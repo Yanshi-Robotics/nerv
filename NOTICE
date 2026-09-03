@@ -1,0 +1,12 @@
+NERV — a nervous system for robots. MIT, see LICENSE.
+
+Lineage: NERV succeeds ANIMA Zero (Yanshi Robotics, MIT). The NERV/Body interface is ANIMA
+Zero's AWI v1 with a different speaker; the turn loop, trust store, session memory and liveness
+supervision descend from its src/.
+
+Third-party material bundled for tests:
+  tests/fixtures/so101/ — SO-101 MJCF and meshes from TheRobotStudio/SO-ARM100 (Apache-2.0),
+  see the LICENSE and NOTICE.md in that directory.
+
+Runtime dependencies keep their own licenses (MuJoCo Apache-2.0, LeRobot Apache-2.0, MCP SDK MIT).
+The G1 model used through alice-house originates from MuJoCo Menagerie (BSD-3-Clause).
