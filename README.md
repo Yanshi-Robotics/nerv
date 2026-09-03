@@ -105,7 +105,8 @@ src/nerv/brain/       the brain plugin: see–think–gate–act loop, model pro
 src/nerv/body/        body node: NERV/Body server, skill runner, families (humanoid, arm), bus endpoints
 src/nerv/world/       world node: the MuJoCo server
 src/nerv/tool/        tool node: the calculator
-bodies/  worlds/  tools/   the registry           frontend/  the web app
+bodies/  tools/       the registry              worlds/  submodule nerv-world (scenes + world descriptors)
+policies/             submodule nerv-policies   frontend/  the web app
 ```
 
 ---
@@ -113,14 +114,13 @@ bodies/  worlds/  tools/   the registry           frontend/  the web app
 ## Installation
 
 ```bash
-git clone <this repository> && cd nerv
-python3 -m venv .venv && .venv/bin/pip install -e ".[platform,dev]"       # NERV, brain, tools — no physics
-python3 -m venv .venv-sim && .venv-sim/bin/pip install -e ".[sim]"        # world node and simulated bodies
-cp .env.example .env    # an API key or a local Ollama; where alice-house and the policy shelf live
-.venv/bin/nerv doctor   # what is configured, what is reachable, which triples are possible
+git clone --recurse-submodules <this repository> && cd nerv
+python3 -m venv .venv && .venv/bin/pip install -e ".[all]"   # platform, brain, tools, MuJoCo — one venv
+cp .env.example .env                                         # an API key, or a local Ollama
+.venv/bin/nerv doctor                                        # what is configured, which triples are possible
 ```
 
-Two things live outside this repository: the scene library [alice-house](https://github.com/Yanshi-Robotics/alice-house) (`ALICE_HOUSE_ROOT`) and a policy release for the humanoid's gait (`NERV_POLICIES_ROOT`, a directory of `policy.onnx` + `contract.json` + `release.yaml`). Point `NERV_SIM_PYTHON` at `.venv-sim/bin/python`. `nerv doctor` names whatever is missing.
+Everything a simulation needs is in the checkout: `worlds/` is the [nerv-world](https://github.com/Yanshi-Robotics/nerv-world) submodule (the scene library formerly known as alice-house, carrying the world descriptors) and `policies/` is the [nerv-policies](https://github.com/Yanshi-Robotics/nerv-policies) submodule (released gait policies: `policy.onnx` + `contract.json` + `release.yaml`). If you cloned without `--recurse-submodules`, run `git submodule update --init --recursive`; `nerv doctor` says so if you forgot.
 
 ## Running
 
@@ -144,7 +144,7 @@ The web app (`frontend/`, Next.js) is a client of NERV/Operator: `npm install &&
 
 ### The real arm
 
-For `arm-lerobot-so101` the motor bus *is* LeRobot's `SOFollower`. Install this package into the environment that has LeRobot, point `NERV_LEROBOT_PYTHON` at it, set `SO101_PORT`, `SO101_ID` and `SO101_CAMERAS` in `.env`, and calibrate with `lerobot-calibrate` as usual. A session against hardware starts disarmed twice over — in NERV and in the body node — and the brain gets "not armed" from every command until you arm it, with your hand near the power switch. A grasping skill is a policy you train with LeRobot and drop on the policy shelf; the skill runner is already waiting for it.
+For `arm-lerobot-so101` the motor bus *is* LeRobot's `SOFollower`. Either `pip install -e ".[lerobot]"` into the same venv, or point `NERV_LEROBOT_PYTHON` at an environment that already has LeRobot; set `SO101_PORT`, `SO101_ID` and `SO101_CAMERAS` in `.env`, and calibrate with `lerobot-calibrate` as usual. A session against hardware starts disarmed twice over — in NERV and in the body node — and the brain gets "not armed" from every command until you arm it, with your hand near the power switch. A grasping skill is a policy you train with LeRobot and drop on the policy shelf; the skill runner is already waiting for it.
 
 ## What ships
 
@@ -155,7 +155,7 @@ For `arm-lerobot-so101` the motor bus *is* LeRobot's `SOFollower`. Install this 
 
 | World | Kind | Supports | World sensors |
 |---|---|---|---|
-| `apt2` | sim | `humanoid-unitree-g1` — a two-storey Manhattan penthouse from alice-house | none |
+| `apt2` | sim | `humanoid-unitree-g1` — a two-storey Manhattan penthouse from nerv-world | none |
 
 | Tool | Functions |
 |---|---|
@@ -169,4 +169,4 @@ A **brain** implements [NERV/Brain](docs/nerv-brain.md). A **body** is a directo
 
 ## Acknowledgements
 
-Scenes come from [alice-house](https://github.com/Yanshi-Robotics/alice-house). The humanoid's gait policy was trained in yanshi-rl-lab on Isaac Lab. Physics is [MuJoCo](https://mujoco.org); hardware access is [LeRobot](https://github.com/huggingface/lerobot); the SO-101 model is from [TheRobotStudio/SO-ARM100](https://github.com/TheRobotStudio/SO-ARM100); the G1 model originates from [MuJoCo Menagerie](https://github.com/google-deepmind/mujoco_menagerie). NERV is the successor of [ANIMA Zero](docs/history/anima-zero.md).
+Scenes come from [nerv-world](https://github.com/Yanshi-Robotics/nerv-world) (formerly alice-house). The humanoid's gait policy was trained in yanshi-rl-lab on Isaac Lab. Physics is [MuJoCo](https://mujoco.org); hardware access is [LeRobot](https://github.com/huggingface/lerobot); the SO-101 model is from [TheRobotStudio/SO-ARM100](https://github.com/TheRobotStudio/SO-ARM100); the G1 model originates from [MuJoCo Menagerie](https://github.com/google-deepmind/mujoco_menagerie). NERV is the successor of [ANIMA Zero](docs/history/anima-zero.md).

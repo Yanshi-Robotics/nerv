@@ -46,10 +46,17 @@ def cmd_doctor(a) -> int:
     print(f"data root      {paths.DATA_ROOT}")
     print(f".env           {paths.ENV_FILE} {'(present)' if os.path.isfile(paths.ENV_FILE) else '(missing)'}")
     print(f"node ports     {config.NODE_PORTS}")
-    for label, val in (("NERV_SIM_PYTHON", config.SIM_PYTHON), ("NERV_LEROBOT_PYTHON", config.LEROBOT_PYTHON),
-                       ("NERV_POLICIES_ROOT", config.POLICIES_ROOT), ("ALICE_HOUSE_ROOT", config.ALICE_HOUSE_ROOT)):
-        ok = bool(val) and os.path.exists(val)
-        print(f"{label:<19} {val or '(unset)'} {'ok' if ok else '⚠ missing'}")
+    for sub, probe in (("worlds", "scenes/manifest.py"), ("policies", "README.md")):
+        ok = os.path.isfile(os.path.join(paths.REPO_ROOT, sub, probe))
+        print(f"submodule {sub:<10} {'ok' if ok else '⚠ empty — run: git submodule update --init --recursive'}")
+    try:
+        import mujoco  # noqa: F401
+        print("mujoco            ok (this venv can run world and simulated body nodes)")
+    except Exception:
+        print("mujoco            ⚠ missing — pip install -e '.[all]'")
+    lp = config.LEROBOT_PYTHON
+    print(f"NERV_LEROBOT_PYTHON {lp or '(unset — only needed for the real arm)'}"
+          f"{'' if not lp or os.path.exists(lp) else '  ⚠ not found'}")
     for b in list_brains():
         print(f"brain {b['name']:<12} {'ready' if b['available'] else 'not configured'}")
     reg = Registry()

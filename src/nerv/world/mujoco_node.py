@@ -95,7 +95,8 @@ class SceneLayout:
     def __init__(self, assets_root: str, scene: str) -> None:
         manifest = os.path.join(assets_root, "scenes", "manifest.py")
         if not os.path.isfile(manifest):
-            raise FileNotFoundError(f"no scene manifest at {manifest}; is ALICE_HOUSE_ROOT right?")
+            raise FileNotFoundError(f"no scene manifest at {manifest}; is the worlds/ submodule initialised "
+                                    f"(git submodule update --init --recursive)?")
         spec = importlib.util.spec_from_file_location("nerv_assets_scenes_manifest", manifest)
         mod = importlib.util.module_from_spec(spec)
         spec.loader.exec_module(mod)

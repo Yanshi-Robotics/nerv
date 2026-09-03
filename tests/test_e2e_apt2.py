@@ -13,7 +13,10 @@ from nerv.nerve.brain import CallTool, Say, Think, UserMessage
 from nerv.platform.hub import Nerv
 from nerv.platform.session import SessionStore
 
-NEEDS = ("ALICE_HOUSE_ROOT", "NERV_POLICIES_ROOT", "NERV_SIM_PYTHON")
+from nerv import paths
+
+NEEDS = (os.path.join(paths.REPO_ROOT, "worlds", "build", "apt2-g1.xml"),
+         os.path.join(paths.REPO_ROOT, "policies", "g1-29dof-turn", "policy.onnx"))
 
 
 class ScriptedBrain:
@@ -33,7 +36,7 @@ class ScriptedBrain:
         link.say(Say("done"))
 
 
-@pytest.mark.skipif(any(not os.environ.get(k) for k in NEEDS), reason=f"needs {NEEDS}")
+@pytest.mark.skipif(any(not os.path.isfile(k) for k in NEEDS), reason="needs the worlds and policies submodules")
 def test_scripted_brain_walks_one_metre(tmp_path, monkeypatch):
     monkeypatch.setenv("NERV_TRUST_ALL", "1")
     monkeypatch.setattr(config, "NODE_PORTS", "8180-8189")

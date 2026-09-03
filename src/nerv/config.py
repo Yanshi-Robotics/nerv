@@ -52,14 +52,9 @@ class Settings(BaseSettings):
                             description="Port pool for launched nodes, 'lo-hi'.")
     node_health_wait_s: float = Field(60, validation_alias="NERV_NODE_HEALTH_WAIT_S", gt=0,
                                       description="How long to wait for a launched node's /health.")
-    sim_python: str = Field("", validation_alias="NERV_SIM_PYTHON",
-                            description="Interpreter for MuJoCo nodes (empty = this one).")
     lerobot_python: str = Field("", validation_alias="NERV_LEROBOT_PYTHON",
-                                description="Interpreter with LeRobot installed (real arms).")
-    policies_root: str = Field("", validation_alias="NERV_POLICIES_ROOT",
-                               description="Policy shelf: <root>/<policy>/{policy.onnx,contract.json,release.yaml}.")
-    alice_house_root: str = Field("", validation_alias="ALICE_HOUSE_ROOT",
-                                  description="Scene library root for the apt2 world.")
+                                description="Interpreter with LeRobot installed (real arms only; "
+                                            "empty = this one).")
     node_bind_host: str = Field("127.0.0.1", validation_alias="NERV_NODE_BIND_HOST",
                                 description="Launched nodes bind here. Loopback only by default.")
 
@@ -109,10 +104,7 @@ BRIDGE_GRACE_S = _settings.bridge_grace_s
 TOOL_TIMEOUT = _settings.tool_timeout
 NODE_PORTS = _settings.node_ports
 NODE_HEALTH_WAIT_S = _settings.node_health_wait_s
-SIM_PYTHON = _settings.sim_python
 LEROBOT_PYTHON = _settings.lerobot_python
-POLICIES_ROOT = _settings.policies_root
-ALICE_HOUSE_ROOT = _settings.alice_house_root
 NODE_BIND_HOST = _settings.node_bind_host
 TITLE_MAX_LEN = _settings.title_max_len
 LOG_MAX_SYSTEM = _settings.log_max_system

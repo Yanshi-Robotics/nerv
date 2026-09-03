@@ -105,7 +105,8 @@ src/nerv/brain/       大脑插件：看–想–过闸–动循环、模型供�
 src/nerv/body/        身体节点：NERV/Body 服务端、技能运行器、家族（humanoid、arm）、总线端点
 src/nerv/world/       世界节点：MuJoCo 服务
 src/nerv/tool/        工具节点：计算器
-bodies/  worlds/  tools/   注册表           frontend/  网页
+bodies/  tools/       注册表                    worlds/  子模块 nerv-world（场景 + 世界描述）
+policies/             子模块 nerv-policies      frontend/  网页
 ```
 
 ---
@@ -113,14 +114,13 @@ bodies/  worlds/  tools/   注册表           frontend/  网页
 ## 安装
 
 ```bash
-git clone <this repository> && cd nerv
-python3 -m venv .venv && .venv/bin/pip install -e ".[platform,dev]"       # NERV、大脑、工具——不含物理
-python3 -m venv .venv-sim && .venv-sim/bin/pip install -e ".[sim]"        # 世界节点与仿真身体
-cp .env.example .env    # API key 或本地 Ollama；alice-house 与策略发布架在哪
-.venv/bin/nerv doctor   # 配了什么、够不够得着、哪些三元组可行
+git clone --recurse-submodules <this repository> && cd nerv
+python3 -m venv .venv && .venv/bin/pip install -e ".[all]"   # 平台、大脑、工具、MuJoCo——一个 venv
+cp .env.example .env                                         # API key，或本地 Ollama
+.venv/bin/nerv doctor                                        # 配了什么、哪些三元组可行
 ```
 
-两样东西住在仓库之外：场景库 [alice-house](https://github.com/Yanshi-Robotics/alice-house)（`ALICE_HOUSE_ROOT`）和人形步态的策略发布件（`NERV_POLICIES_ROOT`，一个装着 `policy.onnx` + `contract.json` + `release.yaml` 的目录）。把 `NERV_SIM_PYTHON` 指向 `.venv-sim/bin/python`。缺什么，`nerv doctor` 会点名。
+仿真需要的一切都在 checkout 里：`worlds/` 是 [nerv-world](https://github.com/Yanshi-Robotics/nerv-world) 子模块（原名 alice-house 的场景库，连同世界描述），`policies/` 是 [nerv-policies](https://github.com/Yanshi-Robotics/nerv-policies) 子模块（已发布的步态策略：`policy.onnx` + `contract.json` + `release.yaml`）。如果 clone 时没带 `--recurse-submodules`，跑一次 `git submodule update --init --recursive`；忘了的话 `nerv doctor` 会提醒。
 
 ## 运行
 
@@ -144,7 +144,7 @@ nerv doctor                                  配了什么、够不够得着
 
 ### 真机机械臂
 
-对 `arm-lerobot-so101` 来说，电机总线就是 LeRobot 的 `SOFollower`。把本包装进有 LeRobot 的环境，让 `NERV_LEROBOT_PYTHON` 指向它，在 `.env` 里填 `SO101_PORT`、`SO101_ID`、`SO101_CAMERAS`，照常用 `lerobot-calibrate` 校准。对硬件的会话双重未武装——NERV 里一道、身体节点里一道——你武装之前，大脑对每条指令都会收到「未武装」；武装时请把手放在电源开关旁。抓取技能是你用 LeRobot 训练后放到策略发布架上的策略；技能运行器已经在等它。
+对 `arm-lerobot-so101` 来说，电机总线就是 LeRobot 的 `SOFollower`。要么在同一个 venv 里 `pip install -e ".[lerobot]"`，要么让 `NERV_LEROBOT_PYTHON` 指向一个已装 LeRobot 的环境；在 `.env` 里填 `SO101_PORT`、`SO101_ID`、`SO101_CAMERAS`，照常用 `lerobot-calibrate` 校准。对硬件的会话双重未武装——NERV 里一道、身体节点里一道——你武装之前，大脑对每条指令都会收到「未武装」；武装时请把手放在电源开关旁。抓取技能是你用 LeRobot 训练后放到策略发布架上的策略；技能运行器已经在等它。
 
 ## 出厂内容
 
@@ -155,7 +155,7 @@ nerv doctor                                  配了什么、够不够得着
 
 | 世界 | 类型 | 支持 | 世界传感器 |
 |---|---|---|---|
-| `apt2` | 仿真 | `humanoid-unitree-g1`——alice-house 的曼哈顿复式顶层公寓 | 无 |
+| `apt2` | 仿真 | `humanoid-unitree-g1`——nerv-world 的曼哈顿复式顶层公寓 | 无 |
 
 | 工具 | 函数 |
 |---|---|
@@ -169,4 +169,4 @@ nerv doctor                                  配了什么、够不够得着
 
 ## 致谢
 
-场景来自 [alice-house](https://github.com/Yanshi-Robotics/alice-house)。人形的步态策略在 yanshi-rl-lab 里用 Isaac Lab 训练。物理是 [MuJoCo](https://mujoco.org)；硬件接入是 [LeRobot](https://github.com/huggingface/lerobot)；SO-101 模型来自 [TheRobotStudio/SO-ARM100](https://github.com/TheRobotStudio/SO-ARM100)；G1 模型源自 [MuJoCo Menagerie](https://github.com/google-deepmind/mujoco_menagerie)。NERV 是 [ANIMA Zero](../../history/anima-zero.md) 的继任者。
+场景来自 [nerv-world](https://github.com/Yanshi-Robotics/nerv-world)（原名 alice-house）。人形的步态策略在 yanshi-rl-lab 里用 Isaac Lab 训练。物理是 [MuJoCo](https://mujoco.org)；硬件接入是 [LeRobot](https://github.com/huggingface/lerobot)；SO-101 模型来自 [TheRobotStudio/SO-ARM100](https://github.com/TheRobotStudio/SO-ARM100)；G1 模型源自 [MuJoCo Menagerie](https://github.com/google-deepmind/mujoco_menagerie)。NERV 是 [ANIMA Zero](../../history/anima-zero.md) 的继任者。

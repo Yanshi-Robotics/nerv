@@ -27,6 +27,7 @@ dependencies = [
 [project.optional-dependencies]
 platform = ["anthropic>=0.69", "openai>=1.0"]
 sim = ["mujoco>=3.2", "numpy>=1.26", "onnxruntime>=1.17", "pyzmq>=25"]
+all = ["anthropic>=0.69", "openai>=1.0", "mujoco>=3.2", "numpy>=1.26", "onnxruntime>=1.17", "pyzmq>=25"]
 lerobot = ["lerobot>=0.6,<0.7", "pyzmq>=25"]
 dev = ["pytest>=8", "ruff>=0.15,<0.17", "pyzmq>=25", "numpy>=1.26"]
 

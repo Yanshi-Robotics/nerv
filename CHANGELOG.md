@@ -1,5 +1,13 @@
 # Changelog
 
+## [0.1.1] — 2026-09-03
+
+Self-contained checkout. `worlds/` is now the `nerv-world` submodule (the scene library formerly
+known as alice-house, carrying the world descriptors) and `policies/` the `nerv-policies` submodule;
+registry paths are relative to the repository root, so `ALICE_HOUSE_ROOT`, `NERV_POLICIES_ROOT` and
+`NERV_SIM_PYTHON` are gone. One virtualenv (`pip install -e ".[all]"`) runs the platform, the world
+node and the simulated bodies; `NERV_LEROBOT_PYTHON` stays optional for the real arm.
+
 ## [0.1.0] — 2026-09-02
 
 First NERV. A platform (roscore without ROS) that couples a brain to a body in a world, with

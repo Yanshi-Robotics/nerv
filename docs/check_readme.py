@@ -20,7 +20,8 @@ LINK = re.compile(r"\]\(([^)#\s]+)(?:#[^)]*)?\)|<img src=\"([^\"]+)\"|<a href=\"
 
 
 def tracked() -> set[str]:
-    out = subprocess.run(["git", "ls-files", "--cached"], cwd=ROOT, capture_output=True, text=True).stdout
+    out = subprocess.run(["git", "ls-files", "--cached", "--recurse-submodules"], cwd=ROOT,
+                         capture_output=True, text=True).stdout
     files = set(out.split())
     dirs = set()
     for f in files:

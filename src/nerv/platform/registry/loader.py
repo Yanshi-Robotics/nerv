@@ -32,6 +32,26 @@ def _guidance(d: str) -> str:
     return ""
 
 
+_PATH_KEYS = ("assets_root",)
+
+
+def _resolve(data: dict, key: str) -> None:
+    v = data.get(key)
+    if isinstance(v, str) and v and not os.path.isabs(v):
+        data[key] = os.path.normpath(os.path.join(paths.REPO_ROOT, v))
+
+
+def _resolve_paths(data: dict) -> dict:
+    """Relative paths in a registry file resolve against the nerv repository root, so a
+    checkout with its submodules needs no environment variable to find scenes or policies."""
+    for k in _PATH_KEYS:
+        _resolve(data, k)
+    for sk in (data.get("skills") or {}).values():
+        if isinstance(sk, dict):
+            _resolve(sk, "policy")
+    return data
+
+
 def _roots() -> list[str]:
     extra = [p for p in os.environ.get("NERV_REGISTRY_PATHS", "").split(":") if p.strip()]
     return [paths.REGISTRY_ROOT] + extra
@@ -54,7 +74,7 @@ class Registry:
             p = os.path.join(d, entry, fname)
             if not os.path.isfile(p):
                 continue
-            data = _read_yaml(p)
+            data = _resolve_paths(_read_yaml(p))
             data.setdefault("name", entry)
             data["dir"] = os.path.join(d, entry)
             data.setdefault("guidance", _guidance(data["dir"]))

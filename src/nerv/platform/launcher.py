@@ -69,8 +69,8 @@ class Launcher:
     def _python(self, requested: str) -> str:
         py = (requested or "").strip() or sys.executable
         if not os.path.isfile(py):
-            raise FileNotFoundError(f"interpreter not found: {py!r} (check NERV_SIM_PYTHON / "
-                                    f"NERV_LEROBOT_PYTHON or the registry entry)")
+            raise FileNotFoundError(f"interpreter not found: {py!r} (check NERV_LEROBOT_PYTHON "
+                                    f"or the registry entry's python:)")
         return py
 
     def _spawn(self, key: str, kind: str, python: str, args: list[str], url: str,
@@ -138,7 +138,7 @@ class Launcher:
         self.nodes[key] = placeholder
         bus_port = self._free_port()
         del self.nodes[key]
-        py = self._python(world.python or config.SIM_PYTHON)
+        py = self._python(world.python)
         url = f"http://{config.NODE_BIND_HOST}:{http_port}"
         bus = f"tcp://{config.NODE_BIND_HOST}:{bus_port}"
         return self._spawn(key, "world", py,
@@ -161,7 +161,7 @@ class Launcher:
             self._wait_health(h)
             return h
         port = self._free_port()
-        default_py = config.SIM_PYTHON if world.kind == KIND_SIM else config.LEROBOT_PYTHON
+        default_py = "" if world.kind == KIND_SIM else config.LEROBOT_PYTHON
         py = self._python(ep.python or default_py)
         args = ["-m", "nerv.body", "--body", body.name, "--world", world.name, "--kind", world.kind,
                 "--port", str(port), "--host", config.NODE_BIND_HOST]

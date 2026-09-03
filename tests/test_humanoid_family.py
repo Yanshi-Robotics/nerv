@@ -1,8 +1,8 @@
 """Humanoid smoke: the G1 walks and turns in alice-house apt2 through the motor bus.
 
 Needs the real assets, so it is gated on the environment:
-  ALICE_HOUSE_ROOT     the alice-house checkout (arena build/apt2-g1.xml must exist)
-  NERV_POLICIES_ROOT   the policy shelf holding g1-29dof-turn/{policy.onnx,contract.json,release.yaml}
+  worlds/    the nerv-world submodule (arena build/apt2-g1.xml must exist)
+  policies/  the nerv-policies submodule holding g1-29dof-turn/{policy.onnx,contract.json,release.yaml}
 Otherwise it skips and says why. Measured numbers are printed (run with -s).
 """
 from __future__ import annotations
@@ -37,12 +37,13 @@ def _free_port() -> int:
 
 
 def _skip_reason() -> str:
-    assets = os.environ.get("ALICE_HOUSE_ROOT", "")
-    policies = os.environ.get("NERV_POLICIES_ROOT", "")
+    from nerv import paths
+    assets = os.path.join(paths.REPO_ROOT, "worlds")
+    policies = os.path.join(paths.REPO_ROOT, "policies")
     if not assets:
-        return "ALICE_HOUSE_ROOT is not set"
+        return "worlds/ submodule is not initialised"
     if not policies:
-        return "NERV_POLICIES_ROOT is not set"
+        return "policies/ submodule is not initialised"
     if not os.path.isfile(os.path.join(assets, "build", "apt2-g1.xml")):
         return f"arena {assets}/build/apt2-g1.xml does not exist"
     for fn in ("policy.onnx", "contract.json", "release.yaml"):

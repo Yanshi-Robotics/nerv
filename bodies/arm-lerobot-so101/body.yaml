@@ -5,7 +5,7 @@ label: SO-101 arm (LeRobot)
 version: "1"
 sensors:
   - {name: "camera:wrist", camera: "wrist", description: "camera on the wrist (sim: MJCF camera 'wrist'; real: LeRobot camera key 'wrist')"}
-skills: {}            # a LeRobot-trained grasp goes here: grasp: {policy: "${NERV_POLICIES_ROOT}/so101-act-grasp"}
+skills: {}            # a LeRobot-trained grasp goes here: grasp: {policy: policies/so101-act-grasp}
 actuators:
   joints: [shoulder_pan, shoulder_lift, elbow_flex, wrist_flex, wrist_roll, gripper]
   gripper: gripper
@@ -18,8 +18,7 @@ actuators:
   settle_tol_deg: 2.0
 buses:
   sim:
-    kind: zmq
-    python: "${NERV_SIM_PYTHON}"
+    kind: zmq                      # runs in the same venv as NERV
   real:
     kind: lerobot
     python: "${NERV_LEROBOT_PYTHON}"

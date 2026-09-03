@@ -58,7 +58,9 @@ src/nerv/brain/       the brain plugin: see–think–gate–act loop, model pro
 src/nerv/body/        body node: MCP server, skill runner, families (humanoid, arm), bus endpoints
 src/nerv/world/       world node: MuJoCo physics, motor firmware, cameras, rays, bus server
 src/nerv/tool/        tool node: the calculator
-bodies/ worlds/ tools/  the registry: one directory, one YAML, one guidance.md per entry
+bodies/ tools/        the registry: one directory, one YAML, one guidance.md per entry
+worlds/               submodule nerv-world: scenes, robot models, arenas and the world descriptors
+policies/             submodule nerv-policies: released policies (policy.onnx + contract.json + release.yaml)
 ```
 
 ## Future paths (not built)
