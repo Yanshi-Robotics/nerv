@@ -63,9 +63,41 @@ def cmd_doctor(a) -> int:
     return 0
 
 
+def _review_trust(hub, s: dict) -> None:
+    """A node's text reaches the brain only after the operator approved its manifest."""
+    from . import trust
+    keys = ([f"body:{s['body']}"] if s.get("body") else []) + [f"tool:{t}" for t in s.get("tools", [])]
+    for key in keys:
+        c = hub.node_client(key)
+        if c is None:
+            continue
+        d = c.trust_decision()
+        if d.allowed:
+            continue
+        print(f"\n[{key}] {d.reason}")
+        if d.changes:
+            for line in d.changes:
+                print(f"   · {line}")
+        m = d.manifest
+        print(f"   url: {m['url']}")
+        for t in m["tools"]:
+            print(f"   tool {t['name']} ({t['kind']}): {t['description'][:140]}")
+        if m["guidance"]:
+            print("   guidance:\n     " + m["guidance"][:1200].replace("\n", "\n     "))
+        try:
+            ans = input("   approve this manifest? [y/N] ").strip().lower()
+        except EOFError:
+            ans = ""
+        if ans == "y":
+            print(f"   approved ({c.approve()[:12]}…)")
+        else:
+            print(f"   not approved — {key} contributes no tools or guidance; set {trust.TRUST_ALL_ENV}=1 for development")
+
+
 def _new_session(hub, a) -> str:
     s = hub.new_session(a.brain or config.DEFAULT_BRAIN, a.body, a.world, a.sensors or [], None)
     print(f"session {s['id']}  brain={s['brain']} body={s['body']} world={s['world']} armed={s['armed']}")
+    _review_trust(hub, s)
     return s["id"]
 
 
@@ -200,7 +232,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--port", type=int, default=0)
     p.set_defaults(fn=cmd_serve)
     p = sub.add_parser("node", help="start a node by hand: node world|body|tool -- <args>")
-    p.add_argument("node"); p.add_argument("rest", nargs=argparse.REMAINDER)
+    p.add_argument("node")
+    p.add_argument("rest", nargs=argparse.REMAINDER)
     p.set_defaults(fn=cmd_node)
     p = sub.add_parser("registry", help="brains, bodies, worlds, tools, compatibility")
     p.set_defaults(fn=cmd_registry)
