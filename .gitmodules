@@ -1,6 +1,6 @@
 [submodule "worlds"]
 	path = worlds
-	url = git@github.com:Yanshi-Robotics/nerv-world.git
+	url = https://github.com/Yanshi-Robotics/nerv-world.git
 [submodule "policies"]
 	path = policies
-	url = git@github.com:Yanshi-Robotics/nerv-policies.git
+	url = https://github.com/Yanshi-Robotics/nerv-policies.git
