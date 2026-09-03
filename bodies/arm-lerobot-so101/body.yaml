@@ -1,0 +1,32 @@
+# NERV body · SO-101 arm through LeRobot. Family `arm`: primitives only until a grasp policy exists.
+name: arm-lerobot-so101
+family: arm
+label: SO-101 arm (LeRobot)
+version: "1"
+sensors:
+  - {name: "camera:wrist", camera: "wrist", description: "camera on the wrist (sim: MJCF camera 'wrist'; real: LeRobot camera key 'wrist')"}
+skills: {}            # a LeRobot-trained grasp goes here: grasp: {policy: "${NERV_POLICIES_ROOT}/so101-act-grasp"}
+actuators:
+  joints: [shoulder_pan, shoulder_lift, elbow_flex, wrist_flex, wrist_roll, gripper]
+  gripper: gripper
+  pd_mode: position_actuator      # sim: the SO-ARM100 MJCF position actuators hold the target
+  rate_hz: 50
+  max_step_deg: 30                # a single nudge may not exceed this
+  min_duration_s: 0.3
+  max_duration_s: 10
+  default_duration_s: 2.0
+  settle_tol_deg: 2.0
+buses:
+  sim:
+    kind: zmq
+    python: "${NERV_SIM_PYTHON}"
+  real:
+    kind: lerobot
+    python: "${NERV_LEROBOT_PYTHON}"
+    settings:
+      robot_type: so_follower
+      port: "${SO101_PORT}"
+      id: "${SO101_ID}"
+      cameras: "${SO101_CAMERAS}"                 # e.g. "wrist=0,top=2" (key=device index)
+      max_relative_target: "${SO101_MAX_RELATIVE_TARGET}"
+      gripper: gripper

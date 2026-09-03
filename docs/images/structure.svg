@@ -1,0 +1,140 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- SVG-DESIGN-NOTES
+Type: A (structure)
+Q0 One Big Idea: NERV is the only hub; every node hangs off it, and the brain can see only what
+   travels on the solid (data-plane) edges. Ground truth stays on dashed (control-plane) edges.
+Q1 Geometry: one wide hub box; four leaf nodes; the World is reachable from the Body (bus) and
+   from NERV (sensors / control) but never from the Brain.
+Q2 DNA: without the title, the hub-and-spokes plus the solid/dashed split still reads as
+   "a nervous system with a gated data plane".
+Q3 Removed: no icons except a minimal human glyph, no gradients, no shadows.
+Q4 Labels sit on the edge they name; the legend only decodes line style.
+Q5 Standalone README image: explicit hex fills, dark text on light boxes so it survives
+   dark-mode <img> embedding.
+-->
+<svg xmlns="http://www.w3.org/2000/svg" width="1100" height="640" viewBox="0 0 1100 640"
+     font-family="Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif"
+     font-size="13" fill="#1f2937">
+  <defs>
+    <marker id="arrData" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8"
+            orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#2563a6"/>
+    </marker>
+    <marker id="arrCtrl" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8"
+            orient="auto-start-reverse">
+      <path d="M0 0 L10 5 L0 10 Z" fill="#6b7280"/>
+    </marker>
+  </defs>
+
+  <!-- background -->
+  <rect x="0" y="0" width="1100" height="640" rx="0" fill="#f8f9fb"/>
+
+  <!-- ===== Human / operator ===== -->
+  <g id="human">
+    <rect x="430" y="14" width="240" height="42" rx="21" fill="#ffffff" stroke="#374151" stroke-width="1.5"/>
+    <circle cx="456" cy="29" r="5" fill="none" stroke="#374151" stroke-width="1.5"/>
+    <path d="M447 44 Q456 34 465 44" fill="none" stroke="#374151" stroke-width="1.5"/>
+    <text x="560" y="40" text-anchor="middle" font-size="14" font-weight="600">Human · web UI / CLI</text>
+  </g>
+
+  <!-- Operator edge (control plane, bidirectional) -->
+  <line x1="550" y1="56" x2="550" y2="108" stroke="#6b7280" stroke-width="1.8" stroke-dasharray="5 4"
+        marker-start="url(#arrCtrl)" marker-end="url(#arrCtrl)"/>
+  <text x="562" y="86" font-size="12.5" fill="#374151">NERV/Operator (HTTP + SSE)</text>
+
+  <!-- ===== NERV hub ===== -->
+  <g id="nerv">
+    <rect x="60" y="110" width="980" height="100" rx="10" fill="#e8f0fe" stroke="#1a4d8f" stroke-width="2"/>
+    <text x="550" y="146" text-anchor="middle" font-size="20" font-weight="700" fill="#0f2f5c">NERV — the nervous system</text>
+    <text x="550" y="172" text-anchor="middle" font-size="14" fill="#0f2f5c">registry · sessions · router · safety gate + arming · observation assembly · one log</text>
+    <text x="550" y="194" text-anchor="middle" font-size="12" fill="#3b5a80">nerv serve — the only process the brain ever talks to</text>
+  </g>
+
+  <!-- ===== Edges NERV -> Brain / Body / Tool (data plane) ===== -->
+  <line x1="160" y1="210" x2="160" y2="298" stroke="#2563a6" stroke-width="1.8"
+        marker-start="url(#arrData)" marker-end="url(#arrData)"/>
+  <text x="170" y="248" font-size="12.5" fill="#1e3a5f">NERV/Brain</text>
+  <text x="170" y="265" font-size="12" fill="#3b5a80">in-process messages</text>
+
+  <line x1="420" y1="210" x2="420" y2="298" stroke="#2563a6" stroke-width="1.8"
+        marker-start="url(#arrData)" marker-end="url(#arrData)"/>
+  <text x="430" y="248" font-size="12.5" fill="#1e3a5f">NERV/Body</text>
+  <text x="430" y="265" font-size="12" fill="#3b5a80">MCP: tools + observation</text>
+
+  <line x1="670" y1="210" x2="670" y2="298" stroke="#2563a6" stroke-width="1.8"
+        marker-start="url(#arrData)" marker-end="url(#arrData)"/>
+  <text x="680" y="248" font-size="12.5" fill="#1e3a5f">NERV/Tool</text>
+  <text x="680" y="265" font-size="12" fill="#3b5a80">MCP: tools only</text>
+
+  <!-- ===== Brain node ===== -->
+  <g id="brain">
+    <rect x="60" y="300" width="200" height="130" rx="10" fill="#fdf2e9" stroke="#b45309" stroke-width="1.8"/>
+    <text x="160" y="326" text-anchor="middle" font-size="16" font-weight="700" fill="#7c2d12">Brain</text>
+    <text x="160" y="345" text-anchor="middle" font-size="12" fill="#7c2d12">plugin · System 2</text>
+    <text x="160" y="372" text-anchor="middle" font-size="13">see › think › gate › act</text>
+    <text x="160" y="392" text-anchor="middle" font-size="13">LLM providers behind</text>
+    <text x="160" y="410" text-anchor="middle" font-size="13">one interface</text>
+  </g>
+
+  <!-- ===== Body node ===== -->
+  <g id="body">
+    <rect x="290" y="300" width="260" height="130" rx="10" fill="#e9f7ef" stroke="#15803d" stroke-width="1.8"/>
+    <text x="420" y="326" text-anchor="middle" font-size="16" font-weight="700" fill="#14532d">Body</text>
+    <text x="420" y="345" text-anchor="middle" font-size="12" fill="#14532d">node · System 1 · 30–50 Hz</text>
+    <text x="420" y="372" text-anchor="middle" font-size="13">primitives · move_joints, set_gripper</text>
+    <text x="420" y="392" text-anchor="middle" font-size="13">skills = policy loops (ACT, gait…)</text>
+    <text x="420" y="410" text-anchor="middle" font-size="13">sensor summary › nerv://observation</text>
+  </g>
+
+  <!-- ===== Tool node ===== -->
+  <g id="tool">
+    <rect x="580" y="300" width="180" height="130" rx="10" fill="#fef9e7" stroke="#a16207" stroke-width="1.8"/>
+    <text x="670" y="326" text-anchor="middle" font-size="16" font-weight="700" fill="#713f12">Tool</text>
+    <text x="670" y="345" text-anchor="middle" font-size="12" fill="#713f12">node · MCP tools</text>
+    <text x="670" y="372" text-anchor="middle" font-size="13">calculator</text>
+    <text x="670" y="392" text-anchor="middle" font-size="13">no observation,</text>
+    <text x="670" y="410" text-anchor="middle" font-size="13">no guidance</text>
+  </g>
+
+  <!-- ===== Body -> World: motor bus (data plane) ===== -->
+  <line x1="420" y1="430" x2="420" y2="498" stroke="#2563a6" stroke-width="1.8"
+        marker-start="url(#arrData)" marker-end="url(#arrData)"/>
+  <text x="430" y="456" font-size="12.5" fill="#1e3a5f">NERV/World · data plane: motor bus</text>
+  <text x="430" y="473" font-size="12" fill="#3b5a80">read / write · ZMQ in sim, driver library on the real robot</text>
+
+  <!-- ===== World -> NERV: sensor streams (data plane; sensors only) ===== -->
+  <line x1="810" y1="500" x2="810" y2="212" stroke="#2563a6" stroke-width="1.8" marker-end="url(#arrData)"/>
+  <text x="820" y="322" font-size="12.5" fill="#1e3a5f">NERV/World · sensor streams</text>
+  <text x="820" y="339" font-size="12" fill="#3b5a80">nerv://sensors/&lt;name&gt; — sensors only</text>
+  <text x="820" y="356" font-size="12" fill="#3b5a80">(ambient cameras, rays)</text>
+
+  <!-- ===== NERV -> World: control plane ===== -->
+  <line x1="1030" y1="210" x2="1030" y2="498" stroke="#6b7280" stroke-width="1.8" stroke-dasharray="5 4"
+        marker-end="url(#arrCtrl)"/>
+  <text x="1020" y="418" text-anchor="end" font-size="12.5" fill="#374151">control plane</text>
+  <text x="1020" y="435" text-anchor="end" font-size="12" fill="#4b5563">launch · spawn · reset ·</text>
+  <text x="1020" y="452" text-anchor="end" font-size="12" fill="#4b5563">status · stream</text>
+
+  <!-- ===== World node ===== -->
+  <g id="world">
+    <rect x="290" y="500" width="750" height="90" rx="10" fill="#f3f0fa" stroke="#6d28d9" stroke-width="1.8"/>
+    <text x="665" y="526" text-anchor="middle" font-size="16" font-weight="700" fill="#3b1d8a">World</text>
+    <text x="665" y="550" text-anchor="middle" font-size="13">sim = MuJoCo physics + motor firmware + cameras + rays</text>
+    <text x="665" y="572" text-anchor="middle" font-size="13">real = reality · bus endpoint = hardware driver · ambient = camera services</text>
+  </g>
+
+  <!-- ===== Legend ===== -->
+  <g id="legend">
+    <rect x="60" y="500" width="200" height="90" rx="8" fill="#ffffff" stroke="#9ca3af" stroke-width="1.2"/>
+    <text x="72" y="520" font-size="12" font-weight="600" fill="#374151">Legend</text>
+    <line x1="72" y1="538" x2="108" y2="538" stroke="#2563a6" stroke-width="2"/>
+    <text x="116" y="542" font-size="12" fill="#1f2937">data plane —</text>
+    <text x="116" y="556" font-size="11.5" fill="#4b5563">the brain may see</text>
+    <line x1="72" y1="570" x2="108" y2="570" stroke="#6b7280" stroke-width="2" stroke-dasharray="5 4"/>
+    <text x="116" y="574" font-size="12" fill="#1f2937">control plane —</text>
+    <text x="116" y="586" font-size="11.5" fill="#4b5563">only NERV + operator</text>
+  </g>
+
+  <!-- ===== Caption ===== -->
+  <text x="550" y="622" text-anchor="middle" font-size="13" font-style="italic" fill="#374151">Ground truth never crosses to the brain.</text>
+</svg>

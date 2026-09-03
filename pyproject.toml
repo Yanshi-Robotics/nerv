@@ -1,0 +1,54 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nerv"
+dynamic = ["version"]
+description = "NERV — a nervous system for robots: couples a brain to a body in a world, with tools within reach."
+readme = "README.md"
+requires-python = ">=3.11"
+license = "MIT"
+authors = [{ name = "Jeff Liu" }]
+keywords = ["robotics", "llm", "mcp", "mujoco", "lerobot", "embodied-ai"]
+dependencies = [
+  "pydantic>=2.6",
+  "pydantic-settings>=2.6",
+  "python-dotenv>=1.0",
+  "pyyaml>=6.0",
+  "httpx>=0.27",
+  "mcp>=1.2,<2",          # 2.0 moved mcp.server.fastmcp; pin below it
+  "fastapi>=0.115",
+  "uvicorn>=0.32",
+  "pillow>=10",
+  "anyio>=4",
+]
+
+[project.optional-dependencies]
+platform = ["anthropic>=0.69", "openai>=1.0"]
+sim = ["mujoco>=3.2", "numpy>=1.26", "onnxruntime>=1.17", "pyzmq>=25"]
+lerobot = ["lerobot>=0.6,<0.7", "pyzmq>=25"]
+dev = ["pytest>=8", "ruff>=0.15,<0.17", "pyzmq>=25", "numpy>=1.26"]
+
+[project.scripts]
+nerv = "nerv.platform.cli:main"
+
+[tool.setuptools]
+package-dir = { "" = "src" }
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.setuptools.dynamic]
+version = { attr = "nerv._version.__version__" }
+
+[tool.ruff]
+line-length = 100
+target-version = "py311"
+
+[tool.ruff.lint]
+select = ["E4", "E7", "E9", "F"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+cache_dir = ".cache/pytest"

@@ -1,0 +1,43 @@
+# NERV body · Unitree G1 (29 DoF). Family `humanoid`: skills driven by a released gait policy.
+name: humanoid-unitree-g1
+family: humanoid
+label: Unitree G1 humanoid (29 DoF)
+version: "1"
+sensors:
+  - {name: "camera:head", camera: "head_front", description: "forward camera on the head"}
+skills:
+  move_forward: {policy: "${NERV_POLICIES_ROOT}/g1-29dof-turn", description: "walk forward a distance"}
+  turn_left:    {policy: "${NERV_POLICIES_ROOT}/g1-29dof-turn", description: "turn left on the spot"}
+  turn_right:   {policy: "${NERV_POLICIES_ROOT}/g1-29dof-turn", description: "turn right on the spot"}
+actuators:
+  source: contract                 # joint order, kp/kd, torque limits come from the policy contract.json
+  pd_mode: release                 # taken from release.yaml (implicit for this policy)
+  start_height: 0.80               # spawn root height (m), matches the contract's default root pose
+  foot_bodies: [left_ankle_roll_link, right_ankle_roll_link]
+  chase_body: torso_link
+  chase_back_m: 2.6
+  chase_up_m: 1.7
+locomotion:
+  walk_speed: 0.6                  # vx (m/s) for move_forward — the policy was tuned at 0.6
+  turn_rate: 0.8                   # wz (rad/s) for turns — inside the trained ±0.8
+  max_move_m: 3.0
+  max_turn_deg: 180
+  default_move_m: 1.0
+  default_turn_deg: 45
+  settle_s: 0.6
+  lidar_range_m: 8.0
+  brake_margin_m: 0.20
+  brake_cone_deg: 40
+  stall_timeout_s: 1.5
+  fall_tilt_rad: 0.8
+  fall_height_m: 0.18
+buses:
+  sim:
+    kind: zmq
+    python: "${NERV_SIM_PYTHON}"
+  real:
+    kind: unitree
+    verified: false                # interface written against lerobot.robots.unitree_g1; never run on hardware
+    python: "${NERV_LEROBOT_PYTHON}"
+    settings:
+      robot_ip: "${G1_ROBOT_IP}"
