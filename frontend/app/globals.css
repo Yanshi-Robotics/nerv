@@ -1,0 +1,48 @@
+@import "tailwindcss";
+
+/* 可点击的按钮默认显示手型光标;禁用的不显示 */
+button:not(:disabled) {
+  cursor: pointer;
+}
+
+/* ============================================================
+   主题：深色（默认）/ 浅色。
+   全站颜色都走 Tailwind 的 neutral 色阶（bg-neutral-950、text-neutral-100…），
+   而 v4 里这些工具类用的是 CSS 变量 var(--color-neutral-*)。
+   所以浅色主题不必改任何组件——只在 [data-theme="light"] 作用域里把整条
+   neutral ramp【镜像翻转】（950↔50、900↔100、800↔200…、500 不变）即可：
+   深色下的"最暗背景"在浅色下变"最亮背景"，"最亮文字"变"最暗文字"，边框、灰字
+   一并对调。强调色（blue/amber/green）不动，深浅两色上都能用。
+   ============================================================ */
+html {
+  color-scheme: dark;
+  /* 强调色文字「按主题分开」token：amber 不随上面的 neutral 一起翻转，
+     浅色底下浅 amber（amber-100/200/300）会糊，所以给需要可读的 amber 文字
+     单独定 per-theme 值。默认（深色）= 亮琥珀（≈ amber-200/300），深底可读。 */
+  --text-accent-amber: oklch(0.9 0.13 90);      /* ≈ amber-200，亮 */
+  --text-accent-amber-dim: oklch(0.83 0.12 86); /* 稍弱一档，用于副标题/提示 */
+}
+
+html[data-theme="light"] {
+  color-scheme: light;
+  /* neutral 镜像翻转（值取自 Tailwind v4 默认 neutral 色阶） */
+  --color-neutral-950: oklch(0.985 0 0); /* ← 原 50  最亮（浅色主背景） */
+  --color-neutral-900: oklch(0.97 0 0);  /* ← 原 100 面板/侧栏 */
+  --color-neutral-800: oklch(0.922 0 0); /* ← 原 200 边框/accent */
+  --color-neutral-700: oklch(0.87 0 0);  /* ← 原 300 */
+  --color-neutral-600: oklch(0.708 0 0); /* ← 原 400 */
+  --color-neutral-500: oklch(0.556 0 0); /*   原 500 不变（中性灰） */
+  --color-neutral-400: oklch(0.439 0 0); /* ← 原 600 */
+  --color-neutral-300: oklch(0.371 0 0); /* ← 原 700 */
+  --color-neutral-200: oklch(0.269 0 0); /* ← 原 800 */
+  --color-neutral-100: oklch(0.205 0 0); /* ← 原 900 主文字（深） */
+  --color-neutral-50: oklch(0.145 0 0);  /* ← 原 950 最暗 */
+  /* 浅色模式：amber 文字翻成深琥珀/棕橙（≈ amber-700/800），亮底可读 */
+  --text-accent-amber: oklch(0.52 0.15 55);
+  --text-accent-amber-dim: oklch(0.56 0.13 58);
+}
+
+/* 切换主题时柔和过渡，不突兀（只过渡颜色，不波及布局动画） */
+body {
+  transition: background-color 0.2s ease, color 0.2s ease;
+}

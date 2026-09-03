@@ -127,7 +127,9 @@ class Turn:
         b64 = base64.b64encode(first).decode() if first else None
         self.trace["inputs"].append({"state": obs.state, "n_images": len(obs.images)})
         self.emit({"type": op.EV_PERCEPTION, "image_b64": b64, "state": obs.state,
-                   "n_images": len(obs.images), "cameras": [i["name"] for i in obs.images]})
+                   "n_images": len(obs.images), "cameras": [i["name"] for i in obs.images],
+                   "images": [{"name": i["name"], "b64": base64.b64encode(i["png"]).decode()}
+                              for i in obs.images]})
         return obs
 
     # -- think ------------------------------------------------------------------------------
@@ -150,7 +152,7 @@ class Turn:
         origin, node, spec = route
         ok, reason = self.gate.check(call.name, call.arguments, kind=spec.kind, origin=origin,
                                      armed=self.session.armed, spec=spec)
-        self.emit({"type": "gate", "name": call.name, "allowed": ok, "reason": reason})
+        self.emit({"type": op.EV_GATE, "name": call.name, "allowed": ok, "reason": reason})
         from .session import log
         log.record("gate", {"tool": call.name, "origin": origin, "kind": spec.kind,
                             "armed": self.session.armed, "allowed": ok, "reason": reason})

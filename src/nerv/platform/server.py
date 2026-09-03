@@ -177,7 +177,7 @@ def new_session(inp: NewSessionIn) -> dict:
     try:
         return nerv.new_session(inp.brain or _default_brain(), inp.body, inp.world, inp.sensors, inp.tools)
     except (ValueError, KeyError, RuntimeError, TimeoutError, FileNotFoundError) as e:
-        raise HTTPException(400, str(e))
+        raise HTTPException(400, e.args[0] if e.args else str(e))
 
 
 @app.get("/api/sessions")
@@ -211,6 +211,8 @@ def interrupt_session(sid: str) -> dict:
 def set_brain(sid: str, inp: BrainIn) -> dict:
     if not nerv.store.exists(sid):
         raise HTTPException(404, "no such session")
+    if inp.brain not in {b["name"] for b in list_brains()}:
+        raise HTTPException(400, messages.UNKNOWN_BRAIN_REPLY)
     nerv.store.set_brain(sid, inp.brain)
     nerv.store.append(sid, {"role": "brain_divider", "brain": inp.brain})
     return {"ok": True}

@@ -117,6 +117,8 @@ class Nerv:
 
     def arm(self, sid: str, armed: bool) -> dict:
         s = self.store.get(sid)
+        if not s.body:
+            return {"ok": False, "armed": False, "message": "a conversation-only session has nothing to arm"}
         self.store.set_armed(sid, armed)
         forwarded = None
         if s.body:

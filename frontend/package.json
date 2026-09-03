@@ -1,0 +1,32 @@
+{
+  "name": "nerv-web",
+  "private": true,
+  "scripts": {
+    "build": "next build",
+    "build:static": "NERV_STATIC_EXPORT=1 NEXT_PUBLIC_API= next build",
+    "check:locales": "node scripts/check-locales.mjs",
+    "dev": "next dev -p 8100",
+    "gen:locales": "node scripts/gen-locales.mjs",
+    "start": "next start -p 8100",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "next": "^16.2.12",
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0",
+    "react-markdown": "^10.1.0",
+    "remark-gfm": "^4.0.1"
+  },
+  "devDependencies": {
+    "@tailwindcss/postcss": "^4.0.0",
+    "@types/node": "^22",
+    "@types/react": "^19",
+    "@types/react-dom": "^19",
+    "tailwindcss": "^4.0.0",
+    "typescript": "^5"
+  },
+  "overrides": {
+    "postcss": "^8.5.18",
+    "sharp": "^0.35.0"
+  }
+}
