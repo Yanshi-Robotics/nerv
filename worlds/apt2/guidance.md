@@ -1,1 +1,0 @@
-This world is a two-storey apartment: rooms, doors, furniture with real collision, a staircase and a double-height living room. Walls stop you; furniture can be walked into. Nothing here tells the brain where it is.
