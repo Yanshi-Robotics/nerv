@@ -41,6 +41,7 @@ class BodySpec(BaseModel):
     sensors: list[SensorDecl] = Field(default_factory=list)
     skills: dict[str, SkillDecl] = Field(default_factory=dict)
     actuators: dict = Field(default_factory=dict)     # family-specific (pd_mode, source, limits)
+    locomotion: dict = Field(default_factory=dict)    # humanoid family knobs (speeds, caps, brake …)
     buses: dict[str, BusEndpoint] = Field(default_factory=dict)   # "sim" | "real"
     guidance: str = ""
     url: str = ""                     # attach to a running node instead of launching

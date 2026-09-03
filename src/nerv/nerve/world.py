@@ -43,6 +43,7 @@ class ActuatorSpec:
     kd: list[float] = field(default_factory=list)
     torque_limit: list[float] = field(default_factory=list)
     default_pos: list[float] = field(default_factory=list)
+    extra: dict[str, Any] = field(default_factory=dict)      # start_height, chase camera, fall thresholds …
 
 
 @dataclass

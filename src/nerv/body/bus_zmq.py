@@ -49,7 +49,7 @@ class ZmqBus:
     def spawn(self, spec: ActuatorSpec) -> dict:
         return self._req({"op": OP_SPAWN, "joint_names": spec.joint_names, "pd_mode": spec.pd_mode,
                           "kp": spec.kp, "kd": spec.kd, "torque_limit": spec.torque_limit,
-                          "default_pos": spec.default_pos})
+                          "default_pos": spec.default_pos, "extra": dict(spec.extra or {})})
 
     def read(self) -> BusState:
         r = self._req({"op": OP_READ})
