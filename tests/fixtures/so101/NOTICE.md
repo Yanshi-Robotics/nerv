@@ -2,7 +2,8 @@
 
 Source: https://github.com/TheRobotStudio/SO-ARM100, directory `Simulation/SO101`,
 commit `7629d2ad9853d10fb903093a33ef6114099d97e5` (copied 2026-09-02 from the local
-read-only snapshot under `Projects/Archive/official-repo/lerobot/`).
+read-only snapshot then under `Projects/Archive/official-repo/lerobot/`; that snapshot moved on
+2026-09-06 into the historical archive folder under `运维与备份/`, and this fixture does not depend on it).
 License: Apache-2.0 (see `LICENSE` in this directory).
 
 Used by NERV only as a **test fixture** for the motor-bus tests (`tests/test_world_bus.py`):
