@@ -5,26 +5,31 @@ import { createSession, deleteSession, type Registry, type SessionSummary } from
 import { useI18n } from "@/lib/i18n";
 import { StatusBadge } from "./ChatPanel";
 import LangToggle from "./LangToggle";
+import RuntimeParamsBar from "./RuntimeParamsBar";
 import ThemeToggle from "./ThemeToggle";
 
 const CONVERSATION_ONLY = ""; // world 选中值空串 = 只聊天，不起身体、不起世界
 
+// 左侧栏，ChatGPT 式可折叠：
+//   展开 ≈ 240px：NERV 字标 + 折叠键 / 新建会话 / 会话列表 / 底部：主题、语言、两个小链接、运行上限
+//   收起 ≈ 56px：展开键 + 一列带提示的图标键（新建、仪表盘、日志、主题）；列表和上限藏起来
+// 折叠状态由 app/page.tsx 持有（栅格列宽要跟着变），存 localStorage 的 `nerv-sidebar`。
 export default function SessionSidebar({
   sessions,
   registry,
   currentId,
+  collapsed,
+  onToggleCollapsed,
   onSelect,
   onChanged,
-  onHome,
-  onOpenPanel,
 }: {
   sessions: SessionSummary[];
   registry: Registry | null;
   currentId: string;
+  collapsed: boolean;
+  onToggleCollapsed: () => void;
   onSelect: (id: string) => void;
   onChanged: (id?: string) => void;
-  onHome: () => void;
-  onOpenPanel: (p: "nerv" | "logs") => void;
 }) {
   const { t } = useI18n();
   const [creating, setCreating] = useState(false);
@@ -54,6 +59,7 @@ export default function SessionSidebar({
     setBrain(registry?.default_brain ?? brains.find((b) => b.available)?.name ?? brains[0]?.name ?? "");
     setError("");
     setCreating(true);
+    if (collapsed) onToggleCollapsed(); // 表单住在展开态里：收起时按「+」先展开
   }
 
   function pickWorld(name: string) {
@@ -92,17 +98,46 @@ export default function SessionSidebar({
   }
 
   const selectCls = "w-full rounded-md border border-neutral-700 bg-neutral-800 px-2 py-1 text-xs text-neutral-200 disabled:opacity-50";
+  const iconBtn =
+    "flex h-9 w-9 items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500";
 
+  // ---------------- 收起态：一条竖的图标带 ----------------
+  if (collapsed) {
+    return (
+      <aside className="flex h-screen flex-col items-center overflow-hidden border-r border-neutral-800 bg-neutral-900 py-2">
+        <button onClick={onToggleCollapsed} title={t("Expand sidebar")} aria-label={t("Expand sidebar")} aria-expanded={false} className={iconBtn}>
+          <PanelIcon />
+        </button>
+        <div className="mt-2 flex flex-col items-center gap-1">
+          <button onClick={openForm} title={t("New session")} aria-label={t("New session")} className={`${iconBtn} text-blue-400 hover:text-blue-300`}>
+            <PlusIcon />
+          </button>
+          <a href="/nerv/" title={t("NERV dashboard")} aria-label={t("NERV dashboard")} className={iconBtn}>
+            <DashboardIcon />
+          </a>
+          <a href="/session-logs/" title="Session Logs" aria-label="Session Logs" className={iconBtn}>
+            <LogsIcon />
+          </a>
+        </div>
+        <div className="mt-auto flex flex-col items-center gap-1 pb-1">
+          <ThemeToggle />
+        </div>
+      </aside>
+    );
+  }
+
+  // ---------------- 展开态 ----------------
   return (
-    <aside className="flex h-screen flex-col border-r border-neutral-800 bg-neutral-900">
-      <button onClick={onHome} title={t("Back to home")}
-        className="flex items-center gap-2 border-b border-neutral-800 px-3 py-2.5 text-sm font-semibold text-neutral-200 transition-colors hover:bg-neutral-800">
-        <HomeIcon />
-        <span>NERV</span>
-        <span className="ml-auto text-[11px] font-normal text-neutral-500">{t("Home")}</span>
-      </button>
+    <aside className="flex h-screen flex-col overflow-hidden border-r border-neutral-800 bg-neutral-900">
+      <div className="flex items-center justify-between border-b border-neutral-800 py-2 pl-3 pr-1.5">
+        <span className="text-sm font-semibold tracking-wide text-neutral-200">NERV</span>
+        <button onClick={onToggleCollapsed} title={t("Collapse sidebar")} aria-label={t("Collapse sidebar")} aria-expanded={true}
+          className="flex h-7 w-7 items-center justify-center rounded-md text-neutral-500 transition-colors hover:bg-neutral-800 hover:text-neutral-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+          <PanelIcon />
+        </button>
+      </div>
       <div className="border-b border-neutral-800 p-3">
-        <button onClick={openForm} className="w-full rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium">
+        <button onClick={openForm} className="w-full rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-500">
           + {t("New session")}
         </button>
       </div>
@@ -185,7 +220,7 @@ export default function SessionSidebar({
           )}
 
           <div className="flex gap-2 pt-1">
-            <button onClick={doCreate} disabled={busy || (!!world && !body)} className="rounded-lg bg-blue-600 px-3 py-1.5 disabled:opacity-50">
+            <button onClick={doCreate} disabled={busy || (!!world && !body)} className="rounded-lg bg-blue-600 px-3 py-1.5 text-white disabled:opacity-50">
               {busy ? (world ? t("Launching nodes…") : t("Creating…")) : t("Create session")}
             </button>
             <button onClick={() => setCreating(false)} disabled={busy} className="rounded-lg bg-neutral-700 px-3 py-1.5">
@@ -201,7 +236,8 @@ export default function SessionSidebar({
         )}
         {sessions.map((s) => (
           <div key={s.id} className={`group mb-1 flex items-start rounded-lg ${s.id === currentId ? "bg-neutral-800" : "hover:bg-neutral-800/50"}`}>
-            <button onClick={() => onSelect(s.id)} className="min-w-0 flex-1 rounded-lg p-2 text-left text-xs">
+            <button onClick={() => onSelect(s.id)} aria-current={s.id === currentId ? "true" : undefined}
+              className="min-w-0 flex-1 rounded-lg p-2 text-left text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
               <div className="flex items-center justify-between gap-1">
                 <span className="truncate font-medium">{s.title}</span>
                 {s.status !== "active" && <StatusBadge status={s.status} />}
@@ -211,41 +247,48 @@ export default function SessionSidebar({
                 <span className="truncate">{s.world ? `${s.world} / ${s.body}` : t("Conversation only")} · {s.brain}</span>
               </div>
             </button>
-            <button onClick={() => doDelete(s.id)} title={t("Delete session")}
-              className="mr-1 mt-1 shrink-0 rounded px-1.5 py-1 text-[11px] text-neutral-600 opacity-0 hover:bg-neutral-700 hover:text-red-400 group-hover:opacity-100">
+            <button onClick={() => doDelete(s.id)} title={t("Delete session")} aria-label={t("Delete session")}
+              className="mr-1 mt-1 shrink-0 rounded px-1.5 py-1 text-[11px] text-neutral-600 opacity-0 hover:bg-neutral-700 hover:text-red-400 focus:opacity-100 group-hover:opacity-100">
               ✕
             </button>
           </div>
         ))}
       </div>
 
-      <div className="shrink-0 space-y-0.5 border-t border-neutral-800 p-2">
-        <button onClick={() => onOpenPanel("nerv")}
-          className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-neutral-300 transition-colors hover:bg-neutral-800 hover:text-neutral-100">
-          <DashboardIcon />
-          <span>{t("NERV dashboard")}</span>
-          <span className="ml-auto text-neutral-600">›</span>
-        </button>
-        <button onClick={() => onOpenPanel("logs")}
-          className="flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-neutral-300 transition-colors hover:bg-neutral-800 hover:text-neutral-100">
-          <LogsIcon />
-          <span>Session Logs</span>
-          <span className="ml-auto text-neutral-600">›</span>
-        </button>
-        <div className="mt-1 flex items-center justify-end gap-1.5 border-t border-neutral-800 px-2 pt-2">
-          <LangToggle />
+      <div className="shrink-0 border-t border-neutral-800">
+        <div className="flex items-center gap-1.5 px-3 pt-2">
           <ThemeToggle />
+          <LangToggle />
+          <span className="ml-auto flex items-center gap-2 text-[11px]">
+            <a href="/nerv/" className="flex items-center gap-1 text-neutral-500 transition-colors hover:text-neutral-200" title={t("NERV dashboard")}>
+              <DashboardIcon /> {t("Dashboard")}
+            </a>
+            <a href="/session-logs/" className="flex items-center gap-1 text-neutral-500 transition-colors hover:text-neutral-200" title="Session Logs">
+              <LogsIcon /> {t("Logs")}
+            </a>
+          </span>
         </div>
+        <RuntimeParamsBar />
       </div>
     </aside>
   );
 }
 
-function HomeIcon() {
+// ◧：侧栏折叠 / 展开
+function PanelIcon() {
   return (
-    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-      <path d="M3 10.5 12 3l9 7.5" />
-      <path d="M5 9.5V20h14V9.5" />
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <rect x="3" y="4" width="18" height="16" rx="2" />
+      <path d="M9 4v16" />
+      <path d="M5 8h2M5 11h2" />
+    </svg>
+  );
+}
+
+function PlusIcon() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" aria-hidden="true">
+      <path d="M12 5v14M5 12h14" />
     </svg>
   );
 }

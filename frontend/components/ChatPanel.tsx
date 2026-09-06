@@ -13,9 +13,11 @@ import {
   streamChat,
   type Brain,
   type ChatEvent,
+  type NodeInfo,
   type RecMsg,
   type SessionSummary,
 } from "@/lib/api";
+import TeleopPanel from "./TeleopPanel";
 
 // 思考区的最大高度：长回合可能几十步，不限高的话思考会把最终回复顶出屏幕。
 const THINKING_MAX_H = "max-h-72";
@@ -79,6 +81,9 @@ const REPLY_CLASS =
 
 // 闸门拒绝行在结果区里的前缀：渲染时据此上色，别的都是普通结果。
 const GATE_PREFIX = "⛔ ";
+
+// 后端把操作员遥控的那几步记成这个 brain 名（hub.teleop_stream）。
+const TELEOP_BRAIN = "operator";
 
 function TurnView({ turn, open, live = false }: { turn: Turn; open: boolean; live?: boolean }) {
   const { t } = useI18n();
@@ -234,13 +239,13 @@ function Notebook({ session }: { session: SessionSummary | null }) {
 export default function ChatPanel({
   session,
   brains,
+  bodyNode,
   onSessionsChanged,
-  paused = false,
 }: {
   session: SessionSummary | null;
   brains: Brain[];
+  bodyNode: NodeInfo | null;
   onSessionsChanged: () => void;
-  paused?: boolean;
 }) {
   const { t } = useI18n();
   const [items, setItems] = useState<Item[]>([]);
@@ -250,6 +255,7 @@ export default function ChatPanel({
   const [stopping, setStopping] = useState(false);
   const [armBusy, setArmBusy] = useState(false);
   const [armErr, setArmErr] = useState("");
+  const [teleop, setTeleop] = useState(false);
   const [expand, setExpand] = useState<"auto" | "all" | "none">(() => {
     if (typeof window === "undefined") return "auto";
     const v = new URLSearchParams(window.location.search).get("expand");
@@ -258,7 +264,12 @@ export default function ChatPanel({
   const bottomRef = useRef<HTMLDivElement>(null);
   const openFor = (isLive: boolean) => (expand === "all" ? true : expand === "none" ? false : isLive);
 
-  const brainLabel = useCallback((n: string) => brains.find((b) => b.name === n)?.label ?? n, [brains]);
+  // 遥控那几步在记录里的 brain 是 "operator"（后端约定），不是注册表里的大脑：给它一个人话标签。
+  const brainLabel = useCallback(
+    (n: string) => (n === TELEOP_BRAIN ? t("operator (teleop)") : brains.find((b) => b.name === n)?.label ?? n),
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [brains],
+  );
 
   const reload = useCallback(async () => {
     if (!session) {
@@ -272,12 +283,14 @@ export default function ChatPanel({
 
   useEffect(() => {
     reload();
+    setTeleop(false); // 换会话就退出遥控
   }, [reload]);
   useEffect(() => {
-    bottomRef.current?.scrollIntoView();
-  }, [items, live, busy]);
+    if (!teleop) bottomRef.current?.scrollIntoView();
+  }, [items, live, busy, teleop]);
 
   const active = session?.status === "active";
+  const hasBody = !!session?.body;
   const curBrain = brains.find((b) => b.name === session?.brain);
 
   async function switchBrain(name: string) {
@@ -287,7 +300,12 @@ export default function ChatPanel({
   }
 
   async function toggleArm() {
-    if (!session || armBusy) return;
+    if (!session || armBusy || !hasBody || !active) return;
+    if (!session.armed) {
+      // 身体节点报的总线不是 zmq（仿真）= 后面是真机：上膛前问一句。
+      const bus = bodyNode?.meta?.bus;
+      if (bus !== "zmq" && !confirm(t("This body node reports a real bus ({bus}) — arming lets the hardware move. Arm it?", { bus: String(bus ?? "unknown") }))) return;
+    }
     setArmBusy(true);
     setArmErr("");
     try {
@@ -299,9 +317,20 @@ export default function ChatPanel({
     setArmBusy(false);
   }
 
+  // 遥控开关。关掉时刷新会话：操作员那几步已经记进会话，历史里要看得到。
+  async function toggleTeleop() {
+    if (!session || !hasBody || !active || busy) return;
+    const next = !teleop;
+    setTeleop(next);
+    if (!next) {
+      await reload();
+      onSessionsChanged();
+    }
+  }
+
   async function send() {
     const text = input.trim();
-    if (!text || !session || !active || busy) return;
+    if (!text || !session || !active || busy || teleop) return;
     setInput("");
     setBusy(true);
     const base: Turn = { user: text, inputs: [], thinking: [], reply: "" };
@@ -356,10 +385,10 @@ export default function ChatPanel({
   return (
     <aside className="flex h-screen flex-col border-l border-neutral-800 bg-neutral-900">
       <header className="border-b border-neutral-800 p-3">
-        <div className="mb-2 flex items-center justify-between text-xs">
+        <div className="flex items-center justify-between text-xs">
           <span className="font-medium text-neutral-200">{t("Talk to the brain")}</span>
           <span className="flex items-center gap-2">
-            {(items.length > 0 || live) && (
+            {(items.length > 0 || live) && !teleop && (
               <button onClick={() => setExpand(expand === "all" ? "none" : "all")}
                 title={t("Expand / collapse the reasoning of every turn")}
                 className="rounded border border-neutral-700 px-1.5 py-0.5 text-[10px] text-neutral-400 hover:border-neutral-500">
@@ -369,45 +398,10 @@ export default function ChatPanel({
             {session && <StatusBadge status={session.status} />}
           </span>
         </div>
-
         {session && (
-          <div className="mb-2 flex flex-wrap items-center gap-2 text-[11px]">
+          <div className="mt-1.5 truncate text-[11px] text-neutral-400" title={curBrain ? `${t(curBrain.vendor)} · ${curBrain.model}` : undefined}>
             {/* 会话 = 大脑 × 身体 × 世界。三样都在这一行。 */}
-            <span className="text-neutral-400">
-              {session.world ? `🌍 ${session.world} · 🤖 ${session.body}` : t("Conversation only")} · 🧠 {brainLabel(session.brain)}
-            </span>
-            {session.body && (
-              <button onClick={toggleArm} disabled={armBusy || !active}
-                title={session.armed
-                  ? t("Armed: the body may move. Click to disarm.")
-                  : t("Disarmed: every world-changing action is refused at the gate. Click to arm — only you can.")}
-                className={`ml-auto rounded-md border px-2 py-0.5 text-[11px] font-semibold tracking-wide disabled:opacity-50 ${
-                  session.armed
-                    ? "border-red-500 bg-red-600 text-white hover:bg-red-500"
-                    : "border-neutral-600 bg-neutral-800 text-neutral-300 hover:border-neutral-400"
-                }`}>
-                {session.armed ? `● ${t("ARMED")} — ${t("DISARM")}` : `○ ${t("DISARMED")} — ${t("ARM")}`}
-              </button>
-            )}
-          </div>
-        )}
-        {armErr && <div className="mb-1 text-[11px] text-red-400">{armErr}</div>}
-
-        {session && (
-          <div className="flex flex-wrap gap-1.5">
-            {brains.map((b) => (
-              <button key={b.name} disabled={!active} onClick={() => switchBrain(b.name)}
-                className={`rounded-lg border px-2 py-0.5 text-[11px] ${
-                  b.name === session.brain ? "border-blue-600 bg-blue-600 text-white" : "border-neutral-700 text-neutral-300 hover:border-neutral-500"
-                } ${b.available ? "" : "opacity-50"}`}>
-                {t(b.label)}
-              </button>
-            ))}
-          </div>
-        )}
-        {curBrain && (
-          <div className="mt-1.5 text-[10px] text-neutral-500">
-            {t("Brain")}: {t(curBrain.vendor)} · {t(curBrain.label)} ({curBrain.model})
+            {session.world ? `🌍 ${session.world} · 🤖 ${session.body}` : t("Conversation only")} · 🧠 {t(brainLabel(session.brain))}
           </div>
         )}
       </header>
@@ -415,61 +409,150 @@ export default function ChatPanel({
       <Notebook session={session} />
 
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
-        {!session && !paused && (
+        {!session && (
           <div className="p-4 text-center text-xs text-neutral-500">{t("Create or pick a session on the left")}</div>
         )}
-        {items.map((it, i) => (
-          <Fragment key={i}>
-            {it.kind === "divider" ? <Divider text={it.text} /> : <TurnView turn={it.turn} open={openFor(false)} />}
-          </Fragment>
-        ))}
-        {live && <TurnView turn={live} open={openFor(true)} live />}
-        {busy && !live?.reply && (
-          <div className="text-xs text-neutral-500">
-            {stopping ? t("Wrapping up — it will stop once this step finishes…") : t("The brain is thinking…")}
-          </div>
+        {session && teleop ? (
+          <TeleopPanel sessionId={session.id} armed={session.armed} />
+        ) : (
+          <>
+            {items.map((it, i) => (
+              <Fragment key={i}>
+                {it.kind === "divider" ? <Divider text={it.text} /> : <TurnView turn={it.turn} open={openFor(false)} />}
+              </Fragment>
+            ))}
+            {live && <TurnView turn={live} open={openFor(true)} live />}
+            {busy && !live?.reply && (
+              <div className="text-xs text-neutral-500">
+                {stopping ? t("Wrapping up — it will stop once this step finishes…") : t("The brain is thinking…")}
+              </div>
+            )}
+            <div ref={bottomRef} />
+          </>
         )}
-        <div ref={bottomRef} />
       </div>
 
-      {paused ? (
-        <div className="border-t border-neutral-800 p-4 text-center text-xs text-neutral-500">
-          {t("Viewing a sub-page — chat is unavailable here")}
-        </div>
-      ) : (
-        session &&
-        (!active ? (
-          <div className="border-t border-neutral-800 p-4 text-center text-xs text-neutral-500">
-            {session.status === "frozen"
-              ? t("🔒 This session is frozen and read-only. Create a new one to continue.")
-              : t("⚠ The world node restarted under this session (different physics now). Start a new session to continue.")}
-            {session.status === "frozen" && (
-              <span className="group relative ml-1 cursor-help text-neutral-400">
-                ❓
-                <span className="pointer-events-none invisible absolute bottom-full left-1/2 z-10 mb-1 w-64 -translate-x-1/2 rounded-lg bg-neutral-800 p-2 text-left text-[11px] leading-relaxed text-neutral-300 opacity-0 shadow-lg transition-opacity group-hover:visible group-hover:opacity-100">
-                  {t("A safety rule for hardware: one active session per body. Opening a new session on the same body locks the previous one — you can still read its history, but it no longer perceives and cannot command the body.")}
-                </span>
-              </span>
-            )}
-          </div>
-        ) : (
-          <div className="flex gap-2 border-t border-neutral-800 p-3">
-            <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()}
-              placeholder={busy ? t("Wait for this turn to finish…") : t("Give the brain an instruction…")}
-              className="flex-1 rounded-xl bg-neutral-800 px-3 py-2 text-sm outline-none placeholder:text-neutral-500" />
-            {busy ? (
-              <button onClick={stop} disabled={stopping}
-                title={t("Stop this turn (it finishes the current step; say “continue” to resume)")}
-                className="flex items-center gap-1.5 rounded-xl bg-neutral-700 px-4 py-2 text-sm font-medium disabled:opacity-60">
-                <StopIcon />
-                {stopping ? t("Stopping…") : t("Stop")}
+      {session && (
+        <div className="border-t border-neutral-800">
+          {/* ---- 一行三个控件：大脑 · 上膛 · 遥控 ---- */}
+          <div className="flex items-center gap-2 px-3 pt-2">
+            <BrainPicker brains={brains} current={session.brain} disabled={!active || busy} onPick={switchBrain} />
+            {hasBody && (
+              <button onClick={toggleArm} disabled={armBusy || !active} role="switch" aria-checked={session.armed}
+                title={session.armed
+                  ? t("Armed: the body may move. Click to disarm.")
+                  : t("Disarmed: every world-changing action is refused at the gate. Click to arm — only you can.")}
+                className={`rounded-full border px-2.5 py-0.5 text-[10px] font-semibold tracking-wide transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                  session.armed
+                    ? "border-red-500 bg-red-600 text-white hover:bg-red-500"
+                    : "border-neutral-600 bg-neutral-800 text-neutral-400 hover:border-neutral-400"
+                }`}>
+                {session.armed ? `● ${t("ARMED")}` : `○ ${t("DISARMED")}`}
               </button>
-            ) : (
-              <button onClick={send} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium">{t("Send")}</button>
+            )}
+            {hasBody && (
+              <button onClick={toggleTeleop} disabled={!active || busy} aria-pressed={teleop}
+                title={teleop ? t("Leave remote control (the brain resumes; your steps are in the history)") : t("Remote control: drive the body yourself; the brain is paused")}
+                className={`ml-auto flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                  teleop ? "border-blue-500 bg-blue-600 text-white" : "border-neutral-600 bg-neutral-800 text-neutral-300 hover:border-neutral-400"
+                }`}>
+                🎮 {t("Teleop")}
+              </button>
             )}
           </div>
-        ))
+          {armErr && <div className="px-3 pt-1 text-[11px] text-red-400">{armErr}</div>}
+
+          {!active ? (
+            <div className="p-4 text-center text-xs text-neutral-500">
+              {session.status === "frozen"
+                ? t("🔒 This session is frozen and read-only. Create a new one to continue.")
+                : t("⚠ The world node restarted under this session (different physics now). Start a new session to continue.")}
+              {session.status === "frozen" && (
+                <span className="group relative ml-1 cursor-help text-neutral-400">
+                  ❓
+                  <span className="pointer-events-none invisible absolute bottom-full left-1/2 z-10 mb-1 w-64 -translate-x-1/2 rounded-lg bg-neutral-800 p-2 text-left text-[11px] leading-relaxed text-neutral-300 opacity-0 shadow-lg transition-opacity group-hover:visible group-hover:opacity-100">
+                    {t("A safety rule for hardware: one active session per body. Opening a new session on the same body locks the previous one — you can still read its history, but it no longer perceives and cannot command the body.")}
+                  </span>
+                </span>
+              )}
+            </div>
+          ) : (
+            <div className="p-3">
+              {teleop && (
+                <div className="mb-1.5 text-[10px] leading-snug text-neutral-500">
+                  {t("teleop mode — the brain is paused; your actions are recorded in the session so the brain sees them next turn")}
+                </div>
+              )}
+              <div className="flex gap-2">
+                <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} disabled={teleop}
+                  placeholder={teleop ? t("teleop mode — chat is paused") : busy ? t("Wait for this turn to finish…") : t("Give the brain an instruction…")}
+                  className="flex-1 rounded-xl bg-neutral-800 px-3 py-2 text-sm outline-none placeholder:text-neutral-500 disabled:opacity-50" />
+                {busy ? (
+                  <button onClick={stop} disabled={stopping}
+                    title={t("Stop this turn (it finishes the current step; say “continue” to resume)")}
+                    className="flex items-center gap-1.5 rounded-xl bg-neutral-700 px-4 py-2 text-sm font-medium disabled:opacity-60">
+                    <StopIcon />
+                    {stopping ? t("Stopping…") : t("Stop")}
+                  </button>
+                ) : (
+                  <button onClick={send} disabled={teleop} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">{t("Send")}</button>
+                )}
+              </div>
+            </div>
+          )}
+        </div>
       )}
     </aside>
+  );
+}
+
+// 🧠 + 当前大脑；点开一个小浮层列出所有大脑，没配好的灰掉。
+function BrainPicker({ brains, current, disabled, onPick }: { brains: Brain[]; current: string; disabled: boolean; onPick: (name: string) => void }) {
+  const { t } = useI18n();
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
+  const cur = brains.find((b) => b.name === current);
+
+  useEffect(() => {
+    if (!open) return;
+    const onDown = (e: MouseEvent) => {
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+    };
+    const onKey = (e: KeyboardEvent) => e.key === "Escape" && setOpen(false);
+    document.addEventListener("mousedown", onDown);
+    document.addEventListener("keydown", onKey);
+    return () => {
+      document.removeEventListener("mousedown", onDown);
+      document.removeEventListener("keydown", onKey);
+    };
+  }, [open]);
+
+  return (
+    <div ref={ref} className="relative min-w-0">
+      <button onClick={() => setOpen((v) => !v)} disabled={disabled} aria-haspopup="listbox" aria-expanded={open}
+        title={cur ? `${t(cur.vendor)} · ${cur.model}` : t("Model")}
+        className="flex max-w-44 items-center gap-1 rounded-full border border-neutral-600 bg-neutral-800 px-2.5 py-0.5 text-[10px] text-neutral-300 hover:border-neutral-400 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+        🧠 <span className="truncate">{cur ? t(cur.label) : current}</span>
+        <span aria-hidden="true" className="text-neutral-500">▾</span>
+      </button>
+      {open && (
+        <ul role="listbox" aria-label={t("Model")}
+          className="absolute bottom-full left-0 z-30 mb-1 w-56 rounded-lg border border-neutral-700 bg-neutral-900 p-1 shadow-xl">
+          {brains.map((b) => (
+            <li key={b.name} role="option" aria-selected={b.name === current}>
+              <button disabled={!b.available} onClick={() => { setOpen(false); if (b.name !== current) onPick(b.name); }}
+                title={b.available ? `${t(b.vendor)} · ${b.model}` : t("not configured")}
+                className={`flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-[11px] hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-40 ${
+                  b.name === current ? "text-blue-300" : "text-neutral-200"
+                }`}>
+                <span className="w-3 shrink-0">{b.name === current ? "✓" : ""}</span>
+                <span className="min-w-0 flex-1 truncate">{t(b.label)}</span>
+                <span className="shrink-0 text-[9px] text-neutral-500">{b.available ? b.hosting : t("not configured")}</span>
+              </button>
+            </li>
+          ))}
+        </ul>
+      )}
+    </div>
   );
 }

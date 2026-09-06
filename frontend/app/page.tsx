@@ -2,12 +2,13 @@
 import { useCallback, useEffect, useState } from "react";
 
 import ChatPanel from "@/components/ChatPanel";
-import NervDashboard from "@/components/NervDashboard";
 import SensingArea from "@/components/SensingArea";
-import SessionLogsView from "@/components/SessionLogsView";
 import SessionSidebar from "@/components/SessionSidebar";
 import { useI18n } from "@/lib/i18n";
 import { getNodes, getRegistry, listSessions, POLL_NODES_MS, type NodeInfo, type Registry, type SessionSummary } from "@/lib/api";
+
+// 左侧栏折叠状态的持久化键；值 "1" = 收起
+const SIDEBAR_KEY = "nerv-sidebar";
 
 export default function Home() {
   const { t } = useI18n();
@@ -15,8 +16,27 @@ export default function Home() {
   const [nodes, setNodes] = useState<NodeInfo[]>([]);
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [currentId, setCurrentId] = useState("");
-  // 中间区当前看什么：会话视图（默认）/ 留白主页 / 内嵌 NERV 仪表盘 / 内嵌 Session Logs
-  const [view, setView] = useState<"session" | "home" | "nerv" | "logs">("session");
+  const [collapsed, setCollapsed] = useState(false);
+
+  // 预渲染阶段拿不到 localStorage，挂载后再对齐一次；此后每次切换都存回去。
+  useEffect(() => {
+    try {
+      setCollapsed(localStorage.getItem(SIDEBAR_KEY) === "1");
+    } catch {
+      /* 隐私模式等读不了就按展开 */
+    }
+  }, []);
+  const toggleCollapsed = useCallback(() => {
+    setCollapsed((v) => {
+      const next = !v;
+      try {
+        localStorage.setItem(SIDEBAR_KEY, next ? "1" : "0");
+      } catch {
+        /* 存不了也照样切 */
+      }
+      return next;
+    });
+  }, []);
 
   const refreshSessions = useCallback(async () => {
     const s = await listSessions().catch(() => []);
@@ -44,41 +64,37 @@ export default function Home() {
   const current = sessions.find((x) => x.id === currentId) || null;
   const bodyNode = current?.body ? nodes.find((n) => n.key === `body:${current.body}`) ?? null : null;
   const worldNode = current?.world && current.body ? nodes.find((n) => n.key === `world:${current.world}/${current.body}`) ?? null : null;
-  const inSession = view === "session";
 
   return (
-    <main className="grid h-screen grid-cols-[240px_minmax(0,1fr)_440px] bg-neutral-950 text-neutral-100">
+    <main
+      className={`grid h-screen bg-neutral-950 text-neutral-100 transition-[grid-template-columns] duration-200 ease-out ${
+        collapsed ? "grid-cols-[56px_minmax(0,1fr)_440px]" : "grid-cols-[240px_minmax(0,1fr)_440px]"
+      }`}
+    >
       <SessionSidebar
         sessions={sessions}
         registry={registry}
         currentId={currentId}
-        onSelect={(id) => {
-          setCurrentId(id);
-          setView("session");
-        }}
+        collapsed={collapsed}
+        onToggleCollapsed={toggleCollapsed}
+        onSelect={setCurrentId}
         onChanged={async (id) => {
           const s = await refreshSessions();
           await refreshNodes(); // 新会话可能刚起了节点
           if (id) setCurrentId(id);
           else setCurrentId((cur) => (s.find((x) => x.id === cur) ? cur : s[0]?.id ?? ""));
         }}
-        onHome={() => setView("home")}
-        onOpenPanel={(p) => setView(p)}
       />
 
-      {view === "nerv" ? (
-        <NervDashboard embedded onOpenLogs={() => setView("logs")} />
-      ) : view === "logs" ? (
-        <SessionLogsView embedded sessionId={currentId} />
-      ) : view === "home" ? (
-        <div className="flex min-w-0 items-center justify-center overflow-hidden bg-neutral-950 p-8 text-center text-sm text-neutral-600">
-          {t("NERV · pick a session on the left or start a new one. The NERV dashboard and Session Logs are at the bottom left.")}
-        </div>
-      ) : (
+      {current ? (
         <SensingArea session={current} bodyNode={bodyNode} worldNode={worldNode} />
+      ) : (
+        <div className="flex min-w-0 items-center justify-center overflow-hidden bg-neutral-950 p-8 text-center text-sm text-neutral-600">
+          {t("Pick a session on the left, or create one.")}
+        </div>
       )}
 
-      <ChatPanel session={inSession ? current : null} brains={registry?.brains ?? []} onSessionsChanged={refreshSessions} paused={!inSession} />
+      <ChatPanel session={current} brains={registry?.brains ?? []} bodyNode={bodyNode} onSessionsChanged={refreshSessions} />
     </main>
   );
 }

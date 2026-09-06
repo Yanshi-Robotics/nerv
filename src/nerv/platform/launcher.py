@@ -79,6 +79,9 @@ class Launcher:
         env = dict(os.environ)
         env.update(extra_env or {})
         env.setdefault("PYTHONUNBUFFERED", "1")
+        # nodes must accept requests from the page nerv serve itself hosts, not only the dev origin
+        serve_origins = [f"http://127.0.0.1:{config.SERVE_PORT}", f"http://localhost:{config.SERVE_PORT}"]
+        env["NERV_CORS_ORIGINS"] = ",".join(dict.fromkeys(config.CORS_ORIGINS + serve_origins))
         env["PYTHONPATH"] = os.pathsep.join(p for p in [os.path.join(paths.REPO_ROOT, "src"),
                                                         env.get("PYTHONPATH", "")] if p)
         logf = open(log_path, "ab")

@@ -287,13 +287,9 @@ export async function sendChat(session: string, text: string): Promise<{ reply: 
   return await r.json();
 }
 
-export async function streamChat(session: string, text: string, onEvent: (e: ChatEvent) => void): Promise<void> {
-  const r = await fetch(`${BASE}/api/chat/stream`, {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ session, text }),
-  });
-  if (!r.ok) throw new ApiError(await detailOf(r), r.status);
+// 读一条 SSE 流（`data: {...}\n\n` 分帧），每帧解析成一个事件交给回调。
+// chat 与 teleop 两个端点吐的是同一种事件，所以解析只写一份。
+async function readSse(r: Response, onEvent: (e: ChatEvent) => void): Promise<void> {
   const reader = r.body?.getReader();
   if (!reader) return;
   const dec = new TextDecoder();
@@ -317,6 +313,80 @@ export async function streamChat(session: string, text: string, onEvent: (e: Cha
     }
   }
 }
+
+export async function streamChat(session: string, text: string, onEvent: (e: ChatEvent) => void): Promise<void> {
+  const r = await fetch(`${BASE}/api/chat/stream`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ session, text }),
+  });
+  if (!r.ok) throw new ApiError(await detailOf(r), r.status);
+  await readSse(r, onEvent);
+}
+
+// ---- teleop (operator remote control) -----------------------------------------------------
+// 这个会话里大脑会看到的工具单：身体的动词（read / primitive / skill）+ 工具节点的函数。
+// 遥控面板照着它生成表单——⛔ 前端不知道任何具体身体有哪些动词，全从这里读。
+export type ToolKind = "read" | "primitive" | "skill";
+export type ToolSheetEntry = {
+  name: string;
+  kind: ToolKind;
+  origin: "body" | "tool";
+  node: string;
+  description: string;
+  parameters: JsonSchema;
+};
+
+// 工具参数的 JSON Schema（只列表单生成用得到的那几个字段）
+export type JsonSchema = {
+  type?: string;
+  description?: string;
+  properties?: Record<string, JsonSchema>;
+  required?: string[];
+  enum?: (string | number)[];
+  minimum?: number;
+  maximum?: number;
+  default?: unknown;
+  additionalProperties?: JsonSchema | boolean;
+};
+
+export async function getSessionTools(id: string): Promise<ToolSheetEntry[]> {
+  const r = await fetch(`${BASE}/api/sessions/${encodeURIComponent(id)}/tools`);
+  if (!r.ok) throw new ApiError(await detailOf(r), r.status);
+  return (await r.json()) as ToolSheetEntry[];
+}
+
+// 操作员直接调一个工具。同一道闸门、同一批节点、同一份日志，事件与 chat 流完全一样
+// （start · gate · progress · tool_result · done）；这一步会记进会话，大脑下一回合看得到。
+export async function streamTeleop(
+  id: string,
+  name: string,
+  args: Record<string, unknown>,
+  onEvent: (e: ChatEvent) => void,
+): Promise<void> {
+  const r = await fetch(`${BASE}/api/sessions/${encodeURIComponent(id)}/teleop`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ name, arguments: args }),
+  });
+  if (!r.ok) throw new ApiError(await detailOf(r), r.status);
+  await readSse(r, onEvent);
+}
+
+// ---- world node (direct) ------------------------------------------------------------------
+// 世界节点自己的传感器清单（GET <worldurl>/sensors）。相机名形如 "camera:<mujoco 相机名>"；
+// 对应的连续视频在 <worldurl>/stream/<去掉 camera: 前缀的名字>。这些都是给人看的，大脑看不到。
+export const WORLD_CAMERA_PREFIX = "camera:";
+
+export async function getWorldSensors(worldUrl: string): Promise<string[]> {
+  const r = await fetch(`${worldUrl}/sensors`);
+  if (!r.ok) throw new ApiError(await detailOf(r), r.status);
+  const j = (await r.json()) as { sensors?: string[] };
+  return j.sensors ?? [];
+}
+
+export const worldCameraStreamUrl = (worldUrl: string, sensor: string) =>
+  `${worldUrl}/stream/${encodeURIComponent(sensor.startsWith(WORLD_CAMERA_PREFIX) ? sensor.slice(WORLD_CAMERA_PREFIX.length) : sensor)}`;
 
 // ---- perception --------------------------------------------------------------------------
 // 大脑此刻会看到的东西：身体自己的感官 + 会话声明的环境流。每一路都带名字。
