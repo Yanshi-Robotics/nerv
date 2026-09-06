@@ -285,6 +285,7 @@
     "⚠ The world node restarted under this session (different physics now). Start a new session to continue.": "⚠ The world node restarted under this session (different physics now). Start a new session to continue.",
     "👁 Observation the brain received": "👁 Observation the brain received",
     "💭 Reasoning": "💭 Reasoning",
-    "🔒 This session is frozen and read-only. Create a new one to continue.": "🔒 This session is frozen and read-only. Create a new one to continue."
+    "🔒 This session is frozen and read-only. Create a new one to continue.": "🔒 This session is frozen and read-only. Create a new one to continue.",
+    "Pages": "Pages"
   }
 }

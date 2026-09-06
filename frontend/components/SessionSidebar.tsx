@@ -100,6 +100,8 @@ export default function SessionSidebar({
   const selectCls = "w-full rounded-md border border-neutral-700 bg-neutral-800 px-2 py-1 text-xs text-neutral-200 disabled:opacity-50";
   const iconBtn =
     "flex h-9 w-9 items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500";
+  const navRow =
+    "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500";
 
   // ---------------- 收起态：一条竖的图标带 ----------------
   if (collapsed) {
@@ -121,6 +123,7 @@ export default function SessionSidebar({
         </div>
         <div className="mt-auto flex flex-col items-center gap-1 pb-1">
           <ThemeToggle />
+          <LangToggle />
         </div>
       </aside>
     );
@@ -256,17 +259,17 @@ export default function SessionSidebar({
       </div>
 
       <div className="shrink-0 border-t border-neutral-800">
-        <div className="flex items-center gap-1.5 px-3 pt-2">
+        <nav className="flex flex-col px-2 pt-2" aria-label={t("Pages")}>
+          <a href="/nerv/" className={navRow} title={t("NERV dashboard")}>
+            <DashboardIcon /> <span>{t("Dashboard")}</span>
+          </a>
+          <a href="/session-logs/" className={navRow} title="Session Logs">
+            <LogsIcon /> <span>{t("Logs")}</span>
+          </a>
+        </nav>
+        <div className="flex items-center gap-2 px-3 pt-2">
           <ThemeToggle />
           <LangToggle />
-          <span className="ml-auto flex items-center gap-2 text-[11px]">
-            <a href="/nerv/" className="flex items-center gap-1 text-neutral-500 transition-colors hover:text-neutral-200" title={t("NERV dashboard")}>
-              <DashboardIcon /> {t("Dashboard")}
-            </a>
-            <a href="/session-logs/" className="flex items-center gap-1 text-neutral-500 transition-colors hover:text-neutral-200" title="Session Logs">
-              <LogsIcon /> {t("Logs")}
-            </a>
-          </span>
         </div>
         <RuntimeParamsBar />
       </div>

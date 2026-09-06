@@ -306,7 +306,8 @@ export const LOCALES: Record<string, Locale> = {
       "⚠ The world node restarted under this session (different physics now). Start a new session to continue.": "⚠ The world node restarted under this session (different physics now). Start a new session to continue.",
       "👁 Observation the brain received": "👁 Observation the brain received",
       "💭 Reasoning": "💭 Reasoning",
-      "🔒 This session is frozen and read-only. Create a new one to continue.": "🔒 This session is frozen and read-only. Create a new one to continue."
+      "🔒 This session is frozen and read-only. Create a new one to continue.": "🔒 This session is frozen and read-only. Create a new one to continue.",
+      "Pages": "Pages"
     }
   },
   "zh": {
@@ -596,7 +597,8 @@ export const LOCALES: Record<string, Locale> = {
       "⚠ The world node restarted under this session (different physics now). Start a new session to continue.": "⚠ 这个会话底下的世界节点重启过（物理已经不是原来的了）。新建一个会话继续。",
       "👁 Observation the brain received": "👁 大脑收到的观察",
       "💭 Reasoning": "💭 思考",
-      "🔒 This session is frozen and read-only. Create a new one to continue.": "🔒 这个会话已冻结、只读。新建一个会话继续。"
+      "🔒 This session is frozen and read-only. Create a new one to continue.": "🔒 这个会话已冻结、只读。新建一个会话继续。",
+      "Pages": "页面"
     }
   }
 };
