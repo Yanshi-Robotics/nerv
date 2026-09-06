@@ -2,8 +2,10 @@
 import { useCallback, useEffect, useState } from "react";
 
 import ChatPanel from "@/components/ChatPanel";
+import NervDashboard from "@/components/NervDashboard";
 import SensingArea from "@/components/SensingArea";
-import SessionSidebar from "@/components/SessionSidebar";
+import SessionLogsView from "@/components/SessionLogsView";
+import SessionSidebar, { type Panel } from "@/components/SessionSidebar";
 import { useI18n } from "@/lib/i18n";
 import { getNodes, getRegistry, listSessions, POLL_NODES_MS, type NodeInfo, type Registry, type SessionSummary } from "@/lib/api";
 
@@ -17,6 +19,8 @@ export default function Home() {
   const [sessions, setSessions] = useState<SessionSummary[]>([]);
   const [currentId, setCurrentId] = useState("");
   const [collapsed, setCollapsed] = useState(false);
+  // 右边那两栏显示什么：会话（感知区 + 对话）、Dashboard、Logs。侧栏一直在，不跳页。
+  const [panel, setPanel] = useState<Panel>("session");
 
   // 预渲染阶段拿不到 localStorage，挂载后再对齐一次；此后每次切换都存回去。
   useEffect(() => {
@@ -77,24 +81,44 @@ export default function Home() {
         currentId={currentId}
         collapsed={collapsed}
         onToggleCollapsed={toggleCollapsed}
-        onSelect={setCurrentId}
+        panel={panel}
+        onPanel={setPanel}
+        onSelect={(id) => {
+          setCurrentId(id);
+          setPanel("session");
+        }}
         onChanged={async (id) => {
           const s = await refreshSessions();
           await refreshNodes(); // 新会话可能刚起了节点
-          if (id) setCurrentId(id);
-          else setCurrentId((cur) => (s.find((x) => x.id === cur) ? cur : s[0]?.id ?? ""));
+          if (id) {
+            setCurrentId(id);
+            setPanel("session"); // a freshly created session is what you want to look at
+          } else setCurrentId((cur) => (s.find((x) => x.id === cur) ? cur : s[0]?.id ?? ""));
         }}
       />
 
-      {current ? (
-        <SensingArea session={current} bodyNode={bodyNode} worldNode={worldNode} />
-      ) : (
-        <div className="flex min-w-0 items-center justify-center overflow-hidden bg-neutral-950 p-8 text-center text-sm text-neutral-600">
-          {t("Pick a session on the left, or create one.")}
+      {panel === "dashboard" && (
+        <div className="col-span-2 min-h-0 min-w-0 overflow-hidden">
+          <NervDashboard embedded onOpenLogs={() => setPanel("logs")} />
         </div>
       )}
-
-      <ChatPanel session={current} brains={registry?.brains ?? []} bodyNode={bodyNode} onSessionsChanged={refreshSessions} />
+      {panel === "logs" && (
+        <div className="col-span-2 min-h-0 min-w-0 overflow-hidden">
+          <SessionLogsView embedded sessionId={current?.id ?? ""} />
+        </div>
+      )}
+      {panel === "session" && (
+        <>
+          {current ? (
+            <SensingArea session={current} bodyNode={bodyNode} worldNode={worldNode} />
+          ) : (
+            <div className="flex min-w-0 items-center justify-center overflow-hidden bg-neutral-950 p-8 text-center text-sm text-neutral-600">
+              {t("Pick a session on the left, or create one.")}
+            </div>
+          )}
+          <ChatPanel session={current} brains={registry?.brains ?? []} bodyNode={bodyNode} onSessionsChanged={refreshSessions} />
+        </>
+      )}
     </main>
   );
 }

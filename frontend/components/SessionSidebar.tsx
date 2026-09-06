@@ -14,11 +14,16 @@ const CONVERSATION_ONLY = ""; // world 选中值空串 = 只聊天，不起身�
 //   展开 ≈ 240px：NERV 字标 + 折叠键 / 新建会话 / 会话列表 / 底部：主题、语言、两个小链接、运行上限
 //   收起 ≈ 56px：展开键 + 一列带提示的图标键（新建、仪表盘、日志、主题）；列表和上限藏起来
 // 折叠状态由 app/page.tsx 持有（栅格列宽要跟着变），存 localStorage 的 `nerv-sidebar`。
+// 右侧显示的面板；Dashboard 和 Logs 不是跳页，是换掉右边两栏，侧栏不动。
+export type Panel = "session" | "dashboard" | "logs";
+
 export default function SessionSidebar({
   sessions,
   registry,
   currentId,
   collapsed,
+  panel,
+  onPanel,
   onToggleCollapsed,
   onSelect,
   onChanged,
@@ -27,6 +32,8 @@ export default function SessionSidebar({
   registry: Registry | null;
   currentId: string;
   collapsed: boolean;
+  panel: Panel;
+  onPanel: (p: Panel) => void;
   onToggleCollapsed: () => void;
   onSelect: (id: string) => void;
   onChanged: (id?: string) => void;
@@ -107,7 +114,7 @@ export default function SessionSidebar({
   if (collapsed) {
     return (
       <aside className="flex h-screen flex-col items-center overflow-hidden border-r border-neutral-800 bg-neutral-900 py-2">
-        <BrandMark className="mb-1 mt-1 h-7" />
+        <BrandMark className="relative -top-px mb-1 mt-1 h-7" />
         <button onClick={onToggleCollapsed} title={t("Expand sidebar")} aria-label={t("Expand sidebar")} aria-expanded={false} className={iconBtn}>
           <PanelIcon />
         </button>
@@ -115,12 +122,14 @@ export default function SessionSidebar({
           <button onClick={openForm} title={t("New session")} aria-label={t("New session")} className={`${iconBtn} text-blue-400 hover:text-blue-300`}>
             <PlusIcon />
           </button>
-          <a href="/nerv/" title={t("NERV dashboard")} aria-label={t("NERV dashboard")} className={iconBtn}>
+          <button onClick={() => onPanel("dashboard")} title={t("NERV dashboard")} aria-label={t("NERV dashboard")} aria-pressed={panel === "dashboard"}
+            className={`${iconBtn} ${panel === "dashboard" ? "bg-neutral-800 text-neutral-100" : ""}`}>
             <DashboardIcon />
-          </a>
-          <a href="/session-logs/" title="Session Logs" aria-label="Session Logs" className={iconBtn}>
+          </button>
+          <button onClick={() => onPanel("logs")} title="Session Logs" aria-label="Session Logs" aria-pressed={panel === "logs"}
+            className={`${iconBtn} ${panel === "logs" ? "bg-neutral-800 text-neutral-100" : ""}`}>
             <LogsIcon />
-          </a>
+          </button>
         </div>
         <div className="mt-auto flex flex-col items-center gap-1 pb-1">
           <ThemeToggle />
@@ -134,7 +143,7 @@ export default function SessionSidebar({
   return (
     <aside className="flex h-screen flex-col overflow-hidden border-r border-neutral-800 bg-neutral-900">
       <div className="flex items-center justify-between border-b border-neutral-800 py-2 pl-3 pr-1.5">
-        <span className="flex items-center gap-2 text-sm font-semibold tracking-wide text-neutral-200"><BrandMark className="h-7" /> NERV</span>
+        <span className="flex items-center gap-2 text-sm font-semibold tracking-wide text-neutral-200"><BrandMark className="relative -top-[3px] h-7" /> NERV</span>
         <button onClick={onToggleCollapsed} title={t("Collapse sidebar")} aria-label={t("Collapse sidebar")} aria-expanded={true}
           className="flex h-7 w-7 items-center justify-center rounded-md text-neutral-500 transition-colors hover:bg-neutral-800 hover:text-neutral-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
           <PanelIcon />
@@ -261,12 +270,12 @@ export default function SessionSidebar({
 
       <div className="shrink-0 border-t border-neutral-800">
         <nav className="flex flex-col px-2 pt-2" aria-label={t("Pages")}>
-          <a href="/nerv/" className={navRow} title={t("NERV dashboard")}>
+          <button onClick={() => onPanel("dashboard")} className={`${navRow} ${panel === "dashboard" ? "bg-neutral-800 text-neutral-100" : ""}`} title={t("NERV dashboard")} aria-pressed={panel === "dashboard"}>
             <DashboardIcon /> <span>{t("Dashboard")}</span>
-          </a>
-          <a href="/session-logs/" className={navRow} title="Session Logs">
+          </button>
+          <button onClick={() => onPanel("logs")} className={`${navRow} ${panel === "logs" ? "bg-neutral-800 text-neutral-100" : ""}`} title="Session Logs" aria-pressed={panel === "logs"}>
             <LogsIcon /> <span>{t("Logs")}</span>
-          </a>
+          </button>
         </nav>
         <div className="flex items-center gap-2 px-3 pt-2">
           <ThemeToggle />
