@@ -329,7 +329,15 @@ export const LOCALES: Record<string, Locale> = {
       "released the hold (fallen); standing": "released the hold (fallen); standing",
       "not holding": "not holding",
       "the body is down; releasing would only make it thrash. Reset the world (simulation) or stand it up first (hardware)": "the body is down; releasing would only make it thrash. Reset the world (simulation) or stand it up first (hardware)",
-      "body back at the spawn pose": "body back at the spawn pose"
+      "body back at the spawn pose": "body back at the spawn pose",
+      "Adjust the chase camera": "Adjust the chase camera",
+      "Zoom in": "Zoom in",
+      "Zoom out": "Zoom out",
+      "Orbit left": "Orbit left",
+      "Orbit right": "Orbit right",
+      "Tilt up": "Tilt up",
+      "Tilt down": "Tilt down",
+      "Default view": "Default view"
     }
   },
   "zh": {
@@ -642,7 +650,15 @@ export const LOCALES: Record<string, Locale> = {
       "released the hold (fallen); standing": "已放开（摔倒）；站立中",
       "not holding": "没有锁姿",
       "the body is down; releasing would only make it thrash. Reset the world (simulation) or stand it up first (hardware)": "身体倒着，放开只会让它乱蹬。先复位世界（仿真）或把它扶起来（真机）",
-      "body back at the spawn pose": "身体已回到出生姿态"
+      "body back at the spawn pose": "身体已回到出生姿态",
+      "Adjust the chase camera": "调整追拍视角",
+      "Zoom in": "拉近",
+      "Zoom out": "拉远",
+      "Orbit left": "左旋转",
+      "Orbit right": "右旋转",
+      "Tilt up": "上旋转",
+      "Tilt down": "下旋转",
+      "Default view": "恢复默认视角"
     }
   }
 };

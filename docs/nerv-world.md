@@ -44,7 +44,7 @@ pose/room/truth keys is refused by the platform (`platform/observe.py`).
 | `GET /status` | ground truth: base pose, yaw, tilt, fallen, room; for people and tests |
 | `GET /sensors` · `GET /sensors/{name}` | stream list · one JPEG frame |
 | `POST /reset` | back to the spawn pose |
-| `GET /stream` · `GET /stream/{camera}` | MJPEG chase camera (operator only) · a model camera |
+| `GET /stream?zoom=1&yaw=0&pitch=0` · `GET /stream/{camera}` | MJPEG chase camera (operator only; `zoom` scales the distance, `yaw`/`pitch` in degrees swing and tilt it around the body, all clamped, nothing remembered) · a model camera |
 
 Launch: `nerv node world -- --world apt2 --body humanoid-unitree-g1 --http-port P --bus-port Q`,
 or let the platform do it when a session is created. Registry: `worlds/<name>/world.yaml`

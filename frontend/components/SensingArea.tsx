@@ -4,7 +4,10 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 import { useI18n } from "@/lib/i18n";
 import {
   getPerception,
+  DEFAULT_CHASE_VIEW,
   getWorldSensors,
+  worldChaseStreamUrl,
+  type ChaseView,
   POLL_PERCEIVE_MS,
   worldCameraStreamUrl,
   type NodeInfo,
@@ -64,6 +67,13 @@ export default function SensingArea({
   const bodyOnline = !!bodyNode?.online;
   const worldOnline = !!worldNode?.online;
   const worldUrl = worldNode?.url ?? "";
+  // 追拍相机的手动视角。住在这一层而不是瓦片里：放大瓦片会重挂子组件，视角不该因此跳回去；
+  // 但把第三人称视图关掉再打开、或换会话，就要回到默认——那是有意的。
+  const [chase, setChase] = useState<ChaseView>(DEFAULT_CHASE_VIEW);
+  const chaseOpen = views.includes(VIEW_WORLD);
+  useEffect(() => {
+    if (!chaseOpen) setChase(DEFAULT_CHASE_VIEW);
+  }, [chaseOpen, session?.id]);
 
   // 视图选择按会话持久化
   useEffect(() => {
@@ -183,8 +193,11 @@ export default function SensingArea({
           sub: t("the brain never sees this"),
           muted: true,
           body: (
-            <Stream nonce={nonce} url={worldOnline && worldNode ? `${worldNode.url}/stream` : null} alt={t("World chase (operator only)")}
-              missing={worldNode ? t("world node offline") : t("world node not launched")} muted />
+            <div className="relative flex h-full w-full items-center justify-center">
+              <Stream nonce={nonce} url={worldOnline && worldNode ? worldChaseStreamUrl(worldNode.url, chase) : null} alt={t("World chase (operator only)")}
+                missing={worldNode ? t("world node offline") : t("world node not launched")} muted />
+              {worldOnline && worldNode && <ChaseControls view={chase} onChange={setChase} />}
+            </div>
           ),
         });
       } else if (v.startsWith(CAM_VIEW_PREFIX)) {
@@ -203,7 +216,7 @@ export default function SensingArea({
       }
     }
     return out;
-  }, [session, hasBody, views, perc, err, bodyNode, worldNode, bodyOnline, worldOnline, worldSensors, nonce, t]);
+  }, [session, hasBody, views, perc, err, bodyNode, worldNode, bodyOnline, worldOnline, worldSensors, nonce, t, chase]);
 
   // Esc 关掉放大的那一格
   useEffect(() => {
@@ -357,6 +370,33 @@ function Stream({ url, alt, missing, nonce, muted = false }: { url: string | nul
     // eslint-disable-next-line @next/next/no-img-element
     return <img key={`${url}#${nonce}`} src={url} alt={alt} onError={() => setFailed(true)} className={`max-h-full max-w-full object-contain ${muted ? "opacity-80" : ""}`} />;
   return <span className="p-4 text-[11px] text-neutral-600">{url ? t("(this node offers no video stream)") : missing}</span>;
+}
+
+// 追拍相机的手动视角条：拉远/拉近、左右旋、上下旋、恢复默认。每一步的量是定值，
+// 范围由世界节点夹住（它只认查询参数，什么都不记）。
+const CHASE_ZOOM_STEP = 1.25; // 每按一下距离 ×/÷ 这个倍数
+const CHASE_YAW_STEP = 15; // 每按一下绕身体转这么多度
+const CHASE_PITCH_STEP = 10; // 每按一下俯仰这么多度
+const CHASE_YAW_WRAP = 360;
+
+function ChaseControls({ view, onChange }: { view: ChaseView; onChange: (v: ChaseView) => void }) {
+  const { t } = useI18n();
+  const isDefault = view.zoom === DEFAULT_CHASE_VIEW.zoom && view.yaw === DEFAULT_CHASE_VIEW.yaw && view.pitch === DEFAULT_CHASE_VIEW.pitch;
+  const btn = "flex h-7 w-7 items-center justify-center rounded-md bg-neutral-900/80 text-[13px] text-neutral-300 backdrop-blur hover:bg-neutral-700 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-40";
+  const set = (patch: Partial<ChaseView>) => onChange({ ...view, ...patch });
+  return (
+    <div className="absolute bottom-1.5 right-1.5 flex items-center gap-1 rounded-lg border border-neutral-800 bg-neutral-950/60 p-1" role="group" aria-label={t("Adjust the chase camera")}>
+      <button className={btn} onClick={() => set({ zoom: view.zoom / CHASE_ZOOM_STEP })} title={t("Zoom in")} aria-label={t("Zoom in")}>＋</button>
+      <button className={btn} onClick={() => set({ zoom: view.zoom * CHASE_ZOOM_STEP })} title={t("Zoom out")} aria-label={t("Zoom out")}>－</button>
+      <span className="mx-0.5 h-4 w-px bg-neutral-700" />
+      <button className={btn} onClick={() => set({ yaw: (view.yaw - CHASE_YAW_STEP + CHASE_YAW_WRAP) % CHASE_YAW_WRAP })} title={t("Orbit left")} aria-label={t("Orbit left")}>◀</button>
+      <button className={btn} onClick={() => set({ yaw: (view.yaw + CHASE_YAW_STEP) % CHASE_YAW_WRAP })} title={t("Orbit right")} aria-label={t("Orbit right")}>▶</button>
+      <button className={btn} onClick={() => set({ pitch: view.pitch + CHASE_PITCH_STEP })} title={t("Tilt up")} aria-label={t("Tilt up")}>▲</button>
+      <button className={btn} onClick={() => set({ pitch: view.pitch - CHASE_PITCH_STEP })} title={t("Tilt down")} aria-label={t("Tilt down")}>▼</button>
+      <span className="mx-0.5 h-4 w-px bg-neutral-700" />
+      <button className={btn} onClick={() => onChange(DEFAULT_CHASE_VIEW)} disabled={isDefault} title={t("Default view")} aria-label={t("Default view")}>⟲</button>
+    </div>
+  );
 }
 
 function ExpandIcon() {

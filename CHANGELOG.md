@@ -11,6 +11,11 @@ brain's observation; mutating verbs are refused while held. Platform: `POST /api
 `/release`, `/reset` (spawn pose, simulated worlds), each written into the session as an operator
 line. Web: an E-STOP row in the remote control with Release and Reset world.
 
+The chase camera can be nudged: `GET /stream?zoom=&yaw=&pitch=` on the world node scales the
+distance and swings / tilts the view around the body (clamped by `chase_zoom_*`, `chase_pitch_*`);
+the web's third-person tile carries zoom in/out, orbit left/right, tilt up/down and a default
+button. The nudge lives only in the open view — close the view and it is the default again.
+
 ## [0.1.1] — 2026-09-03
 
 Self-contained checkout. `worlds/` is now the `nerv-world` submodule (the scene library formerly

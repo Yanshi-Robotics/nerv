@@ -308,6 +308,14 @@
     "released the hold (fallen); standing": "released the hold (fallen); standing",
     "not holding": "not holding",
     "the body is down; releasing would only make it thrash. Reset the world (simulation) or stand it up first (hardware)": "the body is down; releasing would only make it thrash. Reset the world (simulation) or stand it up first (hardware)",
-    "body back at the spawn pose": "body back at the spawn pose"
+    "body back at the spawn pose": "body back at the spawn pose",
+    "Adjust the chase camera": "Adjust the chase camera",
+    "Zoom in": "Zoom in",
+    "Zoom out": "Zoom out",
+    "Orbit left": "Orbit left",
+    "Orbit right": "Orbit right",
+    "Tilt up": "Tilt up",
+    "Tilt down": "Tilt down",
+    "Default view": "Default view"
   }
 }

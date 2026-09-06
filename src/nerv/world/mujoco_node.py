@@ -56,6 +56,10 @@ DEFAULT_PHYSICS: dict[str, Any] = {
     "chase_up_m": 1.0,
     "chase_clear_m": 0.15,       # when a wall blocks the chase camera, stop this far before it
     "chase_min_m": 0.8,          # …but never closer than this (inside the robot otherwise)
+    "chase_zoom_min": 0.4,       # operator zoom on /stream: distance × zoom, clamped to this range
+    "chase_zoom_max": 4.0,
+    "chase_pitch_min_deg": -85.0,  # operator pitch on /stream: elevation clamped to this range
+    "chase_pitch_max_deg": 20.0,   # (positive = looking up from below the lookat point)
     "render_timeout_s": 10.0,    # a render request that takes longer than this is reported failed
     "sim_dead_wall_s": 5.0,      # /health reports the physics thread dead after this much silence
 }
@@ -602,11 +606,14 @@ class WorldSim:
             return r.render().copy(), t
         return self.render.run(job)
 
-    def render_chase(self) -> tuple[np.ndarray, float]:
-        """Third-person view from behind and above the chase body. Humans only, never the brain."""
+    def render_chase(self, zoom: float = 1.0, yaw_deg: float = 0.0, pitch_deg: float = 0.0) -> tuple[np.ndarray, float]:
+        """Third-person view from behind and above the chase body. Humans only, never the brain.
+        The operator may nudge it: `zoom` scales the distance, `yaw_deg` swings the camera around
+        the body, `pitch_deg` tilts it; all three are clamped and none of it is remembered."""
         cam, opt = self._chase_cam, self._chase_opt
         back_m = float(self.spawn_extra.get("chase_back_m") or self.phys["chase_back_m"])
         up_m = float(self.spawn_extra.get("chase_up_m") or self.phys["chase_up_m"])
+        zoom = max(float(self.phys["chase_zoom_min"]), min(float(self.phys["chase_zoom_max"]), float(zoom)))
 
         def job(r: mujoco.Renderer):
             with self._lock:
@@ -615,9 +622,11 @@ class WorldSim:
                 _xyz, _q, yaw = self._base_pose()
                 cam.lookat[:] = pos
                 # azimuth is "where the camera looks", so it equals the heading: camera stays behind
-                cam.azimuth = math.degrees(yaw)
-                cam.elevation = -math.degrees(math.atan2(up_m, back_m))
-                want = math.hypot(back_m, up_m)
+                cam.azimuth = math.degrees(yaw) + float(yaw_deg)
+                cam.elevation = max(float(self.phys["chase_pitch_min_deg"]),
+                                    min(float(self.phys["chase_pitch_max_deg"]),
+                                        -math.degrees(math.atan2(up_m, back_m)) + float(pitch_deg)))
+                want = math.hypot(back_m, up_m) * zoom
                 el, az = math.radians(cam.elevation), math.radians(cam.azimuth)
                 back = np.array([-math.cos(el) * math.cos(az), -math.cos(el) * math.sin(az), math.sin(-el)])
                 hit = self._ray(pos, back) if self.spawned else -1.0
@@ -745,10 +754,12 @@ def build_app(sim: WorldSim, cors_origins: list[str]):
         return StreamingResponse(gen(), media_type="multipart/x-mixed-replace; boundary=frame")
 
     @app.get("/stream")
-    async def stream():
+    async def stream(zoom: float = 1.0, yaw: float = 0.0, pitch: float = 0.0):
+        """Chase camera; the operator's nudges ride as query parameters so nothing is remembered:
+        close the view and reopen it, and it is the default view again."""
         if not sim.phys["third_person"]:
             return JSONResponse({"ok": False, "error": "third_person is off in world.yaml"}, status_code=404)
-        return _mjpeg(sim.render_chase)
+        return _mjpeg(lambda: sim.render_chase(zoom, yaw, pitch))
 
     @app.get("/stream/{camera}")
     async def stream_camera(camera: str):
