@@ -212,6 +212,29 @@ def interrupt_session(sid: str) -> dict:
     return {"ok": True}
 
 
+@app.post("/api/sessions/{sid}/estop")
+def estop_session(sid: str) -> dict:
+    """Emergency stop that keeps the pose: the body latches its joints and stops thinking. Not a power cut."""
+    if not nerv.store.exists(sid):
+        raise HTTPException(404, "no such session")
+    return nerv.estop(sid)
+
+
+@app.post("/api/sessions/{sid}/release")
+def release_session(sid: str) -> dict:
+    if not nerv.store.exists(sid):
+        raise HTTPException(404, "no such session")
+    return nerv.release(sid)
+
+
+@app.post("/api/sessions/{sid}/reset")
+def reset_session_world(sid: str) -> dict:
+    """Back to the spawn pose (simulated worlds only); lifts the hold."""
+    if not nerv.store.exists(sid):
+        raise HTTPException(404, "no such session")
+    return nerv.reset_world(sid)
+
+
 @app.post("/api/sessions/{sid}/brain")
 def set_brain(sid: str, inp: BrainIn) -> dict:
     if not nerv.store.exists(sid):

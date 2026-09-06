@@ -17,11 +17,13 @@ four channels over MCP, and a control plane over plain HTTP that the brain never
 
 | Method · path | What |
 |---|---|
-| `GET /health` | `{ok, node:"body", body, family, version, world, bus, armed, epoch}` |
+| `GET /health` | `{ok, node:"body", body, family, version, world, bus, armed, held, epoch}` |
 | `GET /status` | the family's diagnostic view (joint state, last action); for people |
 | `GET /sensors` | `{sensors:[...]}` streams the body carries |
 | `GET /config` · `POST /config {key, value}` | read / change options; `armed` is always one of them |
 | `POST /stop` | stop the running skill |
+| `POST /hold {reason?}` | **emergency stop that keeps the pose**: the family latches the targets it is tracking and stops thinking; mutating verbs are refused until released. Not a power cut — the joints stay commanded (a powered-off servo robot goes limp). A legged body is first told to stand and latched once still (`hold_settle_s`, `hold_still_rad_s`); a fallen body latches at once, and a fall latches the hold by itself (a gait policy fed a fallen body only thrashes). |
+| `POST /release` | lift the hold; refused while the body is down (reset the world, or stand it up) |
 | `GET /stream` · `GET /snapshot` | MJPEG / one JPEG of the first camera |
 
 ## Verbs: primitives and skills

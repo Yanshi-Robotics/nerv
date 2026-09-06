@@ -310,7 +310,26 @@ export const LOCALES: Record<string, Locale> = {
       "Pages": "Pages",
       "Robot's own view": "Robot's own view",
       "Third-person view": "Third-person view",
-      "running…": "running…"
+      "running…": "running…",
+      "Emergency stop": "Emergency stop",
+      "E-STOP": "E-STOP",
+      "Hold the pose now: the body stops thinking and keeps every joint where it is. Not a power cut — the servos stay on.": "Hold the pose now: the body stops thinking and keeps every joint where it is. Not a power cut — the servos stay on.",
+      "HOLDING — the body keeps its pose and refuses every move": "HOLDING — the body keeps its pose and refuses every move",
+      "free — hold the pose at any moment, running or not": "free — hold the pose at any moment, running or not",
+      "Let the body move again (refused while it is down — reset the world or stand it up first)": "Let the body move again (refused while it is down — reset the world or stand it up first)",
+      "Release": "Release",
+      "Back to the spawn pose (simulated world only). Lifts the hold.": "Back to the spawn pose (simulated world only). Lifts the hold.",
+      "Reset world": "Reset world",
+      "Put the body back at its spawn pose? Only a simulated world can do this; the brain is told.": "Put the body back at its spawn pose? Only a simulated world can do this; the brain is told.",
+      "holding the pose (emergency stop)": "holding the pose (emergency stop)",
+      "holding the pose after a fall": "holding the pose after a fall",
+      "already holding the pose (operator)": "already holding the pose (operator)",
+      "already holding the pose (fallen)": "already holding the pose (fallen)",
+      "released the hold (operator); standing": "released the hold (operator); standing",
+      "released the hold (fallen); standing": "released the hold (fallen); standing",
+      "not holding": "not holding",
+      "the body is down; releasing would only make it thrash. Reset the world (simulation) or stand it up first (hardware)": "the body is down; releasing would only make it thrash. Reset the world (simulation) or stand it up first (hardware)",
+      "body back at the spawn pose": "body back at the spawn pose"
     }
   },
   "zh": {
@@ -604,7 +623,26 @@ export const LOCALES: Record<string, Locale> = {
       "Pages": "页面",
       "Robot's own view": "机器人自己的视角",
       "Third-person view": "第三方观测视角",
-      "running…": "执行中…"
+      "running…": "执行中…",
+      "Emergency stop": "急停",
+      "E-STOP": "急停",
+      "Hold the pose now: the body stops thinking and keeps every joint where it is. Not a power cut — the servos stay on.": "立刻锁住姿态：身体停止思考，每个关节停在原处。不是断电——电机仍在出力。",
+      "HOLDING — the body keeps its pose and refuses every move": "锁姿中——身体保持姿态，拒绝一切动作",
+      "free — hold the pose at any moment, running or not": "未锁——随时可以锁姿，不管有没有动作在跑",
+      "Let the body move again (refused while it is down — reset the world or stand it up first)": "放开，让身体能再动（倒地时会被拒绝——先复位世界或把它扶起来）",
+      "Release": "放开",
+      "Back to the spawn pose (simulated world only). Lifts the hold.": "回到出生姿态（只有仿真世界能做），同时解除锁姿。",
+      "Reset world": "复位世界",
+      "Put the body back at its spawn pose? Only a simulated world can do this; the brain is told.": "把身体放回出生姿态？只有仿真世界能做；大脑会被告知。",
+      "holding the pose (emergency stop)": "锁姿中（急停）",
+      "holding the pose after a fall": "摔倒后锁姿中",
+      "already holding the pose (operator)": "已经在锁姿（急停）",
+      "already holding the pose (fallen)": "已经在锁姿（摔倒）",
+      "released the hold (operator); standing": "已放开（急停）；站立中",
+      "released the hold (fallen); standing": "已放开（摔倒）；站立中",
+      "not holding": "没有锁姿",
+      "the body is down; releasing would only make it thrash. Reset the world (simulation) or stand it up first (hardware)": "身体倒着，放开只会让它乱蹬。先复位世界（仿真）或把它扶起来（真机）",
+      "body back at the spawn pose": "身体已回到出生姿态"
     }
   }
 };

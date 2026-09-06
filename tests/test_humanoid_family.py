@@ -142,3 +142,49 @@ def test_walk_and_turn(humanoid):
     assert images and images[0][0] == "camera:head" and images[0][1][:8] == b"\x89PNG\r\n\x1a\n"
     tools = {t["name"] for t in body.tools()}
     assert tools == {"move_forward", "turn_left", "turn_right"}
+
+
+HOLD_SETTLE_S = 1.0           # sim seconds to watch the held pose
+HOLD_DRIFT_RAD = 0.15         # a held joint may sag this much under gravity and no more
+
+
+def test_hold_keeps_the_pose_and_reset_lifts_it(humanoid):
+    """Emergency stop: the pose is latched, the skill ends, moves are refused, joints stay put;
+    a world reset (spawn pose) lifts the hold by itself."""
+    import threading
+    body, base = humanoid["body"], humanoid["http"]
+    time.sleep(STABILISE_S)
+    assert not body.held
+
+    out: dict = {}
+    th = threading.Thread(target=lambda: out.update(body.invoke("move_forward", meters=2.0)))
+    th.start()
+    time.sleep(0.6)
+    r = body.hold("operator")
+    th.join(timeout=10)
+    assert not th.is_alive(), "the skill did not end after hold"
+    assert r["ok"] and r["held"] and body.held
+    assert not out["ok"] and out["data"]["reason"] in ("stopped", "held"), out
+    print(f"\n[humanoid] hold while walking: skill ended with {out['data']['reason']} after {out['data']['moved_m']} m")
+
+    at_latch = list(body.bus.read().joint_pos)
+    body._sleep_sim(HOLD_SETTLE_S, lambda: False)
+    st = body.bus.read()
+    drifts = sorted(((abs(a - b), jn) for a, b, jn in zip(st.joint_pos, at_latch, body.policy.joint_names)), reverse=True)
+    print(f"[humanoid] held {HOLD_SETTLE_S} s: joint drift {[(jn, round(d, 3)) for d, jn in drifts[:3]]} rad, "
+          f"fallen={body._fallen(st)}")
+    assert drifts[0][0] < HOLD_DRIFT_RAD, "the held pose drifted"
+    assert body.status()["held"] and body.observe()[0]["held"]
+
+    r = body.invoke("turn_left", degrees=30)
+    assert not r["ok"] and "holding" in r["message"], r
+
+    assert httpx.post(base + "/reset", timeout=5).json()["ok"]
+    t0 = time.time()
+    while body.held and time.time() - t0 < 5:
+        time.sleep(0.05)
+    assert not body.held, "reset did not lift the hold"
+    time.sleep(STABILISE_S)
+    st = body.status()
+    assert st["state"] and not st["state"]["fallen"], f"not standing after reset: {st}"
+    print(f"[humanoid] reset lifted the hold; standing again at {_god(base).get('base')}")

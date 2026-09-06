@@ -51,6 +51,7 @@ class ArmBody:
                          (s.get("camera", "") if isinstance(s, dict) else "") for s in spec.get("sensors", [])}
         self._lock = threading.Lock()
         self._last = "nothing yet"
+        self._held = False          # emergency stop: the arm keeps its pose until released
         info = bus.spawn(ActuatorSpec(joint_names=self.joints, pd_mode=act.get("pd_mode", PD_POSITION_ACTUATOR)))
         self.joints = list(info.get("joint_names") or self.joints)
         self.limits: dict[str, tuple[float, float]] = {}
@@ -211,9 +212,29 @@ class ArmBody:
         self._last = msg
         return {"ok": bool(res.get("ok")) and not res.get("aborted"), "message": msg, "data": res}
 
+    def hold(self, reason: str = "operator") -> dict:
+        """Emergency stop that keeps the pose: abort the move, re-command the current joints so the
+        servos stay powered where they are. (Cutting power instead would let the arm drop.)"""
+        self.runner.stop.request()
+        _, cur = self._read()
+        self.bus.write(BusCommand(targets=[cur[jn] for jn in self.joints]))
+        self._held = True
+        self._last = f"holding the pose ({reason})"
+        return {"ok": True, "message": self._last, "held": True, "reason": reason}
+
+    def release(self) -> dict:
+        self._held = False
+        self._last = "released the hold"
+        return {"ok": True, "message": self._last, "held": False, "reason": ""}
+
+    @property
+    def held(self) -> bool:
+        return self._held
+
     def status(self) -> dict:
         st, cur = self._read()
-        return {"joints_rad": cur, "t": st.t, "limits_rad": self.limits, "last_action": self._last}
+        return {"joints_rad": cur, "t": st.t, "limits_rad": self.limits, "last_action": self._last,
+                "held": self._held}
 
     def stream_jpeg(self) -> bytes | None:
         if not self.sensors:

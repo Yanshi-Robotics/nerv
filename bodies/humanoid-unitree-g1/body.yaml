@@ -31,6 +31,8 @@ locomotion:
   stall_timeout_s: 1.5
   fall_tilt_rad: 0.8
   fall_height_m: 0.18
+  hold_settle_s: 1.5               # emergency stop: up to this long (sim s) to come to a stand before latching
+  hold_still_rad_s: 0.3            # all joints slower than this = standing, latch now (standing measures 0.02)
 buses:
   sim:
     kind: zmq                      # runs in the same venv as NERV

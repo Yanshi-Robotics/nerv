@@ -22,6 +22,8 @@ class FakeArm:
     def __init__(self):
         self.angle = 0.0
         self.calls = []
+        self.held = False
+        self.hold_reason = ""
 
     def tools(self):
         return [{"name": "read_angle", "kind": KIND_READ, "description": "read", "parameters": {"type": "object", "properties": {}}},
@@ -54,6 +56,14 @@ class FakeArm:
 
     def set_option(self, key, value):
         return {"ok": False, "message": "no"}
+
+    def hold(self, reason="operator"):
+        self.held, self.hold_reason = True, reason
+        return {"ok": True, "message": f"holding ({reason})", "held": True, "reason": reason}
+
+    def release(self):
+        self.held, self.hold_reason = False, ""
+        return {"ok": True, "message": "released", "held": False, "reason": ""}
 
     def close(self):
         pass
@@ -98,5 +108,26 @@ def test_disarmed_node_refuses_mutation_but_serves_reads():
         assert not r.ok and "not armed" in r.message and impl.calls == [("read_angle", {})]
         assert b.set_config("armed", "true")["armed"] is True
         assert b.invoke("set_angle", deg=10).ok
+    finally:
+        srv.should_exit = True
+
+
+def test_hold_is_an_emergency_stop_that_keeps_the_pose_not_a_power_cut():
+    """/hold latches the pose and refuses every mutating verb until /release; reads still work,
+    and the brain sees `held` in its observation."""
+    impl, node, srv, url = _start(armed=True)
+    try:
+        b = RemoteBody("fake-arm", url)
+        assert b.invoke("set_angle", deg=10).ok
+        r = b.hold("operator")
+        assert r["ok"] and r["held"] and impl.hold_reason == "operator"
+        assert node.stop.is_set()                                   # a running skill would end now
+        assert b.health()["held"] is True
+        r = b.invoke("set_angle", deg=20)
+        assert not r.ok and "holding" in r.message and impl.angle == 10   # nothing moved
+        assert b.invoke("read_angle").ok                            # reads are never refused
+        assert b.perceive().state["held"] is True                   # the brain is told
+        assert b.release()["ok"] and b.health()["held"] is False
+        assert b.invoke("set_angle", deg=20).ok and impl.angle == 20
     finally:
         srv.should_exit = True

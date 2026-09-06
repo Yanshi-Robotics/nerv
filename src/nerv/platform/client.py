@@ -201,6 +201,14 @@ class _McpNode:
         except Exception as e:
             return {"ok": False, "message": f"The {self.what} `{self.name}` did not answer: {e}"}
 
+    def post(self, path: str, payload: dict | None = None) -> dict:
+        """One control-plane POST (never the brain's path); a dead node answers as a refusal."""
+        try:
+            r = self._http.post(self.base + path, json=payload or {}, timeout=config.NODE_STATUS_TIMEOUT)
+            return r.json()
+        except Exception as e:
+            return {"ok": False, "message": f"The {self.what} `{self.name}` did not answer: {e}"}
+
     def close(self) -> None:
         try:
             self._http.close()
@@ -211,6 +219,13 @@ class _McpNode:
 class RemoteBody(_McpNode):
     log_kind = "body_call"
     what = "body"
+
+    # control plane: the emergency stop that keeps the pose, and its release
+    def hold(self, reason: str = "operator") -> dict:
+        return self.post("/hold", {"reason": reason})
+
+    def release(self) -> dict:
+        return self.post("/release")
 
     def __init__(self, *a, **kw):
         super().__init__(*a, **kw)

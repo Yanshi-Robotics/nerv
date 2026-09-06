@@ -1,5 +1,16 @@
 # Changelog
 
+## [0.1.2] — 2026-09-06
+
+Emergency stop that keeps the pose. `POST /hold` on a body node latches the targets the PD is
+tracking and stops the family thinking; `POST /release` lifts it. A fall latches the hold by
+itself, so a fallen humanoid no longer thrashes under its gait policy. A walking biped is first
+told to stand and latched once still (`hold_settle_s`, `hold_still_rad_s`, measured on the
+g1-29dof-turn gait) — freezing legs mid-stride topples it. `held` rides in `/health` and in the
+brain's observation; mutating verbs are refused while held. Platform: `POST /api/sessions/{sid}/estop`,
+`/release`, `/reset` (spawn pose, simulated worlds), each written into the session as an operator
+line. Web: an E-STOP row in the remote control with Release and Reset world.
+
 ## [0.1.1] — 2026-09-03
 
 Self-contained checkout. `worlds/` is now the `nerv-world` submodule (the scene library formerly

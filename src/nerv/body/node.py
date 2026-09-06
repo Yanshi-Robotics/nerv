@@ -7,6 +7,8 @@ Wraps a family implementation (a BodyImpl) and exposes:
        /sensors, /stop, /
 Arming lives here as a second switch under the platform's: while the node is disarmed every
 mutating tool is refused, whatever the platform said. Real-hardware buses start disarmed.
+Hold is the emergency stop that keeps the pose (`POST /hold`, `POST /release`): the family latches
+the current joint targets and stops thinking; mutating verbs are refused until released.
 """
 from __future__ import annotations
 
@@ -56,6 +58,13 @@ class BodyImpl(Protocol):
 
     def set_option(self, key: str, value: str) -> dict: ...
 
+    def hold(self, reason: str = "operator") -> dict: ...      # emergency stop: keep the pose, stop thinking
+
+    def release(self) -> dict: ...                             # back to the family's normal control
+
+    @property
+    def held(self) -> bool: ...
+
     def close(self) -> None: ...
 
 
@@ -92,7 +101,18 @@ class BodyNode:
             return {"ok": False, "message": ("the body is not armed, so it will not move. "
                                              "The operator arms it on the body node's page "
                                              "or through NERV.")}
+        if kind in MUTATING_KINDS and self.impl.held:
+            return {"ok": False, "message": ("the body is holding its pose (emergency stop), so it will "
+                                             "not move until the operator releases it."),
+                    "data": {"held": True}}
         return self.impl.invoke(name, _progress=_progress, **args)
+
+    def hold(self, reason: str = "operator") -> dict:
+        self.stop.request()
+        return self.impl.hold(reason or "operator")
+
+    def release(self) -> dict:
+        return self.impl.release()
 
 
 def build_app(node: BodyNode, cors_origins: list[str]) -> FastAPI:
@@ -156,6 +176,7 @@ def build_app(node: BodyNode, cors_origins: list[str]) -> FastAPI:
         state = dict(state or {})
         state["cameras"] = [n for n, b in images if b]
         state["armed"] = node.armed
+        state["held"] = bool(impl.held)
         out = [ReadResourceContents(content=json.dumps(state, default=str), mime_type="application/json")]
         for _n, blob in images:
             if blob:
@@ -196,7 +217,7 @@ def build_app(node: BodyNode, cors_origins: list[str]) -> FastAPI:
     def health() -> dict:
         return {"ok": True, "node": "body", "body": impl.name, "family": impl.family,
                 "version": impl.version, "world": node.world, "bus": node.bus_kind,
-                "armed": node.armed, "epoch": node.epoch}
+                "armed": node.armed, "held": bool(impl.held), "epoch": node.epoch}
 
     @app.get("/status")
     def status() -> dict:
@@ -221,6 +242,15 @@ def build_app(node: BodyNode, cors_origins: list[str]) -> FastAPI:
     def stop() -> dict:
         node.stop.request()
         return {"ok": True, "message": "stop requested"}
+
+    @app.post("/hold")
+    def hold(body: dict | None = None) -> dict:
+        """Emergency stop that keeps the pose. Not a power cut: the joints stay commanded where they are."""
+        return node.hold(str((body or {}).get("reason") or "operator"))
+
+    @app.post("/release")
+    def release() -> dict:
+        return node.release()
 
     @app.get("/stream")
     async def stream() -> StreamingResponse:

@@ -45,7 +45,7 @@ NERV 是 [ANIMA Zero](../../history/anima-zero.md) 的继任者，只改了一�
 |---|---|---|---|
 | **NERV/Operator** | 人 ⇄ NERV | — | 注册表、会话、聊天与事件流、停止、武装 |
 | **NERV/Brain** | NERV ⇄ 大脑插件 | 进：`UserMessage`、`ToolResult`；出：`Think`、`CallTool`、`SetRegister`、`Say` | 加载、能力、用量 |
-| **NERV/Body** | NERV ⇄ 身体节点（MCP） | tools = 动词、`nerv://observation`、guidance、config、capabilities | `/health` `/status` `/config`（武装）`/stop` `/stream` |
+| **NERV/Body** | NERV ⇄ 身体节点（MCP） | tools = 动词、`nerv://observation`、guidance、config、capabilities | `/health` `/status` `/config`（武装）`/stop` `/hold`（急停）`/release` `/stream` |
 | **NERV/World** | 身体 ⇄ 世界（总线）· NERV ⇄ 世界（传感器） | 电机总线；装在世界里的传感器流 | 拉起、`/health`（epoch）、spawn、`/reset`、`/status`、`/stream` |
 | **NERV/Tool** | NERV ⇄ 工具节点（MCP） | 只有 tools | `/health` |
 
@@ -64,7 +64,7 @@ NERV 是 [ANIMA Zero](../../history/anima-zero.md) 的继任者，只改了一�
 <details>
 <summary><b>NERV/Body</b>——ANIMA Zero 的四通道，换了说话的人</summary>
 
-MCP（`/mcp/`）：`tools/list` + `tools/call`（进度通知即生命迹象）、`resources/read nerv://observation`（状态 JSON，随后是按 `state.cameras` 命名的图像 blob）、`prompts/get guidance`、`nerv://config`、`nerv://capabilities`（`family`、工具种类 `read · primitive · skill`、传感器、武装、epoch）。HTTP：`/health`、`/status`、带节点自身武装开关的 `/config`、`/stop`、`/stream`。`nerv conformance <url>` 按这份契约逐条检查。见 [docs/nerv-body.md](../../nerv-body.md)。
+MCP（`/mcp/`）：`tools/list` + `tools/call`（进度通知即生命迹象）、`resources/read nerv://observation`（状态 JSON，随后是按 `state.cameras` 命名的图像 blob）、`prompts/get guidance`、`nerv://config`、`nerv://capabilities`（`family`、工具种类 `read · primitive · skill`、传感器、武装、epoch）。HTTP：`/health`、`/status`、带节点自身武装开关的 `/config`、`/stop`、`/hold`（锁姿急停——摔倒时自动锁上）、`/release`、`/stream`。`nerv conformance <url>` 按这份契约逐条检查。见 [docs/nerv-body.md](../../nerv-body.md)。
 </details>
 
 <details>

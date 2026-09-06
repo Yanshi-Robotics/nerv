@@ -289,6 +289,25 @@
     "Pages": "Pages",
     "Robot's own view": "Robot's own view",
     "Third-person view": "Third-person view",
-    "running…": "running…"
+    "running…": "running…",
+    "Emergency stop": "Emergency stop",
+    "E-STOP": "E-STOP",
+    "Hold the pose now: the body stops thinking and keeps every joint where it is. Not a power cut — the servos stay on.": "Hold the pose now: the body stops thinking and keeps every joint where it is. Not a power cut — the servos stay on.",
+    "HOLDING — the body keeps its pose and refuses every move": "HOLDING — the body keeps its pose and refuses every move",
+    "free — hold the pose at any moment, running or not": "free — hold the pose at any moment, running or not",
+    "Let the body move again (refused while it is down — reset the world or stand it up first)": "Let the body move again (refused while it is down — reset the world or stand it up first)",
+    "Release": "Release",
+    "Back to the spawn pose (simulated world only). Lifts the hold.": "Back to the spawn pose (simulated world only). Lifts the hold.",
+    "Reset world": "Reset world",
+    "Put the body back at its spawn pose? Only a simulated world can do this; the brain is told.": "Put the body back at its spawn pose? Only a simulated world can do this; the brain is told.",
+    "holding the pose (emergency stop)": "holding the pose (emergency stop)",
+    "holding the pose after a fall": "holding the pose after a fall",
+    "already holding the pose (operator)": "already holding the pose (operator)",
+    "already holding the pose (fallen)": "already holding the pose (fallen)",
+    "released the hold (operator); standing": "released the hold (operator); standing",
+    "released the hold (fallen); standing": "released the hold (fallen); standing",
+    "not holding": "not holding",
+    "the body is down; releasing would only make it thrash. Reset the world (simulation) or stand it up first (hardware)": "the body is down; releasing would only make it thrash. Reset the world (simulation) or stand it up first (hardware)",
+    "body back at the spawn pose": "body back at the spawn pose"
   }
 }

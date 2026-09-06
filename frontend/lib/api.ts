@@ -245,6 +245,28 @@ export async function interruptSession(id: string): Promise<void> {
   await fetch(`${BASE}/api/sessions/${encodeURIComponent(id)}/interrupt`, { method: "POST" });
 }
 
+// 急停：身体锁住当前姿态、停止思考，直到操作员放开。⛔ 不是断电——断电舵机会卸力倒下。
+export type HoldResult = { ok: boolean; held: boolean; message: string };
+
+export async function estopSession(id: string): Promise<HoldResult> {
+  const r = await fetch(`${BASE}/api/sessions/${encodeURIComponent(id)}/estop`, { method: "POST" });
+  if (!r.ok) throw new ApiError(await detailOf(r), r.status);
+  return (await r.json()) as HoldResult;
+}
+
+export async function releaseSession(id: string): Promise<HoldResult> {
+  const r = await fetch(`${BASE}/api/sessions/${encodeURIComponent(id)}/release`, { method: "POST" });
+  if (!r.ok) throw new ApiError(await detailOf(r), r.status);
+  return (await r.json()) as HoldResult;
+}
+
+// 复位：身体回到出生姿态（只有仿真世界会答应），同时解除锁姿。
+export async function resetSessionWorld(id: string): Promise<{ ok: boolean; message: string }> {
+  const r = await fetch(`${BASE}/api/sessions/${encodeURIComponent(id)}/reset`, { method: "POST" });
+  if (!r.ok) throw new ApiError(await detailOf(r), r.status);
+  return (await r.json()) as { ok: boolean; message: string };
+}
+
 export async function setSessionBrain(id: string, brain: string): Promise<void> {
   await fetch(`${BASE}/api/sessions/${encodeURIComponent(id)}/brain`, {
     method: "POST",

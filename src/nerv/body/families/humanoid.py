@@ -66,6 +66,11 @@ DEFAULT_LOCOMOTION: dict = {
     "turn_report_move_m": 0.15,    # a turn that drifted more than this says so
     "stuck_min_ratio": 0.35,       # reached less than this fraction of the target = blocked
     "progress_start": 0.1,         # first progress tick, so the operator sees it start
+    "hold_settle_s": 1.5,          # emergency stop: let the gait come to a stand for at most this (sim s)
+                                   # before latching the joints — freezing legs mid-stride topples a biped
+                                   # (measured 2026-09-06: the g1-29dof-turn gait needs ~1.2 s to stop)
+    "hold_still_rad_s": 0.3,       # every joint slower than this = standing still, latch now
+                                   # (a standing G1 measures 0.02 rad/s; mid-stride 3–8 rad/s)
 }
 
 # the eight bearings the brain gets clearances for (name, degrees CCW from straight ahead)
@@ -78,6 +83,9 @@ PD_MODE_FROM_RELEASE = "release"
 
 REASON_REACHED, REASON_BRAKED, REASON_STALLED = "reached", "braked", "stalled"
 REASON_FALLEN, REASON_BUDGET, REASON_STOPPED, REASON_SIM_DEAD = "fallen", "budget", "stopped", "sim_dead"
+REASON_HELD = "held"
+# why the body is holding its pose: the operator pressed the emergency stop, or it fell
+HOLD_OPERATOR, HOLD_FALLEN = "operator", "fallen"
 
 
 def build(spec: dict, bus: MotorBus, runner: SkillRunner):
@@ -235,6 +243,16 @@ class HumanoidBody:
         self._last = "nothing yet"
         self._sim_dead = False
         self._policy_error = ""
+        # Hold = emergency stop that keeps the pose: the policy loop stops thinking and the PD
+        # keeps every joint where it is (a real robot in damping mode; a powered-off servo robot
+        # would go limp instead). Entered by the operator or automatically on a fall — a gait
+        # policy fed a fallen body's observation only thrashes, which is what the twitching was.
+        self._hold_lock = threading.Lock()
+        self._held = False
+        self._hold_reason = ""
+        self._hold_targets: list[float] = []
+        self._hold_pending: tuple[str, float] | None = None      # (reason, sim deadline) while coming to a stand
+        self._last_targets: list[float] = []                     # what the PD is tracking right now
         self._running = True
         self._thread = threading.Thread(target=self._policy_loop, name="nerv-humanoid-policy", daemon=True)
         self._thread.start()
@@ -301,6 +319,7 @@ class HumanoidBody:
             if last_t is not None and st.t < last_t:          # the world was reset: start over
                 hist, prev_action, last_t = None, np.zeros(len(p.joint_names)), None
                 self._yaw0 = None
+                self._release(after_reset=True)                # back at the spawn pose: nothing to hold
             if last_t is not None:
                 deadline = last_t + p.policy_dt
                 if st.t < deadline - 0.25 * p.policy_dt:
@@ -314,6 +333,23 @@ class HumanoidBody:
             self._state = st
             if self._yaw0 is None:
                 self._yaw0 = float(st.odom_yaw)
+            if not self._held and self._fallen(st):
+                self._hold(HOLD_FALLEN, st)
+            pend = self._hold_pending
+            if pend is not None and not self._held:                # emergency stop: latch once still
+                reason, deadline = pend
+                fastest = max((abs(float(v)) for v in st.joint_vel), default=0.0)
+                if fastest < float(self.loco["hold_still_rad_s"]) or st.t >= deadline:
+                    self._hold(reason, st)
+            with self._hold_lock:
+                hold = list(self._hold_targets) if self._held else None
+            if hold is not None:                                # holding: keep the pose, do not think
+                try:
+                    self.bus.write(BusCommand(targets=hold))
+                except Exception as e:
+                    self._policy_error = f"{type(e).__name__}: {e}"
+                hist, prev_action = None, np.zeros(len(p.joint_names))   # a fresh start on release
+                continue
             try:
                 obs, hist = self._observation(st, hist, prev_action)
                 if p.obs_dim and obs.shape[0] != p.obs_dim:
@@ -322,6 +358,7 @@ class HumanoidBody:
                 prev_action = action
                 targets = p.default_pos + action * p.action_scale
                 self.bus.write(BusCommand(targets=targets.tolist()))
+                self._last_targets = targets.tolist()
                 self._policy_error = ""
             except Exception as e:
                 self._policy_error = f"{type(e).__name__}: {e}"
@@ -337,6 +374,73 @@ class HumanoidBody:
         if not self.has_free_base:
             return False
         return self._tilt(st) > float(self.loco["fall_tilt_rad"]) or st.base_height < float(self.loco["fall_height_m"])
+
+    # ---- hold (emergency stop that keeps the pose) --------------------------------------------------------
+    def _hold(self, reason: str, st: BusState | None = None) -> dict:
+        """Latch the current joint positions as the targets and stop the policy. Idempotent."""
+        self.runner.stop.request()                              # any running skill ends on its next tick
+        self._set_command(0.0, 0.0, 0.0)
+        with self._hold_lock:
+            self._hold_pending = None
+            if self._held:
+                return {"ok": True, "message": f"already holding the pose ({self._hold_reason})",
+                        "held": True, "reason": self._hold_reason}
+            if st is None:
+                st = self._state or self.bus.read()
+            # Freeze the command stream, not the measured angles: the PD is already at equilibrium
+            # for the last targets (they carry the gravity offset the policy learned), so nothing
+            # sags or jumps. Only a body that never got a command latches its measured pose.
+            self._hold_targets = [float(v) for v in (self._last_targets or st.joint_pos)]
+            self._held, self._hold_reason = True, reason
+            targets = list(self._hold_targets)
+        try:
+            self.bus.write(BusCommand(targets=targets))           # do not wait for the loop's next tick
+        except Exception as e:
+            self._policy_error = f"{type(e).__name__}: {e}"
+        self._last = "holding the pose" + (" after a fall" if reason == HOLD_FALLEN else " (emergency stop)")
+        return {"ok": True, "message": self._last, "held": True, "reason": reason}
+
+    def _release(self, after_reset: bool = False) -> dict:
+        with self._hold_lock:
+            self._hold_pending = None
+            if not self._held:
+                return {"ok": True, "message": "not holding", "held": False, "reason": ""}
+            was = self._hold_reason
+            self._held, self._hold_reason, self._hold_targets = False, "", []
+        self._last = "back at the spawn pose" if after_reset else f"released the hold ({was}); standing"
+        return {"ok": True, "message": self._last, "held": False, "reason": ""}
+
+    def hold(self, reason: str = HOLD_OPERATOR) -> dict:
+        """Emergency stop that keeps the pose. A walking biped is first told to stand (zero command,
+        the gait balances itself) and latched as soon as it is still; a fallen or idle body is
+        latched at once. Returns when the joints are latched."""
+        reason = reason or HOLD_OPERATOR
+        st = self._state
+        if self._held or st is None or self._fallen(st) or self._sim_dead:
+            return self._hold(reason, st)
+        settle = float(self.loco["hold_settle_s"])
+        self.runner.stop.request()
+        self._set_command(0.0, 0.0, 0.0)
+        with self._hold_lock:
+            self._hold_pending = (reason, st.t + settle)
+        wall_limit = time.perf_counter() + settle + float(self.loco["sim_dead_wall_s"])
+        while not self._held and time.perf_counter() < wall_limit:
+            time.sleep(float(self.loco["poll_s"]))
+        if not self._held:                                      # the loop never got there: latch anyway
+            return self._hold(reason, self._state)
+        return {"ok": True, "message": self._last, "held": True, "reason": self._hold_reason}
+
+    def release(self) -> dict:
+        st = self._state or self.bus.read()
+        if self._fallen(st):
+            return {"ok": False, "held": self._held, "reason": self._hold_reason,
+                    "message": ("the body is down; releasing would only make it thrash. "
+                                "Reset the world (simulation) or stand it up first (hardware)")}
+        return self._release()
+
+    @property
+    def held(self) -> bool:
+        return self._held
 
     def _front_cone(self) -> float:
         n = max(1, int(self.loco["brake_rays"]))
@@ -518,6 +622,7 @@ class HumanoidBody:
         heading = math.degrees(_wrap(st.odom_yaw - (self._yaw0 if self._yaw0 is not None else st.odom_yaw)))
         state = {"clearance_m": self._clearances(), "front_cone_m": round(self._front_cone(), 2),
                  "fallen": self._fallen(st), "heading_deg": round(heading, 1),
+                 "held": self._held, "hold_reason": self._hold_reason,
                  "last_action": self._last, "t": round(st.t, 3)}
         if self._policy_error:
             state["policy_error"] = self._policy_error
@@ -539,6 +644,12 @@ class HumanoidBody:
 
     def invoke(self, name: str, *, _progress=None, **args) -> dict:
         L = self.loco
+        if self._held:
+            why = "it fell" if self._hold_reason == HOLD_FALLEN else "the operator pressed the emergency stop"
+            return {"ok": False, "message": (f"the body is holding its pose because {why}; it will not move "
+                                             f"until the operator releases it"
+                                             + (" (reset the world first)" if self._hold_reason == HOLD_FALLEN else "")),
+                    "data": {"reason": REASON_HELD, "held": True, "hold_reason": self._hold_reason}}
         if name == "move_forward":
             meters = float(args.get("meters", L["default_move_m"]))
             if meters <= 0:
@@ -568,6 +679,8 @@ class HumanoidBody:
             cmd = self._cmd.tolist()
         return {"policy": self.policy.name, "pd_mode": self.pd_mode, "command": cmd,
                 "running_skill": self.runner.running, "last_action": self._last,
+                "held": self._held, "hold_reason": self._hold_reason,
+                "hold_pending": self._hold_pending is not None,
                 "sim_dead": self._sim_dead, "policy_error": self._policy_error,
                 "front_extent_m": round(self.front_extent_m, 3), "brake_stop_m": round(self.brake_stop_m, 3),
                 "state": None if st is None else {"t": round(st.t, 3), "odom_xy": st.odom_xy,

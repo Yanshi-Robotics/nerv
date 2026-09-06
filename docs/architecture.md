@@ -17,7 +17,7 @@ NERV is the wiring between four kinds of node. It owns none of them.
 |---|---|---|---|
 | NERV/Operator | person ⇄ NERV | — | registry, sessions, chat + events, stop, arm |
 | NERV/Brain | NERV ⇄ brain | `UserMessage`, `ToolResult` in; `Think`, `CallTool`, `SetRegister`, `Say` out | load, capabilities, usage |
-| NERV/Body | NERV ⇄ body (MCP) | tools, `nerv://observation`, guidance, config, capabilities | `/health /status /config /stop /stream` |
+| NERV/Body | NERV ⇄ body (MCP) | tools, `nerv://observation`, guidance, config, capabilities | `/health /status /config /stop /hold /release /stream` |
 | NERV/World | body ⇄ world (bus) · NERV ⇄ world (sensors) | motor bus; sensor streams | launch, `/health` (epoch), spawn, `/reset`, `/status`, `/stream` |
 | NERV/Tool | NERV ⇄ tool (MCP) | tools | `/health` |
 

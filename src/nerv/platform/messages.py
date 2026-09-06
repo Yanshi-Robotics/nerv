@@ -12,4 +12,8 @@ BRAIN_NOT_CONFIGURED_REPLY = "(That brain is not configured. Set it up in .env a
 BRAIN_CALL_FAILED_LEAD = "(The brain call failed.)"
 BRAIN_CALL_FAILED_REPLY = BRAIN_CALL_FAILED_LEAD + " {error}"
 TELEOP_STEP = "(operator teleop: {name})"
+# operator control-plane actions, written into the session so the brain knows what happened
+ESTOP_NOTE = "(operator: emergency stop — the body is holding its pose and will not move until released)"
+RELEASE_NOTE = "(operator: released the emergency stop — the body may move again)"
+RESET_NOTE = "(operator: reset the world — the body is back at its spawn pose; earlier positions no longer apply)"
 SESSION_NOT_ACTIVE = "(This session is {status}; start a new one to continue.)"

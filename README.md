@@ -45,7 +45,7 @@ Every interface has two planes. The data plane is what the brain may see; the co
 |---|---|---|---|
 | **NERV/Operator** | you ⇄ NERV | — | registry, sessions, chat + event stream, stop, arm |
 | **NERV/Brain** | NERV ⇄ brain plugin | `UserMessage`, `ToolResult` in; `Think`, `CallTool`, `SetRegister`, `Say` out | load, capabilities, usage |
-| **NERV/Body** | NERV ⇄ body node (MCP) | tools = verbs, `nerv://observation`, guidance, config, capabilities | `/health` `/status` `/config` (arm) `/stop` `/stream` |
+| **NERV/Body** | NERV ⇄ body node (MCP) | tools = verbs, `nerv://observation`, guidance, config, capabilities | `/health` `/status` `/config` (arm) `/stop` `/hold` (e-stop) `/release` `/stream` |
 | **NERV/World** | body ⇄ world (bus) · NERV ⇄ world (sensors) | the motor bus; sensor streams mounted in the world | launch, `/health` (epoch), spawn, `/reset`, `/status`, `/stream` |
 | **NERV/Tool** | NERV ⇄ tool node (MCP) | tools only | `/health` |
 
@@ -64,7 +64,7 @@ The brain gets a `Link` with `observe()`, `tools()`, `history()`, `registers()`,
 <details>
 <summary><b>NERV/Body</b> — ANIMA Zero's four channels with a new speaker</summary>
 
-Over MCP at `/mcp/`: `tools/list` + `tools/call` (with progress notifications as signs of life), `resources/read nerv://observation` (state JSON, then image blobs named by `state.cameras`), `prompts/get guidance`, `nerv://config`, and `nerv://capabilities` (`family`, tool kinds `read · primitive · skill`, sensors, armed, epoch). Over HTTP: `/health`, `/status`, `/config` with the node's own arming switch, `/stop`, `/stream`. `nerv conformance <url>` checks a node against this. [docs/nerv-body.md](docs/nerv-body.md).
+Over MCP at `/mcp/`: `tools/list` + `tools/call` (with progress notifications as signs of life), `resources/read nerv://observation` (state JSON, then image blobs named by `state.cameras`), `prompts/get guidance`, `nerv://config`, and `nerv://capabilities` (`family`, tool kinds `read · primitive · skill`, sensors, armed, epoch). Over HTTP: `/health`, `/status`, `/config` with the node's own arming switch, `/stop`, `/hold` (the emergency stop that keeps the pose — a fall latches it by itself), `/release`, `/stream`. `nerv conformance <url>` checks a node against this. [docs/nerv-body.md](docs/nerv-body.md).
 </details>
 
 <details>

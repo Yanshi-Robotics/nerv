@@ -34,6 +34,9 @@ Node keys: `body:<body>`, `world:<world>/<body>`, `tool:<tool>`.
 | `GET /api/sessions/{sid}` | summary + `messages` (roles `user`, `assistant` with `tool_calls`, `tool`, `perception` with `images:[{name, ref}]` and `state`, `brain_divider`) |
 | `DELETE /api/sessions/{sid}` | delete the record and its images |
 | `POST /api/sessions/{sid}/interrupt` | stop the running turn and ask the body node to stop its skill |
+| `POST /api/sessions/{sid}/estop` | emergency stop that keeps the pose: interrupt the turn and `POST /hold` on the body node → `{ok, held, message}`. Written into the session as an operator line so the brain knows. Not a tool the brain can call. |
+| `POST /api/sessions/{sid}/release` | lift the hold (refused while the body is down) |
+| `POST /api/sessions/{sid}/reset` | back to the spawn pose (`POST /reset` on a simulated world node) and release the body; the brain is told earlier positions no longer apply |
 | `POST /api/sessions/{sid}/brain` `{brain}` | switch brains mid-session |
 | `POST /api/sessions/{sid}/arm` `{armed}` | the arming switch: sets the session flag and forwards to the body node's `/config` |
 | `GET /api/sessions/{sid}/tools` | the tool sheet the brain would see: `[{name, kind, origin (body · tool), node, description, parameters}]` — what the remote control renders |

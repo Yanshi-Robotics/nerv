@@ -122,3 +122,32 @@ def test_teleop_uses_the_same_gate_and_records_the_step(tmp_path):
         assert store.get(s.id).messages[-2]["brain"] == "operator"
     finally:
         _stop(servers)
+
+
+def test_estop_holds_the_body_and_tells_the_brain(tmp_path):
+    """The operator's emergency stop goes to the body's control plane, lands in the session as an
+    operator line, and release lifts it. Neither is a tool the brain could call."""
+    from nerv.platform.hub import Nerv
+    from nerv.platform.launcher import Launcher
+    from nerv.platform.registry import Registry
+    impl, store, s, body, tool, servers = _setup(tmp_path, armed_session=True)
+    try:
+        hub = Nerv(registry=Registry(), store=store, launcher=Launcher(Registry()))
+        hub._bodies["fake-arm"] = body
+        hub.launcher.nodes["body:fake-arm"] = type("H", (), {"url": body.base, "alive": lambda self: True,
+                                                             "kind": "body", "name": "body:fake-arm",
+                                                             "bus_url": "", "attached": True, "log_path": "",
+                                                             "python": "", "meta": {}})()
+        assert {t["name"] for t in hub.tool_sheet(s.id)}.isdisjoint({"hold", "release", "estop"})
+        r = hub.estop(s.id)
+        assert r["ok"] and r["held"] and impl.held
+        msgs = store.get(s.id).messages
+        assert msgs[-1]["role"] == "assistant" and msgs[-1]["brain"] == "operator" and "emergency stop" in msgs[-1]["text"]
+        evs = list(hub.teleop_stream(s.id, "set_angle", {"deg": 15}))
+        res = next(e for e in evs if e["type"] == "tool_result")
+        assert not res["ok"] and "holding" in res["message"]
+        r = hub.release(s.id)
+        assert r["ok"] and not r["held"] and not impl.held
+        assert "released" in store.get(s.id).messages[-1]["text"]
+    finally:
+        _stop(servers)

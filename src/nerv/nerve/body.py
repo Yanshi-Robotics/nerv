@@ -6,7 +6,8 @@ Data plane (what may reach the brain), carried over MCP:
   prompts/get guidance           the body's own description of itself
   resources/read nerv://config   what is configurable and what it is set to
   resources/read nerv://capabilities  family, tool kinds, sensor names (NERV extension)
-Control plane (never the brain), plain HTTP: /health, /status, /config, /stream, /sensors.
+Control plane (never the brain), plain HTTP: /health, /status, /config, /stream, /sensors,
+/stop, /hold (emergency stop that keeps the pose), /release.
 
 A body may describe itself; only the operator authorises it (see platform.trust).
 """

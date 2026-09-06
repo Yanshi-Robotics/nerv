@@ -10,7 +10,6 @@ import threading
 import time
 from typing import Iterator
 
-from .. import config
 from ..brain import plugin as brain_plugin
 from ..nerve import operator as op
 from . import interrupt, messages
@@ -135,10 +134,61 @@ class Nerv:
         if s.body:
             c = self.body_client(s.body)
             if c is not None:
-                try:
-                    c._http.post(c.base + "/stop", timeout=config.NODE_PROBE_TIMEOUT)
-                except Exception:
-                    pass
+                c.post("/stop")
+
+    # -- operator control plane: emergency stop (hold the pose), release, reset --------------
+    def _operator_note(self, sid: str, event: str, text: str, **fields) -> None:
+        """Log it and put a line in the session, so the brain sees what the operator did."""
+        slog.record("operator", {"event": event, "session": sid, **fields})
+        self.store.append(sid, {"role": "assistant", "brain": "operator", "text": text, "tool_calls": []})
+
+    def estop(self, sid: str) -> dict:
+        """Hold the pose now: interrupt the turn, stop the skill, latch the joints. Never a power cut."""
+        interrupt.request(sid)
+        s = self.store.get(sid)
+        if not s.body:
+            return {"ok": False, "held": False, "message": "a conversation-only session has no body to stop"}
+        c = self.body_client(s.body)
+        if c is None:
+            return {"ok": False, "held": False, "message": f"the body `{s.body}` is not reachable"}
+        res = c.hold("operator")
+        self._operator_note(sid, "estop", messages.ESTOP_NOTE, body=res)
+        return {"ok": bool(res.get("ok")), "held": bool(res.get("held", res.get("ok"))),
+                "message": str(res.get("message", ""))}
+
+    def release(self, sid: str) -> dict:
+        s = self.store.get(sid)
+        if not s.body:
+            return {"ok": False, "held": False, "message": "a conversation-only session has no body"}
+        c = self.body_client(s.body)
+        if c is None:
+            return {"ok": False, "held": True, "message": f"the body `{s.body}` is not reachable"}
+        res = c.release()
+        if res.get("ok"):
+            self._operator_note(sid, "release", messages.RELEASE_NOTE, body=res)
+        else:
+            slog.record("operator", {"event": "release_refused", "session": sid, "body": res})
+        return {"ok": bool(res.get("ok")), "held": bool(res.get("held", not res.get("ok"))),
+                "message": str(res.get("message", ""))}
+
+    def reset_world(self, sid: str) -> dict:
+        """Put the body back at its spawn pose (a simulated world only) and lift any hold."""
+        interrupt.request(sid)
+        s = self.store.get(sid)
+        if not (s.body and s.world):
+            return {"ok": False, "message": "this session has no world to reset"}
+        wc = self.world_client(s.world, s.body)
+        if wc is None:
+            return {"ok": False, "message": f"the world `{s.world}` is not reachable"}
+        res = wc.reset()
+        body = None
+        if res.get("ok"):
+            c = self.body_client(s.body)
+            body = c.release() if c is not None else None
+            self._operator_note(sid, "reset_world", messages.RESET_NOTE, world=res, body=body)
+        else:
+            slog.record("operator", {"event": "reset_refused", "session": sid, "world": res})
+        return {"ok": bool(res.get("ok")), "message": str(res.get("message", "")), "body": body}
 
     def _epoch_ok(self, s) -> bool:
         if not (s.body and s.world):

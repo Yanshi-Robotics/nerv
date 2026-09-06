@@ -3,9 +3,12 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useI18n } from "@/lib/i18n";
 import {
+  estopSession,
   getPerception,
   getSessionTools,
   interruptSession,
+  releaseSession,
+  resetSessionWorld,
   streamTeleop,
   type ChatEvent,
   type JsonSchema,
@@ -38,7 +41,7 @@ type Line = { kind: "ok" | "bad" | "info" | "progress"; text: string };
 
 type Group = { key: string; label: string; tools: ToolSheetEntry[] };
 
-export default function TeleopPanel({ sessionId, armed }: { sessionId: string; armed: boolean }) {
+export default function TeleopPanel({ sessionId, armed, hasWorld }: { sessionId: string; armed: boolean; hasWorld: boolean }) {
   const { t } = useI18n();
   const [tools, setTools] = useState<ToolSheetEntry[] | null>(null);
   const [err, setErr] = useState("");
@@ -46,6 +49,10 @@ export default function TeleopPanel({ sessionId, armed }: { sessionId: string; a
   const [running, setRunning] = useState<string | null>(null); // 正在跑的工具名；一次只跑一个
   const [lines, setLines] = useState<Record<string, Line[]>>({});
   const [stopping, setStopping] = useState(false);
+  // 急停状态：held = 身体正锁着姿态（操作员按了急停，或者它摔倒后自己锁的）。真值在身体节点，这里只是镜像。
+  const [held, setHeld] = useState<boolean | null>(null);
+  const [holdMsg, setHoldMsg] = useState("");
+  const [holdBusy, setHoldBusy] = useState(false);
 
   // 工具单 + 一次观察（拿关节名做 targets 的候选键）
   useEffect(() => {
@@ -56,10 +63,14 @@ export default function TeleopPanel({ sessionId, armed }: { sessionId: string; a
     getSessionTools(sessionId)
       .then((ts) => !gone && setTools(ts))
       .catch((e) => !gone && setErr((e as Error).message));
+    setHeld(null);
+    setHoldMsg("");
     getPerception(sessionId)
       .then((p) => {
+        if (gone) return;
         const j = p.state?.[JOINTS_STATE_KEY];
-        if (!gone && j && typeof j === "object" && !Array.isArray(j)) setJointKeys(Object.keys(j as Record<string, unknown>));
+        if (j && typeof j === "object" && !Array.isArray(j)) setJointKeys(Object.keys(j as Record<string, unknown>));
+        if (typeof p.state?.held === "boolean") setHeld(p.state.held);
       })
       .catch(() => {});
     return () => {
@@ -101,6 +112,9 @@ export default function TeleopPanel({ sessionId, armed }: { sessionId: string; a
       } finally {
         setRunning(null);
         setStopping(false);
+        getPerception(sessionId)
+          .then((p) => typeof p.state?.held === "boolean" && setHeld(p.state.held))
+          .catch(() => {});
       }
     },
     [running, sessionId, t],
@@ -109,6 +123,50 @@ export default function TeleopPanel({ sessionId, armed }: { sessionId: string; a
   async function stop() {
     setStopping(true);
     await interruptSession(sessionId).catch(() => {});
+  }
+
+  // 急停：锁住当前姿态。任何时候都能按，不管有没有动作在跑。
+  async function estop() {
+    if (holdBusy) return;
+    setHoldBusy(true);
+    try {
+      const r = await estopSession(sessionId);
+      setHeld(r.held);
+      setHoldMsg(t(r.message));
+    } catch (e) {
+      setHoldMsg(`${t("(cannot reach the backend)")} ${(e as Error).message ?? ""}`);
+    } finally {
+      setHoldBusy(false);
+    }
+  }
+
+  async function release() {
+    if (holdBusy) return;
+    setHoldBusy(true);
+    try {
+      const r = await releaseSession(sessionId);
+      setHeld(r.held);
+      setHoldMsg(t(r.message));
+    } catch (e) {
+      setHoldMsg(`${t("(cannot reach the backend)")} ${(e as Error).message ?? ""}`);
+    } finally {
+      setHoldBusy(false);
+    }
+  }
+
+  async function resetWorld() {
+    if (holdBusy) return;
+    if (!confirm(t("Put the body back at its spawn pose? Only a simulated world can do this; the brain is told."))) return;
+    setHoldBusy(true);
+    try {
+      const r = await resetSessionWorld(sessionId);
+      setHoldMsg(t(r.message));
+      if (r.ok) setHeld(false);
+    } catch (e) {
+      setHoldMsg(`${t("(cannot reach the backend)")} ${(e as Error).message ?? ""}`);
+    } finally {
+      setHoldBusy(false);
+    }
   }
 
   // 人形的三个大键：工具单里有这三个动词才出现，数值取各自 schema 的 default
@@ -137,6 +195,35 @@ export default function TeleopPanel({ sessionId, armed }: { sessionId: string; a
           className="ml-auto rounded-md bg-red-700 px-3 py-1 text-[11px] font-semibold text-white hover:bg-red-600 disabled:opacity-40">
           ■ {stopping ? t("Stopping…") : t("Stop")}
         </button>
+      </div>
+
+      {/* 急停一排：大红键锁姿态；锁着时给「放开」；有仿真世界时给「复位」。都是控制面，大脑没有这些工具。 */}
+      <div className={`flex items-center gap-2 rounded-lg border p-2 ${held ? "border-red-600 bg-red-950/50" : "border-neutral-800 bg-neutral-900"}`}
+           role="group" aria-label={t("Emergency stop")}>
+        <button onClick={estop} disabled={holdBusy || held === true}
+          title={t("Hold the pose now: the body stops thinking and keeps every joint where it is. Not a power cut — the servos stay on.")}
+          className="rounded-lg bg-red-600 px-4 py-2 text-sm font-bold tracking-wide text-white shadow hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400">
+          ⛔ {t("E-STOP")}
+        </button>
+        <div className="min-w-0 flex-1 text-[11px]">
+          {held === true && <div className="font-semibold text-red-300">{t("HOLDING — the body keeps its pose and refuses every move")}</div>}
+          {held === false && <div className="text-neutral-500">{t("free — hold the pose at any moment, running or not")}</div>}
+          {holdMsg && <div className="truncate text-neutral-400" title={holdMsg}>{holdMsg}</div>}
+        </div>
+        {held === true && (
+          <button onClick={release} disabled={holdBusy}
+            title={t("Let the body move again (refused while it is down — reset the world or stand it up first)")}
+            className="rounded-md border border-neutral-600 px-3 py-1.5 text-[11px] font-semibold text-neutral-100 hover:bg-neutral-800 disabled:opacity-50">
+            {t("Release")}
+          </button>
+        )}
+        {hasWorld && (
+          <button onClick={resetWorld} disabled={holdBusy}
+            title={t("Back to the spawn pose (simulated world only). Lifts the hold.")}
+            className="rounded-md border border-neutral-600 px-3 py-1.5 text-[11px] text-neutral-300 hover:bg-neutral-800 disabled:opacity-50">
+            ↺ {t("Reset world")}
+          </button>
+        )}
       </div>
 
       {err && <div className="rounded-md border border-red-700/60 bg-red-950/40 p-2 text-[11px] text-red-300">{err}</div>}
