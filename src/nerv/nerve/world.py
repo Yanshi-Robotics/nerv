@@ -94,5 +94,6 @@ HEALTH = "/health"
 STATUS = "/status"
 RESET = "/reset"
 STREAM = "/stream"
+VIEW = "/view"                 # GET current chase-view nudge; POST {zoom?, yaw?, pitch?} (operator only)
 SENSORS = "/sensors"           # GET list; GET /sensors/<name> one frame (for the platform)
 SPAWN = "/spawn"

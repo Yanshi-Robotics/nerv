@@ -407,11 +407,14 @@ export async function getWorldSensors(worldUrl: string): Promise<string[]> {
   return j.sensors ?? [];
 }
 
-// 追拍相机的手动视角：拉远/拉近、左右旋、上下旋。⛔ 状态只在前端；关掉再打开就回默认。
+// 追拍相机的手动视角：拉远/拉近、左右旋、上下旋。发给世界节点，视频流不重连、下一帧起平滑过渡。
+// 「关掉再打开回默认」靠前端在打开和关闭视图时各发一次默认值。
 export type ChaseView = { zoom: number; yaw: number; pitch: number };
 export const DEFAULT_CHASE_VIEW: ChaseView = { zoom: 1, yaw: 0, pitch: 0 };
-export const worldChaseStreamUrl = (worldUrl: string, v: ChaseView) =>
-  `${worldUrl}/stream?zoom=${v.zoom.toFixed(3)}&yaw=${v.yaw}&pitch=${v.pitch}`;
+
+export async function setWorldChaseView(worldUrl: string, v: ChaseView): Promise<void> {
+  await fetch(`${worldUrl}/view`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify(v) });
+}
 
 export const worldCameraStreamUrl = (worldUrl: string, sensor: string) =>
   `${worldUrl}/stream/${encodeURIComponent(sensor.startsWith(WORLD_CAMERA_PREFIX) ? sensor.slice(WORLD_CAMERA_PREFIX.length) : sensor)}`;

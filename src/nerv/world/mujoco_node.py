@@ -60,6 +60,8 @@ DEFAULT_PHYSICS: dict[str, Any] = {
     "chase_zoom_max": 4.0,
     "chase_pitch_min_deg": -85.0,  # operator pitch on /stream: elevation clamped to this range
     "chase_pitch_max_deg": 20.0,   # (positive = looking up from below the lookat point)
+    "chase_ease": 0.35,          # per rendered frame, the chase view moves this fraction of the way to
+                                 # the operator's requested view (0.35 at 12 fps ≈ settled in 0.5 s)
     "render_timeout_s": 10.0,    # a render request that takes longer than this is reported failed
     "sim_dead_wall_s": 5.0,      # /health reports the physics thread dead after this much silence
 }
@@ -255,6 +257,10 @@ class WorldSim:
         self.render = RenderService(self.model, self.phys["render_width"], self.phys["render_height"],
                                     self.phys["render_timeout_s"])
         self._chase_cam = mujoco.MjvCamera()
+        # operator's chase view: the requested (target) and the current (eased) nudge; never remembered
+        # across a reopened view because the web client resets it when it opens and closes the view
+        self._view_target = {"zoom": 1.0, "yaw": 0.0, "pitch": 0.0}
+        self._view_now = dict(self._view_target)
         self._chase_cam.type = mujoco.mjtCamera.mjCAMERA_FREE
         self._chase_opt = mujoco.MjvOption()
         if layout is not None and layout.ceiling_group is not None:
@@ -606,17 +612,43 @@ class WorldSim:
             return r.render().copy(), t
         return self.render.run(job)
 
-    def render_chase(self, zoom: float = 1.0, yaw_deg: float = 0.0, pitch_deg: float = 0.0) -> tuple[np.ndarray, float]:
-        """Third-person view from behind and above the chase body. Humans only, never the brain.
-        The operator may nudge it: `zoom` scales the distance, `yaw_deg` swings the camera around
-        the body, `pitch_deg` tilts it; all three are clamped and none of it is remembered."""
+    def set_view(self, zoom: float | None = None, yaw: float | None = None, pitch: float | None = None) -> dict:
+        """The operator's chase-view nudge: `zoom` scales the distance, `yaw` (deg) swings the camera
+        around the body, `pitch` (deg) tilts it. Clamped here; the render eases toward it."""
+        v = dict(self._view_target)
+        if zoom is not None:
+            v["zoom"] = max(float(self.phys["chase_zoom_min"]), min(float(self.phys["chase_zoom_max"]), float(zoom)))
+        if yaw is not None:
+            v["yaw"] = float(yaw) % 360.0
+        if pitch is not None:
+            v["pitch"] = float(pitch)
+        self._view_target = v
+        return dict(v)
+
+    def view(self) -> dict:
+        return {"target": dict(self._view_target), "now": dict(self._view_now)}
+
+    def _ease_view(self) -> dict:
+        """One frame of easing from the current view toward the target; yaw takes the short way round."""
+        a = float(self.phys["chase_ease"])
+        now, tgt = self._view_now, self._view_target
+        dyaw = (tgt["yaw"] - now["yaw"] + 180.0) % 360.0 - 180.0
+        self._view_now = {"zoom": now["zoom"] + a * (tgt["zoom"] - now["zoom"]),
+                          "yaw": (now["yaw"] + a * dyaw) % 360.0,
+                          "pitch": now["pitch"] + a * (tgt["pitch"] - now["pitch"])}
+        return self._view_now
+
+    def render_chase(self) -> tuple[np.ndarray, float]:
+        """Third-person view from behind and above the chase body, plus the operator's eased nudge.
+        Humans only, never the brain."""
         cam, opt = self._chase_cam, self._chase_opt
         back_m = float(self.spawn_extra.get("chase_back_m") or self.phys["chase_back_m"])
         up_m = float(self.spawn_extra.get("chase_up_m") or self.phys["chase_up_m"])
-        zoom = max(float(self.phys["chase_zoom_min"]), min(float(self.phys["chase_zoom_max"]), float(zoom)))
 
         def job(r: mujoco.Renderer):
             with self._lock:
+                v = self._ease_view()
+                zoom, yaw_deg, pitch_deg = v["zoom"], v["yaw"], v["pitch"]
                 body = self.chase_body if self.chase_body >= 0 else 0
                 pos = np.array(self.data.xpos[body])
                 _xyz, _q, yaw = self._base_pose()
@@ -754,12 +786,21 @@ def build_app(sim: WorldSim, cors_origins: list[str]):
         return StreamingResponse(gen(), media_type="multipart/x-mixed-replace; boundary=frame")
 
     @app.get("/stream")
-    async def stream(zoom: float = 1.0, yaw: float = 0.0, pitch: float = 0.0):
-        """Chase camera; the operator's nudges ride as query parameters so nothing is remembered:
-        close the view and reopen it, and it is the default view again."""
+    async def stream():
         if not sim.phys["third_person"]:
             return JSONResponse({"ok": False, "error": "third_person is off in world.yaml"}, status_code=404)
-        return _mjpeg(lambda: sim.render_chase(zoom, yaw, pitch))
+        return _mjpeg(sim.render_chase)
+
+    @app.get("/view")
+    def get_view() -> dict:
+        return sim.view()
+
+    @app.post("/view")
+    def set_view(body: dict | None = None) -> dict:
+        """Nudge the chase camera without touching the stream: {zoom?, yaw?, pitch?}. The stream keeps
+        running and eases to the new view over a few frames. Not remembered by anyone but this process."""
+        b = body or {}
+        return {"ok": True, "view": sim.set_view(b.get("zoom"), b.get("yaw"), b.get("pitch"))}
 
     @app.get("/stream/{camera}")
     async def stream_camera(camera: str):

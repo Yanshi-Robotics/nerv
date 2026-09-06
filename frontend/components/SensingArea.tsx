@@ -6,7 +6,7 @@ import {
   getPerception,
   DEFAULT_CHASE_VIEW,
   getWorldSensors,
-  worldChaseStreamUrl,
+  setWorldChaseView,
   type ChaseView,
   POLL_PERCEIVE_MS,
   worldCameraStreamUrl,
@@ -74,6 +74,12 @@ export default function SensingArea({
   useEffect(() => {
     if (!chaseOpen) setChase(DEFAULT_CHASE_VIEW);
   }, [chaseOpen, session?.id]);
+  // 每次视角变化只发一条小请求给世界节点，视频流保持连着，画面在几帧内滑过去；
+  // 视图关掉时发一次默认值，所以世界那边也不会记住上次的角度。
+  useEffect(() => {
+    if (!worldUrl || !worldOnline) return;
+    setWorldChaseView(worldUrl, chaseOpen ? chase : DEFAULT_CHASE_VIEW).catch(() => {});
+  }, [chase, chaseOpen, worldUrl, worldOnline]);
 
   // 视图选择按会话持久化
   useEffect(() => {
@@ -194,7 +200,7 @@ export default function SensingArea({
           muted: true,
           body: (
             <div className="relative flex h-full w-full items-center justify-center">
-              <Stream nonce={nonce} url={worldOnline && worldNode ? worldChaseStreamUrl(worldNode.url, chase) : null} alt={t("World chase (operator only)")}
+              <Stream nonce={nonce} url={worldOnline && worldNode ? `${worldNode.url}/stream` : null} alt={t("World chase (operator only)")}
                 missing={worldNode ? t("world node offline") : t("world node not launched")} muted />
               {worldOnline && worldNode && <ChaseControls view={chase} onChange={setChase} />}
             </div>
@@ -285,8 +291,10 @@ export default function SensingArea({
         </span>
       </div>
 
-      <div className="flex min-w-0 flex-1 flex-col gap-3 overflow-y-auto p-4">
-        <div className="text-[11px] text-neutral-500">
+      {/* 中间区不滚动：几路视图就分几格，行列按数量算，图像按比例缩进格子里。
+          这样视频流重连、观察刷新都不会把页面拉回顶部。 */}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden p-4">
+        <div className="shrink-0 text-[11px] text-neutral-500">
           {session.body} · {session.world}
           {session.sensors.length ? ` · ${t("ambient")}: ${session.sensors.join(", ")}` : ""}
           {!active && <span className="ml-2 text-amber-400">{t("This session is not active; showing the last observation only.")}</span>}
@@ -302,9 +310,10 @@ export default function SensingArea({
             {t("No view selected — pick one above.")}
           </div>
         ) : (
-          <div className={`grid gap-3 ${tiles.length > 1 ? "grid-cols-2" : "grid-cols-1"}`}>
+          <div className="grid min-h-0 flex-1 gap-3"
+            style={{ gridTemplateColumns: `repeat(${gridColumns(tiles.length)}, minmax(0, 1fr))`, gridAutoRows: "minmax(0, 1fr)" }}>
             {tiles.map((tile) => (
-              <Tile key={tile.id} label={tile.label} sub={tile.sub} muted={tile.muted} onExpand={() => setExpanded(tile.id)}>
+              <Tile key={tile.id} label={tile.label} sub={tile.sub} muted={tile.muted} onExpand={() => setExpanded(tile.id)} fill>
                 {tile.body}
               </Tile>
             ))}
@@ -312,11 +321,11 @@ export default function SensingArea({
         )}
 
         {wantObservation && perc && (
-          <details className="rounded-lg bg-neutral-900/60 text-xs">
+          <details className="shrink-0 rounded-lg bg-neutral-900/60 text-xs">
             <summary className="cursor-pointer px-3 py-1.5 text-neutral-400">
               {t("state the brain is told")} · {stateKeys.length} {t("keys")}
             </summary>
-            <pre className="overflow-x-auto px-3 pb-2 text-[10px] leading-relaxed text-neutral-500">
+            <pre className="max-h-40 overflow-auto px-3 pb-2 text-[10px] leading-relaxed text-neutral-500">
               {JSON.stringify(perc.state ?? {}, null, 2)}
             </pre>
           </details>
@@ -370,6 +379,12 @@ function Stream({ url, alt, missing, nonce, muted = false }: { url: string | nul
     // eslint-disable-next-line @next/next/no-img-element
     return <img key={`${url}#${nonce}`} src={url} alt={alt} onError={() => setFailed(true)} className={`max-h-full max-w-full object-contain ${muted ? "opacity-80" : ""}`} />;
   return <span className="p-4 text-[11px] text-neutral-600">{url ? t("(this node offers no video stream)") : missing}</span>;
+}
+
+// 几格视图排几列：1 格独占，2–4 格两列，再多三列；行数随之而来，每行等高。
+const GRID_TWO_COLUMNS_UP_TO = 4;
+function gridColumns(n: number): number {
+  return n <= 1 ? 1 : n <= GRID_TWO_COLUMNS_UP_TO ? 2 : 3;
 }
 
 // 追拍相机的手动视角条：拉远/拉近、左右旋、上下旋、恢复默认。每一步的量是定值，
