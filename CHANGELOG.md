@@ -16,6 +16,12 @@ distance and swings / tilts the view around the body (clamped by `chase_zoom_*`,
 the web's third-person tile carries zoom in/out, orbit left/right, tilt up/down and a default
 button. The nudge lives only in the open view — close the view and it is the default again.
 
+Trust records are keyed by node identity (`body:<name>`, `tool:<name>`) and hashed over the
+node's guidance and tools only, never its URL: the launcher hands out ports from a pool, and a
+re-launched body used to come back as a stranger with its verbs hidden. Version-1 (URL-keyed)
+trust files are dropped on load — approve each node once more. The remote control now says so
+when the body node is unapproved or unreachable.
+
 ## [0.1.1] — 2026-09-03
 
 Self-contained checkout. `worlds/` is now the `nerv-world` submodule (the scene library formerly

@@ -6,6 +6,10 @@ that URL. So a node may describe itself, but only the operator may authorise it,
 approval is bound to the SHA-256 of what was reviewed (SSH host-key style): if the node
 comes back different, the operator is asked again and shown what changed.
 
+Records are keyed by the node's identity (`body:<name>`, `tool:<name>`), never by its URL: the
+launcher hands out ports from a pool, so the same node comes back on a different port and must
+not look like a stranger. The URL is kept in the record for the reader; it is not hashed.
+
 This decides whether to connect at all. It does not solve prompt injection; the fence and
 the length caps below raise the bar, and the human reading the manifest is the protection.
 """
@@ -36,15 +40,18 @@ def manifest(url: str, tools, guidance: str) -> dict:
                             key=lambda d: d["name"])}
 
 
+STORE_VERSION = 2       # 1 keyed records by URL; those records are dropped on load (approve once more)
+
+
 def manifest_hash(m: dict) -> str:
-    blob = json.dumps(m, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
+    """Hash of what the node says about itself — guidance and tools. Not the URL."""
+    content = {k: v for k, v in m.items() if k != "url"}
+    blob = json.dumps(content, sort_keys=True, ensure_ascii=False, separators=(",", ":"))
     return hashlib.sha256(blob.encode("utf-8")).hexdigest()
 
 
 def manifest_diff(old: dict, new: dict) -> list[str]:
     lines: list[str] = []
-    if old.get("url") != new.get("url"):
-        lines.append(f"URL: {old.get('url')!r} → {new.get('url')!r}")
     if (old.get("guidance") or "") != (new.get("guidance") or ""):
         lines.append(f"guidance changed ({len(old.get('guidance') or '')} chars → "
                      f"{len(new.get('guidance') or '')} chars)")
@@ -102,8 +109,10 @@ class TrustStore:
             with open(self.path, encoding="utf-8") as f:
                 data = json.load(f)
         except (FileNotFoundError, json.JSONDecodeError):
-            return {"version": 1, "nodes": {}}
+            return {"version": STORE_VERSION, "nodes": {}}
         data.setdefault("nodes", {})
+        if int(data.get("version", 1)) < STORE_VERSION:      # v1 keyed by URL: cannot be mapped back
+            data = {"version": STORE_VERSION, "nodes": {}}
         return data
 
     def _save(self) -> None:
@@ -113,11 +122,12 @@ class TrustStore:
             json.dump(self._data, f, ensure_ascii=False, indent=2)
         os.replace(tmp, self.path)
 
-    def check(self, url: str, tools, guidance: str) -> TrustDecision:
+    def check(self, key: str, tools, guidance: str, url: str = "") -> TrustDecision:
+        """`key` is the node's identity (`body:<name>` / `tool:<name>`); `url` is only recorded."""
         m = manifest(url, tools, guidance)
         if trust_all_enabled():
             return TrustDecision(TRUSTED, m, reason=f"{TRUST_ALL_ENV} is on — development only")
-        rec = self._data["nodes"].get(url)
+        rec = self._data["nodes"].get(key)
         if rec is None:
             return TrustDecision(UNKNOWN, m, reason="this node has not been approved yet")
         if rec.get("hash") == manifest_hash(m):
@@ -127,23 +137,23 @@ class TrustStore:
                              reason="this node's manifest is not what you approved last time",
                              changes=manifest_diff(old, m))
 
-    def approved_record(self, url: str) -> dict | None:
-        return self._data["nodes"].get(url)
+    def approved_record(self, key: str) -> dict | None:
+        return self._data["nodes"].get(key)
 
     def list_approved(self) -> dict:
         return dict(self._data["nodes"])
 
-    def approve(self, url: str, tools, guidance: str, label: str = "") -> str:
+    def approve(self, key: str, tools, guidance: str, label: str = "", url: str = "") -> str:
         m = manifest(url, tools, guidance)
         h = manifest_hash(m)
-        self._data["nodes"][url] = {"hash": h, "label": label,
+        self._data["nodes"][key] = {"hash": h, "label": label or key,
                                     "approved_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
                                     "manifest": m}
         self._save()
         return h
 
-    def revoke(self, url: str) -> bool:
-        if self._data["nodes"].pop(url, None) is None:
+    def revoke(self, key: str) -> bool:
+        if self._data["nodes"].pop(key, None) is None:
             return False
         self._save()
         return True

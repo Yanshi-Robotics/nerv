@@ -34,6 +34,7 @@ class _McpNode:
 
     def __init__(self, name: str, base_url: str, timeout: float = config.NODE_TIMEOUT) -> None:
         self.name = name
+        self.key = f"{self.what}:{name}"          # trust identity; the launcher uses the same key
         self.base = base_url.rstrip("/")
         self.mcp_url = self.base + "/mcp/"
         self.timeout = timeout
@@ -53,7 +54,7 @@ class _McpNode:
 
     def approve(self, store: trust.TrustStore | None = None) -> str:
         raw = self.raw_capabilities()
-        h = (store or trust.TrustStore()).approve(self.base, raw.tools, raw.guidance, self.name)
+        h = (store or trust.TrustStore()).approve(self.key, raw.tools, raw.guidance, self.name, url=self.base)
         self.refresh()
         return h
 
@@ -114,7 +115,7 @@ class _McpNode:
             with_session(self.mcp_url, op, self.timeout), self.timeout + config.BRIDGE_GRACE_S)
         self._raw = Capabilities(name=self.name, version=version, tools=tools, guidance=guidance,
                                  config=cfg, family=family, sensors=sensors)
-        self._trust = trust.TrustStore().check(self.base, tools, guidance)
+        self._trust = trust.TrustStore().check(self.key, tools, guidance, url=self.base)
         if self._trust.allowed:
             self._caps = self._raw
         else:

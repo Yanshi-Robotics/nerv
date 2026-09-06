@@ -41,7 +41,10 @@ type Line = { kind: "ok" | "bad" | "info" | "progress"; text: string };
 
 type Group = { key: string; label: string; tools: ToolSheetEntry[] };
 
-export default function TeleopPanel({ sessionId, armed, hasWorld }: { sessionId: string; armed: boolean; hasWorld: boolean }) {
+export default function TeleopPanel({ sessionId, armed, hasWorld, bodyTrust }: {
+  sessionId: string; armed: boolean; hasWorld: boolean;
+  bodyTrust: string | null; // 身体节点的信任状态；不是 trusted 时它的动词不会出现在工具单里
+}) {
   const { t } = useI18n();
   const [tools, setTools] = useState<ToolSheetEntry[] | null>(null);
   const [err, setErr] = useState("");
@@ -227,6 +230,13 @@ export default function TeleopPanel({ sessionId, armed, hasWorld }: { sessionId:
       </div>
 
       {err && <div className="rounded-md border border-red-700/60 bg-red-950/40 p-2 text-[11px] text-red-300">{err}</div>}
+      {bodyTrust && bodyTrust !== "trusted" && (
+        <div className="rounded-md border border-amber-700/60 bg-amber-950/40 p-2 text-[11px] text-amber-300">
+          {bodyTrust === "offline"
+            ? t("The body node is unreachable, so none of its verbs are here.")
+            : t("The body node is not approved, so its verbs are hidden here (the brain does not see them either). Review and approve it on the Dashboard, then reopen the remote control.")}
+        </div>
+      )}
       {tools === null && !err && <div className="text-neutral-500">{t("Loading the tool sheet…")}</div>}
       {tools !== null && tools.length === 0 && (
         <div className="rounded-lg border border-neutral-800 bg-neutral-900 p-3 text-neutral-500">

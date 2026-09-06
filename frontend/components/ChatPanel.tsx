@@ -413,7 +413,7 @@ export default function ChatPanel({
           <div className="p-4 text-center text-xs text-neutral-500">{t("Create or pick a session on the left")}</div>
         )}
         {session && teleop ? (
-          <TeleopPanel sessionId={session.id} armed={session.armed} hasWorld={!!session.world} />
+          <TeleopPanel sessionId={session.id} armed={session.armed} hasWorld={!!session.world} bodyTrust={bodyNode?.trust?.state ?? null} />
         ) : (
           <>
             {items.map((it, i) => (

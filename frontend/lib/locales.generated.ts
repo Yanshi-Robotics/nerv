@@ -337,7 +337,9 @@ export const LOCALES: Record<string, Locale> = {
       "Orbit right": "Orbit right",
       "Tilt up": "Tilt up",
       "Tilt down": "Tilt down",
-      "Default view": "Default view"
+      "Default view": "Default view",
+      "The body node is unreachable, so none of its verbs are here.": "The body node is unreachable, so none of its verbs are here.",
+      "The body node is not approved, so its verbs are hidden here (the brain does not see them either). Review and approve it on the Dashboard, then reopen the remote control.": "The body node is not approved, so its verbs are hidden here (the brain does not see them either). Review and approve it on the Dashboard, then reopen the remote control."
     }
   },
   "zh": {
@@ -658,7 +660,9 @@ export const LOCALES: Record<string, Locale> = {
       "Orbit right": "右旋转",
       "Tilt up": "上旋转",
       "Tilt down": "下旋转",
-      "Default view": "恢复默认视角"
+      "Default view": "恢复默认视角",
+      "The body node is unreachable, so none of its verbs are here.": "身体节点连不上，它的动词都不在这里。",
+      "The body node is not approved, so its verbs are hidden here (the brain does not see them either). Review and approve it on the Dashboard, then reopen the remote control.": "身体节点还没批准，它的动词在这里被隐藏了（大脑同样看不到）。去 Dashboard 审阅并批准它，再重新打开遥控。"
     }
   }
 };
