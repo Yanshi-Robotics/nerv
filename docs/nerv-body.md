@@ -49,5 +49,5 @@ armed…"`. The platform holds the same switch per session and forwards it to th
 
 The body's guidance goes into the system prompt and its tool descriptions into the tool sheet,
 so a body contributes nothing until the operator approved its manifest (SHA-256 of tools +
-guidance, bound to the URL). Changed manifest → asked again with a diff. `NERV_TRUST_ALL=1` is
+guidance, bound to the node's identity `body:<name>`, not its URL — a re-launch on another port stays approved). Changed manifest → asked again with a diff. `NERV_TRUST_ALL=1` is
 the development escape hatch. `nerv conformance <url>` checks a node against this page.
