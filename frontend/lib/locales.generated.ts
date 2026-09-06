@@ -315,7 +315,6 @@ export const LOCALES: Record<string, Locale> = {
       "E-STOP": "E-STOP",
       "Hold the pose now: the body stops thinking and keeps every joint where it is. Not a power cut — the servos stay on.": "Hold the pose now: the body stops thinking and keeps every joint where it is. Not a power cut — the servos stay on.",
       "HOLDING — the body keeps its pose and refuses every move": "HOLDING — the body keeps its pose and refuses every move",
-      "free — hold the pose at any moment, running or not": "free — hold the pose at any moment, running or not",
       "Let the body move again (refused while it is down — reset the world or stand it up first)": "Let the body move again (refused while it is down — reset the world or stand it up first)",
       "Release": "Release",
       "Back to the spawn pose (simulated world only). Lifts the hold.": "Back to the spawn pose (simulated world only). Lifts the hold.",
@@ -339,7 +338,8 @@ export const LOCALES: Record<string, Locale> = {
       "Tilt down": "Tilt down",
       "Default view": "Default view",
       "The body node is unreachable, so none of its verbs are here.": "The body node is unreachable, so none of its verbs are here.",
-      "The body node is not approved, so its verbs are hidden here (the brain does not see them either). Review and approve it on the Dashboard, then reopen the remote control.": "The body node is not approved, so its verbs are hidden here (the brain does not see them either). Review and approve it on the Dashboard, then reopen the remote control."
+      "The body node is not approved, so its verbs are hidden here (the brain does not see them either). Review and approve it on the Dashboard, then reopen the remote control.": "The body node is not approved, so its verbs are hidden here (the brain does not see them either). Review and approve it on the Dashboard, then reopen the remote control.",
+      "not holding — E-STOP locks the pose at any moment (arming is the switch at the bottom)": "not holding — E-STOP locks the pose at any moment (arming is the switch at the bottom)"
     }
   },
   "zh": {
@@ -638,7 +638,6 @@ export const LOCALES: Record<string, Locale> = {
       "E-STOP": "急停",
       "Hold the pose now: the body stops thinking and keeps every joint where it is. Not a power cut — the servos stay on.": "立刻锁住姿态：身体停止思考，每个关节停在原处。不是断电——电机仍在出力。",
       "HOLDING — the body keeps its pose and refuses every move": "锁姿中——身体保持姿态，拒绝一切动作",
-      "free — hold the pose at any moment, running or not": "未锁——随时可以锁姿，不管有没有动作在跑",
       "Let the body move again (refused while it is down — reset the world or stand it up first)": "放开，让身体能再动（倒地时会被拒绝——先复位世界或把它扶起来）",
       "Release": "放开",
       "Back to the spawn pose (simulated world only). Lifts the hold.": "回到出生姿态（只有仿真世界能做），同时解除锁姿。",
@@ -662,7 +661,8 @@ export const LOCALES: Record<string, Locale> = {
       "Tilt down": "下旋转",
       "Default view": "恢复默认视角",
       "The body node is unreachable, so none of its verbs are here.": "身体节点连不上，它的动词都不在这里。",
-      "The body node is not approved, so its verbs are hidden here (the brain does not see them either). Review and approve it on the Dashboard, then reopen the remote control.": "身体节点还没批准，它的动词在这里被隐藏了（大脑同样看不到）。去 Dashboard 审阅并批准它，再重新打开遥控。"
+      "The body node is not approved, so its verbs are hidden here (the brain does not see them either). Review and approve it on the Dashboard, then reopen the remote control.": "身体节点还没批准，它的动词在这里被隐藏了（大脑同样看不到）。去 Dashboard 审阅并批准它，再重新打开遥控。",
+      "not holding — E-STOP locks the pose at any moment (arming is the switch at the bottom)": "未锁姿——急停随时能锁住姿态（要让它动，先按底部的 ARM 开关）"
     }
   }
 };

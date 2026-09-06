@@ -210,7 +210,7 @@ export default function TeleopPanel({ sessionId, armed, hasWorld, bodyTrust }: {
         </button>
         <div className="min-w-0 flex-1 text-[11px]">
           {held === true && <div className="font-semibold text-red-300">{t("HOLDING — the body keeps its pose and refuses every move")}</div>}
-          {held === false && <div className="text-neutral-500">{t("free — hold the pose at any moment, running or not")}</div>}
+          {held === false && <div className="text-neutral-500">{t("not holding — E-STOP locks the pose at any moment (arming is the switch at the bottom)")}</div>}
           {holdMsg && <div className="truncate text-neutral-400" title={holdMsg}>{holdMsg}</div>}
         </div>
         {held === true && (

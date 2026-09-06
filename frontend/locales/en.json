@@ -294,7 +294,6 @@
     "E-STOP": "E-STOP",
     "Hold the pose now: the body stops thinking and keeps every joint where it is. Not a power cut — the servos stay on.": "Hold the pose now: the body stops thinking and keeps every joint where it is. Not a power cut — the servos stay on.",
     "HOLDING — the body keeps its pose and refuses every move": "HOLDING — the body keeps its pose and refuses every move",
-    "free — hold the pose at any moment, running or not": "free — hold the pose at any moment, running or not",
     "Let the body move again (refused while it is down — reset the world or stand it up first)": "Let the body move again (refused while it is down — reset the world or stand it up first)",
     "Release": "Release",
     "Back to the spawn pose (simulated world only). Lifts the hold.": "Back to the spawn pose (simulated world only). Lifts the hold.",
@@ -318,6 +317,7 @@
     "Tilt down": "Tilt down",
     "Default view": "Default view",
     "The body node is unreachable, so none of its verbs are here.": "The body node is unreachable, so none of its verbs are here.",
-    "The body node is not approved, so its verbs are hidden here (the brain does not see them either). Review and approve it on the Dashboard, then reopen the remote control.": "The body node is not approved, so its verbs are hidden here (the brain does not see them either). Review and approve it on the Dashboard, then reopen the remote control."
+    "The body node is not approved, so its verbs are hidden here (the brain does not see them either). Review and approve it on the Dashboard, then reopen the remote control.": "The body node is not approved, so its verbs are hidden here (the brain does not see them either). Review and approve it on the Dashboard, then reopen the remote control.",
+    "not holding — E-STOP locks the pose at any moment (arming is the switch at the bottom)": "not holding — E-STOP locks the pose at any moment (arming is the switch at the bottom)"
   }
 }
