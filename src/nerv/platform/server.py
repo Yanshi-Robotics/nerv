@@ -46,6 +46,11 @@ class ArmIn(BaseModel):
     armed: bool
 
 
+class TeleopIn(BaseModel):
+    name: str
+    arguments: dict = {}
+
+
 class BrainIn(BaseModel):
     brain: str
 
@@ -223,6 +228,27 @@ def arm(sid: str, inp: ArmIn) -> dict:
     if not nerv.store.exists(sid):
         raise HTTPException(404, "no such session")
     return nerv.arm(sid, inp.armed)
+
+
+@app.get("/api/sessions/{sid}/tools")
+def session_tools(sid: str) -> list:
+    if not nerv.store.exists(sid):
+        raise HTTPException(404, "no such session")
+    return nerv.tool_sheet(sid)
+
+
+@app.post("/api/sessions/{sid}/teleop")
+def teleop(sid: str, inp: TeleopIn) -> StreamingResponse:
+    """Operator remote control: call one body verb or tool function directly (gated, logged, SSE)."""
+    if not nerv.store.exists(sid):
+        raise HTTPException(404, "no such session")
+
+    def gen():
+        for ev in slog.bound_stream(sid, nerv.teleop_stream(sid, inp.name, inp.arguments)):
+            yield f"data: {json.dumps(ev, ensure_ascii=False, default=str)}\n\n"
+
+    return StreamingResponse(gen(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
 # ---- chat ------------------------------------------------------------------------------------

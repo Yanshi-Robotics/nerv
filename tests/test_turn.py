@@ -87,3 +87,38 @@ def test_interrupt_and_step_ceiling_are_resumable_pauses(tmp_path):
         assert turn2.stop_reason() == "interrupt" and not interrupt.is_set(s.id)
     finally:
         _stop(servers)
+
+
+def test_teleop_uses_the_same_gate_and_records_the_step(tmp_path):
+    """The operator's remote control goes through the gate and lands in the session history."""
+    from nerv.platform.hub import Nerv
+    from nerv.platform.launcher import Launcher
+    from nerv.platform.registry import Registry
+    impl, store, s, body, tool, servers = _setup(tmp_path, armed_session=False)
+    try:
+        hub = Nerv(registry=Registry(), store=store, launcher=Launcher(Registry()))
+        hub._bodies["fake-arm"] = body
+        hub.launcher.nodes["body:fake-arm"] = type("H", (), {"url": body.base, "alive": lambda self: True,
+                                                             "kind": "body", "name": "body:fake-arm",
+                                                             "bus_url": "", "attached": True, "log_path": "",
+                                                             "python": "", "meta": {}})()
+        hub._tools["calculator"] = tool
+        hub.launcher.nodes["tool:calculator"] = type("H", (), {"url": tool.base, "alive": lambda self: True,
+                                                               "kind": "tool", "name": "tool:calculator",
+                                                               "bus_url": "", "attached": True, "log_path": "",
+                                                               "python": "", "meta": {}})()
+        sheet = hub.tool_sheet(s.id)
+        assert {t["name"] for t in sheet} >= {"set_angle", "read_angle", "calc"}
+        assert next(t for t in sheet if t["name"] == "set_angle")["origin"] == "body"
+        evs = list(hub.teleop_stream(s.id, "set_angle", {"deg": 15}))
+        res = next(e for e in evs if e["type"] == "tool_result")
+        assert not res["ok"] and "not armed" in res["message"] and impl.calls == []
+        hub.arm(s.id, True)
+        evs = list(hub.teleop_stream(s.id, "set_angle", {"deg": 15}))
+        res = next(e for e in evs if e["type"] == "tool_result")
+        assert res["ok"] and impl.angle == 15
+        roles = [m["role"] for m in store.get(s.id).messages]
+        assert roles[-2:] == ["assistant", "tool"]        # the operator's step is in the history
+        assert store.get(s.id).messages[-2]["brain"] == "operator"
+    finally:
+        _stop(servers)

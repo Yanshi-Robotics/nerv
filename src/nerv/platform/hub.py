@@ -7,6 +7,7 @@ from __future__ import annotations
 
 import queue
 import threading
+import time
 from typing import Iterator
 
 from .. import config
@@ -205,6 +206,59 @@ class Nerv:
                 reply = ev.get("text", "")
                 stop = ev.get("stop_reason")
         return {"reply": reply, "events": events, "stop_reason": stop}
+
+    def tool_sheet(self, sid: str) -> list[dict]:
+        """The tools the brain would see in this session, with origin and kind — for the remote control."""
+        s = self.store.get(sid)
+        if s.status != op.SESSION_ACTIVE:
+            return []
+        turn = self._turn(sid, lambda ev: None)
+        out = []
+        for spec in turn.tools():
+            origin, node, _ = turn._routes[spec.name]
+            out.append({"name": spec.name, "kind": spec.kind, "origin": origin, "node": node.name,
+                        "description": spec.description, "parameters": spec.parameters})
+        return out
+
+    def teleop_stream(self, sid: str, name: str, arguments: dict) -> Iterator[dict]:
+        """The operator calls one tool directly. Same gate, same nodes, same log as the brain —
+        recorded in the session as a step taken by the operator so the brain sees it next turn."""
+        from ..nerve.brain import CallTool, Think
+        s = self.store.get(sid)
+        if s.status != op.SESSION_ACTIVE:
+            yield {"type": op.EV_TOOL_RESULT, "name": name, "ok": False,
+                   "message": messages.SESSION_NOT_ACTIVE.format(status=s.status)}
+            yield {"type": op.EV_DONE}
+            return
+        if not self._epoch_ok(s):
+            yield {"type": op.EV_TOOL_RESULT, "name": name, "ok": False,
+                   "message": messages.SESSION_NOT_ACTIVE.format(status=op.SESSION_RECONNECT)}
+            yield {"type": op.EV_DONE}
+            return
+        q: queue.Queue = queue.Queue()
+        turn = self._turn(sid, q.put)
+        call_id = f"teleop-{int(time.time() * 1000)}"
+
+        def _run():
+            with slog.session_scope(sid):
+                try:
+                    interrupt.clear(sid)
+                    turn.session.brain = "operator"
+                    turn.think(Think(messages.TELEOP_STEP.format(name=name), [CallTool(call_id, name, arguments)]))
+                    turn.call_tool(CallTool(call_id, name, arguments))
+                finally:
+                    q.put(None)
+
+        th = threading.Thread(target=_run, daemon=True)
+        th.start()
+        yield {"type": op.EV_START, "brain": "operator", "model": "teleop"}
+        while True:
+            ev = q.get()
+            if ev is None:
+                break
+            yield ev
+        th.join()
+        yield {"type": op.EV_DONE}
 
     def perceive(self, sid: str):
         s = self.store.get(sid)
