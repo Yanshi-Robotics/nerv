@@ -126,13 +126,13 @@ export default function SensingArea({
 
   // 可选的视图清单
   const chips = useMemo(() => {
-    const out: { id: ViewId; label: string; title?: string }[] = [
-      { id: VIEW_OBSERVATION, label: `👁 ${t("Observation")}`, title: t("what the brain sees — one snapshot per turn") },
-      { id: VIEW_BODY, label: `🎥 ${t("Body live")}`, title: t("the body's own camera, continuous — for you, not the brain") },
+    const out: { id: ViewId; label: string; title?: string; group: "robot" | "third" }[] = [
+      { id: VIEW_OBSERVATION, label: `👁 ${t("Observation")}`, title: t("what the brain sees — one snapshot per turn"), group: "robot" },
+      { id: VIEW_BODY, label: `🎥 ${t("Body live")}`, title: t("the body's own camera, continuous — for you, not the brain"), group: "robot" },
     ];
     if (session?.world) {
-      out.push({ id: VIEW_WORLD, label: `🛰 ${t("World chase (operator only)")}`, title: t("the brain never sees this") });
-      for (const s of worldSensors) out.push({ id: CAM_VIEW_PREFIX + s, label: `📷 ${s}`, title: t("world camera — the brain never sees this") });
+      out.push({ id: VIEW_WORLD, label: `🛰 ${t("World chase (operator only)")}`, title: t("the brain never sees this"), group: "third" });
+      for (const s of worldSensors) out.push({ id: CAM_VIEW_PREFIX + s, label: `📷 ${s}`, title: t("world camera — the brain never sees this"), group: "third" });
     }
     return out;
   }, [session?.world, worldSensors, t]);
@@ -230,16 +230,25 @@ export default function SensingArea({
     <section className="relative flex min-w-0 flex-col overflow-hidden">
       {/* ---- 视图选择 ---- */}
       <div className="flex flex-wrap items-center gap-1.5 border-b border-neutral-800 bg-neutral-900/60 px-3 py-2">
-        <div className="flex flex-wrap items-center gap-1.5" role="group" aria-label={t("Views")}>
-        {chips.map((c) => {
-          const on = views.includes(c.id);
+        <div className="flex flex-wrap items-center gap-3" role="group" aria-label={t("Views")}>
+        {([["robot", t("Robot's own view")], ["third", t("Third-person view")]] as const).map(([g, caption]) => {
+          const items = chips.filter((c) => c.group === g);
+          if (!items.length) return null;
           return (
-            <button key={c.id} onClick={() => toggleView(c.id)} aria-pressed={on} title={c.title}
-              className={`rounded-full border px-2.5 py-0.5 text-[11px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-                on ? "border-blue-600 bg-blue-600 text-white" : "border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-neutral-200"
-              }`}>
-              {c.label}
-            </button>
+            <div key={g} className="flex flex-wrap items-center gap-1.5" role="group" aria-label={caption}>
+              <span className="text-[10px] uppercase tracking-wide text-neutral-500">{caption}</span>
+              {items.map((c) => {
+                const on = views.includes(c.id);
+                return (
+                  <button key={c.id} onClick={() => toggleView(c.id)} aria-pressed={on} title={c.title}
+                    className={`rounded-full border px-2.5 py-0.5 text-[11px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                      on ? "border-blue-600 bg-blue-600 text-white" : "border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-neutral-200"
+                    }`}>
+                    {c.label}
+                  </button>
+                );
+              })}
+            </div>
           );
         })}
         </div>

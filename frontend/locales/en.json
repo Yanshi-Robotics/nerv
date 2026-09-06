@@ -286,6 +286,9 @@
     "👁 Observation the brain received": "👁 Observation the brain received",
     "💭 Reasoning": "💭 Reasoning",
     "🔒 This session is frozen and read-only. Create a new one to continue.": "🔒 This session is frozen and read-only. Create a new one to continue.",
-    "Pages": "Pages"
+    "Pages": "Pages",
+    "Robot's own view": "Robot's own view",
+    "Third-person view": "Third-person view",
+    "running…": "running…"
   }
 }

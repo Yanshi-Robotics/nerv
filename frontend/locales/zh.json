@@ -286,6 +286,9 @@
     "👁 Observation the brain received": "👁 大脑收到的观察",
     "💭 Reasoning": "💭 思考",
     "🔒 This session is frozen and read-only. Create a new one to continue.": "🔒 这个会话已冻结、只读。新建一个会话继续。",
-    "Pages": "页面"
+    "Pages": "页面",
+    "Robot's own view": "机器人自己的视角",
+    "Third-person view": "第三方观测视角",
+    "running…": "执行中…"
   }
 }

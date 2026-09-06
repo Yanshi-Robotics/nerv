@@ -307,7 +307,10 @@ export const LOCALES: Record<string, Locale> = {
       "👁 Observation the brain received": "👁 Observation the brain received",
       "💭 Reasoning": "💭 Reasoning",
       "🔒 This session is frozen and read-only. Create a new one to continue.": "🔒 This session is frozen and read-only. Create a new one to continue.",
-      "Pages": "Pages"
+      "Pages": "Pages",
+      "Robot's own view": "Robot's own view",
+      "Third-person view": "Third-person view",
+      "running…": "running…"
     }
   },
   "zh": {
@@ -598,7 +601,10 @@ export const LOCALES: Record<string, Locale> = {
       "👁 Observation the brain received": "👁 大脑收到的观察",
       "💭 Reasoning": "💭 思考",
       "🔒 This session is frozen and read-only. Create a new one to continue.": "🔒 这个会话已冻结、只读。新建一个会话继续。",
-      "Pages": "页面"
+      "Pages": "页面",
+      "Robot's own view": "机器人自己的视角",
+      "Third-person view": "第三方观测视角",
+      "running…": "执行中…"
     }
   }
 };

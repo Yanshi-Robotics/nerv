@@ -85,14 +85,15 @@ export default function TeleopPanel({ sessionId, armed }: { sessionId: string; a
       if (running) return;
       setRunning(name);
       setStopping(false);
-      const push = (line: Line) => setLines((cur) => ({ ...cur, [name]: [...(cur[name] ?? []), line] }));
-      setLines((cur) => ({ ...cur, [name]: [{ kind: "info", text: `→ ${name}(${JSON.stringify(args)})` }] }));
+      // 遥控器只显示一行状态；逐条进度与结果都在 Session Logs 里，这里不重复。
+      const push = (line: Line) => setLines((cur) => ({ ...cur, [name]: [line] }));
+      push({ kind: "progress", text: `⏳ ${t("running…")}` });
       try {
         await streamTeleop(sessionId, name, args, (e: ChatEvent) => {
           if (e.type === "gate") {
             // 闸门：只有拒绝才值得一行（没上膛、参数越界）。放行是常态。
             if (!e.allowed) push({ kind: "bad", text: `⛔ ${t("gate refused {name}", { name: e.name })}: ${t(e.reason)}` });
-          } else if (e.type === "progress") push({ kind: "progress", text: `⏳ ${e.message}` });
+          } else if (e.type === "progress") push({ kind: "progress", text: `⏳ ${e.message || t("running…")}` });
           else if (e.type === "tool_result") push({ kind: e.ok ? "ok" : "bad", text: `${e.ok ? "✓" : "✗"} ${t(e.message)}` });
         });
       } catch (e) {
