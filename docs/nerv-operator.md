@@ -36,6 +36,8 @@ Node keys: `body:<body>`, `world:<world>/<body>`, `tool:<tool>`.
 | `POST /api/sessions/{sid}/interrupt` | stop the running turn and ask the body node to stop its skill |
 | `POST /api/sessions/{sid}/brain` `{brain}` | switch brains mid-session |
 | `POST /api/sessions/{sid}/arm` `{armed}` | the arming switch: sets the session flag and forwards to the body node's `/config` |
+| `GET /api/sessions/{sid}/tools` | the tool sheet the brain would see: `[{name, kind, origin (body · tool), node, description, parameters}]` — what the remote control renders |
+| `POST /api/sessions/{sid}/teleop` `{name, arguments}` | the operator calls one tool directly. Same gate, same nodes, same log as the brain; SSE with `start · tool_call · gate · progress · tool_result · done`. The step is recorded in the session as taken by `operator`, so the brain sees it next turn. |
 
 Session states: `active`, `frozen` (a newer session took the same body), `reconnect_required`
 (the world node's epoch changed — it restarted — so this session's physics is gone).
