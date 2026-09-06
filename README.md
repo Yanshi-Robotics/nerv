@@ -83,6 +83,10 @@ An MCP server with `tools/list` + `tools/call` and a `/health`. Its functions jo
 
 <div align="center"><img src="docs/images/flow.svg" alt="System 2 and System 1 timelines across the nodes" width="860"></div>
 
+<div align="center"><img src="docs/images/walk-to-the-living-room.gif" alt="gpt-5.5 told 走到客厅 (walk to the living room): it notes what it sees, walks 2 m, 2 m and 1.2 m with the gait policy, recognises the sofa, the glass wall and the plant, and reports arrival" width="960"></div>
+
+Above, unedited apart from speed (2.5×): the instruction is *走到客厅* (walk to the living room). System 2 is gpt-5.5: it writes down its task, looks through the head camera, notes "an open space with big windows ahead; the room on the right looks like a bedroom", and calls `move_forward` three times. System 1 is the gait policy on the body node, turning each call into 50 Hz joint targets and reporting the measured distance. The brain recognises the sofa, the glass wall and the plant, and answers 已到达客厅 — "arrived at the living room". The chase camera on the lower left is the operator's; the brain only ever saw the top-left frames.
+
 **See** — the brain asks to observe; NERV assembles one frame from the body's observation and each ambient stream the session declared. **Think** — one model call: answer, or pick a tool. **Gate** — NERV checks the session is armed, the verb is allowed and the arguments are inside what the body declared; a refusal comes back as a tool result the brain can act on. **Act** — a primitive writes a target and settles; a skill starts a policy loop on the body node — a gait at 50 Hz turning "two metres" into velocity commands, reading the bus, writing joint targets — until done, timed out or stopped, sending progress on the way and a measured result at the end: distance covered, stalled, fallen, gripper closed. Then the brain sees again.
 
 ### Primitives and skills
