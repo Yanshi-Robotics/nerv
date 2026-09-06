@@ -19,7 +19,7 @@ NERV couples a **brain** to a **body** in a **world**, with **tools** within rea
 
 The analogy is the human one. The brain thinks and never moves. The body carries out what the brain intends, with its own fast reflexes. The world is what the body touches and sees: a simulated apartment today, your desk tomorrow. A tool is what the brain reaches for when it would rather not guess — a calculator, to begin with. NERV is the nerves between them, and the only place a signal can be stopped on its way.
 
-NERV succeeds [ANIMA Zero](docs/history/anima-zero.md) with one change of address: Zero sent actions to the world; NERV sends them to the body. A world only provides physics and senses. The body and the world are two objects — the body perceives the world, and the world pushes back: this wall can be walked into, that door can be walked through. The brain never sees the world except through the body, which is what makes a simulated world and a real one the same thing to it.
+NERV sends actions to the body, never to the world. A world only provides physics and senses. The body and the world are two objects — the body perceives the world, and the world pushes back: this wall can be walked into, that door can be walked through. The brain never sees the world except through the body, which is what makes a simulated world and a real one the same thing to it.
 
 ## Key features
 
@@ -62,7 +62,7 @@ The brain gets a `Link` with `observe()`, `tools()`, `history()`, `registers()`,
 </details>
 
 <details>
-<summary><b>NERV/Body</b> — ANIMA Zero's four channels with a new speaker</summary>
+<summary><b>NERV/Body</b> — four channels over MCP, a control plane over HTTP</summary>
 
 Over MCP at `/mcp/`: `tools/list` + `tools/call` (with progress notifications as signs of life), `resources/read nerv://observation` (state JSON, then image blobs named by `state.cameras`), `prompts/get guidance`, `nerv://config`, and `nerv://capabilities` (`family`, tool kinds `read · primitive · skill`, sensors, armed, epoch). Over HTTP: `/health`, `/status`, `/config` with the node's own arming switch, `/stop`, `/hold` (the emergency stop that keeps the pose — a fall latches it by itself), `/release`, `/stream`. `nerv conformance <url>` checks a node against this. [docs/nerv-body.md](docs/nerv-body.md).
 </details>
@@ -120,7 +120,7 @@ cp .env.example .env                                         # an API key, or a 
 .venv/bin/nerv doctor                                        # what is configured, which triples are possible
 ```
 
-Everything a simulation needs is in the checkout: `worlds/` is the [nerv-world](https://github.com/Yanshi-Robotics/nerv-world) submodule (the scene library formerly known as alice-house, carrying the world descriptors) and `policies/` is the [nerv-policies](https://github.com/Yanshi-Robotics/nerv-policies) submodule (released gait policies: `policy.onnx` + `contract.json` + `release.yaml`). If you cloned without `--recurse-submodules`, run `git submodule update --init --recursive`; `nerv doctor` says so if you forgot.
+Everything a simulation needs is in the checkout: `worlds/` is the [nerv-world](https://github.com/Yanshi-Robotics/nerv-world) submodule (the scene library, carrying the world descriptors) and `policies/` is the [nerv-policies](https://github.com/Yanshi-Robotics/nerv-policies) submodule (released gait policies: `policy.onnx` + `contract.json` + `release.yaml`). If you cloned without `--recurse-submodules`, run `git submodule update --init --recursive`; `nerv doctor` says so if you forgot.
 
 ## Running
 
@@ -140,11 +140,25 @@ nerv conformance URL [--kind body|tool|world]  check a node against its interfac
 nerv doctor                                  what is configured and what is reachable
 ```
 
-The web app (`frontend/`, Next.js) is a client of NERV/Operator: `npm install && npm run dev` on :8100, or `npm run build:static` and let `nerv serve` serve it. It shows the observation the brain sees, the operator-only chase camera, the trust panel, the arming switch and every signal as it happens.
+The web app (`frontend/`, Next.js) is a client of NERV/Operator: `npm install && npm run dev` on :8100, or `npm run build:static` and let `nerv serve` serve it. See [The web app](#the-web-app) below.
 
 ### The real arm
 
 For `arm-lerobot-so101` the motor bus *is* LeRobot's `SOFollower`. Either `pip install -e ".[lerobot]"` into the same venv, or point `NERV_LEROBOT_PYTHON` at an environment that already has LeRobot; set `SO101_PORT`, `SO101_ID` and `SO101_CAMERAS` in `.env`, and calibrate with `lerobot-calibrate` as usual. A session against hardware starts disarmed twice over — in NERV and in the body node — and the brain gets "not armed" from every command until you arm it, with your hand near the power switch. A grasping skill is a policy you train with LeRobot and drop on the policy shelf; the skill runner is already waiting for it.
+
+## The web app
+
+<div align="center"><img src="docs/images/web-session.png" alt="A session: what the brain sees, the body's live camera, the operator-only chase camera, and the conversation" width="960"></div>
+
+One session on screen. Left: the sessions. Middle, *robot's own view*: the observation the brain received (one frame per step) and the body's live camera; *third-person view*: the chase camera and any world camera — operator only, the brain never sees them, and the chase camera can be zoomed, orbited and tilted without touching the stream. Right: the conversation with the brain — reasoning, the observation it got, every tool call and gate decision — with the model picker and the **ARMED / DISARMED** switch at the bottom. Only a person flips that switch.
+
+<div align="center"><img src="docs/images/web-teleop.png" alt="Remote control: E-STOP, quick moves, and one card per verb and tool generated from the tool sheet" width="960"></div>
+
+**Remote control** (Teleop). The operator drives the body directly through the same gate, nodes and log the brain uses; every step is recorded in the session so the brain sees it next turn. The cards are generated from the tool sheet the brain would see — a body that declares a new verb shows up here with no change to the web app. **E-STOP** holds the pose (the joints stay powered where they are — not a power cut, which would let a robot drop); a fall holds the pose by itself. **Reset world** puts a simulated body back at its spawn pose.
+
+<div align="center"><img src="docs/images/web-dashboard.png" alt="The dashboard: registry, nodes, trust, sessions and live signals" width="960"></div>
+
+**Dashboard** and **Logs** open in place. The dashboard shows what the registry declares, which nodes are up, and where each stands with you: a node's text reaches the brain only after you have read its manifest and approved it, and it is asked again if the manifest changes. Logs are the one signal trace — every frame, thought, command and bus message — per session or across all.
 
 ## What ships
 
@@ -169,4 +183,4 @@ A **brain** implements [NERV/Brain](docs/nerv-brain.md). A **body** is a directo
 
 ## Acknowledgements
 
-Scenes come from [nerv-world](https://github.com/Yanshi-Robotics/nerv-world) (formerly alice-house). The humanoid's gait policy was trained in yanshi-rl-lab on Isaac Lab. Physics is [MuJoCo](https://mujoco.org); hardware access is [LeRobot](https://github.com/huggingface/lerobot); the SO-101 model is from [TheRobotStudio/SO-ARM100](https://github.com/TheRobotStudio/SO-ARM100); the G1 model originates from [MuJoCo Menagerie](https://github.com/google-deepmind/mujoco_menagerie). NERV is the successor of [ANIMA Zero](docs/history/anima-zero.md).
+Scenes come from [nerv-world](https://github.com/Yanshi-Robotics/nerv-world). The humanoid's gait policy was trained in yanshi-rl-lab on Isaac Lab. Physics is [MuJoCo](https://mujoco.org); hardware access is [LeRobot](https://github.com/huggingface/lerobot); the SO-101 model is from [TheRobotStudio/SO-ARM100](https://github.com/TheRobotStudio/SO-ARM100); the G1 model originates from [MuJoCo Menagerie](https://github.com/google-deepmind/mujoco_menagerie).

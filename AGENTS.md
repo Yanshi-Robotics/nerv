@@ -24,7 +24,7 @@ If not, it belongs in a family, a node or a registry entry — never in the plat
 |---|---|
 | What a body can do (verbs, kinds) | its family module + `bodies/<name>/body.yaml` |
 | Which policy drives a skill | `bodies/<name>/body.yaml` `skills.<verb>.policy` → `policies/<name>/` (submodule `nerv-policies`; relative paths resolve against the repo root) |
-| Which bodies a world can host | `worlds/<name>/world.yaml` `supports` — the descriptor lives in the `worlds/` submodule (`nerv-world`, formerly alice-house) next to the scenes |
+| Which bodies a world can host | `worlds/<name>/world.yaml` `supports` — the descriptor lives in the `worlds/` submodule (`nerv-world`) next to the scenes |
 | Where scenes live | `worlds/` (submodule). It ships no policies. |
 | Every tunable of the platform | `src/nerv/config.py` (env `NERV_*`, `.env`) |
 | Tunables of a node | its YAML entry and its command-line args; nodes never import `config.py` |

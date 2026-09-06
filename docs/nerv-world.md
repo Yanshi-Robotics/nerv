@@ -50,6 +50,6 @@ pose/room/truth keys is refused by the platform (`platform/observe.py`).
 Launch: `nerv node world -- --world apt2 --body humanoid-unitree-g1 --http-port P --bus-port Q`,
 or let the platform do it when a session is created. Registry: `worlds/<name>/world.yaml`
 (`kind`, `engine`, `assets_root`, `supports: {body: arena}`, `spawn`, `ambient`, `physics`).
-`worlds/` is the `nerv-world` submodule (formerly alice-house): the scene library and the world
+`worlds/` is the `nerv-world` submodule: the scene library and the world
 descriptors live together, and relative paths in a descriptor resolve against the nerv repository
 root (`assets_root: worlds`).

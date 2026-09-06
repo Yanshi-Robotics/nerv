@@ -1,7 +1,7 @@
 # NERV/Body
 
-The contract between NERV and a body node. It is ANIMA Zero's AWI v1 with a new speaker:
-four channels over MCP, and a control plane over plain HTTP that the brain never sees.
+The contract between NERV and a body node: four channels over MCP, and a control plane over
+plain HTTP that the brain never sees.
 
 ## Data plane — MCP at `/mcp/` (Streamable HTTP, stateless, SSE responses)
 

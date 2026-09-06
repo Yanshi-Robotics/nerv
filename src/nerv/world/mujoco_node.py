@@ -1,6 +1,6 @@
 """NERV/World, simulation endpoint: a MuJoCo arena with motor firmware, cameras and a rangefinder.
 
-One process = one arena (an MJCF scene, usually built by alice-house) hosting one body.
+One process = one arena (an MJCF scene from the nerv-world library) hosting one body.
   * Physics runs on a background thread at ``physics.dt`` (world.yaml), throttled to
     ``physics.realtime_factor`` of wall time. Everything measured is SIM time.
   * The motor bus (ZMQ REP, nerve/wire.py JSON) is what the body node talks to at policy rate:
@@ -89,7 +89,7 @@ def _load_yaml(path: str) -> dict:
         return yaml.safe_load(f) or {}
 
 
-# ---- the scene library (alice-house) ---------------------------------------------------------------
+# ---- the scene library (nerv-world) ---------------------------------------------------------------
 class SceneLayout:
     """A scene's layout module from the assets library: spawn points, rooms, ceiling group.
 
@@ -495,7 +495,7 @@ class WorldSim:
     def _build_ray_mask(self) -> None:
         """Rays must see the scenery and not the body: mj_ray filters by geom *group* (6 bits) plus
         one excluded body. The body's subtree and the scenery therefore need disjoint groups
-        (alice-house convention: robot 2/3, house 0/1/4/5). If they clash we fall back to
+        (nerv-world convention: robot 2/3, house 0/1/4/5). If they clash we fall back to
         excluding only the base body and say so — a fixed-base arm's rays are not load-bearing."""
         m = self.model
         is_self = [m.body_rootid[m.geom_bodyid[g]] == self.base_body for g in range(m.ngeom)]

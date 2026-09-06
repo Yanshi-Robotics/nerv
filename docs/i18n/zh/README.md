@@ -19,7 +19,7 @@ NERV 把**大脑**、**身体**、**世界**耦合在一起，手边还有**工�
 
 类比是人体。大脑思考、从不动手。身体执行大脑的意图，并带着自己的快反射。世界是身体摸到和看到的东西：今天是仿真公寓，明天是你的桌面。工具是大脑不想瞎猜时伸手去拿的东西——先从一个计算器开始。NERV 是它们之间的神经，也是信号在途中唯一能被拦下的地方。
 
-NERV 是 [ANIMA Zero](../../history/anima-zero.md) 的继任者，只改了一个地址：Zero 把动作发给世界，NERV 把动作发给身体。世界只提供物理和感知。身体与世界是两个对象——身体感知世界，世界反过来推它：这堵墙走不过去，那扇门走得过去。大脑只能透过身体看世界，这正是仿真世界与真实世界对大脑等价的原因。
+NERV 把动作发给身体，从不发给世界。世界只提供物理和感知。身体与世界是两个对象——身体感知世界，世界反过来推它：这堵墙走不过去，那扇门走得过去。大脑只能透过身体看世界，这正是仿真世界与真实世界对大脑等价的原因。
 
 ## 主要特性
 
@@ -62,7 +62,7 @@ NERV 是 [ANIMA Zero](../../history/anima-zero.md) 的继任者，只改了一�
 </details>
 
 <details>
-<summary><b>NERV/Body</b>——ANIMA Zero 的四通道，换了说话的人</summary>
+<summary><b>NERV/Body</b>——MCP 上的四条通道，HTTP 上的控制面</summary>
 
 MCP（`/mcp/`）：`tools/list` + `tools/call`（进度通知即生命迹象）、`resources/read nerv://observation`（状态 JSON，随后是按 `state.cameras` 命名的图像 blob）、`prompts/get guidance`、`nerv://config`、`nerv://capabilities`（`family`、工具种类 `read · primitive · skill`、传感器、武装、epoch）。HTTP：`/health`、`/status`、带节点自身武装开关的 `/config`、`/stop`、`/hold`（锁姿急停——摔倒时自动锁上）、`/release`、`/stream`。`nerv conformance <url>` 按这份契约逐条检查。见 [docs/nerv-body.md](../../nerv-body.md)。
 </details>
@@ -120,7 +120,7 @@ cp .env.example .env                                         # API key，或本�
 .venv/bin/nerv doctor                                        # 配了什么、哪些三元组可行
 ```
 
-仿真需要的一切都在 checkout 里：`worlds/` 是 [nerv-world](https://github.com/Yanshi-Robotics/nerv-world) 子模块（原名 alice-house 的场景库，连同世界描述），`policies/` 是 [nerv-policies](https://github.com/Yanshi-Robotics/nerv-policies) 子模块（已发布的步态策略：`policy.onnx` + `contract.json` + `release.yaml`）。如果 clone 时没带 `--recurse-submodules`，跑一次 `git submodule update --init --recursive`；忘了的话 `nerv doctor` 会提醒。
+仿真需要的一切都在 checkout 里：`worlds/` 是 [nerv-world](https://github.com/Yanshi-Robotics/nerv-world) 子模块（场景库，连同世界描述），`policies/` 是 [nerv-policies](https://github.com/Yanshi-Robotics/nerv-policies) 子模块（已发布的步态策略：`policy.onnx` + `contract.json` + `release.yaml`）。如果 clone 时没带 `--recurse-submodules`，跑一次 `git submodule update --init --recursive`；忘了的话 `nerv doctor` 会提醒。
 
 ## 运行
 
@@ -140,11 +140,25 @@ nerv conformance URL [--kind body|tool|world]  按接口检查一个节点
 nerv doctor                                  配了什么、够不够得着
 ```
 
-网页（`frontend/`，Next.js）是 NERV/Operator 的一个客户端：`npm install && npm run dev` 在 :8100 开发，或 `npm run build:static` 后交给 `nerv serve` 提供。它展示大脑看到的观测、只给操作者看的跟拍相机、信任面板、武装开关，以及每一条实时信号。
+网页（`frontend/`，Next.js）是 NERV/Operator 的一个客户端：`npm install && npm run dev` 在 :8100 开发，或 `npm run build:static` 后交给 `nerv serve` 提供。见下面的[网页](#网页)一节。
 
 ### 真机机械臂
 
 对 `arm-lerobot-so101` 来说，电机总线就是 LeRobot 的 `SOFollower`。要么在同一个 venv 里 `pip install -e ".[lerobot]"`，要么让 `NERV_LEROBOT_PYTHON` 指向一个已装 LeRobot 的环境；在 `.env` 里填 `SO101_PORT`、`SO101_ID`、`SO101_CAMERAS`，照常用 `lerobot-calibrate` 校准。对硬件的会话双重未武装——NERV 里一道、身体节点里一道——你武装之前，大脑对每条指令都会收到「未武装」；武装时请把手放在电源开关旁。抓取技能是你用 LeRobot 训练后放到策略发布架上的策略；技能运行器已经在等它。
+
+## 网页
+
+<div align="center"><img src="../../images/web-session.png" alt="一个会话：大脑看到的画面、身体的实时相机、只给操作者看的追拍相机，以及对话" width="960"></div>
+
+屏幕上的一个会话。左边是会话列表。中间的**机器人自己的视角**：大脑收到的观测（每步一帧）和身体的实时相机；**第三人称视角**：追拍相机和任何世界相机——只给操作者看，大脑从来看不到；追拍相机可以拉近拉远、绕着身体旋转、上下俯仰，视频流不断。右边是和大脑的对话——推理、它拿到的观测、每一次工具调用和闸门裁决——底部是模型选择和 **ARMED / DISARMED** 开关。只有人能拨这个开关。
+
+<div align="center"><img src="../../images/web-teleop.png" alt="遥控：急停、方向键，以及按工具单生成的每个动词和工具的卡片" width="960"></div>
+
+**遥控**（Teleop）。操作员直接开身体，走的是大脑同一道闸门、同一批节点、同一份日志；每一步都记进会话，大脑下一回合看得到。卡片按大脑会看到的工具单生成——身体多声明一个动词，这里就多一张卡，网页一行不改。**急停**锁住当前姿态（关节仍在出力、停在原处——不是断电，断电机器人会瘫倒）；摔倒时自动锁姿。**复位世界**把仿真里的身体放回出生姿态。
+
+<div align="center"><img src="../../images/web-dashboard.png" alt="Dashboard：注册表、节点、信任、会话与实时信号" width="960"></div>
+
+**Dashboard** 和 **Logs** 在页内打开。Dashboard 显示注册表声明了什么、哪些节点在线、每个节点和你的信任关系：节点的文字要先经你读过 manifest 并批准，才会送到大脑面前；manifest 一变就再问一次。Logs 是唯一的信号轨迹——每一帧、每个念头、每条指令、每条总线消息——可按会话看，也可看全部。
 
 ## 出厂内容
 
@@ -169,4 +183,4 @@ nerv doctor                                  配了什么、够不够得着
 
 ## 致谢
 
-场景来自 [nerv-world](https://github.com/Yanshi-Robotics/nerv-world)（原名 alice-house）。人形的步态策略在 yanshi-rl-lab 里用 Isaac Lab 训练。物理是 [MuJoCo](https://mujoco.org)；硬件接入是 [LeRobot](https://github.com/huggingface/lerobot)；SO-101 模型来自 [TheRobotStudio/SO-ARM100](https://github.com/TheRobotStudio/SO-ARM100)；G1 模型源自 [MuJoCo Menagerie](https://github.com/google-deepmind/mujoco_menagerie)。NERV 是 [ANIMA Zero](../../history/anima-zero.md) 的继任者。
+场景来自 [nerv-world](https://github.com/Yanshi-Robotics/nerv-world)。人形的步态策略在 yanshi-rl-lab 里用 Isaac Lab 训练。物理是 [MuJoCo](https://mujoco.org)；硬件接入是 [LeRobot](https://github.com/huggingface/lerobot)；SO-101 模型来自 [TheRobotStudio/SO-ARM100](https://github.com/TheRobotStudio/SO-ARM100)；G1 模型源自 [MuJoCo Menagerie](https://github.com/google-deepmind/mujoco_menagerie)。

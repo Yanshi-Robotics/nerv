@@ -1,5 +1,18 @@
 # Changelog
 
+Versions are managed from 0.2.0 on: every release gets an entry here and a `v<version>` tag.
+The 0.1.x entries below are the pre-release trail.
+
+## [0.2.0] — 2026-09-06
+
+First usable release. The framework is verified end to end on the Unitree G1 in the `apt2`
+world: an OpenAI or Claude brain observes through the body's head camera, walks and turns with
+the released gait policy, brakes at walls and reports measured distances; the operator arms the
+session, drives the body from the remote control, holds the pose with E-STOP, resets the world,
+and watches every signal on the dashboard and in the logs. The checkout is self-contained
+(`worlds/` and `policies/` submodules, one virtualenv); trust is bound to node identity.
+The SO-101 arm is registered with its LeRobot bus endpoint but has no world yet.
+
 ## [0.1.2] — 2026-09-06
 
 Emergency stop that keeps the pose. `POST /hold` on a body node latches the targets the PD is
@@ -26,8 +39,8 @@ when the body node is unapproved or unreachable.
 
 ## [0.1.1] — 2026-09-03
 
-Self-contained checkout. `worlds/` is now the `nerv-world` submodule (the scene library formerly
-known as alice-house, carrying the world descriptors) and `policies/` the `nerv-policies` submodule;
+Self-contained checkout. `worlds/` is now the `nerv-world` submodule (the scene library, carrying the
+world descriptors) and `policies/` the `nerv-policies` submodule;
 registry paths are relative to the repository root, so `ALICE_HOUSE_ROOT`, `NERV_POLICIES_ROOT` and
 `NERV_SIM_PYTHON` are gone. One virtualenv (`pip install -e ".[all]"`) runs the platform, the world
 node and the simulated bodies; `NERV_LEROBOT_PYTHON` stays optional for the real arm.
@@ -42,7 +55,7 @@ NERV/Tool — each split into a data plane (what the brain may see) and a contro
   motor bus shaped after Unitree LowCmd/LowState and LeRobot send_action/get_observation.
 - Two body families: `humanoid` (skills driven by a released gait policy) and `arm`
   (primitives). Two bodies: `humanoid-unitree-g1`, `arm-lerobot-so101`. One world: `apt2`
-  (alice-house, MuJoCo). One tool: `calculator`.
+  (nerv-world, MuJoCo). One tool: `calculator`.
 - A session is brain × body × world; the registry refuses pairs the world has no arena for.
   Sessions start disarmed; only the operator arms them, and the body node holds a second switch.
 - Sensor streams: the body publishes what it carries, the world publishes what is mounted in
