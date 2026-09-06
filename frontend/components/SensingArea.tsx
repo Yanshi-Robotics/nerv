@@ -23,7 +23,7 @@ const VIEW_OBSERVATION: ViewId = "observation";
 const VIEW_BODY: ViewId = "body";
 const VIEW_WORLD: ViewId = "world";
 const CAM_VIEW_PREFIX = "cam:";
-const DEFAULT_VIEWS: ViewId[] = [VIEW_OBSERVATION, VIEW_BODY];
+const DEFAULT_VIEWS: ViewId[] = [VIEW_OBSERVATION, VIEW_BODY, VIEW_WORLD];
 const viewsKey = (sid: string) => `nerv-views:${sid}`;
 
 function readViews(sid: string): ViewId[] {
