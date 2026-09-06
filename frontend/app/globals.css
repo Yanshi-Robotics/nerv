@@ -46,3 +46,8 @@ html[data-theme="light"] {
 body {
   transition: background-color 0.2s ease, color 0.2s ease;
 }
+
+/* 公司徽标：深色主题用亮色标记，浅色主题用深色标记 */
+.nerv-mark-dark { display: none; }
+html[data-theme="light"] .nerv-mark-light { display: none; }
+html[data-theme="light"] .nerv-mark-dark { display: inline; }

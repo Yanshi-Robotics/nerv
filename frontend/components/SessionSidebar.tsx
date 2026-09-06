@@ -107,6 +107,7 @@ export default function SessionSidebar({
   if (collapsed) {
     return (
       <aside className="flex h-screen flex-col items-center overflow-hidden border-r border-neutral-800 bg-neutral-900 py-2">
+        <BrandMark className="mb-1 mt-1 h-7" />
         <button onClick={onToggleCollapsed} title={t("Expand sidebar")} aria-label={t("Expand sidebar")} aria-expanded={false} className={iconBtn}>
           <PanelIcon />
         </button>
@@ -133,7 +134,7 @@ export default function SessionSidebar({
   return (
     <aside className="flex h-screen flex-col overflow-hidden border-r border-neutral-800 bg-neutral-900">
       <div className="flex items-center justify-between border-b border-neutral-800 py-2 pl-3 pr-1.5">
-        <span className="text-sm font-semibold tracking-wide text-neutral-200">NERV</span>
+        <span className="flex items-center gap-2 text-sm font-semibold tracking-wide text-neutral-200"><BrandMark className="h-7" /> NERV</span>
         <button onClick={onToggleCollapsed} title={t("Collapse sidebar")} aria-label={t("Collapse sidebar")} aria-expanded={true}
           className="flex h-7 w-7 items-center justify-center rounded-md text-neutral-500 transition-colors hover:bg-neutral-800 hover:text-neutral-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
           <PanelIcon />
@@ -274,6 +275,16 @@ export default function SessionSidebar({
         <RuntimeParamsBar />
       </div>
     </aside>
+  );
+}
+
+// 公司徽标：从原 logo 抽出的单色标记，深浅主题各一份（CSS 按 data-theme 切换），不是原图直贴
+function BrandMark({ className = "" }: { className?: string }) {
+  return (
+    <span className={`inline-flex shrink-0 items-center ${className}`} aria-hidden="true">
+      <img src="/brand/nerv-mark-light.png" alt="" className="nerv-mark-light h-full w-auto" draggable={false} />
+      <img src="/brand/nerv-mark-dark.png" alt="" className="nerv-mark-dark h-full w-auto" draggable={false} />
+    </span>
   );
 }
 
