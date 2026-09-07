@@ -129,7 +129,7 @@ Everything a simulation needs is in the checkout: `worlds/` is the [nerv-world](
 ## Running
 
 ```bash
-.venv/bin/nerv chat --world apt2 --body humanoid-unitree-g1 --brain claude
+.venv/bin/nerv chat --world apt --body humanoid-unitree-g1 --brain claude
 ```
 
 NERV launches the world node, then the body node and the tools, waits for each `/health`, shows you what the body declares and asks you to approve it, and starts the conversation. Type `arm` to arm the session (in simulation that is safe), then "walk forward two metres and turn left, then tell me 17 times 23".
@@ -173,7 +173,8 @@ One session on screen. Left: the sessions. Middle, *robot's own view*: the obser
 
 | World | Kind | Supports | World sensors |
 |---|---|---|---|
-| `apt2` | sim | `humanoid-unitree-g1` — a two-storey Manhattan penthouse from nerv-world | none |
+| `apt` | sim | `humanoid-unitree-g1` — Manhattan duplex, Central Park views and physical furniture | none |
+| `house` | sim | `humanoid-unitree-g1` — California hillside mansion, garden and pool | none |
 
 | Tool | Functions |
 |---|---|

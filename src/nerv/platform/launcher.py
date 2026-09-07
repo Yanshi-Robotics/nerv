@@ -23,7 +23,7 @@ class NodeHandle:
     kind: str                  # world | body | tool
     name: str                  # registry name (world: "<world>/<body>")
     url: str                   # http://host:port
-    bus_url: str = ""          # world only
+    bus_url: str = ""          # published world bus, or the bus a body was launched against
     python: str = ""
     proc: subprocess.Popen | None = None
     log_path: str = ""
@@ -121,6 +121,28 @@ class Launcher:
             return ""
 
     # -- public -----------------------------------------------------------------------------
+    def check_body_binding(self, body: BodySpec, world: WorldSpec,
+                           world_handle: NodeHandle | None = None) -> None:
+        """Refuse reuse across worlds before starting nodes or freezing sessions."""
+        h = self.nodes.get(f"body:{body.name}")
+        if h is None and body.url:
+            h = NodeHandle(kind="body", name=f"body:{body.name}",
+                           url=body.url.rstrip("/"), attached=True)
+        if h is None or not h.alive():
+            return
+        if h.attached or not h.meta.get("world"):
+            self._wait_health(h)
+        bound_world = h.meta.get("world")
+        if bound_world != world.name:
+            raise ValueError(
+                f"body `{body.name}` is connected to world `{bound_world or 'unknown'}`; "
+                f"cannot reuse it for `{world.name}`. Stop that body node explicitly "
+                "before starting a session in another world."
+            )
+        if world_handle and h.bus_url and h.bus_url != world_handle.bus_url:
+            raise ValueError(f"body `{body.name}` is connected to an earlier world bus; "
+                             "stop that body node explicitly before reconnecting")
+
     def ensure_world(self, world: WorldSpec, body: BodySpec) -> NodeHandle | None:
         if world.kind != KIND_SIM:
             return None                     # reality needs no process
@@ -150,6 +172,7 @@ class Launcher:
                             "--host", config.NODE_BIND_HOST], url, bus_url=bus)
 
     def ensure_body(self, body: BodySpec, world: WorldSpec, world_handle: NodeHandle | None) -> NodeHandle:
+        self.check_body_binding(body, world, world_handle)
         key = f"body:{body.name}"
         h = self.nodes.get(key)
         if h and h.alive():
@@ -162,6 +185,7 @@ class Launcher:
             h = NodeHandle(kind="body", name=key, url=body.url.rstrip("/"), attached=True)
             self.nodes[key] = h
             self._wait_health(h)
+            self.check_body_binding(body, world, world_handle)
             return h
         port = self._free_port()
         default_py = "" if world.kind == KIND_SIM else config.LEROBOT_PYTHON
@@ -172,7 +196,8 @@ class Launcher:
             if not world_handle or not world_handle.bus_url:
                 raise RuntimeError("a zmq body endpoint needs a running world node with a bus")
             args += ["--bus", world_handle.bus_url]
-        return self._spawn(key, "body", py, args, f"http://{config.NODE_BIND_HOST}:{port}")
+        return self._spawn(key, "body", py, args, f"http://{config.NODE_BIND_HOST}:{port}",
+                           bus_url=world_handle.bus_url if ep.kind == "zmq" else "")
 
     def ensure_tool(self, tool: ToolNodeSpec) -> NodeHandle:
         key = f"tool:{tool.name}"

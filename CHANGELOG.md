@@ -3,6 +3,16 @@
 Versions are managed from 0.2.0 on: every release gets an entry here and a `v<version>` tag.
 The 0.1.x entries below are the pre-release trail.
 
+## [Unreleased]
+
+The residence catalogue now exposes `apt` and `house`. The duplex keeps the original
+apartment's Central Park environment and four lighting phases, and the hillside mansion
+continues under the shorter name. Numbered maps are retired in the worlds submodule.
+
+Starting a session refuses to reuse a live body connected to another world or world bus.
+Externally attached bodies are checked against current health before reuse. Existing session
+history is retained; updating the checkout does not restart or rebind resident nodes.
+
 ## [0.2.0] — 2026-09-06
 
 First usable release. The framework is verified end to end on the Unitree G1 in the `apt2`

@@ -1,4 +1,4 @@
-"""Platform end to end: a scripted brain walks the G1 one metre in apt2 through NERV.
+"""Platform end to end: a scripted brain walks the G1 one metre in apt through NERV.
 
 Launches the world, body and tool nodes exactly as `nerv chat` would, arms the session, sends
 Think → CallTool(move_forward) → Say, and checks the measured result came back through the gate,
@@ -15,7 +15,7 @@ from nerv.platform.session import SessionStore
 
 from nerv import paths
 
-NEEDS = (os.path.join(paths.REPO_ROOT, "worlds", "build", "apt2-g1.xml"),
+NEEDS = (os.path.join(paths.REPO_ROOT, "worlds", "build", "apt-g1.xml"),
          os.path.join(paths.REPO_ROOT, "policies", "g1-29dof-turn", "policy.onnx"))
 
 
@@ -44,7 +44,7 @@ def test_scripted_brain_walks_one_metre(tmp_path, monkeypatch):
     brain = ScriptedBrain()
     hub._brains["scripted"] = brain
     try:
-        s = hub.new_session("scripted", "humanoid-unitree-g1", "apt2")
+        s = hub.new_session("scripted", "humanoid-unitree-g1", "apt")
         sid = s["id"]
         # disarmed: the gate refuses the skill and the brain is told why
         out = hub.handle(sid, "walk")

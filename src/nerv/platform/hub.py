@@ -94,6 +94,7 @@ class Nerv:
             ok, reason = compat_check(wspec, bspec)
             if not ok:
                 raise ValueError(reason)
+            self.launcher.check_body_binding(bspec, wspec)
             wh = self.launcher.ensure_world(wspec, bspec)
             self.launcher.ensure_body(bspec, wspec, wh)
             wc = self.world_client(world, body)
