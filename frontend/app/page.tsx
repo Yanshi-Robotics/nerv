@@ -61,12 +61,12 @@ export default function Home() {
 
   // 周期性刷新节点在线状态：节点中途挂了也能反映在感知区和侧栏上。
   useEffect(() => {
-    const id = setInterval(refreshNodes, POLL_NODES_MS);
+    const id = setInterval(() => { refreshNodes(); refreshSessions(); }, POLL_NODES_MS);
     return () => clearInterval(id);
-  }, [refreshNodes]);
+  }, [refreshNodes, refreshSessions]);
 
   const current = sessions.find((x) => x.id === currentId) || null;
-  const bodyNode = current?.body ? nodes.find((n) => n.key === `body:${current.body}`) ?? null : null;
+  const bodyNode = current?.body ? nodes.find((n) => n.key === `body:${current.body}` && n.meta.world === current.world) ?? null : null;
   const worldNode = current?.world && current.body ? nodes.find((n) => n.key === `world:${current.world}/${current.body}`) ?? null : null;
 
   return (
@@ -99,7 +99,7 @@ export default function Home() {
 
       {panel === "dashboard" && (
         <div className="col-span-2 min-h-0 min-w-0 overflow-hidden">
-          <NervDashboard embedded onOpenLogs={() => setPanel("logs")} />
+          <NervDashboard embedded onOpenLogs={() => setPanel("logs")} onNodesChanged={() => { refreshNodes(); refreshSessions(); }} />
         </div>
       )}
       {panel === "logs" && (
@@ -110,13 +110,13 @@ export default function Home() {
       {panel === "session" && (
         <>
           {current ? (
-            <SensingArea session={current} bodyNode={bodyNode} worldNode={worldNode} />
+            <SensingArea key={`${current.id}:${current.status}`} session={current} bodyNode={bodyNode} worldNode={worldNode} />
           ) : (
             <div className="flex min-w-0 items-center justify-center overflow-hidden bg-neutral-950 p-8 text-center text-sm text-neutral-600">
               {t("Pick a session on the left, or create one.")}
             </div>
           )}
-          <ChatPanel session={current} brains={registry?.brains ?? []} bodyNode={bodyNode} onSessionsChanged={refreshSessions} />
+          <ChatPanel session={current} brains={registry?.brains ?? []} bodyNode={bodyNode} onSessionsChanged={() => { refreshSessions(); refreshNodes(); }} />
         </>
       )}
     </main>

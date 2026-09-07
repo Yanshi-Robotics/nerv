@@ -10,7 +10,7 @@ import uvicorn
 from ..platform.registry import Registry
 from ..platform.registry.schema import KIND_SIM
 from . import families
-from .node import BodyNode, build_app
+from .node import BodyNode, DEFAULT_STREAM_FPS, build_app
 from .skills import SkillRunner, StopFlag
 
 
@@ -22,11 +22,15 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--bus", default="", help="bus URL for a zmq endpoint (tcp://127.0.0.1:PORT)")
     ap.add_argument("--host", default=os.environ.get("NERV_NODE_BIND_HOST", "127.0.0.1"))
     ap.add_argument("--port", type=int, required=True)
+    ap.add_argument("--stream-fps", type=float, help="camera frame rate (default: world's stream_fps, or 12)")
     ap.add_argument("--cors", default=os.environ.get("NERV_CORS_ORIGINS", "http://localhost:8100"))
     a = ap.parse_args(argv)
 
     reg = Registry()
     body = reg.body(a.body)
+    world = reg.world(a.world) if a.world else None
+    stream_fps = a.stream_fps if a.stream_fps is not None else (
+        world.physics.get("stream_fps", DEFAULT_STREAM_FPS) if world else DEFAULT_STREAM_FPS)
     kind = a.kind or (reg.world(a.world).kind if a.world else KIND_SIM)
     if kind not in body.buses:
         print(f"body {body.name} has no {kind} bus endpoint", file=sys.stderr)
@@ -56,7 +60,7 @@ def main(argv: list[str] | None = None) -> int:
     runner = SkillRunner(stop)
     impl = families.load(body.family).build(body.model_dump(), bus, runner)
     node = BodyNode(impl, guidance=body.guidance, stop=stop, armed=(kind == KIND_SIM),
-                    world=a.world, bus_kind=ep.kind)
+                    world=a.world, bus_kind=ep.kind, stream_fps=stream_fps)
     app = build_app(node, [o.strip() for o in a.cors.split(",") if o.strip()])
     print(f"[nerv body] {body.name} family={body.family} kind={kind} bus={ep.kind} "
           f"armed={node.armed} http://{a.host}:{a.port}", flush=True)

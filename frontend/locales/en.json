@@ -318,6 +318,11 @@
     "Default view": "Default view",
     "The body node is unreachable, so none of its verbs are here.": "The body node is unreachable, so none of its verbs are here.",
     "The body node is not approved, so its verbs are hidden here (the brain does not see them either). Review and approve it on the Dashboard, then reopen the remote control.": "The body node is not approved, so its verbs are hidden here (the brain does not see them either). Review and approve it on the Dashboard, then reopen the remote control.",
-    "not holding — E-STOP locks the pose at any moment (arming is the switch at the bottom)": "not holding — E-STOP locks the pose at any moment (arming is the switch at the bottom)"
+    "not holding — E-STOP locks the pose at any moment (arming is the switch at the bottom)": "not holding — E-STOP locks the pose at any moment (arming is the switch at the bottom)",
+    "Stop this body and its simulated world? Session history will be kept. Create a new session to choose another world.": "Stop this body and its simulated world? Session history will be kept. Create a new session to choose another world.",
+    "Stopping simulation…": "Stopping simulation…",
+    "Stop simulation / change world": "Stop simulation / change world",
+    "Live views are unavailable for inactive sessions. Saved observations remain in the conversation.": "Live views are unavailable for inactive sessions. Saved observations remain in the conversation.",
+    "Open the conversation to view saved observations.": "Open the conversation to view saved observations."
   }
 }

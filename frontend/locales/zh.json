@@ -318,6 +318,11 @@
     "Default view": "恢复默认视角",
     "The body node is unreachable, so none of its verbs are here.": "身体节点连不上，它的动词都不在这里。",
     "The body node is not approved, so its verbs are hidden here (the brain does not see them either). Review and approve it on the Dashboard, then reopen the remote control.": "身体节点还没批准，它的动词在这里被隐藏了（大脑同样看不到）。去 Dashboard 审阅并批准它，再重新打开遥控。",
-    "not holding — E-STOP locks the pose at any moment (arming is the switch at the bottom)": "未锁姿——急停随时能锁住姿态（要让它动，先按底部的 ARM 开关）"
+    "not holding — E-STOP locks the pose at any moment (arming is the switch at the bottom)": "未锁姿——急停随时能锁住姿态（要让它动，先按底部的 ARM 开关）",
+    "Stop this body and its simulated world? Session history will be kept. Create a new session to choose another world.": "停止当前机器人及其仿真世界？会话记录将保留。随后可新建会话并选择其他地图。",
+    "Stopping simulation…": "正在停止仿真…",
+    "Stop simulation / change world": "停止仿真 / 切换地图",
+    "Live views are unavailable for inactive sessions. Saved observations remain in the conversation.": "非活动会话不连接实时画面。已保存的观察图像保留在对话记录中。",
+    "Open the conversation to view saved observations.": "打开对话记录可查看已保存的观察图像。"
   }
 }

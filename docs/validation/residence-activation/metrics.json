@@ -1,0 +1,78 @@
+{
+  "date": "2026-09-07",
+  "configuration": {
+    "width": 640,
+    "height": 480,
+    "fps": 12,
+    "measurement_seconds": 20
+  },
+  "history": {
+    "sessions_preserved": 11,
+    "image_hashes_preserved": 22,
+    "only_status_or_arming_changed": 7
+  },
+  "tests": {
+    "pytest_passed": 88,
+    "ruff": "passed",
+    "frontend_static_build": "passed",
+    "locales": "passed"
+  },
+  "streams": {
+    "apt": {
+      "head": {
+        "frames": 240,
+        "seconds": 20.077385679993313,
+        "fps": 11.90394027436343,
+        "unique_frames": 240,
+        "sizes": [
+          [
+            640,
+            480
+          ]
+        ]
+      },
+      "chase": {
+        "frames": 239,
+        "seconds": 20.00235803000396,
+        "fps": 11.898597137547231,
+        "unique_frames": 239,
+        "sizes": [
+          [
+            640,
+            480
+          ]
+        ]
+      },
+      "wall_seconds": 20.11633254599292,
+      "realtime_ratio": 1.0001823122578972
+    },
+    "house": {
+      "head": {
+        "frames": 239,
+        "seconds": 20.0111177090439,
+        "fps": 11.89338863827868,
+        "unique_frames": 239,
+        "sizes": [
+          [
+            640,
+            480
+          ]
+        ]
+      },
+      "chase": {
+        "frames": 240,
+        "seconds": 20.072836051986087,
+        "fps": 11.906638373422693,
+        "unique_frames": 240,
+        "sizes": [
+          [
+            640,
+            480
+          ]
+        ]
+      },
+      "wall_seconds": 20.119258414953947,
+      "realtime_ratio": 0.9995398232497941
+    }
+  }
+}

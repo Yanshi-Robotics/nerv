@@ -18,12 +18,19 @@ Node keys: `body:<body>`, `world:<world>/<body>`, `tool:<tool>`.
 
 | Method · path | What |
 |---|---|
-| `GET /api/nodes` | every node: `key, kind, url, bus_url, alive, attached, log, meta`, plus `online`, `trust {state, reason, changes}`, `tools`, `family`, `sensors` |
+| `GET /api/nodes` | every node: `key, kind, url, bus_url, alive, attached, log, meta`, plus `online`, `trust {state, reason, changes}`, `tools`, `family`, `sensors`; `local_simulation` identifies a platform-managed body in a simulated world |
 | `GET /api/nodes/{key}/manifest` | the reviewable manifest (url, guidance, tools with kind/description/schema) and the trust decision |
 | `POST /api/nodes/{key}/approve` | record the operator's approval of exactly this manifest → `{ok, hash}` |
 | `POST /api/nodes/{key}/refresh` | drop the cached handshake; next call re-reads the node |
 | `POST /api/nodes/{key}/config` `{key, value}` | forward a configuration change to the node's own `/config` |
 | `GET /api/nodes/{key}/status` | the node's `/status` (for a world node this is ground truth — humans only) |
+| `POST /api/nodes/{key}/stop-simulation` `{expected_world, expected_epoch, session_id?}` | stop a local body and its world → `{ok, stopped, frozen}`. Use a `body:<body>` key and the selected body's `meta.world` and `meta.epoch`. The session view also supplies its session ID. A changed instance, stale session, externally managed node or incomplete pair returns `400` without stopping nodes. |
+
+A running body can be reused by a new session in the same world. To select a different world,
+first stop its simulation through the node endpoint above, then create a new session.
+Stopping interrupts affected sessions, disarms and freezes them, and stops the body before
+its world. Their messages and saved observations remain available. This operation applies
+only to a complete local simulation managed by this platform.
 
 ## Sessions
 
@@ -42,8 +49,11 @@ Node keys: `body:<body>`, `world:<world>/<body>`, `tool:<tool>`.
 | `GET /api/sessions/{sid}/tools` | the tool sheet the brain would see: `[{name, kind, origin (body · tool), node, description, parameters}]` — what the remote control renders |
 | `POST /api/sessions/{sid}/teleop` `{name, arguments}` | the operator calls one tool directly. Same gate, same nodes, same log as the brain; SSE with `start · tool_call · gate · progress · tool_result · done`. The step is recorded in the session as taken by `operator`, so the brain sees it next turn. |
 
-Session states: `active`, `frozen` (a newer session took the same body), `reconnect_required`
+Session states: `active`, `frozen` (a newer session took the same body or its simulation was stopped), `reconnect_required`
 (the world node's epoch changed — it restarted — so this session's physics is gone).
+Inactive sessions cannot arm, stop, hold, release or reset a later body's simulation. Their
+live views are disconnected; `perceive` returns empty state and images. Existing observations
+remain in the conversation history.
 
 ## Chat
 

@@ -64,8 +64,8 @@ export default function SensingArea({
   const sid = session?.id ?? "";
   const hasBody = !!session?.body;
   const active = session?.status === "active";
-  const bodyOnline = !!bodyNode?.online;
-  const worldOnline = !!worldNode?.online;
+  const bodyOnline = active && !!bodyNode?.online;
+  const worldOnline = active && !!worldNode?.online;
   const worldUrl = worldNode?.url ?? "";
   // 追拍相机的手动视角。住在这一层而不是瓦片里：放大瓦片会重挂子组件，视角不该因此跳回去；
   // 但把第三人称视图关掉再打开、或换会话，就要回到默认——那是有意的。
@@ -100,7 +100,7 @@ export default function SensingArea({
 
   // 大脑看到的
   const load = useCallback(async () => {
-    if (!sid || !hasBody) return;
+    if (!sid || !hasBody || !active) return;
     setBusy(true);
     try {
       setPerc(await getPerception(sid));
@@ -109,13 +109,13 @@ export default function SensingArea({
       setErr((e as Error).message);
     }
     setBusy(false);
-  }, [sid, hasBody]);
+  }, [sid, hasBody, active]);
 
   const wantObservation = views.includes(VIEW_OBSERVATION);
   useEffect(() => {
     setPerc(null);
     setErr("");
-    if (!sid || !hasBody || !wantObservation) return;
+    if (!sid || !hasBody || !active || !wantObservation) return;
     load();
     if (!live || !active) return;
     const id = setInterval(load, POLL_PERCEIVE_MS);
@@ -155,7 +155,7 @@ export default function SensingArea({
 
   // 选中的视图 → 一格格瓦片
   const tiles = useMemo(() => {
-    if (!session || !hasBody) return [];
+    if (!session || !hasBody || !active) return [];
     const out: { id: ViewId; label: string; sub?: string; muted?: boolean; body: ReactNode }[] = [];
     for (const v of views) {
       if (v === VIEW_OBSERVATION) {
@@ -222,7 +222,7 @@ export default function SensingArea({
       }
     }
     return out;
-  }, [session, hasBody, views, perc, err, bodyNode, worldNode, bodyOnline, worldOnline, worldSensors, nonce, t, chase]);
+  }, [session, hasBody, active, views, perc, err, bodyNode, worldNode, bodyOnline, worldOnline, worldSensors, nonce, t, chase]);
 
   // Esc 关掉放大的那一格
   useEffect(() => {
@@ -297,7 +297,7 @@ export default function SensingArea({
         <div className="shrink-0 text-[11px] text-neutral-500">
           {session.body} · {session.world}
           {session.sensors.length ? ` · ${t("ambient")}: ${session.sensors.join(", ")}` : ""}
-          {!active && <span className="ml-2 text-amber-400">{t("This session is not active; showing the last observation only.")}</span>}
+          {!active && <span className="ml-2 text-amber-400">{t("Live views are unavailable for inactive sessions. Saved observations remain in the conversation.")}</span>}
         </div>
         {wantObservation && err && (
           <div className="rounded-lg border border-amber-700/60 bg-amber-950/30 p-3 text-xs text-amber-300">
@@ -307,7 +307,7 @@ export default function SensingArea({
 
         {tiles.length === 0 ? (
           <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-neutral-800 text-xs text-neutral-500">
-            {t("No view selected — pick one above.")}
+            {active ? t("No view selected — pick one above.") : t("Open the conversation to view saved observations.")}
           </div>
         ) : (
           <div className="grid min-h-0 flex-1 gap-3"

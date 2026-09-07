@@ -18,6 +18,7 @@ import functools
 import io
 import json
 import time
+import math
 import uuid
 from typing import Any, Protocol
 
@@ -35,6 +36,9 @@ from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 from ..nerve.body import (CAPABILITIES_URI, CONFIG_URI, GUIDANCE_PROMPT, MUTATING_KINDS,
                           NON_MUTATING_KINDS, OBSERVATION_URI)
 from .skills import StopFlag
+
+# Default for standalone nodes; simulated nodes inherit their world's stream budget.
+DEFAULT_STREAM_FPS = 12.0
 
 
 class BodyImpl(Protocol):
@@ -70,13 +74,16 @@ class BodyImpl(Protocol):
 
 class BodyNode:
     def __init__(self, impl: BodyImpl, *, guidance: str, stop: StopFlag, armed: bool,
-                 world: str = "", bus_kind: str = "") -> None:
+                 world: str = "", bus_kind: str = "", stream_fps: float = DEFAULT_STREAM_FPS) -> None:
+        if not math.isfinite(stream_fps) or stream_fps <= 0:
+            raise ValueError("stream_fps must be finite and positive")
         self.impl = impl
         self.guidance = guidance
         self.stop = stop
         self.armed = armed
         self.world = world
         self.bus_kind = bus_kind
+        self.stream_fps = stream_fps
         self.epoch = f"{int(time.time())}-{uuid.uuid4().hex[:6]}"
         self._kinds = {td["name"]: td.get("kind", "primitive") for td in impl.tools()}
 
@@ -256,10 +263,14 @@ def build_app(node: BodyNode, cors_origins: list[str]) -> FastAPI:
     async def stream() -> StreamingResponse:
         async def gen():
             while True:
-                jpg = impl.stream_jpeg()
-                if jpg is not None:
-                    yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + jpg + b"\r\n"
-                await asyncio.sleep(1 / 12)
+                started = time.perf_counter()
+                try:
+                    jpg = await anyio.to_thread.run_sync(impl.stream_jpeg)
+                    if jpg is not None:
+                        yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + jpg + b"\r\n"
+                except Exception:
+                    pass  # Skip a failed frame; never serve an invented or cached image.
+                await asyncio.sleep(max(0.0, 1.0 / node.stream_fps - (time.perf_counter() - started)))
         return StreamingResponse(gen(), media_type="multipart/x-mixed-replace; boundary=frame")
 
     @app.get("/snapshot")

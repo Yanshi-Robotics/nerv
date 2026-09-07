@@ -60,6 +60,12 @@ class ConfigIn(BaseModel):
     value: str
 
 
+class StopSimulationIn(BaseModel):
+    expected_world: str
+    expected_epoch: str
+    session_id: Optional[str] = None
+
+
 def _default_brain() -> str:
     brains = {b["name"]: b for b in list_brains()}
     d = brains.get(config.DEFAULT_BRAIN)
@@ -101,6 +107,8 @@ def nodes() -> list:
     for h in nerv.launcher.list():
         c = nerv.node_client(h["key"])
         item = dict(h)
+        world = nerv.registry.worlds.get(h["meta"].get("world", ""))
+        item["local_simulation"] = bool(h["kind"] == "body" and not h["attached"] and world and world.kind == "sim")
         if c is not None:
             item["online"] = c.online()
             try:
@@ -151,6 +159,14 @@ def node_refresh(key: str) -> dict:
         raise HTTPException(404, "no such node")
     c.refresh()
     return {"ok": True}
+
+
+@app.post("/api/nodes/{key:path}/stop-simulation")
+def stop_simulation(key: str, inp: StopSimulationIn) -> dict:
+    try:
+        return nerv.stop_simulation(key, inp.expected_world, inp.expected_epoch, inp.session_id)
+    except (ValueError, KeyError) as e:
+        raise HTTPException(400, e.args[0] if e.args else str(e))
 
 
 @app.post("/api/nodes/{key:path}/config")
