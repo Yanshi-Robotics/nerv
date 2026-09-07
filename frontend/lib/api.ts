@@ -89,6 +89,7 @@ export type NodeInfo = {
   bus_url: string;
   alive: boolean;
   attached: boolean;
+  local_simulation?: boolean;
   log: string;
   python: string;
   meta: Record<string, unknown>;
@@ -112,6 +113,14 @@ export type NodeManifest = {
 };
 
 const nodePath = (key: string) => `${BASE}/api/nodes/${encodeURI(key)}`; // key 里的 ":" 和 "/" 都要原样穿过去
+
+export async function stopSimulation(node: NodeInfo, sessionId?: string): Promise<void> {
+  const r = await fetch(`${nodePath(node.key)}/stop-simulation`, {
+    method: "POST", headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ expected_world: node.meta.world, expected_epoch: node.meta.epoch, session_id: sessionId }),
+  });
+  if (!r.ok) throw new ApiError(await detailOf(r), r.status);
+}
 
 export async function getNodes(): Promise<NodeInfo[]> {
   const r = await fetch(`${BASE}/api/nodes`);

@@ -26,6 +26,11 @@ plain HTTP that the brain never sees.
 | `POST /release` | lift the hold; refused while the body is down (reset the world, or stand it up) |
 | `GET /stream` · `GET /snapshot` | MJPEG / one JPEG of the first camera |
 
+The body camera inherits `physics.stream_fps` from its world. A standalone node defaults to
+12 fps; `python -m nerv.body --stream-fps <fps> ...` overrides that rate. Acquisition and
+sending count toward the frame period. Camera work runs outside the HTTP event loop so a
+slow frame does not prevent control requests from being handled.
+
 ## Verbs: primitives and skills
 
 A primitive writes one target and settles (`move_joints`, `nudge`, `set_gripper`). A skill starts

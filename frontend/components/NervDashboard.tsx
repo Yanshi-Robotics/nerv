@@ -3,6 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { useI18n } from "@/lib/i18n";
 import LangToggle from "./LangToggle";
+import StopSimulation from "./StopSimulation";
 import { NodeTrust, TrustBadge } from "./NodeTrust";
 import { StatusBadge } from "./ChatPanel";
 import {
@@ -112,6 +113,7 @@ function BodyCard({ spec, node, onChanged }: { spec: BodySpec; node: NodeInfo | 
             )}
             <NodeTrust node={node} onChanged={onChanged} />
             {node.online && <StatusPeek nodeKey={node.key} />}
+            <StopSimulation node={node} onChanged={onChanged} />
           </Region>
         )}
       </div>
@@ -221,7 +223,7 @@ function fmtSignal(e: SignalEntry, tt: (k: string) => string): { head: string; t
 }
 
 // embedded=true：内嵌在主页中间区；false：/nerv 整页独立版。
-export default function NervDashboard({ embedded = false, onOpenLogs }: { embedded?: boolean; onOpenLogs?: () => void }) {
+export default function NervDashboard({ embedded = false, onOpenLogs, onNodesChanged }: { embedded?: boolean; onOpenLogs?: () => void; onNodesChanged?: () => void }) {
   const { t } = useI18n();
   const [data, setData] = useState<NervOverview | null>(null);
   const [events, setEvents] = useState<SignalEntry[]>([]);
@@ -250,7 +252,7 @@ export default function NervDashboard({ embedded = false, onOpenLogs }: { embedd
   const nodes = data?.nodes ?? [];
   const reg = data?.registry;
   const nodeFor = (key: string) => nodes.find((n) => n.key === key) ?? null;
-  const onChanged = () => setTick((x) => x + 1);
+  const onChanged = () => { setTick((x) => x + 1); onNodesChanged?.(); };
 
   return (
     <main className={`${embedded ? "h-full min-w-0 overflow-y-auto" : "min-h-screen"} bg-neutral-950 p-6 text-neutral-200`}>

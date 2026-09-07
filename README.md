@@ -160,6 +160,8 @@ One session on screen. Left: the sessions. Middle, *robot's own view*: the obser
 
 **Remote control** (Teleop). The operator drives the body directly through the same gate, nodes and log the brain uses; every step is recorded in the session so the brain sees it next turn. The cards are generated from the tool sheet the brain would see — a body that declares a new verb shows up here with no change to the web app. **E-STOP** holds the pose (the joints stay powered where they are — not a power cut, which would let a robot drop); a fall holds the pose by itself. **Reset world** puts a simulated body back at its spawn pose.
 
+**Changing maps.** To move the same robot between `apt` and `house`, select **Stop simulation / change world** in the active session or the Dashboard's body details, then confirm. The robot and its simulated world stop together. Affected sessions become read-only, with their history and saved observations preserved. Once the simulation has stopped, choose **New session** and select the target map.
+
 <div align="center"><img src="docs/images/web-dashboard.png" alt="The dashboard: registry, nodes, trust, sessions and live signals" width="960"></div>
 
 **Dashboard** and **Logs** open in place. The dashboard shows what the registry declares, which nodes are up, and where each stands with you: a node's text reaches the brain only after you have read its manifest and approved it, and it is asked again if the manifest changes. Logs are the one signal trace — every frame, thought, command and bus message — per session or across all.

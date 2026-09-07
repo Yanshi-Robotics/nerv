@@ -96,6 +96,7 @@ class SessionStore:
             for s in self.all():
                 if s.body == body and s.status == op.SESSION_ACTIVE:
                     s.status = op.SESSION_FROZEN
+                    s.armed = False
                     self.save(s)
                     frozen.append(s.id)
         s = Session(id=_gen_id(), brain=brain, body=body, world=world, status=op.SESSION_ACTIVE,

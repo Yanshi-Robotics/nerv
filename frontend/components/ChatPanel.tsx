@@ -18,6 +18,7 @@ import {
   type SessionSummary,
 } from "@/lib/api";
 import TeleopPanel from "./TeleopPanel";
+import StopSimulation from "./StopSimulation";
 
 // 思考区的最大高度：长回合可能几十步，不限高的话思考会把最终回复顶出屏幕。
 const THINKING_MAX_H = "max-h-72";
@@ -406,13 +407,17 @@ export default function ChatPanel({
         )}
       </header>
 
+      {session && active && bodyNode && (
+        <div className="px-3 pb-2"><StopSimulation node={bodyNode} sessionId={session.id} onChanged={onSessionsChanged} /></div>
+      )}
+
       <Notebook session={session} />
 
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
         {!session && (
           <div className="p-4 text-center text-xs text-neutral-500">{t("Create or pick a session on the left")}</div>
         )}
-        {session && teleop ? (
+        {session && active && teleop ? (
           <TeleopPanel sessionId={session.id} armed={session.armed} hasWorld={!!session.world} bodyTrust={bodyNode?.trust?.state ?? null} />
         ) : (
           <>

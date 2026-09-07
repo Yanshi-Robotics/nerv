@@ -8,6 +8,7 @@ from __future__ import annotations
 import queue
 import threading
 import time
+from functools import wraps
 from typing import Iterator
 
 from ..brain import plugin as brain_plugin
@@ -23,6 +24,15 @@ from .session import SessionStore
 from .session import log as slog
 
 
+def _node_lifecycle(method):
+    """Serialize launch/stop operations without delaying emergency controls."""
+    @wraps(method)
+    def locked(self, *args, **kwargs):
+        with self._node_lock:
+            return method(self, *args, **kwargs)
+    return locked
+
+
 class Nerv:
     def __init__(self, registry: Registry | None = None, store: SessionStore | None = None,
                  gate: SafetyGate | None = None, launcher: Launcher | None = None) -> None:
@@ -34,6 +44,7 @@ class Nerv:
         self._worlds: dict[str, WorldControl] = {}
         self._tools: dict[str, RemoteTool] = {}
         self._brains: dict = {}
+        self._node_lock = threading.RLock()
 
     # -- node clients ---------------------------------------------------------------------
     def body_client(self, name: str) -> RemoteBody | None:
@@ -82,7 +93,53 @@ class Nerv:
             self._brains[name] = b
         return b
 
+    @_node_lifecycle
+    def stop_simulation(self, key: str, expected_world: str, expected_epoch: str,
+                        session_id: str | None = None) -> dict:
+        """Stop an owned body/world pair; retain every session and observation."""
+        handle = self.launcher.nodes.get(key)
+        if handle is None or handle.kind != "body":
+            raise ValueError("select a running body node")
+        body = key.partition(":")[2]
+        world = handle.meta.get("world", "")
+        if (not expected_epoch or world != expected_world or handle.meta.get("epoch") != expected_epoch):
+            raise ValueError("the simulation changed; refresh the page before stopping it")
+        if session_id:
+            session = self.store.get(session_id)
+            if session.body != body or session.world != world or self._control_error(session):
+                raise ValueError("this session no longer controls the simulation; refresh the page")
+        if not world or self.registry.world(world).kind != "sim":
+            raise ValueError("only a local simulated body and world can be stopped here")
+        world_key = f"world:{world}/{body}"
+        pair = [key, world_key]
+        for node_key in pair:
+            node = self.launcher.nodes.get(node_key)
+            if node is None or node.attached or node.proc is None:
+                raise ValueError("cannot stop an incomplete or externally managed simulation")
+        frozen = []
+        for session in self.store.all():
+            if session.body == body and (session.status != op.SESSION_FROZEN or session.armed):
+                interrupt.request(session.id)
+                session.status = op.SESSION_FROZEN
+                session.armed = False
+                self.store.save(session)
+                frozen.append(session.id)
+        # Stop the command producer before physics, then discard cached clients.
+        for node_key in pair:
+            self.launcher.stop(node_key)
+        self._bodies.pop(body, None)
+        self._worlds.pop(f"{world}/{body}", None)
+        slog.record("operator", {"event": "simulation_stopped", "nodes": pair, "frozen": frozen})
+        return {"ok": True, "stopped": pair, "frozen": frozen}
+
+    def _control_error(self, s) -> dict | None:
+        if s.status != op.SESSION_ACTIVE or not self._epoch_ok(s):
+            status = self.store.get(s.id).status
+            return {"ok": False, "message": messages.SESSION_NOT_ACTIVE.format(status=status)}
+        return None
+
     # -- sessions ---------------------------------------------------------------------------
+    @_node_lifecycle
     def new_session(self, brain: str, body: str | None, world: str | None,
                     sensors: list[str] | None = None, tools: list[str] | None = None) -> dict:
         if (body is None) != (world is None):
@@ -118,20 +175,26 @@ class Nerv:
 
     def arm(self, sid: str, armed: bool) -> dict:
         s = self.store.get(sid)
+        if error := self._control_error(s):
+            return {**error, "armed": False}
         if not s.body:
             return {"ok": False, "armed": False, "message": "a conversation-only session has nothing to arm"}
+        c = self.body_client(s.body)
+        if c is None:
+            return {"ok": False, "armed": False, "message": f"the body `{s.body}` is not reachable"}
+        forwarded = c.set_config("armed", "true" if armed else "false")
+        if not forwarded.get("ok"):
+            return {"ok": False, "armed": s.armed, "body": forwarded,
+                    "message": forwarded.get("message", "body refused the arming change")}
         self.store.set_armed(sid, armed)
-        forwarded = None
-        if s.body:
-            c = self.body_client(s.body)
-            if c is not None:
-                forwarded = c.set_config("armed", "true" if armed else "false")
         slog.record("operator", {"event": "arm", "session": sid, "armed": armed, "body": forwarded})
         return {"ok": True, "armed": armed, "body": forwarded}
 
     def stop(self, sid: str) -> None:
         interrupt.request(sid)
         s = self.store.get(sid)
+        if self._control_error(s):
+            return
         if s.body:
             c = self.body_client(s.body)
             if c is not None:
@@ -147,6 +210,8 @@ class Nerv:
         """Hold the pose now: interrupt the turn, stop the skill, latch the joints. Never a power cut."""
         interrupt.request(sid)
         s = self.store.get(sid)
+        if error := self._control_error(s):
+            return error
         if not s.body:
             return {"ok": False, "held": False, "message": "a conversation-only session has no body to stop"}
         c = self.body_client(s.body)
@@ -159,6 +224,8 @@ class Nerv:
 
     def release(self, sid: str) -> dict:
         s = self.store.get(sid)
+        if error := self._control_error(s):
+            return error
         if not s.body:
             return {"ok": False, "held": False, "message": "a conversation-only session has no body"}
         c = self.body_client(s.body)
@@ -176,6 +243,8 @@ class Nerv:
         """Put the body back at its spawn pose (a simulated world only) and lift any hold."""
         interrupt.request(sid)
         s = self.store.get(sid)
+        if error := self._control_error(s):
+            return error
         if not (s.body and s.world):
             return {"ok": False, "message": "this session has no world to reset"}
         wc = self.world_client(s.world, s.body)
@@ -194,12 +263,18 @@ class Nerv:
     def _epoch_ok(self, s) -> bool:
         if not (s.body and s.world):
             return True
+        handle = self.launcher.nodes.get(f"body:{s.body}")
+        if handle and handle.meta.get("world") and handle.meta["world"] != s.world:
+            self.store.set_status(s.id, op.SESSION_RECONNECT)
+            self.store.set_armed(s.id, False)
+            return False
         wc = self.world_client(s.world, s.body)
         if wc is None:
             return True
         now = wc.epoch()
         if s.epoch and now and now != s.epoch:
             self.store.set_status(s.id, op.SESSION_RECONNECT)
+            self.store.set_armed(s.id, False)
             slog.record("operator", {"event": "epoch_changed", "session": s.id, "was": s.epoch, "now": now})
             return False
         return True
@@ -313,11 +388,13 @@ class Nerv:
 
     def perceive(self, sid: str):
         s = self.store.get(sid)
-        if not s.body:
+        if not s.body or self._control_error(s):
             return None
         from .observe import assemble
-        return assemble(self.body_client(s.body), self.world_client(s.world, s.body) if s.world else None,
-                        s.sensors)
+        observation = assemble(self.body_client(s.body), self.world_client(s.world, s.body) if s.world else None,
+                               s.sensors)
+        # A stopped/rebound session must not receive an in-flight observation.
+        return None if self._control_error(self.store.get(sid)) else observation
 
     def shutdown(self) -> None:
         self.launcher.stop_all()

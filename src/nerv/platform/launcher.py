@@ -225,6 +225,7 @@ class Launcher:
                 h.proc.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 h.proc.kill()
+                h.proc.wait()
         return True
 
     def stop_all(self) -> None:
