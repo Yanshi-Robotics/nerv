@@ -200,6 +200,27 @@ def _jpeg(rgb: np.ndarray, quality: int) -> bytes:
     return buf.getvalue()
 
 
+def robot_root(model: mujoco.MjModel) -> tuple[int, int | None]:
+    """Locate the controlled tree without mistaking passive props for a robot.
+
+    An arena hosts one actuated body tree. Scene objects may have passive hinge,
+    slide and free joints, regardless of their order in the XML.
+    """
+    roots = {int(model.body_rootid[model.jnt_bodyid[model.actuator_trnid[a, 0]]])
+             for a in range(model.nu)
+             if int(model.actuator_trntype[a]) in (int(mujoco.mjtTrn.mjTRN_JOINT),
+                                                  int(mujoco.mjtTrn.mjTRN_JOINTINPARENT))}
+    if len(roots) != 1:
+        raise ValueError(f'Expected one actuated body tree; found {len(roots)}')
+    root = roots.pop()
+    free = [j for j in range(model.njnt)
+            if model.jnt_type[j] == mujoco.mjtJoint.mjJNT_FREE
+            and model.body_rootid[model.jnt_bodyid[j]] == root]
+    if len(free) > 1:
+        raise ValueError('The controlled body tree has multiple free joints')
+    return root, free[0] if free else None
+
+
 # ---- the arena ----------------------------------------------------------------------------------------------
 class WorldSim:
     """Physics + firmware + sensors for one arena. Thread-safe: every touch of MjData holds ``_lock``."""
@@ -223,15 +244,10 @@ class WorldSim:
         self.model.opt.timestep = float(self.phys["dt"])
         self._lock = threading.RLock()
 
-        # the body's base: the (single) free joint if there is one, else the root of the first tree
-        free = [j for j in range(self.model.njnt) if self.model.jnt_type[j] == mujoco.mjtJoint.mjJNT_FREE]
-        if len(free) > 1:
-            raise ValueError(f"the arena has {len(free)} free joints; this world hosts exactly one body "
-                             f"and expects the scenery to be static")
-        self.has_free_base = bool(free)
-        self.free_qadr = int(self.model.jnt_qposadr[free[0]]) if free else -1
-        self.free_dadr = int(self.model.jnt_dofadr[free[0]]) if free else -1
-        self.base_body = int(self.model.jnt_bodyid[free[0]]) if free else -1   # fixed-base: set at spawn
+        self.base_body, free = robot_root(self.model)
+        self.has_free_base = free is not None
+        self.free_qadr = int(self.model.jnt_qposadr[free]) if free is not None else -1
+        self.free_dadr = int(self.model.jnt_dofadr[free]) if free is not None else -1
         self.chase_body = self.base_body
 
         # spawn state (filled by spawn())
@@ -362,6 +378,10 @@ class WorldSim:
             if jid < 0:
                 missing.append(n)
                 continue
+            if self.model.body_rootid[self.model.jnt_bodyid[jid]] != self.base_body:
+                raise ValueError(f'Spawn joint {n!r} belongs to scenery, not the controlled body')
+            if int(self.model.jnt_type[jid]) not in (int(mujoco.mjtJoint.mjJNT_HINGE), int(mujoco.mjtJoint.mjJNT_SLIDE)):
+                raise ValueError(f'Spawn joint {n!r} must have one degree of freedom')
             qadr.append(int(self.model.jnt_qposadr[jid]))
             dadr.append(int(self.model.jnt_dofadr[jid]))
             aid = j2a.get(jid, -1)
