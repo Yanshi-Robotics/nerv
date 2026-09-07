@@ -777,12 +777,15 @@ def build_app(sim: WorldSim, cors_origins: list[str]):
     def _mjpeg(render: Callable[[], tuple[np.ndarray, float]]):
         async def gen():
             while True:
+                frame_started = time.perf_counter()
                 try:
                     rgb, _t = await anyio.to_thread.run_sync(render)
                     yield b"--frame\r\nContent-Type: image/jpeg\r\n\r\n" + _jpeg(rgb, quality) + b"\r\n"
                 except Exception:
                     pass          # a failed frame is skipped, never replaced by a stale/fake one
-                await asyncio.sleep(1.0 / fps)
+                # Rendering, JPEG encoding and sending are part of the frame period.
+                # Slow frames start the next frame immediately, without catch-up bursts.
+                await asyncio.sleep(max(0.0, 1.0 / fps - (time.perf_counter() - frame_started)))
         return StreamingResponse(gen(), media_type="multipart/x-mixed-replace; boundary=frame")
 
     @app.get("/stream")
