@@ -129,7 +129,7 @@ cp .env.example .env                                         # API key，或本�
 ## 运行
 
 ```bash
-.venv/bin/nerv chat --world apt2 --body humanoid-unitree-g1 --brain claude
+.venv/bin/nerv chat --world apt --body humanoid-unitree-g1 --brain claude
 ```
 
 NERV 拉起世界节点，再拉起身体节点和工具，逐个等 `/health`，把身体的自述给你看并请你批准，然后开始对话。输入 `arm` 武装会话（仿真里是安全的），再说「往前走两米、左转，然后告诉我 17 乘 23」。
@@ -173,7 +173,8 @@ nerv doctor                                  配了什么、够不够得着
 
 | 世界 | 类型 | 支持 | 世界传感器 |
 |---|---|---|---|
-| `apt2` | 仿真 | `humanoid-unitree-g1`——nerv-world 的曼哈顿复式顶层公寓 | 无 |
+| `apt` | 仿真 | `humanoid-unitree-g1`——曼哈顿复式、中央公园窗景与真实家具碰撞 | 无 |
+| `house` | 仿真 | `humanoid-unitree-g1`——加州山坡豪宅、庭院与泳池 | 无 |
 
 | 工具 | 函数 |
 |---|---|

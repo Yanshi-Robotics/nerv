@@ -47,7 +47,7 @@ pose/room/truth keys is refused by the platform (`platform/observe.py`).
 | `GET /stream` · `GET /stream/{camera}` | MJPEG chase camera (operator only) · a model camera |
 | `GET /view` · `POST /view {zoom?, yaw?, pitch?}` | the operator's chase-camera nudge: `zoom` scales the distance, `yaw`/`pitch` (degrees) swing and tilt it around the body; clamped, eased over a few frames, and the stream is never reconnected. The web client resets it when the view opens and closes. |
 
-Launch: `nerv node world -- --world apt2 --body humanoid-unitree-g1 --http-port P --bus-port Q`,
+Launch: `nerv node world -- --world apt --body humanoid-unitree-g1 --http-port P --bus-port Q`,
 or let the platform do it when a session is created. Registry: `worlds/<name>/world.yaml`
 (`kind`, `engine`, `assets_root`, `supports: {body: arena}`, `spawn`, `ambient`, `physics`).
 `worlds/` is the `nerv-world` submodule: the scene library and the world

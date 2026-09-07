@@ -1,7 +1,7 @@
-"""Humanoid smoke: the G1 walks and turns in alice-house apt2 through the motor bus.
+"""Humanoid smoke: the G1 walks and turns in alice-house apt through the motor bus.
 
 Needs the real assets, so it is gated on the environment:
-  worlds/    the nerv-world submodule (arena build/apt2-g1.xml must exist)
+  worlds/    the nerv-world submodule (arena build/apt-g1.xml must exist)
   policies/  the nerv-policies submodule holding g1-29dof-turn/{policy.onnx,contract.json,release.yaml}
 Otherwise it skips and says why. Measured numbers are printed (run with -s).
 """
@@ -23,8 +23,8 @@ pytest.importorskip("zmq")
 
 HERE = os.path.dirname(os.path.abspath(__file__))
 REPO = os.path.dirname(HERE)
-WORLD, BODY = "apt2", "humanoid-unitree-g1"
-HEALTH_WAIT_S = 90.0          # the apt2 arena has ~3700 geoms; cold load + EGL takes a few seconds
+WORLD, BODY = "apt", "humanoid-unitree-g1"
+HEALTH_WAIT_S = 90.0          # the apt arena has ~3700 geoms; cold load + EGL takes a few seconds
 STABILISE_S = 2.0             # let the policy loop stand the robot up before asking it to walk
 MIN_MOVE_M = 0.5              # a 1 m walk must cover at least this
 MIN_TURN_DEG = 20.0           # a 45° turn must measure at least this
@@ -44,8 +44,8 @@ def _skip_reason() -> str:
         return "worlds/ submodule is not initialised"
     if not policies:
         return "policies/ submodule is not initialised"
-    if not os.path.isfile(os.path.join(assets, "build", "apt2-g1.xml")):
-        return f"arena {assets}/build/apt2-g1.xml does not exist"
+    if not os.path.isfile(os.path.join(assets, "build", "apt-g1.xml")):
+        return f"arena {assets}/build/apt-g1.xml does not exist"
     for fn in ("policy.onnx", "contract.json", "release.yaml"):
         if not os.path.isfile(os.path.join(policies, "g1-29dof-turn", fn)):
             return f"policy release {policies}/g1-29dof-turn lacks {fn}"
