@@ -1,0 +1,21 @@
+{
+  "checked_at": "2026-09-08T06:45:39Z",
+  "task": "Corrected pool-loop five-roundtrip CPU acceptance",
+  "verifier_report_passed": true,
+  "owned_processes_no_longer_present": {
+    "timeout": 2018238,
+    "verifier": 2018239,
+    "world": 2018240,
+    "body": 2018306
+  },
+  "owned_ports_without_listeners": [8112, 8114, 8118],
+  "resident_listeners_preserved": {
+    "8113": 1194621,
+    "8115": 1172429,
+    "8116": 1194621,
+    "8117": 1194664
+  },
+  "cleanup_method": "The original verifier completed all five rounds, called hub.shutdown and wrote its final report; this agent sent no kill, restart or shutdown command",
+  "outer_tool_exit": "Session 26705 earlier reported 143 while the actual verifier remained running. Monitor-note.json preserves that distinction.",
+  "deletion_condition": "Delete with temporary evidence after reproducible verifier and accepted results are committed"
+}

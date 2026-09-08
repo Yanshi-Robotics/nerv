@@ -1,0 +1,37 @@
+{
+  "checked_unix": 1788850522.8902144,
+  "passed": true,
+  "preserved_original_session_count": 14,
+  "total_session_count": 15,
+  "new_session": {
+    "world": "apt",
+    "status": "active",
+    "armed": false,
+    "message_count": 0
+  },
+  "scene_active": false,
+  "held": null,
+  "phase": "day",
+  "world_status": {
+    "sim_time": 359.73,
+    "spawned": true,
+    "pd_mode": "implicit",
+    "base": {
+      "x": 4.347,
+      "y": -7.162,
+      "z": 0.746,
+      "yaw_deg": 85.0
+    },
+    "tilt_deg": 1.2,
+    "fallen": false,
+    "realtime_ratio": 1.0,
+    "epoch": "27cc24d7764747b5addf9d22a4cbeb4b",
+    "room_key": "foyer",
+    "room_label": "\u5165\u6237\u7384\u5173"
+  },
+  "node_keys": [
+    "world:apt/humanoid-unitree-g1",
+    "body:humanoid-unitree-g1",
+    "tool:calculator"
+  ]
+}
