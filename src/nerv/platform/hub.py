@@ -9,7 +9,7 @@ import queue
 import threading
 import time
 from functools import wraps
-from typing import Iterator
+from typing import Callable, Iterator
 
 from ..brain import plugin as brain_plugin
 from ..nerve import operator as op
@@ -46,6 +46,8 @@ class Nerv:
         self._tools: dict[str, RemoteTool] = {}
         self._brains: dict = {}
         self._node_lock = threading.RLock()
+        self._arm_locks: dict[str, threading.RLock] = {}
+        self._arm_locks_guard = threading.Lock()
         self.scene_tests = SceneTests(self)
 
     # -- node clients ---------------------------------------------------------------------
@@ -177,7 +179,19 @@ class Nerv:
                                  "body": body, "world": world, "frozen": frozen})
         return s.summary()
 
-    def arm(self, sid: str, armed: bool) -> dict:
+    def body_control_lock(self, body: str):
+        # Arming changes are ordered per body. Emergency stop and lease
+        # interruption never take this lock or wait for a slow config request.
+        with self._arm_locks_guard:
+            return self._arm_locks.setdefault(body, threading.RLock())
+
+    def arm(self, sid: str, armed: bool, *, _guard: Callable[[], None] | None = None) -> dict:
+        with self.body_control_lock(self.store.get(sid).body):
+            if _guard is not None:
+                _guard()
+            return self._set_armed(sid, armed)
+
+    def _set_armed(self, sid: str, armed: bool) -> dict:
         s = self.store.get(sid)
         if error := self._control_error(s):
             return {**error, "armed": False}

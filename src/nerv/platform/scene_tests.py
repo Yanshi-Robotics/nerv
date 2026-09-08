@@ -39,6 +39,13 @@ class SceneTests:
         _session, client = self._client(sid)
         return client.scene_get(resource)
 
+    def _check_acquisition(self, sid, reservation):
+        with self._lock:
+            if (self._owners.get(sid) is not reservation
+                    or reservation["expires"] <= time.monotonic()):
+                raise ValueError("Scene acquisition was interrupted")
+        self._client(sid)
+
     def acquire(self, sid, owner):
         session, client = self._client(sid)
         if not owner or len(owner) > 128:
@@ -56,15 +63,20 @@ class SceneTests:
             body = self.hub.body_client(session.body)
             if body is None:
                 raise ValueError("The body is unavailable")
-            body.post("/stop")
+            with self.hub.body_control_lock(session.body):
+                self._check_acquisition(sid, reservation)
+                body.post("/stop")
             deadline = time.monotonic() + config.SCENE_ENTRY_TIMEOUT_S
             while time.monotonic() < deadline:
-                self._client(sid)  # detect a freeze or epoch change during acquisition
+                self._check_acquisition(sid, reservation)
                 status = body.status() or {}
+                self._check_acquisition(sid, reservation)
                 if not status.get("running_skill") and not status.get("held") and not status.get("policy_error"):
-                    disarmed = self.hub.arm(sid, False)
+                    disarmed = self.hub.arm(sid, False,
+                        _guard=lambda: self._check_acquisition(sid, reservation))
                     if not disarmed.get("ok"):
                         raise ValueError(disarmed.get("message", "Could not disarm the body"))
+                    self._check_acquisition(sid, reservation)
                     result = client.scene_post("acquire", {"session": sid, "owner": owner, "epoch": session.epoch})
                     if result.get("ok"):
                         with self._lock:

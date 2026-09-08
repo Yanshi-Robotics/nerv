@@ -3,7 +3,7 @@
 import dynamic from "next/dynamic";
 import { useEffect, useState } from "react";
 import { useI18n } from "@/lib/i18n";
-import { getExplore, localized, type ExploreManifest } from "@/lib/world-explore";
+import { getExplore, isExteriorFacility, localized, type ExploreManifest } from "@/lib/world-explore";
 import type { WorldSpec } from "@/lib/api";
 import type { ExploreLevel, ExploreSelection } from "./ExploreViewer";
 
@@ -49,11 +49,14 @@ export default function WorldExplore({ worlds, defaultWorld }: { worlds: WorldSp
   const matching = <T extends { label: Record<string, string>; id: string }>(items: T[]) => items.filter((item) =>
     !query || Object.values(item.label).some((label) => label.toLocaleLowerCase().includes(query)) || item.id.toLowerCase().includes(query));
   const roomList = matching(manifest?.rooms ?? []).filter((r) => query || floor === "all" || (floor === "courtyard" ? r.exterior : r.floor === floor));
-  const facilityList = matching(manifest?.facilities ?? []).filter((f) => query || floor === "all" || (floor === "courtyard" ? manifest?.rooms.find((r) => r.id === f.room)?.exterior || f.kind === "boundary" : f.floor === floor));
+  const facilityList = matching(manifest?.facilities ?? []).filter((f) => query || floor === "all" || (floor === "courtyard" ? isExteriorFacility(f, manifest?.rooms ?? []) : f.floor === floor));
   function pick(next: ExploreSelection) {
     if (!next || !manifest) { setSelection(null); return; }
     const source = next.kind === "room" ? manifest.rooms.find((r) => r.id === next.id) : manifest.facilities.find((f) => f.id === next.id);
-    if (source) setFloor(source.floor);
+    if (source) {
+      const exterior = next.kind === "room" ? manifest.rooms.find((r) => r.id === next.id)?.exterior : isExteriorFacility(manifest.facilities.find((f) => f.id === next.id)!, manifest.rooms);
+      setFloor(exterior ? "courtyard" : source.floor);
+    }
     setSelection(next);
   }
   const button = "rounded-md border border-neutral-700 px-2.5 py-1.5 text-xs text-neutral-300 hover:bg-neutral-800 focus-visible:outline-2 focus-visible:outline-blue-500";

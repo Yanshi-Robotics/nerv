@@ -686,12 +686,12 @@ class WorldSim:
             # Texture uploads must run on the context-owning thread, never an HTTP worker.
             def job(renderer):
                 with self._lock:
-                    operator.check(**credentials)
+                    operator.commit_command(payload.get("sequence"), credentials)
                     operator.runtime.set_time(str(payload.get("phase", "")), renderer)
             self.render.run(job)
         else:
             with self._lock:
-                operator.check(**credentials)
+                operator.commit_command(payload.get("sequence"), credentials)
                 operator.command(action, payload)
         return {"ok": True, **self.scene_state()}
 
