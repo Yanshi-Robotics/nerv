@@ -34,6 +34,7 @@ export default function WorldExplore({ worlds, defaultWorld }: { worlds: WorldSp
     const abort = new AbortController();
     setManifest(null); setError(""); setSelection(null); setSearch(""); setLoading(true);
     if (world) getExplore(world, abort.signal).then((next) => {
+      if (abort.signal.aborted) return;
       if (next.schema_version !== 1 || next.coordinate_system?.glb_up_axis !== "Y") throw new Error("The display resources use an unsupported format. Regenerate them.");
       setManifest(next); setFloor(next.floors[0]?.id ?? 0);
     }).catch((e: Error) => { if (!abort.signal.aborted) setError(e.message); })

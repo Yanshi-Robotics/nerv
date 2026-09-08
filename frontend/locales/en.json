@@ -426,6 +426,9 @@
     "Pan right": "Pan right",
     "Pan up": "Pan up",
     "Pan down": "Pan down",
-    "Selected joint": "Selected joint"
+    "Selected joint": "Selected joint",
+    "Contact exceeded the tolerance. Reset the scene to retry.": "Contact exceeded the tolerance. Reset the scene to retry.",
+    "Scene request timed out": "Scene request timed out",
+    "(operator: reset the entire scene — robot, furniture and props are back at their initial positions; time of day is unchanged)": "(operator: reset the entire scene — robot, furniture and props are back at their initial positions; time of day is unchanged)"
   }
 }

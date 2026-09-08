@@ -17,6 +17,8 @@ const VIEW_TILT_DEG = 10;
 const VIEW_ZOOM_FACTOR = 1.2;
 const VIEW_PAN_M = 0.2; // Small camera translations make close-range object placement controllable.
 const DRAG_SEND_MS = 50; // At most one pointer command in flight, with a latest-target update.
+const LEASE_WATCHDOG_MS = 100; // An independent local deadline also catches a hung heartbeat.
+const SCENE_FRAME_TIMEOUT_MS = 2000; // A stalled frame must not stop subsequent camera polling.
 const RESULT_LABELS: Record<string, string> = {
   idle: "Idle", selected: "Selected", moving: "Moving", reached: "Completed", blocked: "Blocked", cancelled: "Cancelled",
   occluded_or_out_of_reach: "Occluded or out of reach", lease_expired: "Scene control expired", robot_fallen: "The robot fell; scene control ended",
@@ -24,7 +26,8 @@ const RESULT_LABELS: Record<string, string> = {
   wait_until_settled: "Wait for the can to settle", close_door: "Close the refrigerator door", complete: "Task completed",
   dawn: "Dawn", morning: "Dawn", day: "Day", dusk: "Dusk", night: "Night",
   opened: "Door opened", inside: "Fully inside", released: "Released", settled: "Settled", closed: "Door closed",
-  supported: "Supported by the shelf", no_penetration: "No excessive penetration",
+  supported: "Supported by the shelf", contact_valid: "No excessive penetration",
+  invalid_contact: "Contact exceeded the tolerance. Reset the scene to retry.",
 };
 
 export default function SceneTestPanel({ sessionId, onClose, onStateChanged }: {
@@ -44,6 +47,10 @@ export default function SceneTestPanel({ sessionId, onClose, onStateChanged }: {
   const leaseRef = useRef<SceneLease | null>(null);
   const stateRef = useRef<SceneState | null>(null);
   const owner = useRef("");
+  const lifecycle = useRef(0);
+  const commandSequence = useRef(0);
+  const commandsPending = useRef(0);
+  const leaseRenewedAt = useRef(0);
   const lastXY = useRef<[number, number]>([0, 0]);
   const commandBusy = useRef(false);
   const dragging = useRef(false);
@@ -63,6 +70,7 @@ export default function SceneTestPanel({ sessionId, onClose, onStateChanged }: {
     }
   }, []);
   const relinquish = useCallback(() => {
+    lifecycle.current += 1;
     const current = leaseRef.current;
     leaseRef.current = null;
     latestDrag.current = null;
@@ -73,14 +81,21 @@ export default function SceneTestPanel({ sessionId, onClose, onStateChanged }: {
   useEffect(() => {
     mounted.current = true;
     owner.current = crypto.randomUUID();
-    Promise.all([getSceneCatalogue(sessionId), getSceneState(sessionId)])
-      .then(([cat, next]) => { if (mounted.current) { setCatalogue(cat); update(next); } })
-      .catch((e: Error) => mounted.current && setError(e.message));
-    const pagehide = () => { relinquish(); if (mounted.current) setLease(null); };
+    const load = () => {
+      const generation = lifecycle.current;
+      void Promise.all([getSceneCatalogue(sessionId), getSceneState(sessionId)])
+        .then(([cat, next]) => { if (mounted.current && generation === lifecycle.current) { setCatalogue(cat); update(next); } })
+        .catch((e: Error) => mounted.current && generation === lifecycle.current && setError(e.message));
+    };
+    load();
+    const pagehide = () => { relinquish(); if (mounted.current) { setLease(null); setBusy(false); } };
+    const pageshow = (event: PageTransitionEvent) => { if (event.persisted) load(); };
     window.addEventListener("pagehide", pagehide);
+    window.addEventListener("pageshow", pageshow);
     return () => {
       mounted.current = false;
       window.removeEventListener("pagehide", pagehide);
+      window.removeEventListener("pageshow", pageshow);
       relinquish();
     };
   }, [sessionId, update, relinquish]);
@@ -92,28 +107,41 @@ export default function SceneTestPanel({ sessionId, onClose, onStateChanged }: {
     const tick = async () => {
       if (pending || stopped || leaseRef.current?.token !== lease.token) return;
       pending = true;
+      const sequence = commandSequence.current;
+      const idleAtStart = commandsPending.current === 0;
+      const started = performance.now();
       try {
         const next = await sceneRequest(sessionId, "heartbeat", lease);
-        if (!stopped) update(next);
+        if (!stopped && leaseRef.current?.token === lease.token) {
+          leaseRenewedAt.current = started;
+          if (idleAtStart && commandsPending.current === 0 && sequence === commandSequence.current) update(next);
+        }
       } catch (e) {
         if (!stopped) { relinquish(); setLease(null); setError((e as Error).message); changed.current(); }
       } finally { pending = false; }
     };
     const timer = setInterval(tick, SCENE_HEARTBEAT_MS);
-    return () => { stopped = true; clearInterval(timer); };
+    const watchdog = setInterval(() => {
+      if (!stopped && leaseRef.current?.token === lease.token && performance.now() - leaseRenewedAt.current >= lease.lease_seconds * 1000) {
+        relinquish(); setLease(null); setError("Scene control expired"); changed.current();
+      }
+    }, LEASE_WATCHDOG_MS);
+    return () => { stopped = true; clearInterval(timer); clearInterval(watchdog); };
   }, [lease, sessionId, update, relinquish]);
 
   const command = useCallback(async (action: string, values: Record<string, unknown> = {}) => {
     const current = leaseRef.current;
     if (!current) return false;
+    const sequence = ++commandSequence.current;
+    commandsPending.current += 1;
     try {
       const next = await sceneRequest(sessionId, "command", { ...current, action, ...values });
-      if (leaseRef.current?.token === current.token) { update(next); setError(""); }
+      if (leaseRef.current?.token === current.token && sequence === commandSequence.current) { update(next); setError(""); }
       return true;
     } catch (e) {
-      if (mounted.current) setError((e as Error).message);
+      if (mounted.current && leaseRef.current?.token === current.token && sequence === commandSequence.current) setError((e as Error).message);
       return false;
-    }
+    } finally { commandsPending.current -= 1; }
   }, [sessionId, update]);
 
   useEffect(() => {
@@ -131,24 +159,27 @@ export default function SceneTestPanel({ sessionId, onClose, onStateChanged }: {
 
   async function enter() {
     setBusy(true); setError("");
+    const generation = ++lifecycle.current;
     try {
       const next = await acquireScene(sessionId, owner.current);
       const acquired = { owner: next.owner, token: next.token, epoch: next.epoch, lease_seconds: next.lease_seconds } as SceneLease;
-      if (!mounted.current) { abandonScene(sessionId, acquired); return; }
+      if (!mounted.current || lifecycle.current !== generation) { abandonScene(sessionId, acquired); return; }
+      leaseRenewedAt.current = performance.now();
       leaseRef.current = acquired;
       setLease(acquired);
       update(next);
       changed.current();
-    } catch (e) { if (mounted.current) setError((e as Error).message); }
-    finally { if (mounted.current) setBusy(false); }
+    } catch (e) { if (mounted.current && generation === lifecycle.current) setError((e as Error).message); }
+    finally { if (mounted.current && generation === lifecycle.current) setBusy(false); }
   }
   async function leave() {
-    setBusy(true);
+    lifecycle.current += 1;
     const current = leaseRef.current;
-    relinquish(); setLease(null);
-    try { if (current) await sceneRequest(sessionId, "release", current); } catch { /* The timeout also revokes a disconnected owner. */ }
+    leaseRef.current = null; latestDrag.current = null; dragging.current = false; setLease(null);
     changed.current();
     onClose();
+    // UI exit never waits on network; only pagehide/unmount use the beacon path.
+    try { if (current) await sceneRequest(sessionId, "release", current); } catch { /* The server deadline revokes a disconnected owner. */ }
   }
   async function reset() {
     if (!confirm(t("Reset the whole scene? The robot, furniture and props return to their initial positions. The current time of day is kept."))) return;
@@ -290,6 +321,7 @@ export default function SceneTestPanel({ sessionId, onClose, onStateChanged }: {
             {error && <p role="alert" className="text-red-400">{t(error)}</p>}
             {state?.task.supported && <div className="rounded-lg border border-neutral-700 p-2" aria-label={t("Task progress")}>
               <p className="font-medium">{localized(state.task.label, lang)}</p>
+              {state.task.target && <p className="mt-1 text-blue-400">{localized(state.task.target.label, lang)}</p>}
               <p role="status" className={state.task.success ? "mt-1 text-green-400" : "mt-1 text-neutral-400"}>{statusLabel(state.task.stage ?? "idle")}</p>
               <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-neutral-400">
                 {Object.entries(state.task.checks ?? {}).map(([key, value]) => <span key={key}>{value ? "✓" : "○"} {statusLabel(key)}</span>)}
@@ -318,17 +350,25 @@ function SceneFrame({ sessionId, lease, onPointerDown, onPointerMove, onPointerU
     let objectUrl: string | null = null;
     const tick = async () => {
       const start = performance.now();
+      const request = new AbortController();
+      const cancel = () => request.abort();
+      abort.signal.addEventListener("abort", cancel, { once: true });
+      const deadline = setTimeout(cancel, SCENE_FRAME_TIMEOUT_MS);
       try {
-        const response = await fetch(sceneFrameUrl(sessionId, lease), { cache: "no-store", signal: abort.signal });
+        const response = await fetch(sceneFrameUrl(sessionId, lease), { cache: "no-store", signal: request.signal });
         if (!response.ok) throw new Error("The inspection camera is unavailable");
         const blob = await response.blob();
         if (abort.signal.aborted || !image.current) return;
         const previous = objectUrl;
         objectUrl = URL.createObjectURL(blob);
         image.current.src = objectUrl;
+        image.current.dataset.simTime = response.headers.get("X-Sim-Time") ?? "";
         if (previous) URL.revokeObjectURL(previous);
       } catch (e) {
-        if (!abort.signal.aborted) reportError.current((e as Error).message);
+        if (!abort.signal.aborted) reportError.current(request.signal.aborted ? "The inspection camera is unavailable" : (e as Error).message);
+      } finally {
+        clearTimeout(deadline);
+        abort.signal.removeEventListener("abort", cancel);
       }
       if (!abort.signal.aborted) timer = setTimeout(tick, Math.max(0, 1000 / SCENE_FRAME_FPS - (performance.now() - start)));
     };

@@ -17,7 +17,7 @@ def display(tmp_path):
     (directory / "scene.glb").write_bytes(b"glTF")
     manifest = {"scene": "example", "schema_version": 1,
         "sources": {"layout.py": hashlib.sha256(source.read_bytes()).hexdigest()},
-        "assets": [{"path": "scene.glb", "bytes": 4}]}
+        "assets": [{"path": "scene.glb", "bytes": 4, "hash": hashlib.sha256(b"glTF").hexdigest()}]}
     (directory / "manifest.json").write_text(json.dumps(manifest))
     return SimpleNamespace(name="example", assets_root=str(tmp_path), explore=".cache/explore/example/manifest.json")
 
@@ -33,6 +33,13 @@ def test_source_change_is_explicitly_stale(display):
     (Path(display.assets_root) / "layout.py").write_text("new source")
     with pytest.raises(ValueError, match="out of date"):
         read_manifest(display)
+
+
+def test_same_size_asset_change_invalidates_cached_hash(display):
+    asset = asset_path(display, "scene.glb")
+    asset.write_bytes(b"BAD!")
+    with pytest.raises(ValueError, match="changed"):
+        asset_path(display, "scene.glb")
 
 
 @pytest.mark.parametrize("name", ["../../../layout.py", "/etc/passwd", "missing.glb"])

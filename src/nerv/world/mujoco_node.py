@@ -498,9 +498,9 @@ class WorldSim:
         return x, y, z, yaw
 
     def _place(self) -> None:
+        """Restore the whole scene and spawn pose while retaining the visual phase."""
         if self.scene_operator:
             self.scene_operator.reset()
-        """Body back at the spawn pose, joints at default, everything at rest."""
         mujoco.mj_resetData(self.model, self.data)
         if self.spawn_pose is not None:
             x, y, z, yaw = self.spawn_pose
@@ -702,6 +702,7 @@ class WorldSim:
                     raise ValueError("Scene tests are unavailable")
                 self.scene_operator.check(**credentials)
                 renderer.update_scene(self.data, camera=self.scene_operator.camera)
+                self.scene_operator.decorate(renderer.scene)
                 t = float(self.data.time)
             return renderer.render().copy(), t
         return self.render.run(job)
@@ -916,7 +917,7 @@ def build_app(sim: WorldSim, cors_origins: list[str]):
     @app.post("/reset")
     def reset() -> dict:
         sim.reset()
-        return {"ok": True, "message": "body back at the spawn pose"}
+        return {"ok": True, "message": "robot, furniture and props reset; time of day preserved"}
 
     def _mjpeg(render: Callable[[], tuple[np.ndarray, float]]):
         async def gen():

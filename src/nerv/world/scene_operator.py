@@ -23,6 +23,7 @@ DEFAULTS = {
     "scene_still_speed_m_s": 0.12,      # conservative acquisition check after the body stops
     "scene_still_angular_rad_s": 0.3,
     "scene_task_period_s": 0.05,       # task evaluation at 20 Hz, force control at physics rate
+    "scene_target_line_px": 2.0,       # operator-only task volume edges, in renderer pixels
 }
 
 
@@ -151,7 +152,7 @@ class SceneOperator:
             raise ValueError("Unknown facility")
         anchor = item["anchor"]
         body = item.get("body")
-        if body:
+        if body and item.get("kind") in ("joint", "movable"):
             bid = mujoco.mj_name2id(self.sim.model, mujoco.mjtObj.mjOBJ_BODY, body)
             if bid >= 0:
                 # A movable object's anchor follows its actual geometry, not its initial position.
@@ -203,6 +204,28 @@ class SceneOperator:
             self.cancel()
         else:
             raise ValueError("Unknown scene action")
+
+    def decorate(self, scene):
+        """Draw the source-defined target in the operator camera only, with no physics geom."""
+        target = self.runtime.task_status().get("target")
+        if not target:
+            return
+        bounds = np.asarray(target.get("world_bounds"), dtype=float)
+        if bounds.shape != (2, 3) or not np.isfinite(bounds).all():
+            return
+        corners = [np.array([bounds[(index >> axis) & 1, axis] for axis in range(3)])
+                   for index in range(8)]
+        for index, start in enumerate(corners):
+            for axis in range(3):
+                other = index ^ (1 << axis)
+                if other <= index or scene.ngeom >= scene.maxgeom:
+                    continue
+                geom = scene.geoms[scene.ngeom]
+                mujoco.mjv_initGeom(geom, mujoco.mjtGeom.mjGEOM_LINE, np.zeros(3), np.zeros(3),
+                                   np.eye(3).ravel(), np.array([0.15, 0.55, 1, 1], dtype=np.float32))
+                mujoco.mjv_connector(geom, mujoco.mjtGeom.mjGEOM_LINE,
+                                    self.config["scene_target_line_px"], start, corners[other])
+                scene.ngeom += 1
 
     def state(self):
         active = self.active()

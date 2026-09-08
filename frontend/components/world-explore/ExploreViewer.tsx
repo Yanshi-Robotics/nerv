@@ -12,7 +12,7 @@ export type ExploreSelection = { kind: "room" | "facility"; id: string } | null;
 export type ExploreLevel = number | "all" | "courtyard";
 type Options = { floor: ExploreLevel; labels: boolean; facilities: boolean; surroundings: boolean; selection: ExploreSelection; reset: number; lang: string };
 type Controller = { update: (options: Options) => void };
-type MeshMeta = { floor?: number; levels?: number[]; role?: string; room?: string; facility?: string };
+type MeshMeta = { floor?: number; levels?: number[]; role?: string; room?: string; facility?: string; facilities?: string[] };
 const WALL_SECTION_M = 1.3; // Knee-height wall sections expose furnishings without cutting them.
 const FLOOR_COMPLIANCE_M = 0.2; // Keep slab thickness and the bottom of stair flights.
 const VIEW_FOV_DEG = 42;
@@ -23,6 +23,7 @@ const LABEL_GAP_PX = 5;
 const FACILITY_MARKER_SIZE_PX = 14;
 const CAMERA_MIN_DISTANCE_M = 0.3;
 const VIEW_MARGIN = 1.35;
+const ROUTE_LIFT_M = 0.06; // Avoid z-fighting with the source-defined walking surface.
 
 function disposeObject(root: THREE.Object3D, extraMaterials: THREE.Material[] = []) {
   const geometries = new Set<THREE.BufferGeometry>();
@@ -30,7 +31,7 @@ function disposeObject(root: THREE.Object3D, extraMaterials: THREE.Material[] = 
   const textures = new Set<THREE.Texture>();
   const bitmaps = new Set<ImageBitmap>();
   root.traverse((node) => {
-    if (!(node instanceof THREE.Mesh || node instanceof THREE.LineSegments)) return;
+    if (!(node instanceof THREE.Mesh || node instanceof THREE.Line)) return;
     geometries.add(node.geometry);
     for (const material of Array.isArray(node.material) ? node.material : [node.material]) materials.add(material);
   });
@@ -112,9 +113,15 @@ export default function ExploreViewer({ manifest, floor, labels, facilities, sur
     highlight.renderOrder = 2;
     highlight.visible = false;
     scene.add(highlight);
+    const route = new THREE.Line(new THREE.BufferGeometry(), new THREE.LineBasicMaterial({ color: 0x1774ff, depthTest: false }));
+    route.renderOrder = 3;
+    route.visible = false;
+    scene.add(route);
     let root: THREE.Group | null = null;
     const originals = new Set<THREE.Material>();
     const clones = new Map<string, THREE.Material>();
+    const baseMaterials = new Map<THREE.Mesh, THREE.Material | THREE.Material[]>();
+    const highlightedMaterials = new Map<THREE.Material, THREE.Material>();
     const meshes: THREE.Mesh[] = [];
     let currentOptions = options.current;
     let lastFocus = "";
@@ -193,6 +200,25 @@ export default function ExploreViewer({ manifest, floor, labels, facilities, sur
       for (const mesh of meshes) {
         const meta = mesh.userData as MeshMeta;
         mesh.visible = visibleMeta(meta);
+        const baseMaterial = baseMaterials.get(mesh)!;
+        const selectedFacility = next.selection?.kind === "facility" &&
+          (meta.facility === next.selection.id || meta.facilities?.includes(next.selection.id));
+        const tint = (material: THREE.Material) => {
+          if (!selectedFacility) return material;
+          let selectedMaterial = highlightedMaterials.get(material);
+          if (!selectedMaterial) {
+            selectedMaterial = material.clone();
+            if (selectedMaterial instanceof THREE.MeshStandardMaterial) {
+              selectedMaterial.emissive.set(0x1365cc);
+              selectedMaterial.emissiveIntensity = 0.45;
+            } else if ("color" in selectedMaterial && selectedMaterial.color instanceof THREE.Color) {
+              selectedMaterial.color.lerp(new THREE.Color(0x3186ff), 0.4);
+            }
+            highlightedMaterials.set(material, selectedMaterial);
+          }
+          return selectedMaterial;
+        };
+        mesh.material = Array.isArray(baseMaterial) ? baseMaterial.map(tint) : tint(baseMaterial);
         const structural = ["wall", "stairs", "ceiling", "roof"].includes(meta.role ?? "");
         const planes = level && structural ? [
           new THREE.Plane(new THREE.Vector3(0, 1, 0), -base + FLOOR_COMPLIANCE_M),
@@ -219,6 +245,12 @@ export default function ExploreViewer({ manifest, floor, labels, facilities, sur
       if (selectedBounds) {
         highlight.box.copy(selectedBounds);
         if (next.selection?.kind === "room") highlight.box.max.y = highlight.box.min.y + 0.08;
+      }
+      const points = selected && "points" in selected ? selected.points : null;
+      route.visible = !!points?.length;
+      if (points?.length) {
+        route.geometry.dispose();
+        route.geometry = new THREE.BufferGeometry().setFromPoints(points.map((point) => convert(point).add(new THREE.Vector3(0, ROUTE_LIFT_M, 0))));
       }
       const focusKey = `${next.floor}:${next.selection?.kind}:${next.selection?.id}:${next.reset}`;
       if (focusKey !== lastFocus) {
@@ -279,7 +311,8 @@ export default function ExploreViewer({ manifest, floor, labels, facilities, sur
         const material = Array.isArray(mesh.material) ? mesh.material[0] : mesh.material;
         if (material.clippingPlanes?.some((plane) => plane.distanceToPoint(hit.point) < 0)) continue;
         const meta = mesh.userData as MeshMeta;
-        if (meta.facility) { selectRef.current({ kind: "facility", id: meta.facility }); return; }
+        const facility = meta.facility ?? meta.facilities?.[0];
+        if (facility) { selectRef.current({ kind: "facility", id: facility }); return; }
         if (meta.room) { selectRef.current({ kind: "room", id: meta.room }); return; }
         const point = hit.point.clone().applyMatrix4(toSource);
         const room = manifest.rooms.find((r) => (typeof currentOptions.floor !== "number" || r.floor === currentOptions.floor)
@@ -316,6 +349,7 @@ export default function ExploreViewer({ manifest, floor, labels, facilities, sur
             return clones.get(key)!;
           };
           node.material = Array.isArray(node.material) ? node.material.map(replace) : replace(node.material);
+          baseMaterials.set(node, node.material);
           meshes.push(node);
         });
         scene.add(root);
@@ -329,7 +363,7 @@ export default function ExploreViewer({ manifest, floor, labels, facilities, sur
       disposed = true; abort.abort(); cancelAnimationFrame(frame); controller.current = null;
       resize.disconnect(); controls.removeEventListener("start", start); controls.removeEventListener("change", requestRender); controls.dispose();
       renderer.domElement.removeEventListener("pointerdown", pointerDown); renderer.domElement.removeEventListener("pointerup", pointerUp);
-      disposeObject(scene, [...originals]);
+      disposeObject(scene, [...originals, ...clones.values(), ...highlightedMaterials.values()]);
       renderer.renderLists.dispose(); renderer.dispose(); renderer.forceContextLoss();
       renderer.domElement.remove(); overlay.remove();
     };
