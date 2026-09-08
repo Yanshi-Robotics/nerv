@@ -159,7 +159,7 @@ export default function TeleopPanel({ sessionId, armed, hasWorld, bodyTrust }: {
 
   async function resetWorld() {
     if (holdBusy) return;
-    if (!confirm(t("Put the body back at its spawn pose? Only a simulated world can do this; the brain is told."))) return;
+    if (!confirm(t("Reset the whole scene? The robot, furniture and props return to their initial positions. The current time of day is kept."))) return;
     setHoldBusy(true);
     try {
       const r = await resetSessionWorld(sessionId);
@@ -222,9 +222,9 @@ export default function TeleopPanel({ sessionId, armed, hasWorld, bodyTrust }: {
         )}
         {hasWorld && (
           <button onClick={resetWorld} disabled={holdBusy}
-            title={t("Back to the spawn pose (simulated world only). Lifts the hold.")}
+            title={t("Restore the robot, furniture and props to their initial positions. The current time of day is kept.")}
             className="rounded-md border border-neutral-600 px-3 py-1.5 text-[11px] text-neutral-300 hover:bg-neutral-800 disabled:opacity-50">
-            ↺ {t("Reset world")}
+            ↺ {t("Reset whole scene")}
           </button>
         )}
       </div>

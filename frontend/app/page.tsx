@@ -6,6 +6,7 @@ import NervDashboard from "@/components/NervDashboard";
 import SensingArea from "@/components/SensingArea";
 import SessionLogsView from "@/components/SessionLogsView";
 import SessionSidebar, { type Panel } from "@/components/SessionSidebar";
+import WorldExplore from "@/components/world-explore/WorldExplore";
 import { useI18n } from "@/lib/i18n";
 import { getNodes, getRegistry, listSessions, POLL_NODES_MS, type NodeInfo, type Registry, type SessionSummary } from "@/lib/api";
 
@@ -107,10 +108,15 @@ export default function Home() {
           <SessionLogsView embedded sessionId={current?.id ?? ""} />
         </div>
       )}
+      {panel === "explore" && (
+        <div className="col-span-2 min-h-0 min-w-0 overflow-hidden">
+          <WorldExplore worlds={registry?.worlds ?? []} defaultWorld={current?.world ?? null} />
+        </div>
+      )}
       {panel === "session" && (
         <>
           {current ? (
-            <SensingArea key={`${current.id}:${current.status}`} session={current} bodyNode={bodyNode} worldNode={worldNode} />
+            <SensingArea key={`${current.id}:${current.status}`} session={current} bodyNode={bodyNode} worldNode={worldNode} onStateChanged={() => { refreshSessions(); refreshNodes(); }} />
           ) : (
             <div className="flex min-w-0 items-center justify-center overflow-hidden bg-neutral-950 p-8 text-center text-sm text-neutral-600">
               {t("Pick a session on the left, or create one.")}
