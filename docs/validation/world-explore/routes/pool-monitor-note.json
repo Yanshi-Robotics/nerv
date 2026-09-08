@@ -1,0 +1,17 @@
+{
+  "created": "2026-09-08T06:37:58Z",
+  "task": "Final corrected pool-loop CPU acceptance",
+  "event": "The tool's outer exec session 26705 returned exit 143, but the actual verifier and all its original nodes remained running",
+  "host_confirmation": {
+    "timeout_pid": 2018238,
+    "verifier_pid": 2018239,
+    "world_pid": 2018240,
+    "body_pid": 2018306,
+    "start_local": "2026-09-08 01:58:33 -0400",
+    "elapsed_at_check": "39:24",
+    "owned_ports": [8112, 8114, 8118],
+    "log_continued_updating": true
+  },
+  "response": "Preserved the ongoing verifier; switched to process/file monitoring. No shutdown, restart, new simulation, reset, or retry.",
+  "deletion_condition": "Delete with the temporary evidence after reproducible verifier and accepted results are committed"
+}

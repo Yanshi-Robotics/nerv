@@ -1,0 +1,16 @@
+{
+  "viewport": {
+    "width": 1422,
+    "height": 800
+  },
+  "frames": 131,
+  "animationSeconds": 2.199867999999995,
+  "fps": 59.549027487103906,
+  "method": "House GLB load, focus changes and Chinese/collapsed navigation during apt 90-second dual-camera benchmark; transition FPS, not sustained drag FPS",
+  "courtyardFilter": "Only exterior rooms, exterior doorways, gate, pool and routes remained",
+  "pagehide": {
+    "before": "held book, active lease",
+    "after": "held null, inactive lease, lease_expired"
+  },
+  "nightReset": "Actual inline-confirmed reset retained Night and cleared opened task flag"
+}

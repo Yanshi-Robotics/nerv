@@ -1,0 +1,425 @@
+{
+  "id": "apt_stair_entry",
+  "xy": [
+    -10.96,
+    -0.6599999999999998
+  ],
+  "yaw": 0.0,
+  "direction": [
+    1.0,
+    0.0
+  ],
+  "boundary": -9.959999999999999,
+  "obstacle": "stair0_up",
+  "kind": "low_riser_exceeds_flat_policy_limit",
+  "passed": true,
+  "static_before_preparation": {
+    "forward": {
+      "valid": true,
+      "reason": "clear",
+      "travel_clearance_m": 0.65,
+      "support_drop_m": 0.0,
+      "support_rise_m": 0.00032420929772514206,
+      "turn_clear": true,
+      "sample_count": 520
+    },
+    "turn": {
+      "valid": true,
+      "reason": "clear",
+      "travel_clearance_m": 0.65,
+      "support_drop_m": 0.0,
+      "support_rise_m": 0.00032420929772514206,
+      "turn_clear": true,
+      "sample_count": 1242
+    },
+    "centreline_collision_height_probes": {
+      "stair0_up_s0": {
+        "distance_m": 0.9958095943975923,
+        "heights_world_m": [
+          0.07967579070227485,
+          0.12283240804800015
+        ]
+      },
+      "stair0_up_s1": {
+        "distance_m": 1.2958095943975931,
+        "heights_world_m": [
+          0.16598902539372543,
+          0.20914564273945072,
+          0.25230226008517603,
+          0.2954588774309013
+        ]
+      },
+      "stair0_up_s2": {
+        "distance_m": 1.595809594397592,
+        "heights_world_m": [
+          0.33861549477662667,
+          0.38177211212235196,
+          0.42492872946807725,
+          0.46808534681380254
+        ]
+      },
+      "stair0_up_s3": {
+        "distance_m": 1.8958095943975928,
+        "heights_world_m": [
+          0.5112419641595278,
+          0.5543985815052531,
+          0.5975551988509784
+        ]
+      },
+      "stair0_up_s4": {
+        "distance_m": 2.1958095943975935,
+        "heights_world_m": [
+          0.6407118161967037,
+          0.683868433542429,
+          0.7270250508881543,
+          0.7701816682338796
+        ]
+      },
+      "stair0_up_s5": {
+        "distance_m": 2.4958095943975924,
+        "heights_world_m": [
+          0.8133382855796049,
+          0.8564949029253301,
+          0.8996515202710554
+        ]
+      },
+      "stair0_up_s6": {
+        "distance_m": 2.795809594397593,
+        "heights_world_m": [
+          0.9428081376167807,
+          0.985964754962506,
+          1.0291213723082313,
+          1.0722779896539567
+        ]
+      },
+      "stair0_up_s7": {
+        "distance_m": 3.095809594397593,
+        "heights_world_m": [
+          1.115434606999682,
+          1.1585912243454073,
+          1.2017478416911327,
+          1.2449044590368579
+        ]
+      },
+      "stair0_up_s8": {
+        "distance_m": 3.395809594397593,
+        "heights_world_m": [
+          1.2880610763825833,
+          1.3312176937283084,
+          1.3743743110740338
+        ]
+      },
+      "stair0_up_s9": {
+        "distance_m": 3.6958095943975926,
+        "heights_world_m": [
+          1.417530928419759,
+          1.4606875457654844,
+          1.5038441631112098,
+          1.547000780456935
+        ]
+      },
+      "stair0_up_s10": {
+        "distance_m": 3.9958095943975933,
+        "heights_world_m": [
+          1.5901573978026604
+        ]
+      }
+    }
+  },
+  "static_before_action": {
+    "forward": {
+      "valid": true,
+      "reason": "clear",
+      "travel_clearance_m": 0.65,
+      "support_drop_m": 0.0,
+      "support_rise_m": 0.00032420929772514206,
+      "turn_clear": true,
+      "sample_count": 520
+    },
+    "turn": {
+      "valid": true,
+      "reason": "clear",
+      "travel_clearance_m": 0.65,
+      "support_drop_m": 0.0,
+      "support_rise_m": 0.00032420929772514206,
+      "turn_clear": true,
+      "sample_count": 1242
+    },
+    "centreline_collision_height_probes": {
+      "stair0_up_s0": {
+        "distance_m": 0.9958095943975923,
+        "heights_world_m": [
+          0.07967579070227485,
+          0.12283240804800015
+        ]
+      },
+      "stair0_up_s1": {
+        "distance_m": 1.2958095943975931,
+        "heights_world_m": [
+          0.16598902539372543,
+          0.20914564273945072,
+          0.25230226008517603,
+          0.2954588774309013
+        ]
+      },
+      "stair0_up_s2": {
+        "distance_m": 1.595809594397592,
+        "heights_world_m": [
+          0.33861549477662667,
+          0.38177211212235196,
+          0.42492872946807725,
+          0.46808534681380254
+        ]
+      },
+      "stair0_up_s3": {
+        "distance_m": 1.8958095943975928,
+        "heights_world_m": [
+          0.5112419641595278,
+          0.5543985815052531,
+          0.5975551988509784
+        ]
+      },
+      "stair0_up_s4": {
+        "distance_m": 2.1958095943975935,
+        "heights_world_m": [
+          0.6407118161967037,
+          0.683868433542429,
+          0.7270250508881543,
+          0.7701816682338796
+        ]
+      },
+      "stair0_up_s5": {
+        "distance_m": 2.4958095943975924,
+        "heights_world_m": [
+          0.8133382855796049,
+          0.8564949029253301,
+          0.8996515202710554
+        ]
+      },
+      "stair0_up_s6": {
+        "distance_m": 2.795809594397593,
+        "heights_world_m": [
+          0.9428081376167807,
+          0.985964754962506,
+          1.0291213723082313,
+          1.0722779896539567
+        ]
+      },
+      "stair0_up_s7": {
+        "distance_m": 3.095809594397593,
+        "heights_world_m": [
+          1.115434606999682,
+          1.1585912243454073,
+          1.2017478416911327,
+          1.2449044590368579
+        ]
+      },
+      "stair0_up_s8": {
+        "distance_m": 3.395809594397593,
+        "heights_world_m": [
+          1.2880610763825833,
+          1.3312176937283084,
+          1.3743743110740338
+        ]
+      },
+      "stair0_up_s9": {
+        "distance_m": 3.6958095943975926,
+        "heights_world_m": [
+          1.417530928419759,
+          1.4606875457654844,
+          1.5038441631112098,
+          1.547000780456935
+        ]
+      },
+      "stair0_up_s10": {
+        "distance_m": 3.9958095943975933,
+        "heights_world_m": [
+          1.5901573978026604
+        ]
+      }
+    }
+  },
+  "before": {
+    "sim_time": 3.0,
+    "spawned": true,
+    "pd_mode": "implicit",
+    "base": {
+      "x": -10.956,
+      "y": -0.665,
+      "z": 0.79,
+      "yaw_deg": 1.3
+    },
+    "tilt_deg": 0.4,
+    "fallen": false,
+    "realtime_ratio": 1.0,
+    "epoch": "95b1974c61d74d0397c9c259b42f0832",
+    "room_key": "stair_f62",
+    "room_label": "楼梯间"
+  },
+  "action": {
+    "ok": true,
+    "message": "walked 0.61 m then braked: obstacle ahead",
+    "data": {
+      "moved_m": 0.613,
+      "turned_deg": 0.4,
+      "fallen": false,
+      "reason": "braked",
+      "front_m": 0.33,
+      "motion_clearance": {
+        "valid": true,
+        "reason": "obstacle",
+        "travel_clearance_m": 0.3267126467220334,
+        "support_drop_m": 0.0,
+        "support_rise_m": 0.06455277381767716,
+        "turn_clear": true,
+        "sample_count": 520
+      },
+      "braked": true,
+      "stalled": false,
+      "sim_time": 4.68,
+      "target_m": 3.0,
+      "elapsed_s": 1.66
+    }
+  },
+  "after": {
+    "sim_time": 7.68,
+    "spawned": true,
+    "pd_mode": "implicit",
+    "base": {
+      "x": -10.329,
+      "y": -0.709,
+      "z": 0.789,
+      "yaw_deg": 1.7
+    },
+    "tilt_deg": 0.7,
+    "fallen": false,
+    "realtime_ratio": 1.0,
+    "epoch": "95b1974c61d74d0397c9c259b42f0832",
+    "room_key": "stair_f62",
+    "room_label": "楼梯间"
+  },
+  "static_after_action": {
+    "forward": {
+      "valid": true,
+      "reason": "obstacle",
+      "travel_clearance_m": 0.19674490123950306,
+      "support_drop_m": 0.0,
+      "support_rise_m": 0.06279744603564102,
+      "turn_clear": true,
+      "sample_count": 520
+    },
+    "turn": {
+      "valid": true,
+      "reason": "clear",
+      "travel_clearance_m": 0.65,
+      "support_drop_m": 0.0,
+      "support_rise_m": 0.0002974460356410247,
+      "turn_clear": true,
+      "sample_count": 1242
+    },
+    "centreline_collision_height_probes": {
+      "stair0_up_s0": {
+        "distance_m": 0.3694815937162236,
+        "heights_world_m": [
+          0.07970255396435896,
+          0.12282728606048433
+        ]
+      },
+      "stair0_up_s1": {
+        "distance_m": 0.6694815937162243,
+        "heights_world_m": [
+          0.1659520181566097,
+          0.2090767502527351,
+          0.2522014823488604,
+          0.2953262144449858
+        ]
+      },
+      "stair0_up_s2": {
+        "distance_m": 0.9694815937162232,
+        "heights_world_m": [
+          0.3384509465411112,
+          0.3815756786372365,
+          0.4247004107333619,
+          0.4678251428294873
+        ]
+      },
+      "stair0_up_s3": {
+        "distance_m": 1.269481593716224,
+        "heights_world_m": [
+          0.5109498749256125,
+          0.5540746070217379,
+          0.5971993391178633
+        ]
+      },
+      "stair0_up_s4": {
+        "distance_m": 1.5694815937162248,
+        "heights_world_m": [
+          0.6403240712139886,
+          0.6834488033101139,
+          0.7265735354062394,
+          0.7696982675023647
+        ]
+      },
+      "stair0_up_s5": {
+        "distance_m": 1.8694815937162237,
+        "heights_world_m": [
+          0.81282299959849,
+          0.8559477316946155,
+          0.8990724637907408
+        ]
+      },
+      "stair0_up_s6": {
+        "distance_m": 2.1694815937162244,
+        "heights_world_m": [
+          0.9421971958868661,
+          0.9853219279829916,
+          1.028446660079117,
+          1.0715713921752423
+        ]
+      },
+      "stair0_up_s7": {
+        "distance_m": 2.469481593716224,
+        "heights_world_m": [
+          1.1146961242713678,
+          1.157820856367493,
+          1.2009455884636184,
+          1.2440703205597439
+        ]
+      },
+      "stair0_up_s8": {
+        "distance_m": 2.769481593716224,
+        "heights_world_m": [
+          1.287195052655869,
+          1.3303197847519945,
+          1.37344451684812
+        ]
+      },
+      "stair0_up_s9": {
+        "distance_m": 3.069481593716224,
+        "heights_world_m": [
+          1.4165692489442452,
+          1.4596939810403706,
+          1.502818713136496,
+          1.5459434452326213
+        ]
+      },
+      "stair0_up_s10": {
+        "distance_m": 3.3694815937162246,
+        "heights_world_m": [
+          1.5890681773287467
+        ]
+      }
+    }
+  },
+  "metrics": {
+    "samples": 230,
+    "min_feet_before_boundary_m": 0.254910764072223,
+    "max_hazard_penetration_m": 0.0,
+    "max_tilt_deg": 3.8,
+    "min_root_z": 0.771,
+    "fell": false,
+    "post_stop_max_speed_m_s": 0.006423782052779273,
+    "policy_errors": []
+  },
+  "renderer_initialized": false
+}

@@ -1,0 +1,339 @@
+{
+  "available": true,
+  "active": true,
+  "epoch": "b8e5c117350a4fca89faeec786235eb5",
+  "lease_seconds": 2.0,
+  "session": "s_1788845708146720162",
+  "owner": "61fb1a3a-e144-45f0-8940-a9ea93a4c888",
+  "phase": "day",
+  "phases": [
+    "day",
+    "morning",
+    "dusk",
+    "night"
+  ],
+  "selection": null,
+  "held": 71,
+  "joints": {
+    "ix_a2_fridge__freezer_door_joint": {
+      "name": "ix_a2_fridge__freezer_door_joint",
+      "value": 0.0,
+      "fraction": 0.0,
+      "result": "idle",
+      "body": "ix_a2_fridge__freezer_door"
+    },
+    "ix_a2_fridge__freezer_drawer0_joint": {
+      "name": "ix_a2_fridge__freezer_drawer0_joint",
+      "value": 0.0,
+      "fraction": 0.0,
+      "result": "idle",
+      "body": "ix_a2_fridge__freezer_drawer0"
+    },
+    "ix_a2_fridge__freezer_drawer1_joint": {
+      "name": "ix_a2_fridge__freezer_drawer1_joint",
+      "value": 0.0,
+      "fraction": 0.0,
+      "result": "idle",
+      "body": "ix_a2_fridge__freezer_drawer1"
+    },
+    "ix_a2_fridge__fridge_door_joint": {
+      "name": "ix_a2_fridge__fridge_door_joint",
+      "value": 1.5387931500877026,
+      "fraction": 0.9796261448017141,
+      "result": "reached",
+      "body": "ix_a2_fridge__fridge_door"
+    },
+    "ix_a2_fridge__fridge_drawer0_joint": {
+      "name": "ix_a2_fridge__fridge_drawer0_joint",
+      "value": 0.0,
+      "fraction": 0.0,
+      "result": "idle",
+      "body": "ix_a2_fridge__fridge_drawer0"
+    },
+    "ix_a2_fridge__fridge_drawer1_joint": {
+      "name": "ix_a2_fridge__fridge_drawer1_joint",
+      "value": 0.0,
+      "fraction": 0.0,
+      "result": "idle",
+      "body": "ix_a2_fridge__fridge_drawer1"
+    },
+    "ix_a2_stove__knob_front_left_joint": {
+      "name": "ix_a2_stove__knob_front_left_joint",
+      "value": 8.621657656268232e-06,
+      "fraction": 2.4699229805460887e-06,
+      "result": "idle",
+      "body": "ix_a2_stove__knob_front_left"
+    },
+    "ix_a2_stove__knob_front_right_joint": {
+      "name": "ix_a2_stove__knob_front_right_joint",
+      "value": 1.450739131888787e-05,
+      "fraction": 4.1560614715715164e-06,
+      "result": "idle",
+      "body": "ix_a2_stove__knob_front_right"
+    },
+    "ix_a2_stove__knob_rear_left_joint": {
+      "name": "ix_a2_stove__knob_rear_left_joint",
+      "value": -1.2610041657841585e-09,
+      "fraction": -3.6125108323806357e-10,
+      "result": "idle",
+      "body": "ix_a2_stove__knob_rear_left"
+    },
+    "ix_a2_stove__knob_rear_right_joint": {
+      "name": "ix_a2_stove__knob_rear_right_joint",
+      "value": 1.0928648847467462e-05,
+      "fraction": 3.1308272736918128e-06,
+      "result": "idle",
+      "body": "ix_a2_stove__knob_rear_right"
+    },
+    "ix_a2_stove__Door001_joint": {
+      "name": "ix_a2_stove__Door001_joint",
+      "value": -6.271865441811658e-05,
+      "fraction": -3.9927935493648874e-05,
+      "result": "idle",
+      "body": "ix_a2_stove__Door001"
+    },
+    "ix_a2_stove__Knob001_joint": {
+      "name": "ix_a2_stove__Knob001_joint",
+      "value": -3.2349378982043143e-06,
+      "fraction": -6.178276285114205e-07,
+      "result": "idle",
+      "body": "ix_a2_stove__Knob001"
+    },
+    "ix_a2_stove__Knob002_joint": {
+      "name": "ix_a2_stove__Knob002_joint",
+      "value": 0.005620855418878585,
+      "fraction": 0.001006410289928126,
+      "result": "idle",
+      "body": "ix_a2_stove__Knob002"
+    },
+    "ix_a2_stove__Shelf001_joint": {
+      "name": "ix_a2_stove__Shelf001_joint",
+      "value": 0.0,
+      "fraction": 0.0,
+      "result": "idle",
+      "body": "ix_a2_stove__Shelf001"
+    },
+    "ix_a2_sink__handle_temp_joint": {
+      "name": "ix_a2_sink__handle_temp_joint",
+      "value": 6.086771247980659e-07,
+      "fraction": 0.5000003874958926,
+      "result": "idle",
+      "body": "ix_a2_sink__handle"
+    },
+    "ix_a2_sink__handle_joint": {
+      "name": "ix_a2_sink__handle_joint",
+      "value": 1.1673004803581066e-05,
+      "fraction": 2.3346009607162132e-05,
+      "result": "idle",
+      "body": "ix_a2_sink__handle"
+    },
+    "ix_a2_sink__spout_joint": {
+      "name": "ix_a2_sink__spout_joint",
+      "value": 0.0,
+      "fraction": 0.3333333333050391,
+      "result": "idle",
+      "body": "ix_a2_sink__spout"
+    },
+    "ix_a2_hood__Button001_joint": {
+      "name": "ix_a2_hood__Button001_joint",
+      "value": 0.0,
+      "fraction": 0.0,
+      "result": "idle",
+      "body": "ix_a2_hood__Button001"
+    },
+    "ix_a2_hood__Button002_joint": {
+      "name": "ix_a2_hood__Button002_joint",
+      "value": 0.0,
+      "fraction": 0.0,
+      "result": "idle",
+      "body": "ix_a2_hood__Button002"
+    },
+    "ix_a2_hood__Button003_joint": {
+      "name": "ix_a2_hood__Button003_joint",
+      "value": 0.0,
+      "fraction": 0.0,
+      "result": "idle",
+      "body": "ix_a2_hood__Button003"
+    },
+    "ix_a2_hood__Button004_joint": {
+      "name": "ix_a2_hood__Button004_joint",
+      "value": 0.0,
+      "fraction": 0.0,
+      "result": "idle",
+      "body": "ix_a2_hood__Button004"
+    },
+    "ix_a2_hood__Button005_joint": {
+      "name": "ix_a2_hood__Button005_joint",
+      "value": 0.0,
+      "fraction": 0.0,
+      "result": "idle",
+      "body": "ix_a2_hood__Button005"
+    },
+    "ix_a2_can__free": {
+      "name": "ix_a2_can__free",
+      "position": [
+        -10.654060293489415,
+        3.8300758408164013,
+        1.2809604830639263
+      ],
+      "held": true,
+      "result": "moving",
+      "body": "ix_a2_can"
+    },
+    "ix_a2_fruit__free": {
+      "name": "ix_a2_fruit__free",
+      "position": [
+        -9.15,
+        3.95,
+        0.98247269919443
+      ],
+      "held": false,
+      "result": "idle",
+      "body": "ix_a2_fruit"
+    },
+    "ix_a2_book__free": {
+      "name": "ix_a2_book__free",
+      "position": [
+        -7.450000000023604,
+        4.249999999989145,
+        0.9574931689659989
+      ],
+      "held": false,
+      "result": "idle",
+      "body": "ix_a2_book"
+    },
+    "ix_dn_w0__free": {
+      "name": "ix_dn_w0__free",
+      "position": [
+        -3.6582546987988436,
+        3.8001814946053316,
+        0.47699485635379457
+      ],
+      "held": false,
+      "result": "idle",
+      "body": "ix_dn_w0"
+    },
+    "ix_dn_e0__free": {
+      "name": "ix_dn_e0__free",
+      "position": [
+        -1.9417453012222403,
+        3.7998185054077998,
+        0.47699485635388444
+      ],
+      "held": false,
+      "result": "idle",
+      "body": "ix_dn_e0"
+    },
+    "ix_dn_w1__free": {
+      "name": "ix_dn_w1__free",
+      "position": [
+        -3.6582546987717026,
+        4.600181494618142,
+        0.4769948563537835
+      ],
+      "held": false,
+      "result": "idle",
+      "body": "ix_dn_w1"
+    },
+    "ix_dn_e1__free": {
+      "name": "ix_dn_e1__free",
+      "position": [
+        -1.9417453012021022,
+        4.599818505385567,
+        0.4769948563537883
+      ],
+      "held": false,
+      "result": "idle",
+      "body": "ix_dn_e1"
+    },
+    "ix_dn_w2__free": {
+      "name": "ix_dn_w2__free",
+      "position": [
+        -3.6582546987801083,
+        5.400181494639322,
+        0.47699485635379857
+      ],
+      "held": false,
+      "result": "idle",
+      "body": "ix_dn_w2"
+    },
+    "ix_dn_e2__free": {
+      "name": "ix_dn_e2__free",
+      "position": [
+        -1.941745301264001,
+        5.39981850541586,
+        0.4769948563537807
+      ],
+      "held": false,
+      "result": "idle",
+      "body": "ix_dn_e2"
+    }
+  },
+  "task": {
+    "id": "put_can_in_fridge",
+    "label": {
+      "en": "Put the can in the refrigerator",
+      "zh": "\u5c06\u7f50\u4f53\u653e\u5165\u51b0\u7bb1"
+    },
+    "supported": true,
+    "stage": "release_object",
+    "success": false,
+    "checks": {
+      "opened": true,
+      "inside": true,
+      "released": false,
+      "settled": false,
+      "supported": false,
+      "contact_valid": true,
+      "closed": false
+    },
+    "target": {
+      "body": "ix_a2_fridge__object",
+      "bounds": [
+        [
+          -0.024295925180000004,
+          -0.19358094811,
+          0.211191822218
+        ],
+        [
+          0.39185269743,
+          0.22719619419999998,
+          0.54533257292
+        ]
+      ],
+      "frame": "body",
+      "label": {
+        "en": "Refrigerator middle shelf target",
+        "zh": "\u51b7\u85cf\u5ba4\u4e2d\u5c42\u4efb\u52a1\u533a"
+      },
+      "world_bounds": [
+        [
+          -10.72429592518,
+          3.6064190468899997,
+          1.1570688221179999
+        ],
+        [
+          -10.30814730257,
+          4.0271961892,
+          1.4912095728199999
+        ]
+      ],
+      "world_anchor": [
+        -10.516221613875,
+        3.816807618044999,
+        1.324139197469
+      ]
+    }
+  },
+  "reason": "selected",
+  "view": {
+    "lookat": [
+      -10.64999873812314,
+      4.3415824453468845,
+      1.203123984609769
+    ],
+    "azimuth": 90.0,
+    "elevation": -12.0,
+    "distance": 1.92
+  }
+}

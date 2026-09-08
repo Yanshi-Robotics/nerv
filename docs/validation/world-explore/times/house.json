@@ -1,0 +1,830 @@
+{
+  "created": "2026-09-08",
+  "queue": "queued-night-final",
+  "mode": "Actual WorldSim, released G1 standing policy, LocalBus, production scene_command/render thread",
+  "ports": false,
+  "resident_access": false,
+  "pinning": false,
+  "scenes": [
+    {
+      "scene": "house",
+      "phases": [
+        {
+          "requested": "day",
+          "reported": "day",
+          "fallen": false
+        },
+        {
+          "requested": "morning",
+          "reported": "morning",
+          "fallen": false
+        },
+        {
+          "requested": "dusk",
+          "reported": "dusk",
+          "fallen": false
+        },
+        {
+          "requested": "night",
+          "reported": "night",
+          "fallen": false
+        }
+      ],
+      "mutations": [
+        {
+          "phase": "day",
+          "thread": "nerv-world-render",
+          "physics_before": {
+            "qpos": "06760feab77636d9e060f507e0856cf44e957dca29ae1ee272a9ffcdc8a5f672",
+            "qvel": "71829fc7bfc4060e31512ca5e2fcf41e4e49dee8daf48a1ad974c5eb0a52ae22",
+            "qacc": "f478c9c458949d56c8ce171ec90c21cf0850d9acc70498ef6aa879d950c81d31",
+            "qacc_warmstart": "f478c9c458949d56c8ce171ec90c21cf0850d9acc70498ef6aa879d950c81d31",
+            "act": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "ctrl": "c4fcd50d9f0c893c46288b57d8e62b18523145956b249b6ecd6c21718be49065",
+            "qfrc_applied": "674247dbe3596690183eb9995bdee9c9fcccff643ce74dbd7b934f97eb9d4392",
+            "xfrc_applied": "c87499548f9efbd98c824a95a664af38f414efb1c9eede544e55e019473d6b24",
+            "mocap_pos": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "mocap_quat": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "time": 3.1799999999998714,
+            "model_physics": {
+              "body_mass": "2f808766bf3b8f32076fc06fba45e96c7a0c2d5e6991950103e5b196e304bbad",
+              "body_inertia": "5bc5309ebb955409b2910fe4dcf4a0d527bfc8f8e608add6240567a18797954b",
+              "geom_contype": "bfb86790e07ad081b32ccd7d238216a81d2ec27fda987ecf7476b1837bceeb66",
+              "geom_conaffinity": "bfb86790e07ad081b32ccd7d238216a81d2ec27fda987ecf7476b1837bceeb66",
+              "geom_friction": "733d1ebb5bbf4968bfaaafa6fc58db13b080a6553a9f54509778251d63c8e6b7",
+              "jnt_range": "d9c3ef1713609cf7a40450f0054c0980e165d92c383cdc4129a38f8ee9cc06eb",
+              "dof_damping": "54e827699c78447a173c26f09ae742ab4d4d00c0c1e15dd7ea55dcc0f9b25200"
+            },
+            "epoch": "f24874d5d47447b1bfc758c3bb0e6061"
+          },
+          "physics_after": {
+            "qpos": "06760feab77636d9e060f507e0856cf44e957dca29ae1ee272a9ffcdc8a5f672",
+            "qvel": "71829fc7bfc4060e31512ca5e2fcf41e4e49dee8daf48a1ad974c5eb0a52ae22",
+            "qacc": "f478c9c458949d56c8ce171ec90c21cf0850d9acc70498ef6aa879d950c81d31",
+            "qacc_warmstart": "f478c9c458949d56c8ce171ec90c21cf0850d9acc70498ef6aa879d950c81d31",
+            "act": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "ctrl": "c4fcd50d9f0c893c46288b57d8e62b18523145956b249b6ecd6c21718be49065",
+            "qfrc_applied": "674247dbe3596690183eb9995bdee9c9fcccff643ce74dbd7b934f97eb9d4392",
+            "xfrc_applied": "c87499548f9efbd98c824a95a664af38f414efb1c9eede544e55e019473d6b24",
+            "mocap_pos": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "mocap_quat": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "time": 3.1799999999998714,
+            "model_physics": {
+              "body_mass": "2f808766bf3b8f32076fc06fba45e96c7a0c2d5e6991950103e5b196e304bbad",
+              "body_inertia": "5bc5309ebb955409b2910fe4dcf4a0d527bfc8f8e608add6240567a18797954b",
+              "geom_contype": "bfb86790e07ad081b32ccd7d238216a81d2ec27fda987ecf7476b1837bceeb66",
+              "geom_conaffinity": "bfb86790e07ad081b32ccd7d238216a81d2ec27fda987ecf7476b1837bceeb66",
+              "geom_friction": "733d1ebb5bbf4968bfaaafa6fc58db13b080a6553a9f54509778251d63c8e6b7",
+              "jnt_range": "d9c3ef1713609cf7a40450f0054c0980e165d92c383cdc4129a38f8ee9cc06eb",
+              "dof_damping": "54e827699c78447a173c26f09ae742ab4d4d00c0c1e15dd7ea55dcc0f9b25200"
+            },
+            "epoch": "f24874d5d47447b1bfc758c3bb0e6061"
+          },
+          "unchanged": true,
+          "texture_before": "bb48e978d3f0417b04414661abc609d1283e7af573a3e11da987132cf06bb7b6",
+          "texture_after": "bb48e978d3f0417b04414661abc609d1283e7af573a3e11da987132cf06bb7b6",
+          "warnings": [],
+          "renderer_context": 134135584316192
+        },
+        {
+          "phase": "morning",
+          "thread": "nerv-world-render",
+          "physics_before": {
+            "qpos": "a47cfe757c657c1c44c9d913b121943946b385cf944c305667bc624048751b15",
+            "qvel": "0a45185725fa6f793ee9e8ccfc362a9d5b7924a9a8c897a1b59925913e594652",
+            "qacc": "ea47d1f6e8f3197f72505d620328ca831c9be9de58bc0e7c146b110b7e1b1dce",
+            "qacc_warmstart": "ea47d1f6e8f3197f72505d620328ca831c9be9de58bc0e7c146b110b7e1b1dce",
+            "act": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "ctrl": "c4fcd50d9f0c893c46288b57d8e62b18523145956b249b6ecd6c21718be49065",
+            "qfrc_applied": "f006810287b83ac1eb17597ff43cf88bcfe484f1e2b0f82494f49d5012c2ac8b",
+            "xfrc_applied": "c87499548f9efbd98c824a95a664af38f414efb1c9eede544e55e019473d6b24",
+            "mocap_pos": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "mocap_quat": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "time": 3.619999999999823,
+            "model_physics": {
+              "body_mass": "2f808766bf3b8f32076fc06fba45e96c7a0c2d5e6991950103e5b196e304bbad",
+              "body_inertia": "5bc5309ebb955409b2910fe4dcf4a0d527bfc8f8e608add6240567a18797954b",
+              "geom_contype": "bfb86790e07ad081b32ccd7d238216a81d2ec27fda987ecf7476b1837bceeb66",
+              "geom_conaffinity": "bfb86790e07ad081b32ccd7d238216a81d2ec27fda987ecf7476b1837bceeb66",
+              "geom_friction": "733d1ebb5bbf4968bfaaafa6fc58db13b080a6553a9f54509778251d63c8e6b7",
+              "jnt_range": "d9c3ef1713609cf7a40450f0054c0980e165d92c383cdc4129a38f8ee9cc06eb",
+              "dof_damping": "54e827699c78447a173c26f09ae742ab4d4d00c0c1e15dd7ea55dcc0f9b25200"
+            },
+            "epoch": "f24874d5d47447b1bfc758c3bb0e6061"
+          },
+          "physics_after": {
+            "qpos": "a47cfe757c657c1c44c9d913b121943946b385cf944c305667bc624048751b15",
+            "qvel": "0a45185725fa6f793ee9e8ccfc362a9d5b7924a9a8c897a1b59925913e594652",
+            "qacc": "ea47d1f6e8f3197f72505d620328ca831c9be9de58bc0e7c146b110b7e1b1dce",
+            "qacc_warmstart": "ea47d1f6e8f3197f72505d620328ca831c9be9de58bc0e7c146b110b7e1b1dce",
+            "act": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "ctrl": "c4fcd50d9f0c893c46288b57d8e62b18523145956b249b6ecd6c21718be49065",
+            "qfrc_applied": "f006810287b83ac1eb17597ff43cf88bcfe484f1e2b0f82494f49d5012c2ac8b",
+            "xfrc_applied": "c87499548f9efbd98c824a95a664af38f414efb1c9eede544e55e019473d6b24",
+            "mocap_pos": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "mocap_quat": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "time": 3.619999999999823,
+            "model_physics": {
+              "body_mass": "2f808766bf3b8f32076fc06fba45e96c7a0c2d5e6991950103e5b196e304bbad",
+              "body_inertia": "5bc5309ebb955409b2910fe4dcf4a0d527bfc8f8e608add6240567a18797954b",
+              "geom_contype": "bfb86790e07ad081b32ccd7d238216a81d2ec27fda987ecf7476b1837bceeb66",
+              "geom_conaffinity": "bfb86790e07ad081b32ccd7d238216a81d2ec27fda987ecf7476b1837bceeb66",
+              "geom_friction": "733d1ebb5bbf4968bfaaafa6fc58db13b080a6553a9f54509778251d63c8e6b7",
+              "jnt_range": "d9c3ef1713609cf7a40450f0054c0980e165d92c383cdc4129a38f8ee9cc06eb",
+              "dof_damping": "54e827699c78447a173c26f09ae742ab4d4d00c0c1e15dd7ea55dcc0f9b25200"
+            },
+            "epoch": "f24874d5d47447b1bfc758c3bb0e6061"
+          },
+          "unchanged": true,
+          "texture_before": "bb48e978d3f0417b04414661abc609d1283e7af573a3e11da987132cf06bb7b6",
+          "texture_after": "70358ca3d329dc5e9a229df499da4cb5308e4ef65fb8446086d646944dcac352",
+          "warnings": [],
+          "renderer_context": 134135584316192
+        },
+        {
+          "phase": "dusk",
+          "thread": "nerv-world-render",
+          "physics_before": {
+            "qpos": "9fcf2c037db9b06ec76f2838102045af3a2df4816d7bc9c7cf340b68cb29a81d",
+            "qvel": "b57802b908dcc9779c1e931d18dd727fe2301613c6a6d711ac42ede25bade9b5",
+            "qacc": "c5eae41675da065e9af7cc9783799c4fcd77ee24aee404576c04e687182c361a",
+            "qacc_warmstart": "c5eae41675da065e9af7cc9783799c4fcd77ee24aee404576c04e687182c361a",
+            "act": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "ctrl": "c4fcd50d9f0c893c46288b57d8e62b18523145956b249b6ecd6c21718be49065",
+            "qfrc_applied": "447486d3a57216faa46bb1a76d9a1ac25705dcdc0af04e5a7c7463905380d932",
+            "xfrc_applied": "c87499548f9efbd98c824a95a664af38f414efb1c9eede544e55e019473d6b24",
+            "mocap_pos": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "mocap_quat": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "time": 4.029999999999778,
+            "model_physics": {
+              "body_mass": "2f808766bf3b8f32076fc06fba45e96c7a0c2d5e6991950103e5b196e304bbad",
+              "body_inertia": "5bc5309ebb955409b2910fe4dcf4a0d527bfc8f8e608add6240567a18797954b",
+              "geom_contype": "bfb86790e07ad081b32ccd7d238216a81d2ec27fda987ecf7476b1837bceeb66",
+              "geom_conaffinity": "bfb86790e07ad081b32ccd7d238216a81d2ec27fda987ecf7476b1837bceeb66",
+              "geom_friction": "733d1ebb5bbf4968bfaaafa6fc58db13b080a6553a9f54509778251d63c8e6b7",
+              "jnt_range": "d9c3ef1713609cf7a40450f0054c0980e165d92c383cdc4129a38f8ee9cc06eb",
+              "dof_damping": "54e827699c78447a173c26f09ae742ab4d4d00c0c1e15dd7ea55dcc0f9b25200"
+            },
+            "epoch": "f24874d5d47447b1bfc758c3bb0e6061"
+          },
+          "physics_after": {
+            "qpos": "9fcf2c037db9b06ec76f2838102045af3a2df4816d7bc9c7cf340b68cb29a81d",
+            "qvel": "b57802b908dcc9779c1e931d18dd727fe2301613c6a6d711ac42ede25bade9b5",
+            "qacc": "c5eae41675da065e9af7cc9783799c4fcd77ee24aee404576c04e687182c361a",
+            "qacc_warmstart": "c5eae41675da065e9af7cc9783799c4fcd77ee24aee404576c04e687182c361a",
+            "act": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "ctrl": "c4fcd50d9f0c893c46288b57d8e62b18523145956b249b6ecd6c21718be49065",
+            "qfrc_applied": "447486d3a57216faa46bb1a76d9a1ac25705dcdc0af04e5a7c7463905380d932",
+            "xfrc_applied": "c87499548f9efbd98c824a95a664af38f414efb1c9eede544e55e019473d6b24",
+            "mocap_pos": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "mocap_quat": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "time": 4.029999999999778,
+            "model_physics": {
+              "body_mass": "2f808766bf3b8f32076fc06fba45e96c7a0c2d5e6991950103e5b196e304bbad",
+              "body_inertia": "5bc5309ebb955409b2910fe4dcf4a0d527bfc8f8e608add6240567a18797954b",
+              "geom_contype": "bfb86790e07ad081b32ccd7d238216a81d2ec27fda987ecf7476b1837bceeb66",
+              "geom_conaffinity": "bfb86790e07ad081b32ccd7d238216a81d2ec27fda987ecf7476b1837bceeb66",
+              "geom_friction": "733d1ebb5bbf4968bfaaafa6fc58db13b080a6553a9f54509778251d63c8e6b7",
+              "jnt_range": "d9c3ef1713609cf7a40450f0054c0980e165d92c383cdc4129a38f8ee9cc06eb",
+              "dof_damping": "54e827699c78447a173c26f09ae742ab4d4d00c0c1e15dd7ea55dcc0f9b25200"
+            },
+            "epoch": "f24874d5d47447b1bfc758c3bb0e6061"
+          },
+          "unchanged": true,
+          "texture_before": "70358ca3d329dc5e9a229df499da4cb5308e4ef65fb8446086d646944dcac352",
+          "texture_after": "64090c9e69f1cffdcd10787fd3514fe370d45bf6c03ff837d9b53296ee49332b",
+          "warnings": [],
+          "renderer_context": 134135584316192
+        },
+        {
+          "phase": "night",
+          "thread": "nerv-world-render",
+          "physics_before": {
+            "qpos": "7498265ebcb289de5b317b595151878392f637a0194aca3851b10739a685674b",
+            "qvel": "b9c07504b8b6d5d51e05c878063667bdb873937dd2df5ceb7ca4a3d1f5e6b424",
+            "qacc": "3522de57de1664f698e0d350882fcb1b952c9a50831de2630409d4d6426a4d22",
+            "qacc_warmstart": "3522de57de1664f698e0d350882fcb1b952c9a50831de2630409d4d6426a4d22",
+            "act": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "ctrl": "c4fcd50d9f0c893c46288b57d8e62b18523145956b249b6ecd6c21718be49065",
+            "qfrc_applied": "b4cf9f2a631a588b6c36a96376a05df01ca843541bd6a07ddeb650abbc06f22b",
+            "xfrc_applied": "c87499548f9efbd98c824a95a664af38f414efb1c9eede544e55e019473d6b24",
+            "mocap_pos": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "mocap_quat": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "time": 4.359999999999742,
+            "model_physics": {
+              "body_mass": "2f808766bf3b8f32076fc06fba45e96c7a0c2d5e6991950103e5b196e304bbad",
+              "body_inertia": "5bc5309ebb955409b2910fe4dcf4a0d527bfc8f8e608add6240567a18797954b",
+              "geom_contype": "bfb86790e07ad081b32ccd7d238216a81d2ec27fda987ecf7476b1837bceeb66",
+              "geom_conaffinity": "bfb86790e07ad081b32ccd7d238216a81d2ec27fda987ecf7476b1837bceeb66",
+              "geom_friction": "733d1ebb5bbf4968bfaaafa6fc58db13b080a6553a9f54509778251d63c8e6b7",
+              "jnt_range": "d9c3ef1713609cf7a40450f0054c0980e165d92c383cdc4129a38f8ee9cc06eb",
+              "dof_damping": "54e827699c78447a173c26f09ae742ab4d4d00c0c1e15dd7ea55dcc0f9b25200"
+            },
+            "epoch": "f24874d5d47447b1bfc758c3bb0e6061"
+          },
+          "physics_after": {
+            "qpos": "7498265ebcb289de5b317b595151878392f637a0194aca3851b10739a685674b",
+            "qvel": "b9c07504b8b6d5d51e05c878063667bdb873937dd2df5ceb7ca4a3d1f5e6b424",
+            "qacc": "3522de57de1664f698e0d350882fcb1b952c9a50831de2630409d4d6426a4d22",
+            "qacc_warmstart": "3522de57de1664f698e0d350882fcb1b952c9a50831de2630409d4d6426a4d22",
+            "act": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "ctrl": "c4fcd50d9f0c893c46288b57d8e62b18523145956b249b6ecd6c21718be49065",
+            "qfrc_applied": "b4cf9f2a631a588b6c36a96376a05df01ca843541bd6a07ddeb650abbc06f22b",
+            "xfrc_applied": "c87499548f9efbd98c824a95a664af38f414efb1c9eede544e55e019473d6b24",
+            "mocap_pos": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "mocap_quat": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "time": 4.359999999999742,
+            "model_physics": {
+              "body_mass": "2f808766bf3b8f32076fc06fba45e96c7a0c2d5e6991950103e5b196e304bbad",
+              "body_inertia": "5bc5309ebb955409b2910fe4dcf4a0d527bfc8f8e608add6240567a18797954b",
+              "geom_contype": "bfb86790e07ad081b32ccd7d238216a81d2ec27fda987ecf7476b1837bceeb66",
+              "geom_conaffinity": "bfb86790e07ad081b32ccd7d238216a81d2ec27fda987ecf7476b1837bceeb66",
+              "geom_friction": "733d1ebb5bbf4968bfaaafa6fc58db13b080a6553a9f54509778251d63c8e6b7",
+              "jnt_range": "d9c3ef1713609cf7a40450f0054c0980e165d92c383cdc4129a38f8ee9cc06eb",
+              "dof_damping": "54e827699c78447a173c26f09ae742ab4d4d00c0c1e15dd7ea55dcc0f9b25200"
+            },
+            "epoch": "f24874d5d47447b1bfc758c3bb0e6061"
+          },
+          "unchanged": true,
+          "texture_before": "64090c9e69f1cffdcd10787fd3514fe370d45bf6c03ff837d9b53296ee49332b",
+          "texture_after": "cedb302f97425a24c374b00c3f1fa17a2f49a4540364ece6494b21e01565f8df",
+          "warnings": [],
+          "renderer_context": 134135584316192
+        }
+      ],
+      "frames": [
+        {
+          "view": "head",
+          "phase": "day",
+          "path": "house/head/day.png",
+          "sim_time": 3.199999999999869,
+          "pixel_sha256": "c0dadf686f978238258df49e6d9b75061f72a1eadf266afd3e754bb292c588ab",
+          "file_sha256": "161c250cdd32f017dd15d132c82943745813030db348c12e216fec7c9bba0dc3",
+          "mean_luminance": 139.59587565104167,
+          "std_luminance": 40.81347418496785,
+          "fraction_over_20": 1.0
+        },
+        {
+          "view": "chase",
+          "phase": "day",
+          "path": "house/chase/day.png",
+          "sim_time": 3.2399999999998648,
+          "pixel_sha256": "d4c237d2e33cbab66b8022cabcba0066fedd1e15074be9b0191f91010cc64580",
+          "file_sha256": "83f502d99cfac29e1a75219fd32eed3044474952e098463f01af1dcc90261793",
+          "mean_luminance": 82.13149739583334,
+          "std_luminance": 22.823246694016913,
+          "fraction_over_20": 0.9977506510416667
+        },
+        {
+          "view": "entry",
+          "phase": "day",
+          "path": "house/entry/day.png",
+          "sim_time": 3.2899999999998593,
+          "pixel_sha256": "5176c5266b5a49bc44474747109dbd05212baa211b16872d17bd06b0583cd115",
+          "file_sha256": "7dc4abd98daed337db729ce9c4bc8240329c38c9cdb17185de468dc1b9addf89",
+          "mean_luminance": 81.80570529513889,
+          "std_luminance": 54.627815332902266,
+          "fraction_over_20": 0.8035026041666666
+        },
+        {
+          "view": "walkway",
+          "phase": "day",
+          "path": "house/walkway/day.png",
+          "sim_time": 3.329999999999855,
+          "pixel_sha256": "5f111aead30571bc89c6d0f43aeccf3e1f763a9f38d663c68e7baf4d6f7904d5",
+          "file_sha256": "9db21406618e0baff11d639083c4256a2bd3331db02c42586823cb298430d373",
+          "mean_luminance": 104.47184353298611,
+          "std_luminance": 71.24728543730231,
+          "fraction_over_20": 0.647998046875
+        },
+        {
+          "view": "pool",
+          "phase": "day",
+          "path": "house/pool/day.png",
+          "sim_time": 3.3799999999998493,
+          "pixel_sha256": "6ec09d80349872c51402520e8b8b94b03ed6948e599960d04028b186cbce1ba7",
+          "file_sha256": "3a91ac78f5e7582f38c89d57b8f29c171dde71cdf33a0c0e554526e70110d7cc",
+          "mean_luminance": 110.40780815972224,
+          "std_luminance": 53.124249494417725,
+          "fraction_over_20": 0.9076204427083333
+        },
+        {
+          "view": "gate",
+          "phase": "day",
+          "path": "house/gate/day.png",
+          "sim_time": 3.419999999999845,
+          "pixel_sha256": "7cdfa94bc18a57c0dffaa733b95d1292fad3bf232f0065ed0d49cd425b38029f",
+          "file_sha256": "78c5fdc6cf9762676a975a89bbe2b883319d7dc3ad22bcec70319f4bdedffaea",
+          "mean_luminance": 114.89749674479167,
+          "std_luminance": 54.43394904687589,
+          "fraction_over_20": 0.857099609375
+        },
+        {
+          "view": "west_walk",
+          "phase": "day",
+          "path": "house/west_walk/day.png",
+          "sim_time": 3.4599999999998405,
+          "pixel_sha256": "d5c6856c9396f17514f3a849bbd2f23882cf3db7b4285929165fa4db571b4d4b",
+          "file_sha256": "c25c1c9211e57b9a03479baa3549b76684842ce92feec17e60c6bd70703e8e8b",
+          "mean_luminance": 90.34077473958334,
+          "std_luminance": 52.59879601606479,
+          "fraction_over_20": 0.7551920572916667
+        },
+        {
+          "view": "entry_to_gate",
+          "phase": "day",
+          "path": "house/entry_to_gate/day.png",
+          "sim_time": 3.499999999999836,
+          "pixel_sha256": "e014f263bf565efde716a395791e93608a8c8db64106c389a278cfe906738332",
+          "file_sha256": "db4e1721231fde9af7a10b4333f081f5a2cae3297dadc95cb45651a8ceab1123",
+          "mean_luminance": 97.34351453993055,
+          "std_luminance": 49.436997514394896,
+          "fraction_over_20": 0.857080078125
+        },
+        {
+          "view": "inside_gate",
+          "phase": "day",
+          "path": "house/inside_gate/day.png",
+          "sim_time": 3.5399999999998317,
+          "pixel_sha256": "a5f94e47fdcd7f3b2b51c1de4590845476cdea575fa180168283996468f8975f",
+          "file_sha256": "fb6465971247110379d887d95b461c17b97b988d39c35eb4b3cb347ecc42bcb8",
+          "mean_luminance": 107.631240234375,
+          "std_luminance": 53.7241355832942,
+          "fraction_over_20": 0.8379134114583333
+        },
+        {
+          "view": "west_pool",
+          "phase": "day",
+          "path": "house/west_pool/day.png",
+          "sim_time": 3.5799999999998273,
+          "pixel_sha256": "9d6a12ab02d53c80e5e5a59cdd8721f46d26722a4b09c5d09bd75b32f50b9111",
+          "file_sha256": "50e9ba016b20a654b3661382647ec02340c523c2c1c926ee66c5c983b3119165",
+          "mean_luminance": 104.81115776909722,
+          "std_luminance": 52.08250431421462,
+          "fraction_over_20": 0.8575423177083333
+        },
+        {
+          "view": "head",
+          "phase": "morning",
+          "path": "house/head/morning.png",
+          "sim_time": 3.6399999999998207,
+          "pixel_sha256": "22b54544f954232dcf0590d747ddbf39a318983f6b24aab3ef3d4be80253fbb6",
+          "file_sha256": "6a73006566da9fe5c6d81c0a3395c36e43756278ba7be00e200efc16b509632b",
+          "mean_luminance": 131.6100661892361,
+          "std_luminance": 38.33303442689871,
+          "fraction_over_20": 1.0
+        },
+        {
+          "view": "chase",
+          "phase": "morning",
+          "path": "house/chase/morning.png",
+          "sim_time": 3.6799999999998163,
+          "pixel_sha256": "2d83eab2e5bdfbe42840ae1be4ff9ad411f1370acb4d877ae1f5105d968e22d0",
+          "file_sha256": "1b8675e741ba6091ce6d66e3115f48d48563aa1ee84cf714ecaf8418c6a42222",
+          "mean_luminance": 78.58195963541667,
+          "std_luminance": 23.6819239670302,
+          "fraction_over_20": 0.9915494791666667
+        },
+        {
+          "view": "entry",
+          "phase": "morning",
+          "path": "house/entry/morning.png",
+          "sim_time": 3.729999999999811,
+          "pixel_sha256": "078b3647055dab7415ad05971307487294bab7c02182057514cca3e1fd7572ec",
+          "file_sha256": "b658f944c88034ce67432dcdb0f2583e5b30d04e4c69f8388be9da1bb52f7779",
+          "mean_luminance": 70.4120822482639,
+          "std_luminance": 47.24249909610082,
+          "fraction_over_20": 0.7720247395833333
+        },
+        {
+          "view": "walkway",
+          "phase": "morning",
+          "path": "house/walkway/morning.png",
+          "sim_time": 3.7799999999998053,
+          "pixel_sha256": "beb11b09a35092466f570014a3670f3cbf4625492c4f52a404457c6289c0092e",
+          "file_sha256": "f55ebbd9cbe8cb9dbe2bad72adc31606c3c0f1689c170623d2db3039714c40a9",
+          "mean_luminance": 82.88907118055555,
+          "std_luminance": 59.925906268541695,
+          "fraction_over_20": 0.6467610677083333
+        },
+        {
+          "view": "pool",
+          "phase": "morning",
+          "path": "house/pool/morning.png",
+          "sim_time": 3.809999999999802,
+          "pixel_sha256": "68fdd9203d6879c020c69ae1468acd4d6f548c11e61351b24ba745e01afd8d97",
+          "file_sha256": "d19a27806275a6a0993e8e393055dcd7d1ff99e6f7a8c092b632d15661b9f10e",
+          "mean_luminance": 84.10971896701388,
+          "std_luminance": 49.41764062726511,
+          "fraction_over_20": 0.9055338541666667
+        },
+        {
+          "view": "gate",
+          "phase": "morning",
+          "path": "house/gate/morning.png",
+          "sim_time": 3.8599999999997965,
+          "pixel_sha256": "6e70e2488efca9b9334e71b5cbfcb710f65a7a6965c36642d5e9f798d30d3ff7",
+          "file_sha256": "3349af640bc1dae64b43db4a5063457aca8af5b4b50c2d5742345247b966ddeb",
+          "mean_luminance": 87.22810329861112,
+          "std_luminance": 51.85547612841267,
+          "fraction_over_20": 0.8553873697916666
+        },
+        {
+          "view": "west_walk",
+          "phase": "morning",
+          "path": "house/west_walk/morning.png",
+          "sim_time": 3.889999999999793,
+          "pixel_sha256": "6339863081431ff68d64dce7912377df33c6ccbb3abd2c5148bc1aa187c7c8fb",
+          "file_sha256": "ded8542d37bfe143be21856b9ac1ab7925da8da8b82edd207239066043b0f46f",
+          "mean_luminance": 59.33171983506945,
+          "std_luminance": 43.22631952556111,
+          "fraction_over_20": 0.7412239583333333
+        },
+        {
+          "view": "entry_to_gate",
+          "phase": "morning",
+          "path": "house/entry_to_gate/morning.png",
+          "sim_time": 3.9299999999997888,
+          "pixel_sha256": "d475ac15dd61725e0b1c6ccce13ca8e692e481b36f3504db2035cdbe45ee6136",
+          "file_sha256": "0b1a14f84882c0e97634797001021a53be3b42a1a2d9c6732827b538d1ab001e",
+          "mean_luminance": 69.34508572048611,
+          "std_luminance": 46.072220808333476,
+          "fraction_over_20": 0.8420279947916667
+        },
+        {
+          "view": "inside_gate",
+          "phase": "morning",
+          "path": "house/inside_gate/morning.png",
+          "sim_time": 3.9599999999997855,
+          "pixel_sha256": "21e7b6cb2ad2b37d478352401639b9c4a7b3ee66f9b52d2ff7c6c0db3348285d",
+          "file_sha256": "d4b5f988ea408df177b1d3e7370b9d4cc1d23599e86364a425d7d2d68fac19ee",
+          "mean_luminance": 75.86994791666666,
+          "std_luminance": 49.611141775306905,
+          "fraction_over_20": 0.8356966145833333
+        },
+        {
+          "view": "west_pool",
+          "phase": "morning",
+          "path": "house/west_pool/morning.png",
+          "sim_time": 3.989999999999782,
+          "pixel_sha256": "c9bd2dd1904c0f457ab52dad41f963ceaf2dfe484bef4b63d80e8b87fb6a27b6",
+          "file_sha256": "f895f41b06a17d41f7b9cebdd31f2a47ae65c1decd56157f9bcdf1b9e8cc7e88",
+          "mean_luminance": 73.17260850694446,
+          "std_luminance": 48.31499828983354,
+          "fraction_over_20": 0.85548828125
+        },
+        {
+          "view": "head",
+          "phase": "dusk",
+          "path": "house/head/dusk.png",
+          "sim_time": 4.049999999999776,
+          "pixel_sha256": "4603c66d915c9136c66025adf3de9c0a33fa5a4fdc0e131d91ddb884fbbc5323",
+          "file_sha256": "b4a86118de3a2a5373b445292248688c96fa21b445c5e7dc74c280b283054eaa",
+          "mean_luminance": 66.04540798611112,
+          "std_luminance": 18.514425382100864,
+          "fraction_over_20": 0.9984114583333333
+        },
+        {
+          "view": "chase",
+          "phase": "dusk",
+          "path": "house/chase/dusk.png",
+          "sim_time": 4.079999999999773,
+          "pixel_sha256": "14455fcd04776521f3e8563b822fdafe98a5a93924d7d005ba78c220cee93c38",
+          "file_sha256": "a44d8e9d26f703a3d5599222e6afd3b951c2677da1f2a7f0208cdcb0ef50f547",
+          "mean_luminance": 43.079791666666665,
+          "std_luminance": 12.893635876207206,
+          "fraction_over_20": 0.9441959635416667
+        },
+        {
+          "view": "entry",
+          "phase": "dusk",
+          "path": "house/entry/dusk.png",
+          "sim_time": 4.129999999999767,
+          "pixel_sha256": "f7e8777904607838659b5c21d750dbc0c3be9a251052c3cb9465de29b39443cf",
+          "file_sha256": "1c49e5c525a74c495d4897e268a41b5f2e054bc4225783927ca6ce49d7e9251c",
+          "mean_luminance": 38.32365668402778,
+          "std_luminance": 26.308534777480883,
+          "fraction_over_20": 0.7705794270833334
+        },
+        {
+          "view": "walkway",
+          "phase": "dusk",
+          "path": "house/walkway/dusk.png",
+          "sim_time": 4.159999999999764,
+          "pixel_sha256": "1823f5848a3dc6c7337c73d10e7f4b8e0d3891f53cb20feb57813a516cff1899",
+          "file_sha256": "96f17c9451215d579bccdaebdb3f97d0ad0de0c651ae2dda1c86cb097e1be6b8",
+          "mean_luminance": 51.06836697048611,
+          "std_luminance": 38.10350306685761,
+          "fraction_over_20": 0.64189453125
+        },
+        {
+          "view": "pool",
+          "phase": "dusk",
+          "path": "house/pool/dusk.png",
+          "sim_time": 4.189999999999761,
+          "pixel_sha256": "89585e5a96c80a3533566bec14b868dd20601aae99fe8faad2b68cac61b8db01",
+          "file_sha256": "0d3e1a25deb6b8fc38062dd33f63c7cc55884bf070eb01eba1edc94fcbb1807d",
+          "mean_luminance": 46.283764105902776,
+          "std_luminance": 33.23825386014142,
+          "fraction_over_20": 0.757021484375
+        },
+        {
+          "view": "gate",
+          "phase": "dusk",
+          "path": "house/gate/dusk.png",
+          "sim_time": 4.229999999999756,
+          "pixel_sha256": "8d8cbeaf7f55bcdc3a65ba11409c6cd804a4429518d1041a55da1137a7509ee5",
+          "file_sha256": "3a461784e7254f4c346daa5477ccc14ce07391593d4d372fca2963a5b42f1e13",
+          "mean_luminance": 54.40049913194444,
+          "std_luminance": 36.40834132698962,
+          "fraction_over_20": 0.8319986979166667
+        },
+        {
+          "view": "west_walk",
+          "phase": "dusk",
+          "path": "house/west_walk/dusk.png",
+          "sim_time": 4.249999999999754,
+          "pixel_sha256": "fd78fcc34d1b06ee0da1f6ba538ae5e10dbc1d1c832fb51eeab56b39e51276f4",
+          "file_sha256": "26a804fcfac5278580d829b42c12a0f8bf7579de7c3561ffc965e61d7adbd644",
+          "mean_luminance": 40.921533203125,
+          "std_luminance": 32.05945633668123,
+          "fraction_over_20": 0.7244173177083333
+        },
+        {
+          "view": "entry_to_gate",
+          "phase": "dusk",
+          "path": "house/entry_to_gate/dusk.png",
+          "sim_time": 4.279999999999751,
+          "pixel_sha256": "dbbf40c41121c8a579d81a40035a7540ce72d24e2572b5f16ad93520a5861783",
+          "file_sha256": "6499ce426da7aa7f3949253e0ac675fcceab45aab5312ee41285353f18312024",
+          "mean_luminance": 41.75257161458333,
+          "std_luminance": 37.853568055771,
+          "fraction_over_20": 0.770224609375
+        },
+        {
+          "view": "inside_gate",
+          "phase": "dusk",
+          "path": "house/inside_gate/dusk.png",
+          "sim_time": 4.309999999999747,
+          "pixel_sha256": "108bb04dc0fcc41bb30f1a2cf8994a32486338b4d46038bccc5f3554fde34744",
+          "file_sha256": "843367019d2d1643815f250360655cc753ff503e7262cb03a97a7181752f882c",
+          "mean_luminance": 45.75291775173612,
+          "std_luminance": 34.96218774772804,
+          "fraction_over_20": 0.8147200520833333
+        },
+        {
+          "view": "west_pool",
+          "phase": "dusk",
+          "path": "house/west_pool/dusk.png",
+          "sim_time": 4.329999999999745,
+          "pixel_sha256": "57ff4450936279f94dcd623cb5ea441f5fc8a53296143e9b5c625f05858a97d5",
+          "file_sha256": "c7a415b69d586ba14f04b9cbd08494b651f4fc15c04e32bebc229db24fdc1bfd",
+          "mean_luminance": 43.39457139756945,
+          "std_luminance": 34.41895215542759,
+          "fraction_over_20": 0.786181640625
+        },
+        {
+          "view": "head",
+          "phase": "night",
+          "path": "house/head/night.png",
+          "sim_time": 4.37999999999974,
+          "pixel_sha256": "a08efea31f5317bb99c89710cee3850516d28ac268fb9facb81b0b21882ac3a1",
+          "file_sha256": "8e8c0bf9d683d7eccd1574df4524b6be8fdeb1be973789ac9e1a1f990c2cd108",
+          "mean_luminance": 148.920078125,
+          "std_luminance": 25.980101809657956,
+          "fraction_over_20": 1.0
+        },
+        {
+          "view": "chase",
+          "phase": "night",
+          "path": "house/chase/night.png",
+          "sim_time": 4.419999999999735,
+          "pixel_sha256": "f986ab8068031946416325203da3b853a17734215f30bc085d26ed8bf4b6ff10",
+          "file_sha256": "71a552e0abadf5dde75fa83698829f10417dffade385c1c03b994963b0c19f9f",
+          "mean_luminance": 107.21743272569444,
+          "std_luminance": 24.455473851643276,
+          "fraction_over_20": 0.9977213541666666
+        },
+        {
+          "view": "entry",
+          "phase": "night",
+          "path": "house/entry/night.png",
+          "sim_time": 4.479999999999729,
+          "pixel_sha256": "d9353cdd7b5304199794d3c047b5c51a783e7bc46481fc9a09ad8fdf28a2e7a1",
+          "file_sha256": "2cd8d62a423c625238ffe0a1b35b573aab358eec9e7c19b957896ac41fd77687",
+          "mean_luminance": 96.150009765625,
+          "std_luminance": 55.14277897510621,
+          "fraction_over_20": 0.8038736979166666
+        },
+        {
+          "view": "walkway",
+          "phase": "night",
+          "path": "house/walkway/night.png",
+          "sim_time": 4.519999999999724,
+          "pixel_sha256": "2bfade1ece9fbadb25e68f5fdd99edbbf70d2dd9019c7f39d605af00606e9119",
+          "file_sha256": "8bc42264857499f8173fed19b9c4da36f6618f86fa47d92a9f337cde08220a62",
+          "mean_luminance": 48.15339084201389,
+          "std_luminance": 58.16245140376481,
+          "fraction_over_20": 0.29606770833333335
+        },
+        {
+          "view": "pool",
+          "phase": "night",
+          "path": "house/pool/night.png",
+          "sim_time": 4.549999999999721,
+          "pixel_sha256": "3d29720f409facc17201f55681d5c4413012fd17f5f223fa76e1258483b7dbb3",
+          "file_sha256": "676d3ca1ce2064537a0fc318fad012fac35895eca6bb3a661141f5338e15e00e",
+          "mean_luminance": 70.20654188368054,
+          "std_luminance": 48.54247407782897,
+          "fraction_over_20": 0.65796875
+        },
+        {
+          "view": "gate",
+          "phase": "night",
+          "path": "house/gate/night.png",
+          "sim_time": 4.5899999999997165,
+          "pixel_sha256": "172dbc5cf06df59ef594954f276888fb6709d046916418892482e643b5379691",
+          "file_sha256": "347a14579157ec0ec4eecc82c2861a41adaedc575ec51d83d04cdcb8eb6c9dc3",
+          "mean_luminance": 50.82857530381945,
+          "std_luminance": 45.116103074021055,
+          "fraction_over_20": 0.4418815104166667
+        },
+        {
+          "view": "west_walk",
+          "phase": "night",
+          "path": "house/west_walk/night.png",
+          "sim_time": 4.619999999999713,
+          "pixel_sha256": "a02e637082fa78e6009e2644662ddf36090fee22a61e341970b3b6c76647a03c",
+          "file_sha256": "c30287fe16905ae93b5218ad401c6c313b52bf5eec404bbeee14792483360ac8",
+          "mean_luminance": 77.711767578125,
+          "std_luminance": 52.03834836861973,
+          "fraction_over_20": 0.65140625
+        },
+        {
+          "view": "entry_to_gate",
+          "phase": "night",
+          "path": "house/entry_to_gate/night.png",
+          "sim_time": 4.659999999999709,
+          "pixel_sha256": "b9471a014140d480a2d8a03dba894be391ca3cb4586403f95cdb8f7e59492411",
+          "file_sha256": "47046fe4dbce3d36ca09bd32abbb9aef3308fab2a5ec760755175d2965b14b99",
+          "mean_luminance": 68.38763888888889,
+          "std_luminance": 42.35759152762606,
+          "fraction_over_20": 0.7081998697916667
+        },
+        {
+          "view": "inside_gate",
+          "phase": "night",
+          "path": "house/inside_gate/night.png",
+          "sim_time": 4.699999999999704,
+          "pixel_sha256": "382dd929d2aa0a1d2d5df3078514e6938b43c8ad329f3c1bf8c64ddecad341d5",
+          "file_sha256": "383c93fd6ff41edbf5dc8b36e44a03af7bba8b55fdbaf4fcd710322610908b07",
+          "mean_luminance": 66.61626844618054,
+          "std_luminance": 45.8236033645502,
+          "fraction_over_20": 0.593583984375
+        },
+        {
+          "view": "west_pool",
+          "phase": "night",
+          "path": "house/west_pool/night.png",
+          "sim_time": 4.7399999999997,
+          "pixel_sha256": "6d46b47c33bbef44b884b1112b644863815d10dd92703c6b2e8a0e1af368b5b9",
+          "file_sha256": "798b7c9a9d5a03fb1e144e4fcf9f0448934a50c64901b4569b9d29ed18aadece",
+          "mean_luminance": 64.11325520833333,
+          "std_luminance": 41.01481257406639,
+          "fraction_over_20": 0.639404296875
+        }
+      ],
+      "camera_views": {
+        "entry": {
+          "lookat": [
+            -1.4,
+            0.9996000299975005,
+            1.5799960002999751
+          ],
+          "distance": 8.0,
+          "azimuth": 90.0,
+          "elevation": 0.5729386976834864
+        },
+        "walkway": {
+          "lookat": [
+            -10.352860326437096,
+            -24.4658332367825,
+            2.128521402528679
+          ],
+          "distance": 8.0,
+          "azimuth": 70.64100582430528,
+          "elevation": 3.429204039116737
+        },
+        "pool": {
+          "lookat": [
+            26.43354523817254,
+            -23.867090476345087,
+            1.5659635978973412
+          ],
+          "distance": 8.0,
+          "azimuth": 116.56505117707799,
+          "elevation": -4.545718558663352
+        },
+        "gate": {
+          "lookat": [
+            -28.0,
+            -39.0,
+            1.4
+          ],
+          "distance": 8.0,
+          "azimuth": -90.0,
+          "elevation": 0.0
+        },
+        "west_walk": {
+          "lookat": [
+            -17.0,
+            0.4186030929419191,
+            0.5117008053895993
+          ],
+          "distance": 8.0,
+          "azimuth": 90.0,
+          "elevation": -8.180229882497521
+        },
+        "entry_to_gate": {
+          "lookat": [
+            -9.318603092941919,
+            -8.0,
+            0.5117008053895993
+          ],
+          "distance": 8.0,
+          "azimuth": 180.0,
+          "elevation": -8.180229882497521
+        },
+        "inside_gate": {
+          "lookat": [
+            -28.0,
+            -38.0,
+            0.5
+          ],
+          "distance": 7.587654446533526,
+          "azimuth": -90.0,
+          "elevation": -8.71745696459966
+        },
+        "west_pool": {
+          "lookat": [
+            17.5,
+            -15.918603092941918,
+            0.5117008053895993
+          ],
+          "distance": 8.0,
+          "azimuth": -90.0,
+          "elevation": -8.180229882497521
+        }
+      },
+      "passed": true,
+      "unique_per_view": {
+        "head": 4,
+        "chase": 4,
+        "entry": 4,
+        "walkway": 4,
+        "pool": 4,
+        "gate": 4,
+        "west_walk": 4,
+        "entry_to_gate": 4,
+        "inside_gate": 4,
+        "west_pool": 4
+      },
+      "status_after": {
+        "sim_time": 4.77,
+        "spawned": true,
+        "pd_mode": "implicit",
+        "base": {
+          "x": 8.008,
+          "y": -2.695,
+          "z": 0.79,
+          "yaw_deg": 91.5
+        },
+        "tilt_deg": 0.7,
+        "fallen": false,
+        "realtime_ratio": 1.33,
+        "epoch": "f24874d5d47447b1bfc758c3bb0e6061",
+        "room_key": "robot_home",
+        "room_label": "机器人停机房"
+      },
+      "policy_error": "",
+      "owned_instance_stopped": true
+    }
+  ],
+  "passed": true,
+  "source_sha256": {
+    "src/nerv/world/mujoco_node.py": "7da61c52f6ce17c3e1ec81153724534dccc1caa3322fe0f3d93c46b3e67b185e",
+    "src/nerv/world/scene_operator.py": "a58ba5a0cd4639711108c3f442224361e9eee7020f455fce45c0605b53535556",
+    "bodies/humanoid-unitree-g1/body.yaml": "0ab3430b5412c5d2507b96f2ca80dd56bc4f09d47de6839b872ab101257dafa7",
+    "worlds/scenes/operator.py": "9dcb51727224b0badac1bf21a341d10df0f932ceeb4d97054295c5b778539f9c",
+    "worlds/scenes/time_cycle.py": "bd45c7b1dc9faf1d55797d70d2f6ab092e8200fcc4a272439aa182e7390a5f34",
+    "worlds/scenes/apply_time_preset.py": "7ef289bfc315263b98feed398ba424ab78c841eb66fdc3a47a0df3a11f02d943",
+    "policies/g1-29dof-turn/policy.onnx": "07400671a8fffae172d261688bc84f0e60d3d656156b564dbdc0a4638fb695c6",
+    "worlds/build/house-g1.xml": "504d12a89c4923e0998e5468c69b50cbf6731ef597c5dc0a37001c5f36a51a0b",
+    "worlds/scenes/house/layout.py": "6aff665bdb6d82e2ff87e3000e500f458c9a7ecdb8baad200c232064cb47f219",
+    "worlds/scenes/house/shots.py": "c7a9d18fcdfcb2563465c4b733722ee1cc10837ab44b9b0ae374eaf984eda362",
+    "worlds/build/apt-g1.xml": "397d0330f435d5560896b3232adadde0c84c8ebce8d6a6ea7c0833212a78f15e",
+    "worlds/scenes/apt/layout.py": "7f010b273ad197ccbbc98dd5804fce9e2aab7a4711c95997a18671e9c7c7417e",
+    "worlds/scenes/apt/shots.py": "3de1158161f881b7a7fb0405478f8fbbfbde4cbe324ff30cf1b0de0742e8606c"
+  },
+  "finished": "2026-09-08T04:46:48Z"
+}

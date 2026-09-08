@@ -1,0 +1,495 @@
+{
+  "passed": true,
+  "repetitions": [
+    {
+      "repetition": 1,
+      "passed": true,
+      "before": {
+        "sim_time": 3.0,
+        "spawned": true,
+        "pd_mode": "implicit",
+        "base": {
+          "x": 4.005,
+          "y": -6.596,
+          "z": 0.79,
+          "yaw_deg": 91.3
+        },
+        "tilt_deg": 0.4,
+        "fallen": false,
+        "realtime_ratio": 1.0,
+        "epoch": "5bb8e2f953364ef4b009ff60298b8216",
+        "room_key": "foyer",
+        "room_label": "入户玄关"
+      },
+      "after": {
+        "sim_time": 34.41,
+        "spawned": true,
+        "pd_mode": "implicit",
+        "base": {
+          "x": 4.011,
+          "y": -6.617,
+          "z": 0.775,
+          "yaw_deg": 91.6
+        },
+        "tilt_deg": 1.6,
+        "fallen": false,
+        "realtime_ratio": 1.01,
+        "epoch": "5bb8e2f953364ef4b009ff60298b8216",
+        "room_key": "foyer",
+        "room_label": "入户玄关"
+      },
+      "task": {
+        "held_rejected": true,
+        "open_door_rejected": true,
+        "physical_placement": {
+          "id": "put_can_in_fridge",
+          "label": {
+            "en": "Put the can in the refrigerator",
+            "zh": "将罐体放入冰箱"
+          },
+          "supported": true,
+          "stage": "complete",
+          "success": true,
+          "checks": {
+            "opened": true,
+            "inside": true,
+            "released": true,
+            "settled": true,
+            "supported": true,
+            "contact_valid": true,
+            "closed": true
+          },
+          "target": {
+            "body": "ix_a2_fridge__object",
+            "bounds": [
+              [
+                -0.024295925180000004,
+                -0.19358094811,
+                0.211191822218
+              ],
+              [
+                0.39185269743,
+                0.22719619419999998,
+                0.54533257292
+              ]
+            ],
+            "frame": "body",
+            "label": {
+              "en": "Refrigerator middle shelf target",
+              "zh": "冷藏室中层任务区"
+            },
+            "world_bounds": [
+              [
+                -10.72429592518,
+                3.6064190468899997,
+                1.1570688221179999
+              ],
+              [
+                -10.30814730257,
+                4.0271961892,
+                1.4912095728199999
+              ]
+            ],
+            "world_anchor": [
+              -10.516221613875,
+              3.816807618044999,
+              1.324139197469
+            ]
+          }
+        }
+      }
+    },
+    {
+      "repetition": 2,
+      "passed": true,
+      "before": {
+        "sim_time": 3.0,
+        "spawned": true,
+        "pd_mode": "implicit",
+        "base": {
+          "x": 4.005,
+          "y": -6.593,
+          "z": 0.79,
+          "yaw_deg": 90.9
+        },
+        "tilt_deg": 0.5,
+        "fallen": false,
+        "realtime_ratio": 1.0,
+        "epoch": "5bb8e2f953364ef4b009ff60298b8216",
+        "room_key": "foyer",
+        "room_label": "入户玄关"
+      },
+      "after": {
+        "sim_time": 34.54,
+        "spawned": true,
+        "pd_mode": "implicit",
+        "base": {
+          "x": 4.011,
+          "y": -6.613,
+          "z": 0.775,
+          "yaw_deg": 91.7
+        },
+        "tilt_deg": 1.6,
+        "fallen": false,
+        "realtime_ratio": 1.01,
+        "epoch": "5bb8e2f953364ef4b009ff60298b8216",
+        "room_key": "foyer",
+        "room_label": "入户玄关"
+      },
+      "task": {
+        "held_rejected": true,
+        "open_door_rejected": true,
+        "physical_placement": {
+          "id": "put_can_in_fridge",
+          "label": {
+            "en": "Put the can in the refrigerator",
+            "zh": "将罐体放入冰箱"
+          },
+          "supported": true,
+          "stage": "complete",
+          "success": true,
+          "checks": {
+            "opened": true,
+            "inside": true,
+            "released": true,
+            "settled": true,
+            "supported": true,
+            "contact_valid": true,
+            "closed": true
+          },
+          "target": {
+            "body": "ix_a2_fridge__object",
+            "bounds": [
+              [
+                -0.024295925180000004,
+                -0.19358094811,
+                0.211191822218
+              ],
+              [
+                0.39185269743,
+                0.22719619419999998,
+                0.54533257292
+              ]
+            ],
+            "frame": "body",
+            "label": {
+              "en": "Refrigerator middle shelf target",
+              "zh": "冷藏室中层任务区"
+            },
+            "world_bounds": [
+              [
+                -10.72429592518,
+                3.6064190468899997,
+                1.1570688221179999
+              ],
+              [
+                -10.30814730257,
+                4.0271961892,
+                1.4912095728199999
+              ]
+            ],
+            "world_anchor": [
+              -10.516221613875,
+              3.816807618044999,
+              1.324139197469
+            ]
+          }
+        }
+      }
+    },
+    {
+      "repetition": 3,
+      "passed": true,
+      "before": {
+        "sim_time": 3.0,
+        "spawned": true,
+        "pd_mode": "implicit",
+        "base": {
+          "x": 4.004,
+          "y": -6.595,
+          "z": 0.79,
+          "yaw_deg": 91.0
+        },
+        "tilt_deg": 0.5,
+        "fallen": false,
+        "realtime_ratio": 1.0,
+        "epoch": "5bb8e2f953364ef4b009ff60298b8216",
+        "room_key": "foyer",
+        "room_label": "入户玄关"
+      },
+      "after": {
+        "sim_time": 34.27,
+        "spawned": true,
+        "pd_mode": "implicit",
+        "base": {
+          "x": 4.01,
+          "y": -6.616,
+          "z": 0.775,
+          "yaw_deg": 91.2
+        },
+        "tilt_deg": 1.6,
+        "fallen": false,
+        "realtime_ratio": 1.02,
+        "epoch": "5bb8e2f953364ef4b009ff60298b8216",
+        "room_key": "foyer",
+        "room_label": "入户玄关"
+      },
+      "task": {
+        "held_rejected": true,
+        "open_door_rejected": true,
+        "physical_placement": {
+          "id": "put_can_in_fridge",
+          "label": {
+            "en": "Put the can in the refrigerator",
+            "zh": "将罐体放入冰箱"
+          },
+          "supported": true,
+          "stage": "complete",
+          "success": true,
+          "checks": {
+            "opened": true,
+            "inside": true,
+            "released": true,
+            "settled": true,
+            "supported": true,
+            "contact_valid": true,
+            "closed": true
+          },
+          "target": {
+            "body": "ix_a2_fridge__object",
+            "bounds": [
+              [
+                -0.024295925180000004,
+                -0.19358094811,
+                0.211191822218
+              ],
+              [
+                0.39185269743,
+                0.22719619419999998,
+                0.54533257292
+              ]
+            ],
+            "frame": "body",
+            "label": {
+              "en": "Refrigerator middle shelf target",
+              "zh": "冷藏室中层任务区"
+            },
+            "world_bounds": [
+              [
+                -10.72429592518,
+                3.6064190468899997,
+                1.1570688221179999
+              ],
+              [
+                -10.30814730257,
+                4.0271961892,
+                1.4912095728199999
+              ]
+            ],
+            "world_anchor": [
+              -10.516221613875,
+              3.816807618044999,
+              1.324139197469
+            ]
+          }
+        }
+      }
+    },
+    {
+      "repetition": 4,
+      "passed": true,
+      "before": {
+        "sim_time": 2.99,
+        "spawned": true,
+        "pd_mode": "implicit",
+        "base": {
+          "x": 4.004,
+          "y": -6.595,
+          "z": 0.79,
+          "yaw_deg": 91.0
+        },
+        "tilt_deg": 0.5,
+        "fallen": false,
+        "realtime_ratio": 1.01,
+        "epoch": "5bb8e2f953364ef4b009ff60298b8216",
+        "room_key": "foyer",
+        "room_label": "入户玄关"
+      },
+      "after": {
+        "sim_time": 34.58,
+        "spawned": true,
+        "pd_mode": "implicit",
+        "base": {
+          "x": 4.01,
+          "y": -6.616,
+          "z": 0.775,
+          "yaw_deg": 91.2
+        },
+        "tilt_deg": 1.6,
+        "fallen": false,
+        "realtime_ratio": 1.0,
+        "epoch": "5bb8e2f953364ef4b009ff60298b8216",
+        "room_key": "foyer",
+        "room_label": "入户玄关"
+      },
+      "task": {
+        "held_rejected": true,
+        "open_door_rejected": true,
+        "physical_placement": {
+          "id": "put_can_in_fridge",
+          "label": {
+            "en": "Put the can in the refrigerator",
+            "zh": "将罐体放入冰箱"
+          },
+          "supported": true,
+          "stage": "complete",
+          "success": true,
+          "checks": {
+            "opened": true,
+            "inside": true,
+            "released": true,
+            "settled": true,
+            "supported": true,
+            "contact_valid": true,
+            "closed": true
+          },
+          "target": {
+            "body": "ix_a2_fridge__object",
+            "bounds": [
+              [
+                -0.024295925180000004,
+                -0.19358094811,
+                0.211191822218
+              ],
+              [
+                0.39185269743,
+                0.22719619419999998,
+                0.54533257292
+              ]
+            ],
+            "frame": "body",
+            "label": {
+              "en": "Refrigerator middle shelf target",
+              "zh": "冷藏室中层任务区"
+            },
+            "world_bounds": [
+              [
+                -10.72429592518,
+                3.6064190468899997,
+                1.1570688221179999
+              ],
+              [
+                -10.30814730257,
+                4.0271961892,
+                1.4912095728199999
+              ]
+            ],
+            "world_anchor": [
+              -10.516221613875,
+              3.816807618044999,
+              1.324139197469
+            ]
+          }
+        }
+      }
+    },
+    {
+      "repetition": 5,
+      "passed": true,
+      "before": {
+        "sim_time": 3.0,
+        "spawned": true,
+        "pd_mode": "implicit",
+        "base": {
+          "x": 4.007,
+          "y": -6.591,
+          "z": 0.79,
+          "yaw_deg": 91.0
+        },
+        "tilt_deg": 0.6,
+        "fallen": false,
+        "realtime_ratio": 1.01,
+        "epoch": "5bb8e2f953364ef4b009ff60298b8216",
+        "room_key": "foyer",
+        "room_label": "入户玄关"
+      },
+      "after": {
+        "sim_time": 34.6,
+        "spawned": true,
+        "pd_mode": "implicit",
+        "base": {
+          "x": 4.011,
+          "y": -6.611,
+          "z": 0.774,
+          "yaw_deg": 92.0
+        },
+        "tilt_deg": 1.6,
+        "fallen": false,
+        "realtime_ratio": 1.0,
+        "epoch": "5bb8e2f953364ef4b009ff60298b8216",
+        "room_key": "foyer",
+        "room_label": "入户玄关"
+      },
+      "task": {
+        "held_rejected": true,
+        "open_door_rejected": true,
+        "physical_placement": {
+          "id": "put_can_in_fridge",
+          "label": {
+            "en": "Put the can in the refrigerator",
+            "zh": "将罐体放入冰箱"
+          },
+          "supported": true,
+          "stage": "complete",
+          "success": true,
+          "checks": {
+            "opened": true,
+            "inside": true,
+            "released": true,
+            "settled": true,
+            "supported": true,
+            "contact_valid": true,
+            "closed": true
+          },
+          "target": {
+            "body": "ix_a2_fridge__object",
+            "bounds": [
+              [
+                -0.024295925180000004,
+                -0.19358094811,
+                0.211191822218
+              ],
+              [
+                0.39185269743,
+                0.22719619419999998,
+                0.54533257292
+              ]
+            ],
+            "frame": "body",
+            "label": {
+              "en": "Refrigerator middle shelf target",
+              "zh": "冷藏室中层任务区"
+            },
+            "world_bounds": [
+              [
+                -10.72429592518,
+                3.6064190468899997,
+                1.1570688221179999
+              ],
+              [
+                -10.30814730257,
+                4.0271961892,
+                1.4912095728199999
+              ]
+            ],
+            "world_anchor": [
+              -10.516221613875,
+              3.816807618044999,
+              1.324139197469
+            ]
+          }
+        }
+      }
+    }
+  ]
+}

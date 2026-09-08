@@ -1,0 +1,37 @@
+{
+  "passed": true,
+  "cases": [
+    {
+      "script": "verify_routes.py",
+      "exit": 2,
+      "existing_output_refused": true
+    },
+    {
+      "script": "verify_task_runtime.py",
+      "exit": 1,
+      "existing_output_refused": true
+    },
+    {
+      "script": "verify_lifecycle.py",
+      "exit": 1,
+      "existing_output_refused": true
+    },
+    {
+      "script": "verify_hazards.py",
+      "exit": 2,
+      "existing_output_refused": true
+    },
+    {
+      "script": "verify_confined.py",
+      "exit": 2,
+      "existing_output_refused": true
+    },
+    {
+      "script": "verify_time.py",
+      "exit": 1,
+      "existing_output_refused": true
+    }
+  ],
+  "missing_queue_refused_before_output": true,
+  "existing_report_sha256": "14fcbbe8a10b17ae4bd1d40b42d2bd17c34a371c1344c495eaf494582e8829df"
+}

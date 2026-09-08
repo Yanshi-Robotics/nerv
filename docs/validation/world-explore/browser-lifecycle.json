@@ -1,0 +1,416 @@
+{
+  "loadingExit": [
+    {
+      "canvasCount": 1,
+      "size": [
+        1920,
+        1080
+      ],
+      "viewer": {
+        "animationFrames": "0",
+        "animationSeconds": "0",
+        "drawnFrames": "3",
+        "geometries": "187",
+        "renderCalls": "196",
+        "testid": "explore-viewer",
+        "textures": "23"
+      }
+    },
+    {
+      "canvasCount": 1,
+      "map": "house",
+      "viewer": {
+        "animationFrames": "0",
+        "animationSeconds": "0",
+        "drawnFrames": "1",
+        "geometries": "0",
+        "renderCalls": "0",
+        "testid": "explore-viewer",
+        "textures": "0"
+      }
+    },
+    {
+      "canvasCount": 0,
+      "exit": true
+    },
+    {
+      "canvasCount": 1,
+      "map": "apt",
+      "viewer": {
+        "animationFrames": "0",
+        "animationSeconds": "0",
+        "drawnFrames": "1",
+        "geometries": "0",
+        "renderCalls": "0",
+        "testid": "explore-viewer",
+        "textures": "0"
+      }
+    },
+    {
+      "canvasCount": 1,
+      "map": "house",
+      "viewer": {
+        "animationFrames": "0",
+        "animationSeconds": "0",
+        "drawnFrames": "1",
+        "geometries": "0",
+        "renderCalls": "0",
+        "testid": "explore-viewer",
+        "textures": "0"
+      }
+    },
+    {
+      "canvasCount": 0,
+      "exit": true
+    },
+    {
+      "canvasCount": 1,
+      "map": "apt",
+      "viewer": {
+        "animationFrames": "0",
+        "animationSeconds": "0",
+        "drawnFrames": "1",
+        "geometries": "0",
+        "renderCalls": "0",
+        "testid": "explore-viewer",
+        "textures": "0"
+      }
+    },
+    {
+      "canvasCount": 1,
+      "map": "house",
+      "viewer": {
+        "animationFrames": "0",
+        "animationSeconds": "0",
+        "drawnFrames": "1",
+        "geometries": "0",
+        "renderCalls": "0",
+        "testid": "explore-viewer",
+        "textures": "0"
+      }
+    },
+    {
+      "canvasCount": 0,
+      "exit": true
+    },
+    {
+      "canvasCount": 1,
+      "map": "apt",
+      "viewer": {
+        "animationFrames": "0",
+        "animationSeconds": "0",
+        "drawnFrames": "1",
+        "geometries": "0",
+        "renderCalls": "0",
+        "testid": "explore-viewer",
+        "textures": "0"
+      }
+    },
+    {
+      "canvasCount": 1,
+      "map": "house",
+      "viewer": {
+        "animationFrames": "0",
+        "animationSeconds": "0",
+        "drawnFrames": "1",
+        "geometries": "0",
+        "renderCalls": "0",
+        "testid": "explore-viewer",
+        "textures": "0"
+      }
+    },
+    {
+      "canvasCount": 0,
+      "exit": true
+    },
+    {
+      "canvasCount": 1,
+      "map": "apt",
+      "viewer": {
+        "animationFrames": "0",
+        "animationSeconds": "0",
+        "drawnFrames": "1",
+        "geometries": "0",
+        "renderCalls": "0",
+        "testid": "explore-viewer",
+        "textures": "0"
+      }
+    },
+    {
+      "canvasCount": 1,
+      "map": "house",
+      "viewer": {
+        "animationFrames": "0",
+        "animationSeconds": "0",
+        "drawnFrames": "1",
+        "geometries": "0",
+        "renderCalls": "0",
+        "testid": "explore-viewer",
+        "textures": "0"
+      }
+    },
+    {
+      "canvasCount": 0,
+      "exit": true
+    },
+    {
+      "canvasCount": 1,
+      "map": "apt",
+      "viewer": {
+        "animationFrames": "0",
+        "animationSeconds": "0",
+        "drawnFrames": "1",
+        "geometries": "0",
+        "renderCalls": "0",
+        "testid": "explore-viewer",
+        "textures": "0"
+      }
+    },
+    {
+      "canvasCount": 1,
+      "map": "house",
+      "viewer": {
+        "animationFrames": "0",
+        "animationSeconds": "0",
+        "drawnFrames": "1",
+        "geometries": "0",
+        "renderCalls": "0",
+        "testid": "explore-viewer",
+        "textures": "0"
+      }
+    },
+    {
+      "canvasCount": 0,
+      "exit": true
+    },
+    {
+      "canvasCount": 1,
+      "map": "apt",
+      "viewer": {
+        "animationFrames": "0",
+        "animationSeconds": "0",
+        "drawnFrames": "1",
+        "geometries": "0",
+        "renderCalls": "0",
+        "testid": "explore-viewer",
+        "textures": "0"
+      }
+    },
+    {
+      "canvasCount": 1,
+      "map": "house",
+      "viewer": {
+        "animationFrames": "0",
+        "animationSeconds": "0",
+        "drawnFrames": "1",
+        "geometries": "0",
+        "renderCalls": "0",
+        "testid": "explore-viewer",
+        "textures": "0"
+      }
+    },
+    {
+      "canvasCount": 0,
+      "exit": true
+    },
+    {
+      "canvasCount": 1,
+      "map": "apt",
+      "viewer": {
+        "animationFrames": "0",
+        "animationSeconds": "0",
+        "drawnFrames": "1",
+        "geometries": "0",
+        "renderCalls": "0",
+        "testid": "explore-viewer",
+        "textures": "0"
+      }
+    },
+    {
+      "canvasCount": 1,
+      "map": "house",
+      "viewer": {
+        "animationFrames": "0",
+        "animationSeconds": "0",
+        "drawnFrames": "1",
+        "geometries": "0",
+        "renderCalls": "0",
+        "testid": "explore-viewer",
+        "textures": "0"
+      }
+    },
+    {
+      "canvasCount": 0,
+      "exit": true
+    },
+    {
+      "canvasCount": 1,
+      "map": "apt",
+      "viewer": {
+        "animationFrames": "0",
+        "animationSeconds": "0",
+        "drawnFrames": "1",
+        "geometries": "0",
+        "renderCalls": "0",
+        "testid": "explore-viewer",
+        "textures": "0"
+      }
+    },
+    {
+      "canvasCount": 1,
+      "map": "house",
+      "viewer": {
+        "animationFrames": "0",
+        "animationSeconds": "0",
+        "drawnFrames": "1",
+        "geometries": "0",
+        "renderCalls": "0",
+        "testid": "explore-viewer",
+        "textures": "0"
+      }
+    }
+  ],
+  "loadedSwitch": [
+    {
+      "canvasCount": 1,
+      "map": "apt",
+      "viewer": {
+        "animationFrames": "0",
+        "animationSeconds": "0",
+        "drawnFrames": "2",
+        "geometries": "187",
+        "renderCalls": "196",
+        "testid": "explore-viewer",
+        "textures": "23"
+      }
+    },
+    {
+      "canvasCount": 1,
+      "map": "house",
+      "viewer": {
+        "animationFrames": "0",
+        "animationSeconds": "0",
+        "drawnFrames": "2",
+        "geometries": "208",
+        "renderCalls": "215",
+        "testid": "explore-viewer",
+        "textures": "13"
+      }
+    },
+    {
+      "canvasCount": 1,
+      "map": "apt",
+      "viewer": {
+        "animationFrames": "0",
+        "animationSeconds": "0",
+        "drawnFrames": "2",
+        "geometries": "187",
+        "renderCalls": "196",
+        "testid": "explore-viewer",
+        "textures": "23"
+      }
+    },
+    {
+      "canvasCount": 1,
+      "map": "house",
+      "viewer": {
+        "animationFrames": "0",
+        "animationSeconds": "0",
+        "drawnFrames": "2",
+        "geometries": "208",
+        "renderCalls": "215",
+        "testid": "explore-viewer",
+        "textures": "13"
+      }
+    },
+    {
+      "canvasCount": 1,
+      "map": "apt",
+      "viewer": {
+        "animationFrames": "0",
+        "animationSeconds": "0",
+        "drawnFrames": "2",
+        "geometries": "187",
+        "renderCalls": "196",
+        "testid": "explore-viewer",
+        "textures": "23"
+      }
+    },
+    {
+      "canvasCount": 1,
+      "map": "house",
+      "viewer": {
+        "animationFrames": "0",
+        "animationSeconds": "0",
+        "drawnFrames": "2",
+        "geometries": "208",
+        "renderCalls": "215",
+        "testid": "explore-viewer",
+        "textures": "13"
+      }
+    },
+    {
+      "canvasCount": 1,
+      "map": "apt",
+      "viewer": {
+        "animationFrames": "0",
+        "animationSeconds": "0",
+        "drawnFrames": "2",
+        "geometries": "187",
+        "renderCalls": "196",
+        "testid": "explore-viewer",
+        "textures": "23"
+      }
+    },
+    {
+      "canvasCount": 1,
+      "map": "house",
+      "viewer": {
+        "animationFrames": "0",
+        "animationSeconds": "0",
+        "drawnFrames": "2",
+        "geometries": "208",
+        "renderCalls": "215",
+        "testid": "explore-viewer",
+        "textures": "13"
+      }
+    }
+  ],
+  "fps": [
+    {
+      "animationFrames": "157",
+      "animationSeconds": "2.6164340000000084",
+      "drawnFrames": "170",
+      "geometries": "437",
+      "map": "house",
+      "renderCalls": "215",
+      "testid": "explore-viewer",
+      "textures": "13",
+      "viewport": [
+        1920,
+        1080
+      ]
+    },
+    {
+      "animationFrames": "158",
+      "animationSeconds": "2.63307600000003",
+      "drawnFrames": "170",
+      "geometries": "293",
+      "map": "apt",
+      "renderCalls": "196",
+      "testid": "explore-viewer",
+      "textures": "23",
+      "viewport": [
+        1920,
+        1080
+      ]
+    }
+  ],
+  "idle": {
+    "before": "170",
+    "after": "170",
+    "seconds": 2
+  },
+  "console": [],
+  "heap": "Browser control surface does not expose JS heap; resource counters and cleanup paths checked."
+}

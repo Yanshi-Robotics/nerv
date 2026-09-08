@@ -1,0 +1,1037 @@
+{
+  "created": "2026-09-08",
+  "queue": 104,
+  "mode": "Actual WorldSim, released G1 standing policy, LocalBus, production scene_command/render thread",
+  "ports": false,
+  "resident_access": false,
+  "pinning": false,
+  "scenes": [
+    {
+      "scene": "house",
+      "phases": [
+        {
+          "requested": "day",
+          "reported": "day",
+          "fallen": false
+        },
+        {
+          "requested": "morning",
+          "reported": "morning",
+          "fallen": false
+        },
+        {
+          "requested": "dusk",
+          "reported": "dusk",
+          "fallen": false
+        },
+        {
+          "requested": "night",
+          "reported": "night",
+          "fallen": false
+        }
+      ],
+      "mutations": [
+        {
+          "phase": "day",
+          "thread": "nerv-world-render",
+          "physics_before": {
+            "qpos": "86a8b8d2cefce09a303e41df3ed982d5003fb4220c1302bc5455131eaf2dbddd",
+            "qvel": "7bb445bc12c511030dfc68f8543d1077580cc745a0ccb72b73ee4d683cc61c05",
+            "qacc": "e9a560b0928a7a58d6b8900ee6c8a396507154aed8f07dbf97952fe30ccb0c3b",
+            "qacc_warmstart": "e9a560b0928a7a58d6b8900ee6c8a396507154aed8f07dbf97952fe30ccb0c3b",
+            "act": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "ctrl": "c4fcd50d9f0c893c46288b57d8e62b18523145956b249b6ecd6c21718be49065",
+            "qfrc_applied": "b81292912e369e404c7e8fc7ea84549f22920491c83368079fad198eb872c51b",
+            "xfrc_applied": "c87499548f9efbd98c824a95a664af38f414efb1c9eede544e55e019473d6b24",
+            "mocap_pos": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "mocap_quat": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "time": 3.129999999999877,
+            "model_physics": {
+              "body_mass": "2f808766bf3b8f32076fc06fba45e96c7a0c2d5e6991950103e5b196e304bbad",
+              "body_inertia": "5bc5309ebb955409b2910fe4dcf4a0d527bfc8f8e608add6240567a18797954b",
+              "geom_contype": "bfb86790e07ad081b32ccd7d238216a81d2ec27fda987ecf7476b1837bceeb66",
+              "geom_conaffinity": "bfb86790e07ad081b32ccd7d238216a81d2ec27fda987ecf7476b1837bceeb66",
+              "geom_friction": "733d1ebb5bbf4968bfaaafa6fc58db13b080a6553a9f54509778251d63c8e6b7",
+              "jnt_range": "d9c3ef1713609cf7a40450f0054c0980e165d92c383cdc4129a38f8ee9cc06eb",
+              "dof_damping": "54e827699c78447a173c26f09ae742ab4d4d00c0c1e15dd7ea55dcc0f9b25200"
+            },
+            "epoch": "536fce7405e0416fbbe1c64314a652f8"
+          },
+          "physics_after": {
+            "qpos": "86a8b8d2cefce09a303e41df3ed982d5003fb4220c1302bc5455131eaf2dbddd",
+            "qvel": "7bb445bc12c511030dfc68f8543d1077580cc745a0ccb72b73ee4d683cc61c05",
+            "qacc": "e9a560b0928a7a58d6b8900ee6c8a396507154aed8f07dbf97952fe30ccb0c3b",
+            "qacc_warmstart": "e9a560b0928a7a58d6b8900ee6c8a396507154aed8f07dbf97952fe30ccb0c3b",
+            "act": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "ctrl": "c4fcd50d9f0c893c46288b57d8e62b18523145956b249b6ecd6c21718be49065",
+            "qfrc_applied": "b81292912e369e404c7e8fc7ea84549f22920491c83368079fad198eb872c51b",
+            "xfrc_applied": "c87499548f9efbd98c824a95a664af38f414efb1c9eede544e55e019473d6b24",
+            "mocap_pos": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "mocap_quat": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "time": 3.129999999999877,
+            "model_physics": {
+              "body_mass": "2f808766bf3b8f32076fc06fba45e96c7a0c2d5e6991950103e5b196e304bbad",
+              "body_inertia": "5bc5309ebb955409b2910fe4dcf4a0d527bfc8f8e608add6240567a18797954b",
+              "geom_contype": "bfb86790e07ad081b32ccd7d238216a81d2ec27fda987ecf7476b1837bceeb66",
+              "geom_conaffinity": "bfb86790e07ad081b32ccd7d238216a81d2ec27fda987ecf7476b1837bceeb66",
+              "geom_friction": "733d1ebb5bbf4968bfaaafa6fc58db13b080a6553a9f54509778251d63c8e6b7",
+              "jnt_range": "d9c3ef1713609cf7a40450f0054c0980e165d92c383cdc4129a38f8ee9cc06eb",
+              "dof_damping": "54e827699c78447a173c26f09ae742ab4d4d00c0c1e15dd7ea55dcc0f9b25200"
+            },
+            "epoch": "536fce7405e0416fbbe1c64314a652f8"
+          },
+          "unchanged": true,
+          "texture_before": "bb48e978d3f0417b04414661abc609d1283e7af573a3e11da987132cf06bb7b6",
+          "texture_after": "bb48e978d3f0417b04414661abc609d1283e7af573a3e11da987132cf06bb7b6",
+          "warnings": [],
+          "renderer_context": 127761361977952
+        },
+        {
+          "phase": "morning",
+          "thread": "nerv-world-render",
+          "physics_before": {
+            "qpos": "4053d0de212c681fe34553a9d3fcb9a1ae01489bbe0a65d7a0beae8a40260fdf",
+            "qvel": "ad38a2c1d8e9c0c4386b2c1e6c5982dc36d16545666707b5051366c1502f7f4a",
+            "qacc": "bbeccbe2cbce2949efc38d4f62113fad8b29b52f082da8cfd0379504f1594baa",
+            "qacc_warmstart": "bbeccbe2cbce2949efc38d4f62113fad8b29b52f082da8cfd0379504f1594baa",
+            "act": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "ctrl": "c4fcd50d9f0c893c46288b57d8e62b18523145956b249b6ecd6c21718be49065",
+            "qfrc_applied": "deb1a8424be682fe4adc245799fce2bfdc49aa70a130be00e32700b7f03267ab",
+            "xfrc_applied": "c87499548f9efbd98c824a95a664af38f414efb1c9eede544e55e019473d6b24",
+            "mocap_pos": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "mocap_quat": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "time": 3.4799999999998383,
+            "model_physics": {
+              "body_mass": "2f808766bf3b8f32076fc06fba45e96c7a0c2d5e6991950103e5b196e304bbad",
+              "body_inertia": "5bc5309ebb955409b2910fe4dcf4a0d527bfc8f8e608add6240567a18797954b",
+              "geom_contype": "bfb86790e07ad081b32ccd7d238216a81d2ec27fda987ecf7476b1837bceeb66",
+              "geom_conaffinity": "bfb86790e07ad081b32ccd7d238216a81d2ec27fda987ecf7476b1837bceeb66",
+              "geom_friction": "733d1ebb5bbf4968bfaaafa6fc58db13b080a6553a9f54509778251d63c8e6b7",
+              "jnt_range": "d9c3ef1713609cf7a40450f0054c0980e165d92c383cdc4129a38f8ee9cc06eb",
+              "dof_damping": "54e827699c78447a173c26f09ae742ab4d4d00c0c1e15dd7ea55dcc0f9b25200"
+            },
+            "epoch": "536fce7405e0416fbbe1c64314a652f8"
+          },
+          "physics_after": {
+            "qpos": "4053d0de212c681fe34553a9d3fcb9a1ae01489bbe0a65d7a0beae8a40260fdf",
+            "qvel": "ad38a2c1d8e9c0c4386b2c1e6c5982dc36d16545666707b5051366c1502f7f4a",
+            "qacc": "bbeccbe2cbce2949efc38d4f62113fad8b29b52f082da8cfd0379504f1594baa",
+            "qacc_warmstart": "bbeccbe2cbce2949efc38d4f62113fad8b29b52f082da8cfd0379504f1594baa",
+            "act": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "ctrl": "c4fcd50d9f0c893c46288b57d8e62b18523145956b249b6ecd6c21718be49065",
+            "qfrc_applied": "deb1a8424be682fe4adc245799fce2bfdc49aa70a130be00e32700b7f03267ab",
+            "xfrc_applied": "c87499548f9efbd98c824a95a664af38f414efb1c9eede544e55e019473d6b24",
+            "mocap_pos": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "mocap_quat": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "time": 3.4799999999998383,
+            "model_physics": {
+              "body_mass": "2f808766bf3b8f32076fc06fba45e96c7a0c2d5e6991950103e5b196e304bbad",
+              "body_inertia": "5bc5309ebb955409b2910fe4dcf4a0d527bfc8f8e608add6240567a18797954b",
+              "geom_contype": "bfb86790e07ad081b32ccd7d238216a81d2ec27fda987ecf7476b1837bceeb66",
+              "geom_conaffinity": "bfb86790e07ad081b32ccd7d238216a81d2ec27fda987ecf7476b1837bceeb66",
+              "geom_friction": "733d1ebb5bbf4968bfaaafa6fc58db13b080a6553a9f54509778251d63c8e6b7",
+              "jnt_range": "d9c3ef1713609cf7a40450f0054c0980e165d92c383cdc4129a38f8ee9cc06eb",
+              "dof_damping": "54e827699c78447a173c26f09ae742ab4d4d00c0c1e15dd7ea55dcc0f9b25200"
+            },
+            "epoch": "536fce7405e0416fbbe1c64314a652f8"
+          },
+          "unchanged": true,
+          "texture_before": "bb48e978d3f0417b04414661abc609d1283e7af573a3e11da987132cf06bb7b6",
+          "texture_after": "70358ca3d329dc5e9a229df499da4cb5308e4ef65fb8446086d646944dcac352",
+          "warnings": [],
+          "renderer_context": 127761361977952
+        },
+        {
+          "phase": "dusk",
+          "thread": "nerv-world-render",
+          "physics_before": {
+            "qpos": "34846848f2e64e5f37d6ba80c2f26ba7e7e6cf427448d967f777c2bd4919e0b8",
+            "qvel": "f69ecf41851931a11350edc9ca5cd4e0e0391442fef43a03dac32ca60c5828bd",
+            "qacc": "67a37a2cdab38957caf6c95253715996e6bf662098d2d35d4b203dcaca128a67",
+            "qacc_warmstart": "67a37a2cdab38957caf6c95253715996e6bf662098d2d35d4b203dcaca128a67",
+            "act": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "ctrl": "c4fcd50d9f0c893c46288b57d8e62b18523145956b249b6ecd6c21718be49065",
+            "qfrc_applied": "0da8c5d7fdd7ef3aacbde6e80b9a0220896cefb081d697a7e41bc00b65bcaa97",
+            "xfrc_applied": "c87499548f9efbd98c824a95a664af38f414efb1c9eede544e55e019473d6b24",
+            "mocap_pos": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "mocap_quat": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "time": 3.8399999999997987,
+            "model_physics": {
+              "body_mass": "2f808766bf3b8f32076fc06fba45e96c7a0c2d5e6991950103e5b196e304bbad",
+              "body_inertia": "5bc5309ebb955409b2910fe4dcf4a0d527bfc8f8e608add6240567a18797954b",
+              "geom_contype": "bfb86790e07ad081b32ccd7d238216a81d2ec27fda987ecf7476b1837bceeb66",
+              "geom_conaffinity": "bfb86790e07ad081b32ccd7d238216a81d2ec27fda987ecf7476b1837bceeb66",
+              "geom_friction": "733d1ebb5bbf4968bfaaafa6fc58db13b080a6553a9f54509778251d63c8e6b7",
+              "jnt_range": "d9c3ef1713609cf7a40450f0054c0980e165d92c383cdc4129a38f8ee9cc06eb",
+              "dof_damping": "54e827699c78447a173c26f09ae742ab4d4d00c0c1e15dd7ea55dcc0f9b25200"
+            },
+            "epoch": "536fce7405e0416fbbe1c64314a652f8"
+          },
+          "physics_after": {
+            "qpos": "34846848f2e64e5f37d6ba80c2f26ba7e7e6cf427448d967f777c2bd4919e0b8",
+            "qvel": "f69ecf41851931a11350edc9ca5cd4e0e0391442fef43a03dac32ca60c5828bd",
+            "qacc": "67a37a2cdab38957caf6c95253715996e6bf662098d2d35d4b203dcaca128a67",
+            "qacc_warmstart": "67a37a2cdab38957caf6c95253715996e6bf662098d2d35d4b203dcaca128a67",
+            "act": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "ctrl": "c4fcd50d9f0c893c46288b57d8e62b18523145956b249b6ecd6c21718be49065",
+            "qfrc_applied": "0da8c5d7fdd7ef3aacbde6e80b9a0220896cefb081d697a7e41bc00b65bcaa97",
+            "xfrc_applied": "c87499548f9efbd98c824a95a664af38f414efb1c9eede544e55e019473d6b24",
+            "mocap_pos": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "mocap_quat": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "time": 3.8399999999997987,
+            "model_physics": {
+              "body_mass": "2f808766bf3b8f32076fc06fba45e96c7a0c2d5e6991950103e5b196e304bbad",
+              "body_inertia": "5bc5309ebb955409b2910fe4dcf4a0d527bfc8f8e608add6240567a18797954b",
+              "geom_contype": "bfb86790e07ad081b32ccd7d238216a81d2ec27fda987ecf7476b1837bceeb66",
+              "geom_conaffinity": "bfb86790e07ad081b32ccd7d238216a81d2ec27fda987ecf7476b1837bceeb66",
+              "geom_friction": "733d1ebb5bbf4968bfaaafa6fc58db13b080a6553a9f54509778251d63c8e6b7",
+              "jnt_range": "d9c3ef1713609cf7a40450f0054c0980e165d92c383cdc4129a38f8ee9cc06eb",
+              "dof_damping": "54e827699c78447a173c26f09ae742ab4d4d00c0c1e15dd7ea55dcc0f9b25200"
+            },
+            "epoch": "536fce7405e0416fbbe1c64314a652f8"
+          },
+          "unchanged": true,
+          "texture_before": "70358ca3d329dc5e9a229df499da4cb5308e4ef65fb8446086d646944dcac352",
+          "texture_after": "64090c9e69f1cffdcd10787fd3514fe370d45bf6c03ff837d9b53296ee49332b",
+          "warnings": [],
+          "renderer_context": 127761361977952
+        },
+        {
+          "phase": "night",
+          "thread": "nerv-world-render",
+          "physics_before": {
+            "qpos": "d59b384c0c482495638cb639e633ff226219c236a24eefcb9e8b45d8bdeb0df8",
+            "qvel": "01fa4e93b231c06c217213dd77511433f855094cde3d1c969200c07902d4adbe",
+            "qacc": "ef237dbbf7828f0c8ffb6c65f40007f090beefdb1f66f648db086585ee637729",
+            "qacc_warmstart": "ef237dbbf7828f0c8ffb6c65f40007f090beefdb1f66f648db086585ee637729",
+            "act": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "ctrl": "c4fcd50d9f0c893c46288b57d8e62b18523145956b249b6ecd6c21718be49065",
+            "qfrc_applied": "54fcb9d1b62bb654d0ef780f2e2cee8be65215cc019321667d7fa66cd964cd3a",
+            "xfrc_applied": "c87499548f9efbd98c824a95a664af38f414efb1c9eede544e55e019473d6b24",
+            "mocap_pos": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "mocap_quat": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "time": 4.159999999999764,
+            "model_physics": {
+              "body_mass": "2f808766bf3b8f32076fc06fba45e96c7a0c2d5e6991950103e5b196e304bbad",
+              "body_inertia": "5bc5309ebb955409b2910fe4dcf4a0d527bfc8f8e608add6240567a18797954b",
+              "geom_contype": "bfb86790e07ad081b32ccd7d238216a81d2ec27fda987ecf7476b1837bceeb66",
+              "geom_conaffinity": "bfb86790e07ad081b32ccd7d238216a81d2ec27fda987ecf7476b1837bceeb66",
+              "geom_friction": "733d1ebb5bbf4968bfaaafa6fc58db13b080a6553a9f54509778251d63c8e6b7",
+              "jnt_range": "d9c3ef1713609cf7a40450f0054c0980e165d92c383cdc4129a38f8ee9cc06eb",
+              "dof_damping": "54e827699c78447a173c26f09ae742ab4d4d00c0c1e15dd7ea55dcc0f9b25200"
+            },
+            "epoch": "536fce7405e0416fbbe1c64314a652f8"
+          },
+          "physics_after": {
+            "qpos": "d59b384c0c482495638cb639e633ff226219c236a24eefcb9e8b45d8bdeb0df8",
+            "qvel": "01fa4e93b231c06c217213dd77511433f855094cde3d1c969200c07902d4adbe",
+            "qacc": "ef237dbbf7828f0c8ffb6c65f40007f090beefdb1f66f648db086585ee637729",
+            "qacc_warmstart": "ef237dbbf7828f0c8ffb6c65f40007f090beefdb1f66f648db086585ee637729",
+            "act": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "ctrl": "c4fcd50d9f0c893c46288b57d8e62b18523145956b249b6ecd6c21718be49065",
+            "qfrc_applied": "54fcb9d1b62bb654d0ef780f2e2cee8be65215cc019321667d7fa66cd964cd3a",
+            "xfrc_applied": "c87499548f9efbd98c824a95a664af38f414efb1c9eede544e55e019473d6b24",
+            "mocap_pos": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "mocap_quat": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "time": 4.159999999999764,
+            "model_physics": {
+              "body_mass": "2f808766bf3b8f32076fc06fba45e96c7a0c2d5e6991950103e5b196e304bbad",
+              "body_inertia": "5bc5309ebb955409b2910fe4dcf4a0d527bfc8f8e608add6240567a18797954b",
+              "geom_contype": "bfb86790e07ad081b32ccd7d238216a81d2ec27fda987ecf7476b1837bceeb66",
+              "geom_conaffinity": "bfb86790e07ad081b32ccd7d238216a81d2ec27fda987ecf7476b1837bceeb66",
+              "geom_friction": "733d1ebb5bbf4968bfaaafa6fc58db13b080a6553a9f54509778251d63c8e6b7",
+              "jnt_range": "d9c3ef1713609cf7a40450f0054c0980e165d92c383cdc4129a38f8ee9cc06eb",
+              "dof_damping": "54e827699c78447a173c26f09ae742ab4d4d00c0c1e15dd7ea55dcc0f9b25200"
+            },
+            "epoch": "536fce7405e0416fbbe1c64314a652f8"
+          },
+          "unchanged": true,
+          "texture_before": "64090c9e69f1cffdcd10787fd3514fe370d45bf6c03ff837d9b53296ee49332b",
+          "texture_after": "cedb302f97425a24c374b00c3f1fa17a2f49a4540364ece6494b21e01565f8df",
+          "warnings": [],
+          "renderer_context": 127761361977952
+        }
+      ],
+      "frames": [
+        {
+          "view": "head",
+          "phase": "day",
+          "path": "house/head/day.png",
+          "sim_time": 3.1499999999998747,
+          "pixel_sha256": "c0dadf686f978238258df49e6d9b75061f72a1eadf266afd3e754bb292c588ab",
+          "file_sha256": "161c250cdd32f017dd15d132c82943745813030db348c12e216fec7c9bba0dc3",
+          "mean_luminance": 139.59587565104167,
+          "std_luminance": 40.81347418496785,
+          "fraction_over_20": 1.0
+        },
+        {
+          "view": "chase",
+          "phase": "day",
+          "path": "house/chase/day.png",
+          "sim_time": 3.199999999999869,
+          "pixel_sha256": "c9892382e1936ff8274dfb3cf0bd96670999a14ed33b442b71447f6725923afa",
+          "file_sha256": "42c62c7f6db699fa4f4f82204f363b0f6e41d9cd978a758e339150d131238c3c",
+          "mean_luminance": 82.12961697048611,
+          "std_luminance": 22.82191837551198,
+          "fraction_over_20": 0.9977376302083333
+        },
+        {
+          "view": "entry",
+          "phase": "day",
+          "path": "house/entry/day.png",
+          "sim_time": 3.2699999999998615,
+          "pixel_sha256": "936655a2b9bfb87773c719bb063fc324b4c348621f26b4a2bf41a2ff8c35aaed",
+          "file_sha256": "aa5f1bc5a2ad2dc3301f18162653eb4d7a6bad5046503bf08c47984425067f43",
+          "mean_luminance": 81.805693359375,
+          "std_luminance": 54.62781167870291,
+          "fraction_over_20": 0.8035026041666666
+        },
+        {
+          "view": "walkway",
+          "phase": "day",
+          "path": "house/walkway/day.png",
+          "sim_time": 3.319999999999856,
+          "pixel_sha256": "9f0add6edfb325824d9f5dfe1b63c719dea40e12b9f1855aa031a905953d4593",
+          "file_sha256": "7a570d2c692f5755884af3709b96dfec6eef9b0710280c2d0105875b6c7279f6",
+          "mean_luminance": 104.47184461805556,
+          "std_luminance": 71.24728601138033,
+          "fraction_over_20": 0.647998046875
+        },
+        {
+          "view": "pool",
+          "phase": "day",
+          "path": "house/pool/day.png",
+          "sim_time": 3.3699999999998504,
+          "pixel_sha256": "6ec09d80349872c51402520e8b8b94b03ed6948e599960d04028b186cbce1ba7",
+          "file_sha256": "3a91ac78f5e7582f38c89d57b8f29c171dde71cdf33a0c0e554526e70110d7cc",
+          "mean_luminance": 110.40780815972224,
+          "std_luminance": 53.124249494417725,
+          "fraction_over_20": 0.9076204427083333
+        },
+        {
+          "view": "gate",
+          "phase": "day",
+          "path": "house/gate/day.png",
+          "sim_time": 3.429999999999844,
+          "pixel_sha256": "7cdfa94bc18a57c0dffaa733b95d1292fad3bf232f0065ed0d49cd425b38029f",
+          "file_sha256": "78c5fdc6cf9762676a975a89bbe2b883319d7dc3ad22bcec70319f4bdedffaea",
+          "mean_luminance": 114.89749674479167,
+          "std_luminance": 54.43394904687589,
+          "fraction_over_20": 0.857099609375
+        },
+        {
+          "view": "head",
+          "phase": "morning",
+          "path": "house/head/morning.png",
+          "sim_time": 3.499999999999836,
+          "pixel_sha256": "22b54544f954232dcf0590d747ddbf39a318983f6b24aab3ef3d4be80253fbb6",
+          "file_sha256": "6a73006566da9fe5c6d81c0a3395c36e43756278ba7be00e200efc16b509632b",
+          "mean_luminance": 131.6100661892361,
+          "std_luminance": 38.33303442689871,
+          "fraction_over_20": 1.0
+        },
+        {
+          "view": "chase",
+          "phase": "morning",
+          "path": "house/chase/morning.png",
+          "sim_time": 3.5599999999998295,
+          "pixel_sha256": "c26bd649675343511c671009c45023b3eb295ac867bada8ae7d0f47db5b7c5c5",
+          "file_sha256": "40e2a5a76151b9629376fc424c22141e979b4c6a8e252dd14be2bf203606d0ff",
+          "mean_luminance": 78.5754123263889,
+          "std_luminance": 23.682902344791415,
+          "fraction_over_20": 0.99158203125
+        },
+        {
+          "view": "entry",
+          "phase": "morning",
+          "path": "house/entry/morning.png",
+          "sim_time": 3.629999999999822,
+          "pixel_sha256": "882ab2d406da20c7ffab0eb80d16e0d979991b0c4d3425e62a7707a90afb52f2",
+          "file_sha256": "6703f9994923a35a7a0a40d195918f90186eb6a56d7c35cc6d6d4b17b4bd6fb2",
+          "mean_luminance": 70.41208550347223,
+          "std_luminance": 47.242499354807485,
+          "fraction_over_20": 0.7720247395833333
+        },
+        {
+          "view": "walkway",
+          "phase": "morning",
+          "path": "house/walkway/morning.png",
+          "sim_time": 3.699999999999814,
+          "pixel_sha256": "2fa08fa44e626eb3478a519795c04f14368e9ec7827ac86e6471981f1c14d18f",
+          "file_sha256": "011c83c25d210bd418ffaf763bc4d5b7d25b2862eaa663c36caad0f9c3b584d9",
+          "mean_luminance": 82.88907552083332,
+          "std_luminance": 59.92590844939788,
+          "fraction_over_20": 0.6467610677083333
+        },
+        {
+          "view": "pool",
+          "phase": "morning",
+          "path": "house/pool/morning.png",
+          "sim_time": 3.7499999999998086,
+          "pixel_sha256": "68fdd9203d6879c020c69ae1468acd4d6f548c11e61351b24ba745e01afd8d97",
+          "file_sha256": "d19a27806275a6a0993e8e393055dcd7d1ff99e6f7a8c092b632d15661b9f10e",
+          "mean_luminance": 84.10971896701388,
+          "std_luminance": 49.41764062726511,
+          "fraction_over_20": 0.9055338541666667
+        },
+        {
+          "view": "gate",
+          "phase": "morning",
+          "path": "house/gate/morning.png",
+          "sim_time": 3.799999999999803,
+          "pixel_sha256": "6e70e2488efca9b9334e71b5cbfcb710f65a7a6965c36642d5e9f798d30d3ff7",
+          "file_sha256": "3349af640bc1dae64b43db4a5063457aca8af5b4b50c2d5742345247b966ddeb",
+          "mean_luminance": 87.22810329861112,
+          "std_luminance": 51.85547612841267,
+          "fraction_over_20": 0.8553873697916666
+        },
+        {
+          "view": "head",
+          "phase": "dusk",
+          "path": "house/head/dusk.png",
+          "sim_time": 3.8499999999997976,
+          "pixel_sha256": "4603c66d915c9136c66025adf3de9c0a33fa5a4fdc0e131d91ddb884fbbc5323",
+          "file_sha256": "b4a86118de3a2a5373b445292248688c96fa21b445c5e7dc74c280b283054eaa",
+          "mean_luminance": 66.04540798611112,
+          "std_luminance": 18.514425382100864,
+          "fraction_over_20": 0.9984114583333333
+        },
+        {
+          "view": "chase",
+          "phase": "dusk",
+          "path": "house/chase/dusk.png",
+          "sim_time": 3.91999999999979,
+          "pixel_sha256": "59cf098b41d7ac203efe7c65ac73dfa1ece7f0c428eb623ea19e64f2007104ae",
+          "file_sha256": "228353d706ba6768e3aa2ddabd107eb584eabec1cfc16184b45167bbe5b2dffd",
+          "mean_luminance": 43.080869140625,
+          "std_luminance": 12.896966463627145,
+          "fraction_over_20": 0.944443359375
+        },
+        {
+          "view": "entry",
+          "phase": "dusk",
+          "path": "house/entry/dusk.png",
+          "sim_time": 3.9799999999997833,
+          "pixel_sha256": "5c6165df8747ba444f9d1b129f90069fab9f4d2e8973aec35a6b213e1043b322",
+          "file_sha256": "23cdbd64486832788c08769ac2d3db97545ff4ddd19cbcb0d1f4ce635e05029f",
+          "mean_luminance": 38.32367078993056,
+          "std_luminance": 26.308531105074398,
+          "fraction_over_20": 0.7705794270833334
+        },
+        {
+          "view": "walkway",
+          "phase": "dusk",
+          "path": "house/walkway/dusk.png",
+          "sim_time": 4.019999999999779,
+          "pixel_sha256": "d017f07ed172fd1979a4570159f4cbe049993e2094c394accf19e9370a01209c",
+          "file_sha256": "9ef091ed505127d2f79f51fa6ea53a88ee7e1730f31d67b93c14575ae7d08730",
+          "mean_luminance": 51.06834309895833,
+          "std_luminance": 38.10349117786073,
+          "fraction_over_20": 0.64189453125
+        },
+        {
+          "view": "pool",
+          "phase": "dusk",
+          "path": "house/pool/dusk.png",
+          "sim_time": 4.059999999999775,
+          "pixel_sha256": "d87bbe75c105b73a91dbe274925e47cadc1e2536dfd4240127d14571946bf847",
+          "file_sha256": "b92c5bad9c9c436320fdd89dee96364121d83d202392591a80e432bf597f6781",
+          "mean_luminance": 46.28375542534722,
+          "std_luminance": 33.23824763372439,
+          "fraction_over_20": 0.757021484375
+        },
+        {
+          "view": "gate",
+          "phase": "dusk",
+          "path": "house/gate/dusk.png",
+          "sim_time": 4.119999999999768,
+          "pixel_sha256": "8d8cbeaf7f55bcdc3a65ba11409c6cd804a4429518d1041a55da1137a7509ee5",
+          "file_sha256": "3a461784e7254f4c346daa5477ccc14ce07391593d4d372fca2963a5b42f1e13",
+          "mean_luminance": 54.40049913194444,
+          "std_luminance": 36.40834132698962,
+          "fraction_over_20": 0.8319986979166667
+        },
+        {
+          "view": "head",
+          "phase": "night",
+          "path": "house/head/night.png",
+          "sim_time": 4.179999999999762,
+          "pixel_sha256": "e92141314de9e2528d1eb926a6c1ef7bc612e2ace6cef3efd6d81c5d1c778d53",
+          "file_sha256": "0ad9db65d096ed644ec273b94c2601f5e744ab14a4eb42b25ced3788c1320764",
+          "mean_luminance": 41.885871310763896,
+          "std_luminance": 12.34495385730286,
+          "fraction_over_20": 0.8243098958333334
+        },
+        {
+          "view": "chase",
+          "phase": "night",
+          "path": "house/chase/night.png",
+          "sim_time": 4.269999999999752,
+          "pixel_sha256": "1263446b78b9878aa380045dcd99513fc1410cb6ba0f5d030379204824836563",
+          "file_sha256": "c3d516f3af2984f9bfee0495d9a9db3d2be63440c1335e77532c796f447f19c2",
+          "mean_luminance": 24.617877604166665,
+          "std_luminance": 6.91466338401125,
+          "fraction_over_20": 0.920146484375
+        },
+        {
+          "view": "entry",
+          "phase": "night",
+          "path": "house/entry/night.png",
+          "sim_time": 4.359999999999742,
+          "pixel_sha256": "0cf26dd919779505c3f811b8348d3e5bb97139448b5d193c3edc3493b93944c9",
+          "file_sha256": "15ca97b13bfd837de14420eccb4be52be917c9215c7513b0d620661b7552f414",
+          "mean_luminance": 24.76102105034722,
+          "std_luminance": 17.956060220012116,
+          "fraction_over_20": 0.5401399739583334
+        },
+        {
+          "view": "walkway",
+          "phase": "night",
+          "path": "house/walkway/night.png",
+          "sim_time": 4.409999999999736,
+          "pixel_sha256": "98b1ac9407f52291b483c5e22a71b215eb0a749ab676ca5e39148d6defdf00b8",
+          "file_sha256": "05aeb4e404cc2d7aa8c36ef7c4e4a18fa3eeb01ded0758ea903b500b817e2732",
+          "mean_luminance": 15.544580078125,
+          "std_luminance": 15.905679509371135,
+          "fraction_over_20": 0.25213541666666667
+        },
+        {
+          "view": "pool",
+          "phase": "night",
+          "path": "house/pool/night.png",
+          "sim_time": 4.449999999999732,
+          "pixel_sha256": "9ffd04ed09ff749ade766fbd21d17c39e5992fd333fa020a49f63b13b1cc4772",
+          "file_sha256": "daad3f0c626494da539fc626fa01aef3f3374a8fc2f6b6236486d61f2b6da257",
+          "mean_luminance": 17.77435221354167,
+          "std_luminance": 10.879453707837555,
+          "fraction_over_20": 0.21853190104166667
+        },
+        {
+          "view": "gate",
+          "phase": "night",
+          "path": "house/gate/night.png",
+          "sim_time": 4.4899999999997275,
+          "pixel_sha256": "ac24cd6fb3e6e72242eb0683eca30c6096cdeafac486b510bece1626cc5b0266",
+          "file_sha256": "29129a4280819e1c7b14287a3c792b9be8c5faefef917e0ed30f747964139557",
+          "mean_luminance": 15.075919053819446,
+          "std_luminance": 8.63012473377593,
+          "fraction_over_20": 0.13068684895833332
+        }
+      ],
+      "camera_views": {
+        "entry": {
+          "lookat": [
+            -1.4,
+            0.9996000299975005,
+            1.5799960002999751
+          ],
+          "distance": 8.0,
+          "azimuth": 90.0,
+          "elevation": 0.5729386976834864
+        },
+        "walkway": {
+          "lookat": [
+            -10.352860326437096,
+            -24.4658332367825,
+            2.128521402528679
+          ],
+          "distance": 8.0,
+          "azimuth": 70.64100582430528,
+          "elevation": 3.429204039116737
+        },
+        "pool": {
+          "lookat": [
+            26.43354523817254,
+            -23.867090476345087,
+            1.5659635978973412
+          ],
+          "distance": 8.0,
+          "azimuth": 116.56505117707799,
+          "elevation": -4.545718558663352
+        },
+        "gate": {
+          "lookat": [
+            -28.0,
+            -39.0,
+            1.4
+          ],
+          "distance": 8.0,
+          "azimuth": -90.0,
+          "elevation": 0.0
+        }
+      },
+      "passed": true,
+      "unique_per_view": {
+        "head": 4,
+        "chase": 4,
+        "entry": 4,
+        "walkway": 4,
+        "pool": 4,
+        "gate": 4
+      },
+      "status_after": {
+        "sim_time": 4.53,
+        "spawned": true,
+        "pd_mode": "implicit",
+        "base": {
+          "x": 8.007,
+          "y": -2.695,
+          "z": 0.79,
+          "yaw_deg": 91.5
+        },
+        "tilt_deg": 0.6,
+        "fallen": false,
+        "realtime_ratio": 1.15,
+        "epoch": "536fce7405e0416fbbe1c64314a652f8",
+        "room_key": "robot_home",
+        "room_label": "机器人停机房"
+      },
+      "policy_error": "",
+      "owned_instance_stopped": true
+    },
+    {
+      "scene": "apt",
+      "phases": [
+        {
+          "requested": "day",
+          "reported": "day",
+          "fallen": false
+        },
+        {
+          "requested": "morning",
+          "reported": "morning",
+          "fallen": false
+        },
+        {
+          "requested": "dusk",
+          "reported": "dusk",
+          "fallen": false
+        },
+        {
+          "requested": "night",
+          "reported": "night",
+          "fallen": false
+        }
+      ],
+      "mutations": [
+        {
+          "phase": "day",
+          "thread": "nerv-world-render",
+          "physics_before": {
+            "qpos": "0423deed3d4232dced7ade1590e7f40eeda8b405a07b7531bc5a46739cabfc96",
+            "qvel": "fa1946c64940efb4aea27be785fde2f6d50a5c3a9fab15527ff3e6abc7af66e6",
+            "qacc": "5635d0a3273fe8ded3bed7f8dd94b252896db8606934359c42855dcfe985ce88",
+            "qacc_warmstart": "5635d0a3273fe8ded3bed7f8dd94b252896db8606934359c42855dcfe985ce88",
+            "act": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "ctrl": "c4fcd50d9f0c893c46288b57d8e62b18523145956b249b6ecd6c21718be49065",
+            "qfrc_applied": "a53c4c6cfc51f0477af25fca6b032fd0bafca4331ccd56ba5e00832425f7c5c2",
+            "xfrc_applied": "d60d6cd6fbd560cb387c6294aeab1e088bc4dbf4b85b8341702120cfd5fcde32",
+            "mocap_pos": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "mocap_quat": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "time": 3.0699999999998835,
+            "model_physics": {
+              "body_mass": "d737f0cc4a96185813164347923c3fab616842e4f873ade263e593f4824e78e7",
+              "body_inertia": "77e0405facacbcb175e83eb46591d6fe7066f2043fb8cb82135356641429a604",
+              "geom_contype": "ec0a72fd7588200a6ae7d7f2c98130c8f7ec3824d35b45bb6107ae92e1ff83fb",
+              "geom_conaffinity": "ec0a72fd7588200a6ae7d7f2c98130c8f7ec3824d35b45bb6107ae92e1ff83fb",
+              "geom_friction": "c7c1f1dc8c4e4fc5bdf0a44b08f093ddfa9f2305813dd2719fbe5ea10b4e54db",
+              "jnt_range": "e8d664824472da522ad43f037a62294eb2dc243b94b2987cd2f2fa17886c0a4c",
+              "dof_damping": "9a001cfa07b2176431cf280395eb18257140b39b12ee8d5df4ce5093f39ff27c"
+            },
+            "epoch": "8f4c2eda5a1f4689af649fabbd7822cb"
+          },
+          "physics_after": {
+            "qpos": "0423deed3d4232dced7ade1590e7f40eeda8b405a07b7531bc5a46739cabfc96",
+            "qvel": "fa1946c64940efb4aea27be785fde2f6d50a5c3a9fab15527ff3e6abc7af66e6",
+            "qacc": "5635d0a3273fe8ded3bed7f8dd94b252896db8606934359c42855dcfe985ce88",
+            "qacc_warmstart": "5635d0a3273fe8ded3bed7f8dd94b252896db8606934359c42855dcfe985ce88",
+            "act": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "ctrl": "c4fcd50d9f0c893c46288b57d8e62b18523145956b249b6ecd6c21718be49065",
+            "qfrc_applied": "a53c4c6cfc51f0477af25fca6b032fd0bafca4331ccd56ba5e00832425f7c5c2",
+            "xfrc_applied": "d60d6cd6fbd560cb387c6294aeab1e088bc4dbf4b85b8341702120cfd5fcde32",
+            "mocap_pos": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "mocap_quat": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "time": 3.0699999999998835,
+            "model_physics": {
+              "body_mass": "d737f0cc4a96185813164347923c3fab616842e4f873ade263e593f4824e78e7",
+              "body_inertia": "77e0405facacbcb175e83eb46591d6fe7066f2043fb8cb82135356641429a604",
+              "geom_contype": "ec0a72fd7588200a6ae7d7f2c98130c8f7ec3824d35b45bb6107ae92e1ff83fb",
+              "geom_conaffinity": "ec0a72fd7588200a6ae7d7f2c98130c8f7ec3824d35b45bb6107ae92e1ff83fb",
+              "geom_friction": "c7c1f1dc8c4e4fc5bdf0a44b08f093ddfa9f2305813dd2719fbe5ea10b4e54db",
+              "jnt_range": "e8d664824472da522ad43f037a62294eb2dc243b94b2987cd2f2fa17886c0a4c",
+              "dof_damping": "9a001cfa07b2176431cf280395eb18257140b39b12ee8d5df4ce5093f39ff27c"
+            },
+            "epoch": "8f4c2eda5a1f4689af649fabbd7822cb"
+          },
+          "unchanged": true,
+          "texture_before": "8406897e60ccab06c3070b136c2b573fcd91949e01c1c6b327b78f81e2c64e23",
+          "texture_after": "8406897e60ccab06c3070b136c2b573fcd91949e01c1c6b327b78f81e2c64e23",
+          "warnings": [],
+          "renderer_context": 127760059009072
+        },
+        {
+          "phase": "morning",
+          "thread": "nerv-world-render",
+          "physics_before": {
+            "qpos": "b3fba94fb646d2b34ab532da111551229d82ad4f673c4eea9ba2086643990ef6",
+            "qvel": "2e6048bb4495303185aec7c152cd78eb743bb437e956d53b45a3e3359371dfc9",
+            "qacc": "7691828955b9c28d66373906d15e2978510ba28ed85291fe20e4385270298046",
+            "qacc_warmstart": "7691828955b9c28d66373906d15e2978510ba28ed85291fe20e4385270298046",
+            "act": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "ctrl": "c4fcd50d9f0c893c46288b57d8e62b18523145956b249b6ecd6c21718be49065",
+            "qfrc_applied": "d8a1568bb14fbc69155cda774dd21dd220f229fea5eb309f6ef8849d1a1404e6",
+            "xfrc_applied": "d60d6cd6fbd560cb387c6294aeab1e088bc4dbf4b85b8341702120cfd5fcde32",
+            "mocap_pos": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "mocap_quat": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "time": 3.329999999999855,
+            "model_physics": {
+              "body_mass": "d737f0cc4a96185813164347923c3fab616842e4f873ade263e593f4824e78e7",
+              "body_inertia": "77e0405facacbcb175e83eb46591d6fe7066f2043fb8cb82135356641429a604",
+              "geom_contype": "ec0a72fd7588200a6ae7d7f2c98130c8f7ec3824d35b45bb6107ae92e1ff83fb",
+              "geom_conaffinity": "ec0a72fd7588200a6ae7d7f2c98130c8f7ec3824d35b45bb6107ae92e1ff83fb",
+              "geom_friction": "c7c1f1dc8c4e4fc5bdf0a44b08f093ddfa9f2305813dd2719fbe5ea10b4e54db",
+              "jnt_range": "e8d664824472da522ad43f037a62294eb2dc243b94b2987cd2f2fa17886c0a4c",
+              "dof_damping": "9a001cfa07b2176431cf280395eb18257140b39b12ee8d5df4ce5093f39ff27c"
+            },
+            "epoch": "8f4c2eda5a1f4689af649fabbd7822cb"
+          },
+          "physics_after": {
+            "qpos": "b3fba94fb646d2b34ab532da111551229d82ad4f673c4eea9ba2086643990ef6",
+            "qvel": "2e6048bb4495303185aec7c152cd78eb743bb437e956d53b45a3e3359371dfc9",
+            "qacc": "7691828955b9c28d66373906d15e2978510ba28ed85291fe20e4385270298046",
+            "qacc_warmstart": "7691828955b9c28d66373906d15e2978510ba28ed85291fe20e4385270298046",
+            "act": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "ctrl": "c4fcd50d9f0c893c46288b57d8e62b18523145956b249b6ecd6c21718be49065",
+            "qfrc_applied": "d8a1568bb14fbc69155cda774dd21dd220f229fea5eb309f6ef8849d1a1404e6",
+            "xfrc_applied": "d60d6cd6fbd560cb387c6294aeab1e088bc4dbf4b85b8341702120cfd5fcde32",
+            "mocap_pos": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "mocap_quat": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "time": 3.329999999999855,
+            "model_physics": {
+              "body_mass": "d737f0cc4a96185813164347923c3fab616842e4f873ade263e593f4824e78e7",
+              "body_inertia": "77e0405facacbcb175e83eb46591d6fe7066f2043fb8cb82135356641429a604",
+              "geom_contype": "ec0a72fd7588200a6ae7d7f2c98130c8f7ec3824d35b45bb6107ae92e1ff83fb",
+              "geom_conaffinity": "ec0a72fd7588200a6ae7d7f2c98130c8f7ec3824d35b45bb6107ae92e1ff83fb",
+              "geom_friction": "c7c1f1dc8c4e4fc5bdf0a44b08f093ddfa9f2305813dd2719fbe5ea10b4e54db",
+              "jnt_range": "e8d664824472da522ad43f037a62294eb2dc243b94b2987cd2f2fa17886c0a4c",
+              "dof_damping": "9a001cfa07b2176431cf280395eb18257140b39b12ee8d5df4ce5093f39ff27c"
+            },
+            "epoch": "8f4c2eda5a1f4689af649fabbd7822cb"
+          },
+          "unchanged": true,
+          "texture_before": "8406897e60ccab06c3070b136c2b573fcd91949e01c1c6b327b78f81e2c64e23",
+          "texture_after": "a039e1c934b4949bba8097d0c49b9b462a950701a96a7a9bcaae7fa9d61f0c05",
+          "warnings": [],
+          "renderer_context": 127760059009072
+        },
+        {
+          "phase": "dusk",
+          "thread": "nerv-world-render",
+          "physics_before": {
+            "qpos": "6ada50c8b6a687feabd968acb415a9a98eb8d449ec27e86af5dbb3afbb625569",
+            "qvel": "41a66deb91913d5fbf9b8cb13c0586a6a5b99d122951f04926196f46894daf2f",
+            "qacc": "4badc30ae5ae41d664a5ae8213c401c04a7c28ce184d15db88cee2dffb6361f7",
+            "qacc_warmstart": "4badc30ae5ae41d664a5ae8213c401c04a7c28ce184d15db88cee2dffb6361f7",
+            "act": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "ctrl": "c4fcd50d9f0c893c46288b57d8e62b18523145956b249b6ecd6c21718be49065",
+            "qfrc_applied": "77611f56fd6134d1d01a8721c2c1a5eb97b1e57c01ca82090adbe9d5967d8c06",
+            "xfrc_applied": "d60d6cd6fbd560cb387c6294aeab1e088bc4dbf4b85b8341702120cfd5fcde32",
+            "mocap_pos": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "mocap_quat": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "time": 3.599999999999825,
+            "model_physics": {
+              "body_mass": "d737f0cc4a96185813164347923c3fab616842e4f873ade263e593f4824e78e7",
+              "body_inertia": "77e0405facacbcb175e83eb46591d6fe7066f2043fb8cb82135356641429a604",
+              "geom_contype": "ec0a72fd7588200a6ae7d7f2c98130c8f7ec3824d35b45bb6107ae92e1ff83fb",
+              "geom_conaffinity": "ec0a72fd7588200a6ae7d7f2c98130c8f7ec3824d35b45bb6107ae92e1ff83fb",
+              "geom_friction": "c7c1f1dc8c4e4fc5bdf0a44b08f093ddfa9f2305813dd2719fbe5ea10b4e54db",
+              "jnt_range": "e8d664824472da522ad43f037a62294eb2dc243b94b2987cd2f2fa17886c0a4c",
+              "dof_damping": "9a001cfa07b2176431cf280395eb18257140b39b12ee8d5df4ce5093f39ff27c"
+            },
+            "epoch": "8f4c2eda5a1f4689af649fabbd7822cb"
+          },
+          "physics_after": {
+            "qpos": "6ada50c8b6a687feabd968acb415a9a98eb8d449ec27e86af5dbb3afbb625569",
+            "qvel": "41a66deb91913d5fbf9b8cb13c0586a6a5b99d122951f04926196f46894daf2f",
+            "qacc": "4badc30ae5ae41d664a5ae8213c401c04a7c28ce184d15db88cee2dffb6361f7",
+            "qacc_warmstart": "4badc30ae5ae41d664a5ae8213c401c04a7c28ce184d15db88cee2dffb6361f7",
+            "act": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "ctrl": "c4fcd50d9f0c893c46288b57d8e62b18523145956b249b6ecd6c21718be49065",
+            "qfrc_applied": "77611f56fd6134d1d01a8721c2c1a5eb97b1e57c01ca82090adbe9d5967d8c06",
+            "xfrc_applied": "d60d6cd6fbd560cb387c6294aeab1e088bc4dbf4b85b8341702120cfd5fcde32",
+            "mocap_pos": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "mocap_quat": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "time": 3.599999999999825,
+            "model_physics": {
+              "body_mass": "d737f0cc4a96185813164347923c3fab616842e4f873ade263e593f4824e78e7",
+              "body_inertia": "77e0405facacbcb175e83eb46591d6fe7066f2043fb8cb82135356641429a604",
+              "geom_contype": "ec0a72fd7588200a6ae7d7f2c98130c8f7ec3824d35b45bb6107ae92e1ff83fb",
+              "geom_conaffinity": "ec0a72fd7588200a6ae7d7f2c98130c8f7ec3824d35b45bb6107ae92e1ff83fb",
+              "geom_friction": "c7c1f1dc8c4e4fc5bdf0a44b08f093ddfa9f2305813dd2719fbe5ea10b4e54db",
+              "jnt_range": "e8d664824472da522ad43f037a62294eb2dc243b94b2987cd2f2fa17886c0a4c",
+              "dof_damping": "9a001cfa07b2176431cf280395eb18257140b39b12ee8d5df4ce5093f39ff27c"
+            },
+            "epoch": "8f4c2eda5a1f4689af649fabbd7822cb"
+          },
+          "unchanged": true,
+          "texture_before": "a039e1c934b4949bba8097d0c49b9b462a950701a96a7a9bcaae7fa9d61f0c05",
+          "texture_after": "99a48e7948ef3c6e22961f3d44d2e1de601b313e5012cfd6564c9d13a1cd33f4",
+          "warnings": [],
+          "renderer_context": 127760059009072
+        },
+        {
+          "phase": "night",
+          "thread": "nerv-world-render",
+          "physics_before": {
+            "qpos": "1ca5a74ee62d5fff4e0e94668b5f376c7bd1eb4ea147c9d032fa09f41b524f13",
+            "qvel": "410e07a59c4dd43002d03ce4b607cc93b42203ea37a70082f86232c07337c2d8",
+            "qacc": "66e476e6a4fdd8d8622d223b499ef32a5fe5f19312432ec3ad7d4d6a750c195e",
+            "qacc_warmstart": "66e476e6a4fdd8d8622d223b499ef32a5fe5f19312432ec3ad7d4d6a750c195e",
+            "act": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "ctrl": "c4fcd50d9f0c893c46288b57d8e62b18523145956b249b6ecd6c21718be49065",
+            "qfrc_applied": "c90f76148aed07afdee1da04d1f7692278554ace0225d4dd7b5903cf3ec7dcc9",
+            "xfrc_applied": "d60d6cd6fbd560cb387c6294aeab1e088bc4dbf4b85b8341702120cfd5fcde32",
+            "mocap_pos": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "mocap_quat": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "time": 3.91999999999979,
+            "model_physics": {
+              "body_mass": "d737f0cc4a96185813164347923c3fab616842e4f873ade263e593f4824e78e7",
+              "body_inertia": "77e0405facacbcb175e83eb46591d6fe7066f2043fb8cb82135356641429a604",
+              "geom_contype": "ec0a72fd7588200a6ae7d7f2c98130c8f7ec3824d35b45bb6107ae92e1ff83fb",
+              "geom_conaffinity": "ec0a72fd7588200a6ae7d7f2c98130c8f7ec3824d35b45bb6107ae92e1ff83fb",
+              "geom_friction": "c7c1f1dc8c4e4fc5bdf0a44b08f093ddfa9f2305813dd2719fbe5ea10b4e54db",
+              "jnt_range": "e8d664824472da522ad43f037a62294eb2dc243b94b2987cd2f2fa17886c0a4c",
+              "dof_damping": "9a001cfa07b2176431cf280395eb18257140b39b12ee8d5df4ce5093f39ff27c"
+            },
+            "epoch": "8f4c2eda5a1f4689af649fabbd7822cb"
+          },
+          "physics_after": {
+            "qpos": "1ca5a74ee62d5fff4e0e94668b5f376c7bd1eb4ea147c9d032fa09f41b524f13",
+            "qvel": "410e07a59c4dd43002d03ce4b607cc93b42203ea37a70082f86232c07337c2d8",
+            "qacc": "66e476e6a4fdd8d8622d223b499ef32a5fe5f19312432ec3ad7d4d6a750c195e",
+            "qacc_warmstart": "66e476e6a4fdd8d8622d223b499ef32a5fe5f19312432ec3ad7d4d6a750c195e",
+            "act": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "ctrl": "c4fcd50d9f0c893c46288b57d8e62b18523145956b249b6ecd6c21718be49065",
+            "qfrc_applied": "c90f76148aed07afdee1da04d1f7692278554ace0225d4dd7b5903cf3ec7dcc9",
+            "xfrc_applied": "d60d6cd6fbd560cb387c6294aeab1e088bc4dbf4b85b8341702120cfd5fcde32",
+            "mocap_pos": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "mocap_quat": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "time": 3.91999999999979,
+            "model_physics": {
+              "body_mass": "d737f0cc4a96185813164347923c3fab616842e4f873ade263e593f4824e78e7",
+              "body_inertia": "77e0405facacbcb175e83eb46591d6fe7066f2043fb8cb82135356641429a604",
+              "geom_contype": "ec0a72fd7588200a6ae7d7f2c98130c8f7ec3824d35b45bb6107ae92e1ff83fb",
+              "geom_conaffinity": "ec0a72fd7588200a6ae7d7f2c98130c8f7ec3824d35b45bb6107ae92e1ff83fb",
+              "geom_friction": "c7c1f1dc8c4e4fc5bdf0a44b08f093ddfa9f2305813dd2719fbe5ea10b4e54db",
+              "jnt_range": "e8d664824472da522ad43f037a62294eb2dc243b94b2987cd2f2fa17886c0a4c",
+              "dof_damping": "9a001cfa07b2176431cf280395eb18257140b39b12ee8d5df4ce5093f39ff27c"
+            },
+            "epoch": "8f4c2eda5a1f4689af649fabbd7822cb"
+          },
+          "unchanged": true,
+          "texture_before": "99a48e7948ef3c6e22961f3d44d2e1de601b313e5012cfd6564c9d13a1cd33f4",
+          "texture_after": "3ad8fe0990ffb18450ee39cb903a91b57341b97a983bd0fd3a7fad0e5a5d5cd9",
+          "warnings": [],
+          "renderer_context": 127760059009072
+        }
+      ],
+      "frames": [
+        {
+          "view": "head",
+          "phase": "day",
+          "path": "apt/head/day.png",
+          "sim_time": 3.0899999999998813,
+          "pixel_sha256": "4b10f1d29b5ac211557be49f00a53c4dc76d3e6a8d5240c5ef76881efa6844b4",
+          "file_sha256": "6a34d52b147c48cf3dbd10c438363274ed43eff413c638a7f0b3b5eb70e4723d",
+          "mean_luminance": 137.36732530381943,
+          "std_luminance": 35.299711817087655,
+          "fraction_over_20": 0.9975716145833333
+        },
+        {
+          "view": "chase",
+          "phase": "day",
+          "path": "apt/chase/day.png",
+          "sim_time": 3.1699999999998725,
+          "pixel_sha256": "f415b5d4722c0ae3c52fcd78381e7e9852d7c3c46a3c095763f00372b28806fa",
+          "file_sha256": "c22589b5db3a25560244ff33c290db1a1182ddfc72140031febfcf119f268834",
+          "mean_luminance": 88.599873046875,
+          "std_luminance": 20.45760998943503,
+          "fraction_over_20": 0.9999967447916667
+        },
+        {
+          "view": "living",
+          "phase": "day",
+          "path": "apt/living/day.png",
+          "sim_time": 3.2499999999998637,
+          "pixel_sha256": "7d1720063bc10769de78150595fa54d5d8e426590bc517d40aa929302be13517",
+          "file_sha256": "4ecb695f498ce01f290225f89cf77476abd3bbf0119bb19df923eb51337d356f",
+          "mean_luminance": 112.13523763020834,
+          "std_luminance": 43.29224680199379,
+          "fraction_over_20": 0.9776627604166667
+        },
+        {
+          "view": "head",
+          "phase": "morning",
+          "path": "apt/head/morning.png",
+          "sim_time": 3.3499999999998527,
+          "pixel_sha256": "63618e2dd2230d109456558b6be1df21bec3c0344a1f20c9a34336e0aa60cfe0",
+          "file_sha256": "371cf5d7b255c477ca2dee71f27e01a807dded31096aef6b8a1fd01fab2cf116",
+          "mean_luminance": 123.72019856770834,
+          "std_luminance": 35.240037100544086,
+          "fraction_over_20": 0.9973600260416666
+        },
+        {
+          "view": "chase",
+          "phase": "morning",
+          "path": "apt/chase/morning.png",
+          "sim_time": 3.429999999999844,
+          "pixel_sha256": "fe110dae71095b16e5521d5bcf3c62e135a5fb2121eadd58cb5530ef82867cf1",
+          "file_sha256": "c4a7f5bcf20ad0f7e7a5dd0ca42afb84a5130cbde79990d94b0b5b8c6ddd6037",
+          "mean_luminance": 70.62935112847221,
+          "std_luminance": 20.877684979209704,
+          "fraction_over_20": 0.9990006510416667
+        },
+        {
+          "view": "living",
+          "phase": "morning",
+          "path": "apt/living/morning.png",
+          "sim_time": 3.499999999999836,
+          "pixel_sha256": "671613f395ce5f84545976a464cc568b1988c72d2d7d39e713681c3121c80251",
+          "file_sha256": "38c9a64255fb83cbd0aae1f81df0b2a47b2b69cb4c0ac4bd2935dbc3e16df6e5",
+          "mean_luminance": 117.17349826388887,
+          "std_luminance": 63.96862974985076,
+          "fraction_over_20": 0.9703873697916666
+        },
+        {
+          "view": "head",
+          "phase": "dusk",
+          "path": "apt/head/dusk.png",
+          "sim_time": 3.619999999999823,
+          "pixel_sha256": "f4aa8944166e60298b19bef4d2d3f395062548cf4a9f5f50e31940153c188635",
+          "file_sha256": "0bd7e4db1b3d9d1d4c0093f01b6fa187c4b890b08d41228449d7a488eb2d7cd9",
+          "mean_luminance": 141.03471354166666,
+          "std_luminance": 36.902268207351966,
+          "fraction_over_20": 0.99302734375
+        },
+        {
+          "view": "chase",
+          "phase": "dusk",
+          "path": "apt/chase/dusk.png",
+          "sim_time": 3.699999999999814,
+          "pixel_sha256": "f48a347c1be55c2b1f1522f2e480ae67e2312163f68a18784d0a80e4be94afd7",
+          "file_sha256": "4c325d66f41285840d3377ee5947a06b4a52bffa400ee62e682a8b8922b17206",
+          "mean_luminance": 86.29155598958333,
+          "std_luminance": 22.613005124204506,
+          "fraction_over_20": 0.9999446614583334
+        },
+        {
+          "view": "living",
+          "phase": "dusk",
+          "path": "apt/living/dusk.png",
+          "sim_time": 3.799999999999803,
+          "pixel_sha256": "0489649cf64bfccc73264c96412cc399e1aea5b695239b58e95f6be60f9f9f38",
+          "file_sha256": "d150a66e00d6077936b2e178921671a616849c2d49780b8dc6bf620c4d2a8f53",
+          "mean_luminance": 106.48801866319442,
+          "std_luminance": 44.956848423380904,
+          "fraction_over_20": 0.98052734375
+        },
+        {
+          "view": "head",
+          "phase": "night",
+          "path": "apt/head/night.png",
+          "sim_time": 3.9299999999997888,
+          "pixel_sha256": "201731592f0f5f1e40be37511b7e0006462622b417e70a922d3a6460ebc4ff68",
+          "file_sha256": "410ba084012cbc2e80a35425b46c416d055528888b63a2dde173a9871302732c",
+          "mean_luminance": 63.67644965277778,
+          "std_luminance": 18.19147457793906,
+          "fraction_over_20": 0.9381380208333333
+        },
+        {
+          "view": "chase",
+          "phase": "night",
+          "path": "apt/chase/night.png",
+          "sim_time": 4.069999999999774,
+          "pixel_sha256": "a0f0e64193bfeedc8bba239a2a51c99aeb544a7360edd4689f1b2a2e0609c90d",
+          "file_sha256": "432e8ac2fedf0d52a9ad08bc191f76cb7ebc0109e9cfe069f76692f7296ba537",
+          "mean_luminance": 35.880274522569444,
+          "std_luminance": 12.307292971969963,
+          "fraction_over_20": 0.9491178385416666
+        },
+        {
+          "view": "living",
+          "phase": "night",
+          "path": "apt/living/night.png",
+          "sim_time": 4.169999999999763,
+          "pixel_sha256": "f402224408615d9e666a00e395d9c3ad57bed48611eeb5d46bb3bcf8de109032",
+          "file_sha256": "46a6455b67c86ccbb3cad0b875eab45ee6bc25869519fa9fd2486c45a3a38c2f",
+          "mean_luminance": 42.87451388888889,
+          "std_luminance": 18.79973187960875,
+          "fraction_over_20": 0.8617024739583333
+        }
+      ],
+      "camera_views": {
+        "living": {
+          "lookat": [
+            2.5,
+            3.3,
+            1.25
+          ],
+          "distance": 1.0,
+          "azimuth": 90.0,
+          "elevation": 0.0
+        }
+      },
+      "passed": true,
+      "unique_per_view": {
+        "head": 4,
+        "chase": 4,
+        "living": 4
+      },
+      "status_after": {
+        "sim_time": 4.26,
+        "spawned": true,
+        "pd_mode": "implicit",
+        "base": {
+          "x": 4.007,
+          "y": -6.594,
+          "z": 0.79,
+          "yaw_deg": 91.4
+        },
+        "tilt_deg": 0.6,
+        "fallen": false,
+        "realtime_ratio": 1.09,
+        "epoch": "8f4c2eda5a1f4689af649fabbd7822cb",
+        "room_key": "foyer",
+        "room_label": "入户玄关"
+      },
+      "policy_error": "",
+      "owned_instance_stopped": true
+    }
+  ],
+  "source_sha256": {
+    "src/nerv/world/mujoco_node.py": "1e3f606a73f26b7a682b47599eaf28345dfc160275148b2f866bc07ddceea373",
+    "src/nerv/world/scene_operator.py": "05b0732b3a6c08f9421ca3086f28d07d2c30951128c74581e2fcc347107331a1",
+    "bodies/humanoid-unitree-g1/body.yaml": "0ab3430b5412c5d2507b96f2ca80dd56bc4f09d47de6839b872ab101257dafa7",
+    "worlds/scenes/operator.py": "4cfaf28dcff6489e3dc191b86f021cfd7679857a66e3d43c7724cf740eaf212a",
+    "worlds/scenes/time_cycle.py": "bd45c7b1dc9faf1d55797d70d2f6ab092e8200fcc4a272439aa182e7390a5f34",
+    "worlds/scenes/apply_time_preset.py": "7ef289bfc315263b98feed398ba424ab78c841eb66fdc3a47a0df3a11f02d943",
+    "policies/g1-29dof-turn/policy.onnx": "07400671a8fffae172d261688bc84f0e60d3d656156b564dbdc0a4638fb695c6",
+    "worlds/build/house-g1.xml": "504d12a89c4923e0998e5468c69b50cbf6731ef597c5dc0a37001c5f36a51a0b",
+    "worlds/scenes/house/layout.py": "6aff665bdb6d82e2ff87e3000e500f458c9a7ecdb8baad200c232064cb47f219",
+    "worlds/scenes/house/shots.py": "c7a9d18fcdfcb2563465c4b733722ee1cc10837ab44b9b0ae374eaf984eda362",
+    "worlds/build/apt-g1.xml": "397d0330f435d5560896b3232adadde0c84c8ebce8d6a6ea7c0833212a78f15e",
+    "worlds/scenes/apt/layout.py": "7f010b273ad197ccbbc98dd5804fce9e2aab7a4711c95997a18671e9c7c7417e",
+    "worlds/scenes/apt/shots.py": "3de1158161f881b7a7fb0405478f8fbbfbde4cbe324ff30cf1b0de0742e8606c"
+  },
+  "finished": "2026-09-08T04:10:18Z",
+  "source_changes_after_capture": {},
+  "verifier_sha256": "fafcf423cfdd584ff0699649b81e82eee832fd3820906e742b2d2d55f3d2ab8d",
+  "render_pipeline_passed": true,
+  "visual_review": {
+    "apt_living_night": "Furniture, floor, glazing and distant lit buildings are discernible.",
+    "house_night": "Entrance, gate, pool edge and loungers are discernible; lawn/path details are dim and not accepted as clear nighttime obstacle visibility.",
+    "night_walkway_detail_accepted": false,
+    "scope": "36 native 640x480 WorldSim frames. No browser, live walking during visual checks, physical hardware or long-duration validation claimed."
+  },
+  "own_process_released": true
+}
