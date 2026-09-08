@@ -447,7 +447,10 @@ export const LOCALES: Record<string, Locale> = {
       "Pan right": "Pan right",
       "Pan up": "Pan up",
       "Pan down": "Pan down",
-      "Selected joint": "Selected joint"
+      "Selected joint": "Selected joint",
+      "Contact exceeded the tolerance. Reset the scene to retry.": "Contact exceeded the tolerance. Reset the scene to retry.",
+      "Scene request timed out": "Scene request timed out",
+      "(operator: reset the entire scene — robot, furniture and props are back at their initial positions; time of day is unchanged)": "(operator: reset the entire scene — robot, furniture and props are back at their initial positions; time of day is unchanged)"
     }
   },
   "zh": {
@@ -878,7 +881,10 @@ export const LOCALES: Record<string, Locale> = {
       "Pan right": "向右平移",
       "Pan up": "向上平移",
       "Pan down": "向下平移",
-      "Selected joint": "选中关节"
+      "Selected joint": "选中关节",
+      "Contact exceeded the tolerance. Reset the scene to retry.": "接触穿透超过容差，请重置场景后重试。",
+      "Scene request timed out": "场景请求超时",
+      "(operator: reset the entire scene — robot, furniture and props are back at their initial positions; time of day is unchanged)": "（操作员：已重置整个场景，机器人、家具和道具均已回到初始位置，时段保持不变）"
     }
   }
 };

@@ -3,7 +3,20 @@ from __future__ import annotations
 
 import hashlib
 import json
+from functools import lru_cache
 from pathlib import Path
+
+
+@lru_cache(maxsize=512)
+def _digest(path: str, size: int, modified_ns: int, changed_ns: int) -> str:
+    """Cache hashes by file identity metadata; edits invalidate without hashing each request."""
+    with open(path, "rb") as stream:
+        return hashlib.file_digest(stream, "sha256").hexdigest()
+
+
+def digest(path: Path) -> str:
+    status = path.stat()
+    return _digest(str(path.resolve()), status.st_size, status.st_mtime_ns, status.st_ctime_ns)
 
 
 def contained(root: Path, relative: str) -> Path:
@@ -28,7 +41,7 @@ def read_manifest(spec) -> tuple[Path, dict]:
         raise ValueError("Display resources have no source verification record")
     for relative, expected in sources.items():
         source = contained(root, relative)
-        if not source.is_file() or hashlib.sha256(source.read_bytes()).hexdigest() != expected:
+        if not source.is_file() or digest(source) != expected:
             raise ValueError("Display resources are out of date; regenerate them")
     return path.parent, manifest
 
@@ -41,6 +54,6 @@ def asset_path(spec, filename: str) -> Path:
     path = contained(directory, filename)
     if not path.is_file():
         raise FileNotFoundError("A display asset is missing; regenerate resources")
-    if path.stat().st_size != asset["bytes"]:
+    if path.stat().st_size != asset["bytes"] or digest(path) != asset.get("hash"):
         raise ValueError("A display asset changed; regenerate resources")
     return path

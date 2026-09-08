@@ -93,27 +93,33 @@ class SceneTests:
                     item.get(k) != payload.get(k) for k in ("owner", "token", "epoch"))):
                 raise ValueError("Scene control expired or belongs to another operator")
         if session.armed:
-            self.cancel(sid)
+            self.cancel(sid, expected=item)
             raise ValueError("Scene control ended because the body was armed")
         return client, {"session": sid, **{k: payload[k] for k in ("owner", "token", "epoch")}}
 
     def action(self, sid, operation, payload):
         client, credentials = self.credentials(sid, payload)
+        with self._lock:
+            owner = self._owners.get(sid)
+            if not owner or any(owner.get(k) != credentials[k] for k in ("owner", "token", "epoch")):
+                raise ValueError("Scene control changed before the request was sent")
         result = client.scene_post(operation, {**payload, **credentials})
         if operation == "heartbeat" and result.get("ok"):
             with self._lock:
                 item = self._owners.get(sid)
-                if item:
+                if item is owner:
                     item["expires"] = time.monotonic() + float(result["lease_seconds"])
         if operation == "release" or not result.get("ok") and operation == "heartbeat":
-            self.cancel(sid)
+            self.cancel(sid, expected=owner, release=operation != "release")
         return result
 
-    def cancel(self, sid, expected=None):
+    def _detach(self, sid, expected=None):
         with self._lock:
             if expected is not None and self._owners.get(sid) is not expected:
-                return
-            item = self._owners.pop(sid, None)
+                return None
+            return self._owners.pop(sid, None)
+
+    def _release(self, sid, item):
         if not item or not item.get("token"):
             return
         session = self.hub.store.get(sid)
@@ -121,7 +127,14 @@ class SceneTests:
         if client:
             client.scene_post("release", {"session": sid, **{k: item[k] for k in ("owner", "token", "epoch")}})
 
+    def cancel(self, sid, expected=None, release=True):
+        item = self._detach(sid, expected)
+        if release:
+            self._release(sid, item)
+
     def interrupt(self, sid):
-        # Fire-and-forget cancellation keeps emergency controls independent of scene HTTP latency.
-        threading.Thread(target=self.cancel, args=(sid,), daemon=True).start()
+        # Revoke ownership now; a delayed network thread must never detach a later owner.
+        item = self._detach(sid)
+        if item:
+            threading.Thread(target=self._release, args=(sid, item), daemon=True).start()
         interrupt.request(sid)
