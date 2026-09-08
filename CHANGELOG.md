@@ -5,6 +5,15 @@ The 0.1.x entries below are the pre-release trail.
 
 ## [Unreleased]
 
+The 2026-09-08 interaction update adds operator testing for apt's 22 appliance joints
+and nine movable objects, measured refrigerator-task evaluation, interruption and reset
+handling, house lighting phases, and collision-based ground-support and turning checks.
+Nerv World Explore provides a read-only floor guide built from the scene models. The
+existing robot policy is unchanged; autonomous manipulation and stair traversal remain
+outside this update. See the [detailed development record (Chinese)](docs/development/2026-09-08-world-interaction-explore.md)
+and [validation evidence](docs/validation/world-explore/README.md) for retained failures,
+actual routes, browser measurements and the authorized local service activation.
+
 The residence catalogue now exposes `apt` and `house`. The duplex keeps the original
 apartment's Central Park environment and four lighting phases, and the hillside mansion
 continues under the shorter name. Numbered maps are retired in the worlds submodule.
