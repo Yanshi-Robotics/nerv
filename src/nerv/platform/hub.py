@@ -22,6 +22,7 @@ from .registry.compat import check as compat_check
 from .router import Turn
 from .session import SessionStore
 from .session import log as slog
+from .scene_tests import SceneTests
 
 
 def _node_lifecycle(method):
@@ -45,6 +46,7 @@ class Nerv:
         self._tools: dict[str, RemoteTool] = {}
         self._brains: dict = {}
         self._node_lock = threading.RLock()
+        self.scene_tests = SceneTests(self)
 
     # -- node clients ---------------------------------------------------------------------
     def body_client(self, name: str) -> RemoteBody | None:
@@ -123,6 +125,7 @@ class Nerv:
                 session.status = op.SESSION_FROZEN
                 session.armed = False
                 self.store.save(session)
+                self.scene_tests.interrupt(session.id)
                 frozen.append(session.id)
         # Stop the command producer before physics, then discard cached clients.
         for node_key in pair:
@@ -169,6 +172,7 @@ class Nerv:
         s, frozen = self.store.new(brain, body, world, sensors=sensors, tools=tool_names, epoch=epoch)
         for sid in frozen:
             interrupt.request(sid)
+            self.scene_tests.interrupt(sid)
         slog.record("operator", {"event": "session_new", "session": s.id, "brain": brain,
                                  "body": body, "world": world, "frozen": frozen})
         return s.summary()
@@ -179,6 +183,8 @@ class Nerv:
             return {**error, "armed": False}
         if not s.body:
             return {"ok": False, "armed": False, "message": "a conversation-only session has nothing to arm"}
+        if armed and self.scene_tests.blocks(s.body):
+            return {"ok": False, "armed": False, "message": "End scene testing before arming the body"}
         c = self.body_client(s.body)
         if c is None:
             return {"ok": False, "armed": False, "message": f"the body `{s.body}` is not reachable"}
@@ -192,6 +198,7 @@ class Nerv:
 
     def stop(self, sid: str) -> None:
         interrupt.request(sid)
+        self.scene_tests.interrupt(sid)
         s = self.store.get(sid)
         if self._control_error(s):
             return
@@ -209,6 +216,7 @@ class Nerv:
     def estop(self, sid: str) -> dict:
         """Hold the pose now: interrupt the turn, stop the skill, latch the joints. Never a power cut."""
         interrupt.request(sid)
+        self.scene_tests.interrupt(sid)
         s = self.store.get(sid)
         if error := self._control_error(s):
             return error
@@ -240,13 +248,14 @@ class Nerv:
                 "message": str(res.get("message", ""))}
 
     def reset_world(self, sid: str) -> dict:
-        """Put the body back at its spawn pose (a simulated world only) and lift any hold."""
+        """Reset the entire simulated scene, including passive objects, preserving its time phase."""
         interrupt.request(sid)
         s = self.store.get(sid)
         if error := self._control_error(s):
             return error
         if not (s.body and s.world):
             return {"ok": False, "message": "this session has no world to reset"}
+        self.scene_tests.cancel(sid)
         wc = self.world_client(s.world, s.body)
         if wc is None:
             return {"ok": False, "message": f"the world `{s.world}` is not reachable"}
@@ -290,6 +299,10 @@ class Nerv:
 
     def handle_stream(self, sid: str, text: str) -> Iterator[dict]:
         s = self.store.get(sid)
+        if s.body and self.scene_tests.blocks(s.body):
+            yield {"type": op.EV_REPLY, "text": "End scene testing before starting a robot task"}
+            yield {"type": op.EV_DONE}
+            return
         if s.status != op.SESSION_ACTIVE:
             yield {"type": op.EV_REPLY, "text": messages.SESSION_NOT_ACTIVE.format(status=s.status)}
             yield {"type": op.EV_DONE}
@@ -351,6 +364,11 @@ class Nerv:
         recorded in the session as a step taken by the operator so the brain sees it next turn."""
         from ..nerve.brain import CallTool, Think
         s = self.store.get(sid)
+        if s.body and self.scene_tests.blocks(s.body):
+            yield {"type": op.EV_TOOL_RESULT, "name": name, "ok": False,
+                   "message": "End scene testing before moving the body"}
+            yield {"type": op.EV_DONE}
+            return
         if s.status != op.SESSION_ACTIVE:
             yield {"type": op.EV_TOOL_RESULT, "name": name, "ok": False,
                    "message": messages.SESSION_NOT_ACTIVE.format(status=s.status)}

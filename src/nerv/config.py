@@ -82,6 +82,8 @@ class Settings(BaseSettings):
     cors_origins: str = Field("http://localhost:8100", validation_alias="NERV_CORS_ORIGINS")
     serve_host: str = Field("127.0.0.1", validation_alias="NERV_SERVE_HOST")
     serve_port: int = Field(8000, validation_alias="NERV_SERVE_PORT")
+    scene_entry_timeout_s: float = Field(6.0, gt=0, validation_alias="NERV_SCENE_ENTRY_TIMEOUT_S")
+    scene_entry_poll_s: float = Field(0.1, gt=0, validation_alias="NERV_SCENE_ENTRY_POLL_S")
 
 
 _settings = Settings()
@@ -124,6 +126,8 @@ MODEL_OLLAMA = _settings.model_ollama
 CORS_ORIGINS = [o.strip() for o in _settings.cors_origins.split(",") if o.strip()]
 SERVE_HOST = _settings.serve_host
 SERVE_PORT = _settings.serve_port
+SCENE_ENTRY_TIMEOUT_S = _settings.scene_entry_timeout_s
+SCENE_ENTRY_POLL_S = _settings.scene_entry_poll_s
 
 _RUNTIME_PARAMS_SHOWN = ("max_steps", "turn_time_budget_s", "context_token_budget", "notes_max")
 _RUNTIME_PARAM_LABELS = {"max_steps": "Steps per turn", "turn_time_budget_s": "Time per turn (s)",

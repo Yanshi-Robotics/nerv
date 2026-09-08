@@ -7,6 +7,8 @@ import os
 import time
 from typing import Optional
 
+import httpx
+
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse, Response, StreamingResponse
@@ -16,6 +18,7 @@ from pydantic import BaseModel
 from .. import __version__, config, paths
 from ..brain.providers import list_brains
 from . import messages, trust
+from . import explore
 from .hub import Nerv
 from .session import log as slog
 
@@ -86,6 +89,30 @@ def registry() -> dict:
 @app.get("/api/brains")
 def brains() -> list:
     return list_brains()
+
+
+@app.get("/api/worlds/{world}/explore")
+def world_explore(world: str) -> dict:
+    try:
+        _directory, manifest = explore.read_manifest(nerv.registry.world(world))
+        return manifest
+    except KeyError:
+        raise HTTPException(404, "Unknown world")
+    except FileNotFoundError as error:
+        raise HTTPException(404, str(error))
+    except ValueError as error:
+        raise HTTPException(409, str(error))
+
+
+@app.get("/api/worlds/{world}/explore/assets/{filename:path}")
+def world_explore_asset(world: str, filename: str):
+    try:
+        path = explore.asset_path(nerv.registry.world(world), filename)
+        return FileResponse(path, headers={"Cache-Control": "no-cache"})
+    except (KeyError, FileNotFoundError) as error:
+        raise HTTPException(404, str(error))
+    except ValueError as error:
+        raise HTTPException(409, str(error))
 
 
 @app.get("/api/check")
@@ -174,6 +201,9 @@ def node_config(key: str, inp: ConfigIn) -> dict:
     c = nerv.node_client(key)
     if c is None:
         raise HTTPException(404, "no such node")
+    if (key.startswith("body:") and inp.key == "armed" and inp.value.lower() in ("true", "1", "yes", "on")
+            and nerv.scene_tests.blocks(key.partition(":")[2])):
+        raise HTTPException(409, "End scene testing before arming the body")
     r = c.set_config(inp.key, inp.value)
     c.refresh()
     return r
@@ -245,10 +275,48 @@ def release_session(sid: str) -> dict:
 
 @app.post("/api/sessions/{sid}/reset")
 def reset_session_world(sid: str) -> dict:
-    """Back to the spawn pose (simulated worlds only); lifts the hold."""
+    """Reset the whole simulated scene, including furniture; preserve the time preset."""
     if not nerv.store.exists(sid):
         raise HTTPException(404, "no such session")
     return nerv.reset_world(sid)
+
+
+@app.get("/api/sessions/{sid}/scene/frame")
+def scene_test_frame(sid: str, owner: str, token: str, epoch: str):
+    try:
+        client, credentials = nerv.scene_tests.credentials(sid, dict(owner=owner, token=token, epoch=epoch))
+        content, stamp = client.scene_frame(credentials)
+        return Response(content, media_type="image/jpeg", headers={"Cache-Control": "no-store", "X-Sim-Time": stamp})
+    except (ValueError, KeyError) as error:
+        raise HTTPException(409, str(error))
+    except httpx.HTTPError:
+        raise HTTPException(503, "The scene camera is unavailable")
+
+
+@app.get("/api/sessions/{sid}/scene/{resource}")
+def scene_test_read(sid: str, resource: str):
+    if resource not in ("state", "catalogue"):
+        raise HTTPException(404, "Unknown scene resource")
+    try:
+        return nerv.scene_tests.read(sid, resource)
+    except (ValueError, KeyError) as error:
+        raise HTTPException(409, str(error))
+    except httpx.HTTPError:
+        raise HTTPException(503, "The world is unavailable")
+
+
+@app.post("/api/sessions/{sid}/scene/{operation}")
+def scene_test_operation(sid: str, operation: str, payload: dict):
+    try:
+        if operation == "acquire":
+            return nerv.scene_tests.acquire(sid, str(payload.get("owner", "")))
+        if operation not in ("heartbeat", "release", "command"):
+            raise HTTPException(404, "Unknown scene operation")
+        return nerv.scene_tests.action(sid, operation, payload)
+    except (ValueError, KeyError) as error:
+        raise HTTPException(409, str(error))
+    except httpx.HTTPError:
+        raise HTTPException(503, "The world is unavailable")
 
 
 @app.post("/api/sessions/{sid}/brain")

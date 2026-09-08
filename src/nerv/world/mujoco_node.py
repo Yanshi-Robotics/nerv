@@ -40,9 +40,11 @@ from ..nerve.world import (OP_CLOSE, OP_EPOCH, OP_RAYS, OP_READ, OP_RESET, OP_SE
                            OP_SENSORS, OP_SPAWN, OP_WRITE, PD_EXPLICIT, PD_IMPLICIT,
                            PD_POSITION_ACTUATOR)
 from .bus_server import BusServer  # noqa: E402
+from .scene_operator import SceneOperator, DEFAULTS as SCENE_DEFAULTS  # noqa: E402
 
 # ---- named defaults: every one of these can be overridden from world.yaml `physics:` ------------
 DEFAULT_PHYSICS: dict[str, Any] = {
+    **SCENE_DEFAULTS,
     "dt": 0.002,                 # MuJoCo step (s); the Unitree deployment recipe uses the same
     "realtime_factor": 1.0,      # 1 = wall time; >1 = faster than life (streams look sped up)
     "steps_per_tick": 5,         # physics steps between sleeps; 5 × 2 ms = a 10 ms scheduling grain
@@ -99,6 +101,7 @@ class SceneLayout:
     """
 
     def __init__(self, assets_root: str, scene: str) -> None:
+        self.assets_root = assets_root
         manifest = os.path.join(assets_root, "scenes", "manifest.py")
         if not os.path.isfile(manifest):
             raise FileNotFoundError(f"no scene manifest at {manifest}; is the worlds/ submodule initialised "
@@ -108,6 +111,20 @@ class SceneLayout:
         spec.loader.exec_module(mod)
         self.scene = scene
         self.layout = mod.load_layout(scene)
+
+    def operator_runtime(self, model, data):
+        """Optional control-plane scene extension, loaded through the asset boundary."""
+        path = os.path.join(self.assets_root, "scenes", "operator.py")
+        if not os.path.isfile(path):
+            return None
+        spec = importlib.util.spec_from_file_location("nerv_scene_operator", path)
+        module = importlib.util.module_from_spec(spec)
+        sys.path.insert(0, self.assets_root)
+        try:
+            spec.loader.exec_module(module)
+            return module.SceneRuntime(model, data, self.scene)
+        finally:
+            sys.path.remove(self.assets_root)
 
     def spawn_pose(self, point: str) -> tuple[float, float, float]:
         L = self.layout
@@ -287,6 +304,8 @@ class WorldSim:
         self._running = False
         self._thread: threading.Thread | None = None
         mujoco.mj_forward(self.model, self.data)
+        runtime = layout.operator_runtime(self.model, self.data) if layout is not None else None
+        self.scene_operator = SceneOperator(self, runtime) if runtime is not None else None
 
     # ---- physics thread --------------------------------------------------------------------------------
     def start(self) -> None:
@@ -297,6 +316,9 @@ class WorldSim:
         self._thread.start()
 
     def stop(self) -> None:
+        with self._lock:
+            if self.scene_operator:
+                self.scene_operator.revoke("world_stopped")
         self._running = False
         if self._thread:
             self._thread.join(timeout=2)
@@ -314,6 +336,8 @@ class WorldSim:
             with self._lock:
                 for _ in range(n):
                     self._apply_firmware()
+                    if self.scene_operator:
+                        self.scene_operator.tick()
                     mujoco.mj_step(self.model, self.data)
                 self._update_imu(tick_sim)
             now = time.perf_counter()
@@ -470,6 +494,8 @@ class WorldSim:
         return x, y, z, yaw
 
     def _place(self) -> None:
+        if self.scene_operator:
+            self.scene_operator.reset()
         """Body back at the spawn pose, joints at default, everything at rest."""
         mujoco.mj_resetData(self.model, self.data)
         if self.spawn_pose is not None:
@@ -632,6 +658,42 @@ class WorldSim:
             return r.render().copy(), t
         return self.render.run(job)
 
+    def scene_state(self) -> dict:
+        with self._lock:
+            return self.scene_operator.state() if self.scene_operator else {"available": False}
+
+    def scene_command(self, payload: dict) -> dict:
+        operator = self.scene_operator
+        if operator is None:
+            raise ValueError("This world does not offer scene tests")
+        action = str(payload.get("action", ""))
+        credentials = {key: str(payload.get(key, "")) for key in ("session", "owner", "token", "epoch")}
+        with self._lock:
+            operator.check(**credentials)
+        if action == "time":
+            # Texture uploads must run on the context-owning thread, never an HTTP worker.
+            def job(renderer):
+                with self._lock:
+                    operator.check(**credentials)
+                    operator.runtime.set_time(str(payload.get("phase", "")), renderer)
+            self.render.run(job)
+        else:
+            with self._lock:
+                operator.check(**credentials)
+                operator.command(action, payload)
+        return {"ok": True, **self.scene_state()}
+
+    def render_scene_operator(self, credentials: dict) -> tuple[np.ndarray, float]:
+        def job(renderer):
+            with self._lock:
+                if self.scene_operator is None:
+                    raise ValueError("Scene tests are unavailable")
+                self.scene_operator.check(**credentials)
+                renderer.update_scene(self.data, camera=self.scene_operator.camera)
+                t = float(self.data.time)
+            return renderer.render().copy(), t
+        return self.render.run(job)
+
     def set_view(self, zoom: float | None = None, yaw: float | None = None, pitch: float | None = None) -> dict:
         """The operator's chase-view nudge: `zoom` scales the distance, `yaw` (deg) swings the camera
         around the body, `pitch` (deg) tilts it. Clamped here; the render eases toward it."""
@@ -773,6 +835,54 @@ def build_app(sim: WorldSim, cors_origins: list[str]):
     @app.get("/status")
     def status() -> dict:
         return sim.status()
+
+    @app.get("/scene/state")
+    def scene_state() -> dict:
+        return sim.scene_state()
+
+    @app.get("/scene/catalogue")
+    def scene_catalogue() -> dict:
+        with sim._lock:
+            return sim.scene_operator.runtime.catalogue() if sim.scene_operator else {"facilities": []}
+
+    @app.post("/scene/acquire")
+    def scene_acquire(payload: dict) -> dict:
+        try:
+            with sim._lock:
+                if sim.scene_operator is None:
+                    raise ValueError("Scene tests are unavailable")
+                lease = sim.scene_operator.acquire(str(payload.get("session", "")),
+                    str(payload.get("owner", "")), str(payload.get("epoch", "")))
+            return {"ok": True, **lease, **sim.scene_state()}
+        except (ValueError, KeyError) as error:
+            return {"ok": False, "message": str(error)}
+
+    @app.post("/scene/{operation}")
+    def scene_operation(operation: str, payload: dict) -> dict:
+        try:
+            if operation == "command":
+                return sim.scene_command(payload)
+            if operation not in ("heartbeat", "release"):
+                raise ValueError("Unknown scene operation")
+            with sim._lock:
+                if sim.scene_operator is None:
+                    raise ValueError("Scene tests are unavailable")
+                credentials = {k: str(payload.get(k, "")) for k in ("session", "owner", "token", "epoch")}
+                sim.scene_operator.check(**credentials, renew=operation == "heartbeat")
+                if operation == "release":
+                    sim.scene_operator.revoke()
+            return {"ok": True, **sim.scene_state()}
+        except (ValueError, KeyError, TypeError) as error:
+            return {"ok": False, "message": str(error)}
+
+    @app.get("/scene/frame")
+    def scene_frame(session: str, owner: str, token: str, epoch: str):
+        try:
+            rgb, t = sim.render_scene_operator(dict(session=session, owner=owner, token=token, epoch=epoch))
+            return Response(_jpeg(rgb, sim.phys["jpeg_quality"]), media_type="image/jpeg",
+                            headers={"Cache-Control": "no-store", "X-Sim-Time": str(t)})
+        except (ValueError, TimeoutError, RuntimeError) as error:
+            return JSONResponse({"ok": False, "message": str(error)}, status_code=409)
 
     @app.get("/sensors")
     def sensors() -> dict:
