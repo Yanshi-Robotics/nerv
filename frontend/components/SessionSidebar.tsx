@@ -15,7 +15,7 @@ const CONVERSATION_ONLY = ""; // world 选中值空串 = 只聊天，不起身�
 //   收起 ≈ 56px：展开键 + 一列带提示的图标键（新建、仪表盘、日志、主题）；列表和上限藏起来
 // 折叠状态由 app/page.tsx 持有（栅格列宽要跟着变），存 localStorage 的 `nerv-sidebar`。
 // 右侧显示的面板；Dashboard 和 Logs 不是跳页，是换掉右边两栏，侧栏不动。
-export type Panel = "session" | "dashboard" | "logs";
+export type Panel = "session" | "dashboard" | "logs" | "explore";
 
 export default function SessionSidebar({
   sessions,
@@ -125,6 +125,10 @@ export default function SessionSidebar({
           <button onClick={() => onPanel("dashboard")} title={t("NERV dashboard")} aria-label={t("NERV dashboard")} aria-pressed={panel === "dashboard"}
             className={`${iconBtn} ${panel === "dashboard" ? "bg-neutral-800 text-neutral-100" : ""}`}>
             <DashboardIcon />
+          </button>
+          <button onClick={() => onPanel("explore")} title="Nerv World Explore" aria-label="Nerv World Explore" aria-pressed={panel === "explore"}
+            className={`${iconBtn} ${panel === "explore" ? "bg-neutral-800 text-neutral-100" : ""}`}>
+            <ExploreIcon />
           </button>
           <button onClick={() => onPanel("logs")} title="Session Logs" aria-label="Session Logs" aria-pressed={panel === "logs"}
             className={`${iconBtn} ${panel === "logs" ? "bg-neutral-800 text-neutral-100" : ""}`}>
@@ -273,6 +277,9 @@ export default function SessionSidebar({
           <button onClick={() => onPanel("dashboard")} className={`${navRow} ${panel === "dashboard" ? "bg-neutral-800 text-neutral-100" : ""}`} title={t("NERV dashboard")} aria-pressed={panel === "dashboard"}>
             <DashboardIcon /> <span>{t("Dashboard")}</span>
           </button>
+          <button onClick={() => onPanel("explore")} className={`${navRow} ${panel === "explore" ? "bg-neutral-800 text-neutral-100" : ""}`} title="Nerv World Explore" aria-pressed={panel === "explore"}>
+            <ExploreIcon /> <span>Nerv World Explore</span>
+          </button>
           <button onClick={() => onPanel("logs")} className={`${navRow} ${panel === "logs" ? "bg-neutral-800 text-neutral-100" : ""}`} title="Session Logs" aria-pressed={panel === "logs"}>
             <LogsIcon /> <span>{t("Logs")}</span>
           </button>
@@ -331,6 +338,14 @@ function LogsIcon() {
   return (
     <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
       <path d="M4 6h16M4 12h16M4 18h10" />
+    </svg>
+  );
+}
+
+function ExploreIcon() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.7" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="m12 2 9 5v10l-9 5-9-5V7zM3 7l9 5 9-5M12 12v10M7.5 4.5l9 5v5" />
     </svg>
   );
 }
