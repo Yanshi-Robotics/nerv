@@ -1,0 +1,70 @@
+{
+  "reviewed_revision": "4b12216f3b51a7087a3701cdfc0cd423e59c73d1",
+  "scope": "Real handler/ownership/parser; deterministic mocked transport, no physics or services",
+  "handler_source_sha256": "13518e5664c28b50a0c21f6af15f22c967b8de02b11fed735e3fd8077201cca0",
+  "reproduced_baseline_defects": true,
+  "cases": [
+    {
+      "case": "active_lease_boolean_alias",
+      "value": "true",
+      "http_status": 409,
+      "error": "End scene testing before arming the body",
+      "body_armed": false,
+      "local_lease_active": true,
+      "session_armed": false
+    },
+    {
+      "case": "active_lease_boolean_alias",
+      "value": "armed",
+      "response": {
+        "ok": true,
+        "message": "body armed",
+        "armed": true
+      },
+      "body_armed": true,
+      "local_lease_active": true,
+      "session_armed": false
+    },
+    {
+      "case": "active_lease_boolean_alias",
+      "value": " true ",
+      "response": {
+        "ok": true,
+        "message": "body armed",
+        "armed": true
+      },
+      "body_armed": true,
+      "local_lease_active": true,
+      "session_armed": false
+    },
+    {
+      "case": "active_lease_boolean_alias",
+      "value": "ARMED",
+      "response": {
+        "ok": true,
+        "message": "body armed",
+        "armed": true
+      },
+      "body_armed": true,
+      "local_lease_active": true,
+      "session_armed": false
+    },
+    {
+      "case": "ordinary_true_request_overtakes_scene_acquisition",
+      "remote_state_order": [
+        "false",
+        "true"
+      ],
+      "response": [
+        {
+          "ok": true,
+          "message": "body armed",
+          "armed": true
+        }
+      ],
+      "body_armed": true,
+      "local_lease_active": true,
+      "session_armed": false
+    }
+  ]
+}

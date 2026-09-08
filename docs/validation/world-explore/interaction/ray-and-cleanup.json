@@ -1,0 +1,745 @@
+{
+  "scope": "actual apt ray/force layer; deterministic entry fixture, no browser/standing/physics trajectory proof",
+  "model_sha256": "397d0330f435d5560896b3232adadde0c84c8ebce8d6a6ea7c0833212a78f15e",
+  "facilities": [
+    {
+      "id": "ix_a2_fridge__freezer_door_joint",
+      "kind": "joint",
+      "selectable": true,
+      "distance": 1.4380727543311183,
+      "ray_xy": [
+        0.0,
+        0.0
+      ],
+      "view": {
+        "lookat": [
+          -11.077090630949668,
+          3.2604960673362045,
+          1.0280913040049446
+        ],
+        "azimuth": 90.0,
+        "elevation": -12.0,
+        "distance": 1.6
+      },
+      "force_norm_before_cancel": 31.41592654,
+      "cancel_preserves_pose_and_other_forces": true,
+      "out_of_reach_rejected": true
+    },
+    {
+      "id": "ix_a2_fridge__freezer_drawer0_joint",
+      "kind": "joint",
+      "selectable": true,
+      "distance": 1.47661065925311,
+      "ray_xy": [
+        0.0,
+        0.0
+      ],
+      "view": {
+        "lookat": [
+          -10.930316526517718,
+          3.7313057571780823,
+          0.1952824054172074
+        ],
+        "azimuth": 90.0,
+        "elevation": -12.0,
+        "distance": 1.6
+      },
+      "force_norm_before_cancel": 32.9174985475,
+      "cancel_preserves_pose_and_other_forces": true,
+      "out_of_reach_rejected": true
+    },
+    {
+      "id": "ix_a2_fridge__freezer_drawer1_joint",
+      "kind": "joint",
+      "selectable": true,
+      "distance": 1.4739630633916028,
+      "ray_xy": [
+        0.0,
+        0.0
+      ],
+      "view": {
+        "lookat": [
+          -10.929569021499832,
+          3.731866819557309,
+          0.5853288882008755
+        ],
+        "azimuth": 90.0,
+        "elevation": -12.0,
+        "distance": 1.6
+      },
+      "force_norm_before_cancel": 32.9174985475,
+      "cancel_preserves_pose_and_other_forces": true,
+      "out_of_reach_rejected": true
+    },
+    {
+      "id": "ix_a2_fridge__fridge_door_joint",
+      "kind": "joint",
+      "selectable": true,
+      "distance": 1.4240786493778046,
+      "ray_xy": [
+        0.0,
+        0.0
+      ],
+      "view": {
+        "lookat": [
+          -10.3475858813169,
+          3.224387759327217,
+          1.2663380948682141
+        ],
+        "azimuth": 90.0,
+        "elevation": -12.0,
+        "distance": 1.6
+      },
+      "force_norm_before_cancel": 31.41592654,
+      "cancel_preserves_pose_and_other_forces": true,
+      "out_of_reach_rejected": true
+    },
+    {
+      "id": "ix_a2_fridge__fridge_drawer0_joint",
+      "kind": "joint",
+      "selectable": true,
+      "distance": 1.4697208054012587,
+      "ray_xy": [
+        0.0,
+        0.0
+      ],
+      "view": {
+        "lookat": [
+          -10.529531137991796,
+          3.73403166291337,
+          0.21567749926206278
+        ],
+        "azimuth": 90.0,
+        "elevation": -12.0,
+        "distance": 1.6
+      },
+      "force_norm_before_cancel": 32.9174985475,
+      "cancel_preserves_pose_and_other_forces": true,
+      "out_of_reach_rejected": true
+    },
+    {
+      "id": "ix_a2_fridge__fridge_drawer1_joint",
+      "kind": "joint",
+      "selectable": true,
+      "distance": 1.4676435091478777,
+      "ray_xy": [
+        0.0,
+        0.0
+      ],
+      "view": {
+        "lookat": [
+          -10.52901562712025,
+          3.737053343752706,
+          0.6053048191969793
+        ],
+        "azimuth": 90.0,
+        "elevation": -12.0,
+        "distance": 1.6
+      },
+      "force_norm_before_cancel": 32.9174985475,
+      "cancel_preserves_pose_and_other_forces": true,
+      "out_of_reach_rejected": true
+    },
+    {
+      "id": "ix_a2_stove__knob_front_left_joint",
+      "kind": "joint",
+      "selectable": true,
+      "distance": 1.5868646227115755,
+      "ray_xy": [
+        0.0,
+        0.0
+      ],
+      "view": {
+        "lookat": [
+          -8.697102744364665,
+          7.201831313517406,
+          1.0412885060181436
+        ],
+        "azimuth": 90.0,
+        "elevation": -12.0,
+        "distance": 1.6
+      },
+      "force_norm_before_cancel": 35.0,
+      "cancel_preserves_pose_and_other_forces": true,
+      "out_of_reach_rejected": true
+    },
+    {
+      "id": "ix_a2_stove__knob_front_right_joint",
+      "kind": "joint",
+      "selectable": true,
+      "distance": 1.5868646185981583,
+      "ray_xy": [
+        0.0,
+        0.0
+      ],
+      "view": {
+        "lookat": [
+          -8.103171358807716,
+          7.201831314313935,
+          1.0414170691861273
+        ],
+        "azimuth": 90.0,
+        "elevation": -12.0,
+        "distance": 1.6
+      },
+      "force_norm_before_cancel": 35.0,
+      "cancel_preserves_pose_and_other_forces": true,
+      "out_of_reach_rejected": true
+    },
+    {
+      "id": "ix_a2_stove__knob_rear_left_joint",
+      "kind": "joint",
+      "selectable": true,
+      "distance": 1.586864615764342,
+      "ray_xy": [
+        0.0,
+        0.0
+      ],
+      "view": {
+        "lookat": [
+          -8.578208426603537,
+          7.201831315241826,
+          1.0412885052463026
+        ],
+        "azimuth": 90.0,
+        "elevation": -12.0,
+        "distance": 1.6
+      },
+      "force_norm_before_cancel": 35.0,
+      "cancel_preserves_pose_and_other_forces": true,
+      "out_of_reach_rejected": true
+    },
+    {
+      "id": "ix_a2_stove__knob_rear_right_joint",
+      "kind": "joint",
+      "selectable": true,
+      "distance": 1.5868646124911574,
+      "ray_xy": [
+        0.0,
+        0.0
+      ],
+      "view": {
+        "lookat": [
+          -8.221911120606178,
+          7.2018313152164835,
+          1.0413407607925553
+        ],
+        "azimuth": 90.0,
+        "elevation": -12.0,
+        "distance": 1.6
+      },
+      "force_norm_before_cancel": 35.0,
+      "cancel_preserves_pose_and_other_forces": true,
+      "out_of_reach_rejected": true
+    },
+    {
+      "id": "ix_a2_stove__Door001_joint",
+      "kind": "joint",
+      "selectable": true,
+      "distance": 1.4656830938181176,
+      "ray_xy": [
+        0.0,
+        0.0
+      ],
+      "view": {
+        "lookat": [
+          -8.40067020430202,
+          6.245673619274927,
+          0.2745321854560576
+        ],
+        "azimuth": 90.0,
+        "elevation": -12.0,
+        "distance": 1.6
+      },
+      "force_norm_before_cancel": 35.0,
+      "cancel_preserves_pose_and_other_forces": true,
+      "out_of_reach_rejected": true
+    },
+    {
+      "id": "ix_a2_stove__Knob001_joint",
+      "kind": "joint",
+      "selectable": true,
+      "distance": 1.5868644896857547,
+      "ray_xy": [
+        0.0,
+        0.0
+      ],
+      "view": {
+        "lookat": [
+          -8.459187187148855,
+          7.201831431650294,
+          1.044120539819176
+        ],
+        "azimuth": 90.0,
+        "elevation": -12.0,
+        "distance": 1.6
+      },
+      "force_norm_before_cancel": 35.0,
+      "cancel_preserves_pose_and_other_forces": true,
+      "out_of_reach_rejected": true
+    },
+    {
+      "id": "ix_a2_stove__Knob002_joint",
+      "kind": "joint",
+      "selectable": true,
+      "distance": 1.5865175344556106,
+      "ray_xy": [
+        0.0,
+        0.0
+      ],
+      "view": {
+        "lookat": [
+          -8.340574157486877,
+          7.201661527893221,
+          1.0444981561864501
+        ],
+        "azimuth": 90.0,
+        "elevation": -12.0,
+        "distance": 1.6
+      },
+      "force_norm_before_cancel": 35.0,
+      "cancel_preserves_pose_and_other_forces": true,
+      "out_of_reach_rejected": true
+    },
+    {
+      "id": "ix_a2_stove__Shelf001_joint",
+      "kind": "joint",
+      "selectable": true,
+      "distance": 1.5849674917503263,
+      "ray_xy": [
+        0.0,
+        0.0
+      ],
+      "view": {
+        "lookat": [
+          -8.399536718576554,
+          6.9223164281343,
+          0.5424143849185785
+        ],
+        "azimuth": 90.0,
+        "elevation": -12.0,
+        "distance": 1.6
+      },
+      "force_norm_before_cancel": 25.9874991425,
+      "cancel_preserves_pose_and_other_forces": true,
+      "out_of_reach_rejected": true
+    },
+    {
+      "id": "ix_a2_sink__handle_temp_joint",
+      "kind": "joint",
+      "selectable": true,
+      "distance": 1.596787580539432,
+      "ray_xy": [
+        0.0,
+        0.0
+      ],
+      "view": {
+        "lookat": [
+          -8.386397536701049,
+          4.375705087745119,
+          0.9842763139525607
+        ],
+        "azimuth": 90.0,
+        "elevation": -12.0,
+        "distance": 1.6
+      },
+      "force_norm_before_cancel": 15.707956982733327,
+      "cancel_preserves_pose_and_other_forces": true,
+      "out_of_reach_rejected": true
+    },
+    {
+      "id": "ix_a2_sink__handle_joint",
+      "kind": "joint",
+      "selectable": true,
+      "distance": 1.596787580539432,
+      "ray_xy": [
+        0.0,
+        0.0
+      ],
+      "view": {
+        "lookat": [
+          -8.386397536701049,
+          4.375705087745119,
+          0.9842763139525607
+        ],
+        "azimuth": 90.0,
+        "elevation": -12.0,
+        "distance": 1.6
+      },
+      "force_norm_before_cancel": 9.999879463280067,
+      "cancel_preserves_pose_and_other_forces": true,
+      "out_of_reach_rejected": true
+    },
+    {
+      "id": "ix_a2_sink__spout_joint",
+      "kind": "joint",
+      "selectable": true,
+      "distance": 0.20827612408063467,
+      "ray_xy": [
+        -0.45,
+        -0.029999999999999916
+      ],
+      "view": {
+        "lookat": [
+          -8.474117301517785,
+          4.31883698443275,
+          1.119945651579885
+        ],
+        "azimuth": 90.0,
+        "elevation": -12.0,
+        "distance": 0.3
+      },
+      "force_norm_before_cancel": 31.41592654,
+      "cancel_preserves_pose_and_other_forces": true,
+      "out_of_reach_rejected": true
+    },
+    {
+      "id": "ix_a2_hood__Button001_joint",
+      "kind": "joint",
+      "selectable": true,
+      "distance": 1.597933760235976,
+      "ray_xy": [
+        0.0,
+        0.0
+      ],
+      "view": {
+        "lookat": [
+          -8.459876364794294,
+          6.813881830909722,
+          1.6297972286078426
+        ],
+        "azimuth": 90.0,
+        "elevation": -12.0,
+        "distance": 1.6
+      },
+      "force_norm_before_cancel": 15.0,
+      "cancel_preserves_pose_and_other_forces": true,
+      "out_of_reach_rejected": true
+    },
+    {
+      "id": "ix_a2_hood__Button002_joint",
+      "kind": "joint",
+      "selectable": true,
+      "distance": 1.5979561333522725,
+      "ray_xy": [
+        0.0,
+        0.0
+      ],
+      "view": {
+        "lookat": [
+          -8.429948489299285,
+          6.813859946699695,
+          1.629788064723653
+        ],
+        "azimuth": 90.0,
+        "elevation": -12.0,
+        "distance": 1.6
+      },
+      "force_norm_before_cancel": 15.0,
+      "cancel_preserves_pose_and_other_forces": true,
+      "out_of_reach_rejected": true
+    },
+    {
+      "id": "ix_a2_hood__Button003_joint",
+      "kind": "joint",
+      "selectable": true,
+      "distance": 1.597921626922513,
+      "ray_xy": [
+        0.0,
+        0.0
+      ],
+      "view": {
+        "lookat": [
+          -8.400024751650928,
+          6.8138936990811745,
+          1.6297880618844556
+        ],
+        "azimuth": 90.0,
+        "elevation": -12.0,
+        "distance": 1.6
+      },
+      "force_norm_before_cancel": 15.0,
+      "cancel_preserves_pose_and_other_forces": true,
+      "out_of_reach_rejected": true
+    },
+    {
+      "id": "ix_a2_hood__Button004_joint",
+      "kind": "joint",
+      "selectable": true,
+      "distance": 1.5979643782528006,
+      "ray_xy": [
+        0.0,
+        0.0
+      ],
+      "view": {
+        "lookat": [
+          -8.370098767456897,
+          6.813851881970026,
+          1.6297891717476913
+        ],
+        "azimuth": 90.0,
+        "elevation": -12.0,
+        "distance": 1.6
+      },
+      "force_norm_before_cancel": 15.0,
+      "cancel_preserves_pose_and_other_forces": true,
+      "out_of_reach_rejected": true
+    },
+    {
+      "id": "ix_a2_hood__Button005_joint",
+      "kind": "joint",
+      "selectable": true,
+      "distance": 1.597953169151442,
+      "ray_xy": [
+        0.0,
+        0.0
+      ],
+      "view": {
+        "lookat": [
+          -8.340181350007747,
+          6.813862846125626,
+          1.6297799881213475
+        ],
+        "azimuth": 90.0,
+        "elevation": -12.0,
+        "distance": 1.6
+      },
+      "force_norm_before_cancel": 15.0,
+      "cancel_preserves_pose_and_other_forces": true,
+      "out_of_reach_rejected": true
+    },
+    {
+      "id": "ix_a2_can",
+      "kind": "movable",
+      "selectable": true,
+      "distance": 1.5667739306668795,
+      "ray_xy": [
+        0.0,
+        0.0
+      ],
+      "view": {
+        "lookat": [
+          -9.25,
+          4.3,
+          1.0125
+        ],
+        "azimuth": 90.0,
+        "elevation": -12.0,
+        "distance": 1.6
+      },
+      "force_norm_before_cancel": 2.279884693049034,
+      "cancel_preserves_pose_and_other_forces": true,
+      "out_of_reach_rejected": true
+    },
+    {
+      "id": "ix_a2_fruit",
+      "kind": "movable",
+      "selectable": true,
+      "distance": 1.5549999999999884,
+      "ray_xy": [
+        0.0,
+        0.0
+      ],
+      "view": {
+        "lookat": [
+          -9.15,
+          3.95,
+          0.99
+        ],
+        "azimuth": 90.0,
+        "elevation": -12.0,
+        "distance": 1.6
+      },
+      "force_norm_before_cancel": 2.061475395032295,
+      "cancel_preserves_pose_and_other_forces": true,
+      "out_of_reach_rejected": true
+    },
+    {
+      "id": "ix_a2_book",
+      "kind": "movable",
+      "selectable": true,
+      "distance": 1.5284361583594481,
+      "ray_xy": [
+        0.0,
+        0.0
+      ],
+      "view": {
+        "lookat": [
+          -7.45,
+          4.25,
+          0.9575
+        ],
+        "azimuth": 90.0,
+        "elevation": -12.0,
+        "distance": 1.6
+      },
+      "force_norm_before_cancel": 3.854930010823149,
+      "cancel_preserves_pose_and_other_forces": true,
+      "out_of_reach_rejected": true
+    },
+    {
+      "id": "ix_dn_w0",
+      "kind": "movable",
+      "selectable": true,
+      "distance": 1.3833885322289179,
+      "ray_xy": [
+        0.0,
+        0.0
+      ],
+      "view": {
+        "lookat": [
+          -3.556260469819698,
+          3.8085479970645406,
+          0.3593449079947417
+        ],
+        "azimuth": 90.0,
+        "elevation": -12.0,
+        "distance": 1.6
+      },
+      "force_norm_before_cancel": 94.34110610526088,
+      "cancel_preserves_pose_and_other_forces": true,
+      "out_of_reach_rejected": true
+    },
+    {
+      "id": "ix_dn_e0",
+      "kind": "movable",
+      "selectable": true,
+      "distance": 1.400643698738706,
+      "ray_xy": [
+        0.0,
+        0.0
+      ],
+      "view": {
+        "lookat": [
+          -2.043739530180302,
+          3.7914520029354595,
+          0.3593449079947417
+        ],
+        "azimuth": 90.0,
+        "elevation": -12.0,
+        "distance": 1.6
+      },
+      "force_norm_before_cancel": 94.34508088349872,
+      "cancel_preserves_pose_and_other_forces": true,
+      "out_of_reach_rejected": true
+    },
+    {
+      "id": "ix_dn_w1",
+      "kind": "movable",
+      "selectable": true,
+      "distance": 1.3833885322289168,
+      "ray_xy": [
+        0.0,
+        0.0
+      ],
+      "view": {
+        "lookat": [
+          -3.556260469819698,
+          4.608547997064541,
+          0.3593449079947417
+        ],
+        "azimuth": 90.0,
+        "elevation": -12.0,
+        "distance": 1.6
+      },
+      "force_norm_before_cancel": 94.34110610526089,
+      "cancel_preserves_pose_and_other_forces": true,
+      "out_of_reach_rejected": true
+    },
+    {
+      "id": "ix_dn_e1",
+      "kind": "movable",
+      "selectable": true,
+      "distance": 1.4006436987387068,
+      "ray_xy": [
+        0.0,
+        0.0
+      ],
+      "view": {
+        "lookat": [
+          -2.043739530180302,
+          4.591452002935458,
+          0.3593449079947417
+        ],
+        "azimuth": 90.0,
+        "elevation": -12.0,
+        "distance": 1.6
+      },
+      "force_norm_before_cancel": 94.34508088349872,
+      "cancel_preserves_pose_and_other_forces": true,
+      "out_of_reach_rejected": true
+    },
+    {
+      "id": "ix_dn_w2",
+      "kind": "movable",
+      "selectable": true,
+      "distance": 1.3833885322289179,
+      "ray_xy": [
+        0.0,
+        0.0
+      ],
+      "view": {
+        "lookat": [
+          -3.556260469819698,
+          5.408547997064541,
+          0.3593449079947417
+        ],
+        "azimuth": 90.0,
+        "elevation": -12.0,
+        "distance": 1.6
+      },
+      "force_norm_before_cancel": 94.34110610526088,
+      "cancel_preserves_pose_and_other_forces": true,
+      "out_of_reach_rejected": true
+    },
+    {
+      "id": "ix_dn_e2",
+      "kind": "movable",
+      "selectable": true,
+      "distance": 1.4006436987387068,
+      "ray_xy": [
+        0.0,
+        0.0
+      ],
+      "view": {
+        "lookat": [
+          -2.043739530180302,
+          5.391452002935459,
+          0.3593449079947417
+        ],
+        "azimuth": 90.0,
+        "elevation": -12.0,
+        "distance": 1.6
+      },
+      "force_norm_before_cancel": 94.34508088349872,
+      "cancel_preserves_pose_and_other_forces": true,
+      "out_of_reach_rejected": true
+    }
+  ],
+  "selected": 31,
+  "total": 31,
+  "closed_door": {
+    "drawer": "ix_a2_fridge__freezer_drawer0_joint",
+    "occluded": true,
+    "hit": [
+      "ix_a2_fridge__freezer_door_joint"
+    ]
+  },
+  "interruptions": [
+    {
+      "cause": "expired",
+      "forces_cleared": true,
+      "reason": "lease_expired"
+    },
+    {
+      "cause": "fallen",
+      "forces_cleared": true,
+      "reason": "robot_fallen"
+    },
+    {
+      "cause": "reset",
+      "forces_cleared": true,
+      "reason": "scene_reset"
+    }
+  ]
+}

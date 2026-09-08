@@ -1,0 +1,48 @@
+{
+  "date": "2026-09-08",
+  "physical_and_route_sources_unchanged": true,
+  "hashes": {
+    "scenes/paths.py": "6c6ce4557f73cfdb5bc80ce39f608e2bf995947e9b7c754988ac7a29528c451a",
+    "build/apt-g1.xml": "397d0330f435d5560896b3232adadde0c84c8ebce8d6a6ea7c0833212a78f15e",
+    "build/apt-go2.xml": "f4d76ce185feb33d293cfba454a8118e8f6678921fcc3b1549713e5334c35fb2",
+    "build/house-g1.xml": "504d12a89c4923e0998e5468c69b50cbf6731ef597c5dc0a37001c5f36a51a0b",
+    "build/house-go2.xml": "6bfb2c702f85718749e558e7ae6fb6b81063b529effb916c71f1a94ba2f4efe0",
+    "decor/manifest.py": "3ea4011b0f255af530d65d086f99d219298661e8358ec8b87df1742c9284fcc8",
+    "decor/decor.lock.json": "d439b817e8a376b3e52bb5d4c93dc8cdc7e702f7f3e64d166fe0996cc4922a60"
+  },
+  "scenes": {
+    "apt": {
+      "changed_facilities": [
+        "st_chair"
+      ],
+      "source_hash": "718f51d24b5809cf5dc7de5397403cdae904714cbdaa8ffe7c3e943c5dc08b16",
+      "assets": [
+        {
+          "path": "scene.glb",
+          "hash": "edfedb48edbf9a47cf017db749dcbb45c5cd0cd4850c7a8a75a85b190ec3a570",
+          "bytes": 49308988
+        }
+      ],
+      "routes_unchanged": true
+    },
+    "house": {
+      "changed_facilities": [
+        "h2_dining_chair0_-1",
+        "h2_dining_chair0_1",
+        "h2_dining_chair1_-1",
+        "h2_dining_chair1_1",
+        "h2_dining_chair2_-1",
+        "h2_dining_chair2_1"
+      ],
+      "source_hash": "f14460841e04973d8d57878e23f932233da4c243a7b6f470b6602b4799c55fc2",
+      "assets": [
+        {
+          "path": "scene.glb",
+          "hash": "328cce1b213d91d8336dcff05203937a568e64619295c3d6064d1d2ea9be465b",
+          "bytes": 87310004
+        }
+      ],
+      "routes_unchanged": true
+    }
+  }
+}

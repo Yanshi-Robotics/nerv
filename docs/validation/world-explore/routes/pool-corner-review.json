@@ -1,0 +1,19 @@
+{
+  "created": "2026-09-08",
+  "reviewer": "scene_contract_audit/pool_failure_review",
+  "mode": "Independent read-only review; no simulation, file edits, or service access",
+  "blockers": [],
+  "confirmed": [
+    "Actual repetition 2 reached 28 waypoints and action 49 returned turn stopped after 0 degrees: obstacle",
+    "The recorded root XY/yaw with default standing joints reproduces the refusal against geom 2600 h2_pergola_post17.5_-7.0",
+    "Thirty-nine rays hit the post inside the 0.336483 m static envelope; nearest ray distance is 0.331299 m",
+    "The original nominal corner lacks room for the static turn envelope plus the unchanged 0.18 m goal tolerance",
+    "Reusing only ESTATE routes[1] first two points for pool_loop provides 0.393517 m remaining static clearance after the goal tolerance",
+    "All 32 sampled candidate tolerance-boundary/yaw combinations pass the existing scanner"
+  ],
+  "limits": [
+    "The evidence proves entry into the protection envelope, not actual physical contact with the post",
+    "Static default joints at root z 0.80 m are not a replay of the unrecorded live joint state at z 0.789 m",
+    "The corrected route needs fresh actual repetitions; old-route successes do not count toward five identical final-route passes"
+  ]
+}

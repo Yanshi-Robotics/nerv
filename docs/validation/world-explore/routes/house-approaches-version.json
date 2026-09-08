@@ -1,0 +1,17 @@
+{
+  "created_utc": "2026-09-08T05:31:50.327423+00:00",
+  "task": "House pool and lawn approach routes, five round trips each through real Hub/MCP/ZMQ",
+  "worlds_commit": "b0793444c2f5813e4a52de25e6715567436058ce",
+  "parent_commit": "22d9ba23cdb659ef63c8b4c6df57e87e9cd59392",
+  "mujoco_version": "3.12.0",
+  "timestep": 0.002,
+  "disableflags": 0,
+  "nativeccd_disable_bit": 131072,
+  "nativeccd_enabled": true,
+  "model_sha256": "504d12a89c4923e0998e5468c69b50cbf6731ef597c5dc0a37001c5f36a51a0b",
+  "node_ports": "8119-8121",
+  "MUJOCO_GL": "disable",
+  "CUDA_VISIBLE_DEVICES": "",
+  "max_rise_m": 0.03,
+  "command": ".venv/bin/python temp/world-explore/verify_routes.py --scene house --repeats 5 --route pool_approach,lawn_approach --output temp/world-explore/routes-house-approaches-release"
+}

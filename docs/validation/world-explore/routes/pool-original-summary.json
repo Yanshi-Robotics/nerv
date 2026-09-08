@@ -1,0 +1,82 @@
+{
+  "created": "2026-09-08",
+  "passed": false,
+  "requested_additional_repetitions": 4,
+  "completed_additional_repetitions": 1,
+  "valid_pool_repetitions_including_prior": 2,
+  "prior_valid_report": "temp/world-explore/routes-house-heading-check/actual/report.json",
+  "MUJOCO_GL": "disable",
+  "max_rise_m": 0.03,
+  "routes": [
+    {
+      "repetition": 1,
+      "passed": true,
+      "waypoints": 137,
+      "actions": 229,
+      "max_waypoint_error_m": 0.1429146312899226,
+      "max_waypoint_tilt_deg": 1.1,
+      "last_reached": {
+        "goal": [
+          8.0,
+          -2.7,
+          0.0
+        ],
+        "actual": {
+          "x": 8.017,
+          "y": -2.69,
+          "z": 0.789,
+          "yaw_deg": 269.9
+        },
+        "error_m": 0.01972308292331567,
+        "tilt_deg": 0.7
+      },
+      "failed_actions": [],
+      "braked_reports": 0,
+      "action_wall_seconds": 545.1415780860698
+    },
+    {
+      "repetition": 2,
+      "passed": false,
+      "waypoints": 28,
+      "actions": 49,
+      "max_waypoint_error_m": 0.14661927914756448,
+      "max_waypoint_tilt_deg": 1.1,
+      "last_reached": {
+        "goal": [
+          17.5,
+          -7.5,
+          0.0
+        ],
+        "actual": {
+          "x": 17.495,
+          "y": -7.421,
+          "z": 0.789,
+          "yaw_deg": 359.1
+        },
+        "error_m": 0.07915806970865288,
+        "tilt_deg": 0.6
+      },
+      "failed_actions": [
+        {
+          "action": "turn_right",
+          "arguments": {
+            "degrees": 88.89715999476147
+          },
+          "result": {
+            "type": "tool_result",
+            "name": "turn_right",
+            "ok": false,
+            "message": "turn stopped after 0°: obstacle"
+          },
+          "wall_seconds": 0.8144661580445245
+        }
+      ],
+      "braked_reports": 0,
+      "action_wall_seconds": 118.47638477315195
+    }
+  ],
+  "error": "RuntimeError: Action refused or failed: {'type': 'tool_result', 'name': 'turn_right', 'ok': False, 'message': 'turn stopped after 0°: obstacle'}",
+  "interpretation": "Real production turn protection refused motion near a pergola post. No retry, source change, route change, threshold reduction, or fall. Repetitions 3 and 4 were not executed. Static default-joint diagnosis is separate from actual route evidence.",
+  "source_changed_since_run": {},
+  "diagnosis": "corner-diagnosis.json"
+}

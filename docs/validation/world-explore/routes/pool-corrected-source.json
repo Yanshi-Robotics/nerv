@@ -1,0 +1,67 @@
+{
+  "created": "2026-09-08",
+  "task": "Five fresh production-chain roundtrips of corrected pool_loop",
+  "route": {
+    "id": "pool_loop",
+    "label": {
+      "en": "Complete pool circuit",
+      "zh": "\u6cf3\u6c60\u5b8c\u6574\u73af\u7ebf"
+    },
+    "points": [
+      [
+        -1.4,
+        -8,
+        0
+      ],
+      [
+        17.5,
+        -8,
+        0
+      ],
+      [
+        17.5,
+        -11.5,
+        0
+      ],
+      [
+        17.5,
+        -29.25,
+        0
+      ],
+      [
+        26.99,
+        -29.25,
+        0
+      ],
+      [
+        26.99,
+        -11.5,
+        0
+      ],
+      [
+        17.5,
+        -11.5,
+        0
+      ]
+    ]
+  },
+  "repetitions": 5,
+  "max_rise_m": 0.03,
+  "MUJOCO_GL": "disable",
+  "old_route_passes_included": 0,
+  "source_sha256": {
+    "temp/world-explore/verify_routes.py": "f3b7c0f58f96f4aa0f2ad69016b87f2de81ec04afa2d5249ac60dab8ec95c18c",
+    "src/nerv/body/families/humanoid.py": "3828a40ea370e48c4df6da8d46a87d1b99e89d6e2e91744d3cb8071690481d32",
+    "src/nerv/world/clearance.py": "66be19210f40caa3a93546fa0f5b290d94f422d619ee6a33b3dbba7d4c57cb41",
+    "src/nerv/world/mujoco_node.py": "7da61c52f6ce17c3e1ec81153724534dccc1caa3322fe0f3d93c46b3e67b185e",
+    "bodies/humanoid-unitree-g1/body.yaml": "0ab3430b5412c5d2507b96f2ca80dd56bc4f09d47de6839b872ab101257dafa7",
+    "worlds/house/world.yaml": "579ca9f8957930d61e2c0b9585617164f7c70a588342b1d3e54d02b83ebf6b85",
+    "worlds/scenes/paths.py": "6c6ce4557f73cfdb5bc80ce39f608e2bf995947e9b7c754988ac7a29528c451a",
+    "worlds/build/house-g1.xml": "504d12a89c4923e0998e5468c69b50cbf6731ef597c5dc0a37001c5f36a51a0b",
+    "policies/g1-29dof-turn/contract.json": "1fdbe2ecc5d60945b5b630074425b053dbbca058b6a55be91833697083c8d6ef",
+    "policies/g1-29dof-turn/policy.onnx": "07400671a8fffae172d261688bc84f0e60d3d656156b564dbdc0a4638fb695c6"
+  },
+  "deletion_condition": "After reproducible verifier and accepted evidence are committed",
+  "worlds_commit": "10c87999d861cfae2a6f07da27e36b1d89834350",
+  "worlds_commit_binding": "The source writer committed the unchanged running route during repetition 1; physical XML remained unchanged."
+}

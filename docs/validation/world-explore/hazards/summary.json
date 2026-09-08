@@ -1,0 +1,184 @@
+{
+  "created": "2026-09-07",
+  "task": "World Explore negative G1 navigation CPU acceptance",
+  "environment": {
+    "MUJOCO_GL": "disable",
+    "transport": "LocalBus",
+    "physics": "production WorldSim single loop",
+    "policy": "released g1-29dof-turn",
+    "renderer_initialized": false,
+    "listening_ports": false,
+    "LLM": false
+  },
+  "method": {
+    "initial_pose": "Each case uses normal scene reset to a layout-derived robot spawn.",
+    "action": "Original G1 policy receives move_forward(3). No robot pose writes or pinning occur during action.",
+    "chair": "Original movable chair is moved by SceneOperator/Interaction grab forces, then released before G1 walking. It is not an obstacle injected during walking.",
+    "static_checks": "Stored separately; never counted as actual braking.",
+    "monitor": "Actual movement and 3 seconds after return, sampled every 0.02 seconds."
+  },
+  "verifier": "verify_hazards.py",
+  "initial": {
+    "report": "initial/report.json",
+    "passed": false,
+    "cases": 6,
+    "passed_cases": 5,
+    "max_rise_m": 0.08
+  },
+  "failure": {
+    "case": "house_pool_edge",
+    "physical_cause": "The 0.075 m coping was below the original 0.08 m permitted rise; braking targeted the basin drop after feet reached the coping.",
+    "zero_command_time_s_inferred_from_return_minus_settle": 5.21,
+    "root_x_at_nearest_sample_m": 19.418,
+    "coping_outer_edge_x_m": 19.62,
+    "pool_basin_edge_x_m": 20.0,
+    "action_return_time_s": 5.81,
+    "root_x_at_action_return_m": 19.624,
+    "advance_during_configured_settle_m": 0.206,
+    "speed_at_return_m_s": 0.3223051721566282,
+    "fell_after_action_return": true,
+    "initial_failure_preserved": true
+  },
+  "correction": {
+    "writer": "root agent",
+    "file": "bodies/humanoid-unitree-g1/body.yaml",
+    "field": "locomotion.clearance.max_rise_m",
+    "before": 0.08,
+    "after": 0.03,
+    "policy_weights_changed": false,
+    "geometry_changed": false,
+    "spawn_and_action_changed": false
+  },
+  "same_case_retest": {
+    "report": "fixed-rise-003/report.json",
+    "passed": true
+  },
+  "final": {
+    "report": "final-rise-003/report.json",
+    "passed": true,
+    "cases": 6,
+    "passed_cases": 6,
+    "max_rise_m": 0.03,
+    "results": [
+      {
+        "id": "house_pool_edge",
+        "passed": true,
+        "moved_m": 0.864,
+        "brake_reason": "rise",
+        "samples": 248,
+        "min_feet_before_boundary_m": 0.6817170679414062,
+        "max_hazard_penetration_m": 0.0,
+        "max_tilt_deg": 3.9,
+        "min_root_z": 0.77,
+        "fell": false,
+        "post_stop_max_speed_m_s": 0.005525046401419622,
+        "policy_errors": []
+      },
+      {
+        "id": "house_closed_gate",
+        "passed": true,
+        "moved_m": 0.936,
+        "brake_reason": "obstacle",
+        "samples": 254,
+        "min_feet_before_boundary_m": 0.20801755669652522,
+        "max_hazard_penetration_m": 0.0,
+        "max_tilt_deg": 3.8,
+        "min_root_z": 0.768,
+        "fell": false,
+        "post_stop_max_speed_m_s": 0.006557142724013888,
+        "policy_errors": []
+      },
+      {
+        "id": "apt_stair_entry",
+        "passed": true,
+        "moved_m": 0.615,
+        "brake_reason": "obstacle",
+        "samples": 228,
+        "min_feet_before_boundary_m": 0.2482982691545832,
+        "max_hazard_penetration_m": 0.0,
+        "max_tilt_deg": 3.8,
+        "min_root_z": 0.771,
+        "fell": false,
+        "post_stop_max_speed_m_s": 0.00652292813030031,
+        "policy_errors": []
+      },
+      {
+        "id": "apt_low_coffee_table",
+        "passed": true,
+        "moved_m": 0.885,
+        "brake_reason": "rise",
+        "samples": 250,
+        "min_feet_before_boundary_m": 0.2739147199913594,
+        "max_hazard_penetration_m": 0.0,
+        "max_tilt_deg": 3.7,
+        "min_root_z": 0.769,
+        "fell": false,
+        "post_stop_max_speed_m_s": 0.005604884841088462,
+        "policy_errors": []
+      },
+      {
+        "id": "apt_mid_tabletop",
+        "passed": true,
+        "moved_m": 0.809,
+        "brake_reason": "obstacle",
+        "samples": 246,
+        "min_feet_before_boundary_m": 0.20743349706675218,
+        "max_hazard_penetration_m": 0.0,
+        "max_tilt_deg": 3.7,
+        "min_root_z": 0.769,
+        "fell": false,
+        "post_stop_max_speed_m_s": 0.0047722399385638405,
+        "policy_errors": []
+      },
+      {
+        "id": "apt_physically_moved_chair",
+        "passed": true,
+        "moved_m": 1.05,
+        "brake_reason": "obstacle",
+        "samples": 258,
+        "min_feet_before_boundary_m": 0.06786172668878065,
+        "max_hazard_penetration_m": 0.0,
+        "max_tilt_deg": 3.6,
+        "min_root_z": 0.766,
+        "fell": false,
+        "post_stop_max_speed_m_s": 0.003669435401570271,
+        "policy_errors": []
+      }
+    ]
+  },
+  "limits": [
+    "Seven authored hazard approaches passed with the corrected configuration; pool additionally passed an isolated identical-case retest. Six main cases and the additional pure-descent case are stored separately.",
+    "No visual, browser, real-hardware, complete-route, arbitrary-terrain, or moving-obstacle-during-walking acceptance is claimed.",
+    "Post-stop samples run at 50 Hz; they are not an exhaustive per-physics-step contact trace."
+  ],
+  "completed": "2026-09-08",
+  "six_case_verifier_sha256": "af02d4ee6b0b6eb85073dd52019a36cbc7aa9be85f361e83902c1cb1e05cab92",
+  "current_verifier_sha256": "6f83dad5e28429885e7a9b394a85814759ddab086ec27d04a7dfc8b23425def6",
+  "verifier_extension": "On 2026-09-08 the same verifier gained an upper stair descent case and a per-case floor elevation; all original six cases keep identical initial coordinates, requested actions and checks.",
+  "additional_drop_case": {
+    "report": "drop-descent-003/report.json",
+    "passed": true,
+    "id": "apt_stair_descent",
+    "initial": [
+      -10.96,
+      0.6599999999999998
+    ],
+    "floor_z": 3.75,
+    "moved_m": 0.566,
+    "brake_reason": "drop",
+    "measured_drop_m": 0.1560031974306964,
+    "samples": 223,
+    "min_feet_before_boundary_m": 0.30196419415031706,
+    "max_hazard_penetration_m": 0.0,
+    "max_tilt_deg": 3.8,
+    "min_root_z": 4.521,
+    "fell": false,
+    "post_stop_max_speed_m_s": 0.0057795856015590555,
+    "policy_errors": []
+  },
+  "corrected_coverage": {
+    "distinct_cases": 7,
+    "passed": 7,
+    "pool_same_case_extra_retest": true
+  }
+}

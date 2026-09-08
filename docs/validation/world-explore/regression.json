@@ -1,0 +1,14 @@
+{
+  "passed": true,
+  "tests_passed": 160,
+  "warnings": 3,
+  "seconds": 34.71,
+  "exit_code": 0,
+  "queue_job": 118,
+  "queue_label": "nerv-regression-final",
+  "command": ".venv/bin/python -m pytest tests -q",
+  "parent_commit": "874ebcfdb46bd8468e128eaabac75baec04ece75",
+  "world_commit": "725d3b3e486ecb9ba57417ff43a68497f69262bb",
+  "log": "regression.txt",
+  "log_sha256": "31e9226edca4f60c567954ef8919c383a5b53ebb92a34a9957ea4419f8764350"
+}

@@ -1,0 +1,75 @@
+{
+  "created": "2026-09-08",
+  "passed": true,
+  "max_rise_m": 0.03,
+  "MUJOCO_GL": "disable",
+  "routes": [
+    {
+      "repetition": 1,
+      "passed": true,
+      "waypoints": 103,
+      "actions": 177,
+      "max_waypoint_error_m": 0.1070969331326514,
+      "max_waypoint_tilt_deg": 1.1,
+      "return_error_m": 0.01300000000000031,
+      "failed_actions": 0,
+      "braked_reports": 0,
+      "stuck_reports": 0,
+      "action_wall_seconds": 417.21225163922645
+    },
+    {
+      "repetition": 2,
+      "passed": true,
+      "waypoints": 103,
+      "actions": 178,
+      "max_waypoint_error_m": 0.11234520214252416,
+      "max_waypoint_tilt_deg": 4.1,
+      "return_error_m": 0.017117242768623673,
+      "failed_actions": 0,
+      "braked_reports": 0,
+      "stuck_reports": 0,
+      "action_wall_seconds": 421.25868052616715
+    },
+    {
+      "repetition": 3,
+      "passed": true,
+      "waypoints": 103,
+      "actions": 194,
+      "max_waypoint_error_m": 0.11920249396678465,
+      "max_waypoint_tilt_deg": 1.0,
+      "return_error_m": 0.016124515496596974,
+      "failed_actions": 0,
+      "braked_reports": 0,
+      "stuck_reports": 0,
+      "action_wall_seconds": 433.4301619553007
+    },
+    {
+      "repetition": 4,
+      "passed": true,
+      "waypoints": 103,
+      "actions": 173,
+      "max_waypoint_error_m": 0.13622861141441994,
+      "max_waypoint_tilt_deg": 1.0,
+      "return_error_m": 0.026925824035672376,
+      "failed_actions": 0,
+      "braked_reports": 0,
+      "stuck_reports": 0,
+      "action_wall_seconds": 419.1807980965823
+    },
+    {
+      "repetition": 5,
+      "passed": true,
+      "waypoints": 103,
+      "actions": 191,
+      "max_waypoint_error_m": 0.11899999999999977,
+      "max_waypoint_tilt_deg": 1.1,
+      "return_error_m": 0.014999999999998792,
+      "failed_actions": 0,
+      "braked_reports": 0,
+      "stuck_reports": 0,
+      "action_wall_seconds": 437.53950722317677
+    }
+  ],
+  "source_changes_after_run": {},
+  "limits": "Five consecutive operator-scripted out-and-back runs in one actual simulation; no reset between repetitions. Not autonomous navigation, exhaustive per-physics-step contact sampling, or hardware proof."
+}

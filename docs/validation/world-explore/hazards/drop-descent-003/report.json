@@ -1,0 +1,297 @@
+{
+  "created": "2026-09-07",
+  "mode": "CPU WorldSim + released G1 policy + LocalBus",
+  "pose_boundary": "Initial scene reset only; no qpos writes or pinning during any action",
+  "rendering": false,
+  "ports": false,
+  "cases": [
+    {
+      "id": "apt_stair_descent",
+      "xy": [
+        -10.96,
+        0.6599999999999998
+      ],
+      "floor_z": 3.75,
+      "yaw": 0.0,
+      "direction": [
+        1.0,
+        0.0
+      ],
+      "boundary": -9.959999999999999,
+      "obstacle": "stair0_dn",
+      "kind": "unsupported_descent_beyond_flat_policy_limit",
+      "passed": true,
+      "static_before_preparation": {
+        "forward": {
+          "valid": true,
+          "reason": "clear",
+          "travel_clearance_m": 0.65,
+          "support_drop_m": 0.0,
+          "support_rise_m": 0.0003242092977249339,
+          "turn_clear": true,
+          "sample_count": 520
+        },
+        "turn": {
+          "valid": true,
+          "reason": "clear",
+          "travel_clearance_m": 0.65,
+          "support_drop_m": 0.0,
+          "support_rise_m": 0.0003242092977249339,
+          "turn_clear": true,
+          "sample_count": 1242
+        },
+        "centreline_collision_height_probes": {
+          "stair_f63_dfe0_r": {
+            "distance_m": 5.680809594397735,
+            "heights_world_m": [
+              3.8296757907022756,
+              3.872832408048001,
+              3.9159890253937264,
+              3.959145642739452,
+              4.002302260085177,
+              4.045458877430903,
+              4.0886154947766284,
+              4.131772112122354,
+              4.174928729468079,
+              4.218085346813805,
+              4.261241964159529,
+              4.3043985815052554,
+              4.347555198850981,
+              4.390711816196706,
+              4.433868433542432,
+              4.477025050888157,
+              4.5201816682338825,
+              4.563338285579608,
+              4.606494902925333,
+              4.649651520271059,
+              4.692808137616784,
+              4.7359647549625095,
+              4.779121372308235,
+              4.82227798965396,
+              4.865434606999686,
+              4.908591224345411,
+              4.9517478416911365,
+              4.994904459036862,
+              5.038061076382587,
+              5.081217693728313,
+              5.124374311074038,
+              5.1675309284197635,
+              5.210687545765489,
+              5.253844163111214,
+              5.29700078045694,
+              5.340157397802665
+            ]
+          }
+        }
+      },
+      "static_before_action": {
+        "forward": {
+          "valid": true,
+          "reason": "clear",
+          "travel_clearance_m": 0.65,
+          "support_drop_m": 0.0,
+          "support_rise_m": 0.0003242092977249339,
+          "turn_clear": true,
+          "sample_count": 520
+        },
+        "turn": {
+          "valid": true,
+          "reason": "clear",
+          "travel_clearance_m": 0.65,
+          "support_drop_m": 0.0,
+          "support_rise_m": 0.0003242092977249339,
+          "turn_clear": true,
+          "sample_count": 1242
+        },
+        "centreline_collision_height_probes": {
+          "stair_f63_dfe0_r": {
+            "distance_m": 5.680809594397735,
+            "heights_world_m": [
+              3.8296757907022756,
+              3.872832408048001,
+              3.9159890253937264,
+              3.959145642739452,
+              4.002302260085177,
+              4.045458877430903,
+              4.0886154947766284,
+              4.131772112122354,
+              4.174928729468079,
+              4.218085346813805,
+              4.261241964159529,
+              4.3043985815052554,
+              4.347555198850981,
+              4.390711816196706,
+              4.433868433542432,
+              4.477025050888157,
+              4.5201816682338825,
+              4.563338285579608,
+              4.606494902925333,
+              4.649651520271059,
+              4.692808137616784,
+              4.7359647549625095,
+              4.779121372308235,
+              4.82227798965396,
+              4.865434606999686,
+              4.908591224345411,
+              4.9517478416911365,
+              4.994904459036862,
+              5.038061076382587,
+              5.081217693728313,
+              5.124374311074038,
+              5.1675309284197635,
+              5.210687545765489,
+              5.253844163111214,
+              5.29700078045694,
+              5.340157397802665
+            ]
+          }
+        }
+      },
+      "before": {
+        "sim_time": 3.0,
+        "spawned": true,
+        "pd_mode": "implicit",
+        "base": {
+          "x": -10.956,
+          "y": 0.655,
+          "z": 4.54,
+          "yaw_deg": 1.3
+        },
+        "tilt_deg": 0.4,
+        "fallen": false,
+        "realtime_ratio": 1.0,
+        "epoch": "30fafec145bb4bb4a29fb917aec3054d",
+        "room_key": "stair_f63",
+        "room_label": "上层楼梯间"
+      },
+      "action": {
+        "ok": true,
+        "message": "walked 0.57 m then braked: drop ahead",
+        "data": {
+          "moved_m": 0.566,
+          "turned_deg": 0.3,
+          "fallen": false,
+          "reason": "braked",
+          "front_m": 0.35,
+          "motion_clearance": {
+            "valid": true,
+            "reason": "drop",
+            "travel_clearance_m": 0.3490063153203969,
+            "support_drop_m": 0.1560031974306964,
+            "support_rise_m": 0.00024680256930366407,
+            "turn_clear": true,
+            "sample_count": 621
+          },
+          "braked": true,
+          "stalled": false,
+          "sim_time": 4.54,
+          "target_m": 3.0,
+          "elapsed_s": 1.52
+        }
+      },
+      "after": {
+        "sim_time": 7.54,
+        "spawned": true,
+        "pd_mode": "implicit",
+        "base": {
+          "x": -10.37,
+          "y": 0.612,
+          "z": 4.539,
+          "yaw_deg": 0.7
+        },
+        "tilt_deg": 0.6,
+        "fallen": false,
+        "realtime_ratio": 1.01,
+        "epoch": "30fafec145bb4bb4a29fb917aec3054d",
+        "room_key": "stair_f63",
+        "room_label": "上层楼梯间"
+      },
+      "static_after_action": {
+        "forward": {
+          "valid": true,
+          "reason": "drop",
+          "travel_clearance_m": 0.1998575964556225,
+          "support_drop_m": 0.3122119115346594,
+          "support_rise_m": 0.00028808846534068844,
+          "turn_clear": true,
+          "sample_count": 760
+        },
+        "turn": {
+          "valid": true,
+          "reason": "clear",
+          "travel_clearance_m": 0.65,
+          "support_drop_m": 0.0,
+          "support_rise_m": 0.00028808846534068844,
+          "turn_clear": true,
+          "sample_count": 1242
+        },
+        "centreline_collision_height_probes": {
+          "furn_a2_dressing_north_front0": {
+            "distance_m": 16.817809412990922,
+            "heights_world_m": [
+              3.82971191153466,
+              3.872839069230881,
+              3.9159662269271025,
+              3.9590933846233236,
+              4.002220542319545,
+              4.045347700015766,
+              4.088474857711987,
+              4.131602015408209,
+              4.17472917310443,
+              4.217856330800651,
+              4.260983488496873,
+              4.304110646193093,
+              4.347237803889315,
+              4.3903649615855365,
+              4.433492119281757,
+              4.476619276977979,
+              4.5197464346742,
+              4.562873592370422,
+              4.6060007500666424,
+              4.649127907762864,
+              4.6922550654590856,
+              4.735382223155306,
+              4.778509380851528,
+              4.821636538547749,
+              4.864763696243971,
+              4.9078908539401915,
+              4.951018011636413,
+              4.994145169332635,
+              5.037272327028855,
+              5.080399484725077,
+              5.123526642421298,
+              5.166653800117519,
+              5.209780957813741,
+              5.252908115509962,
+              5.296035273206183,
+              5.339162430902404
+            ]
+          }
+        }
+      },
+      "metrics": {
+        "samples": 223,
+        "min_feet_before_boundary_m": 0.30196419415031706,
+        "max_hazard_penetration_m": 0.0,
+        "max_tilt_deg": 3.8,
+        "min_root_z": 4.521,
+        "fell": false,
+        "post_stop_max_speed_m_s": 0.0057795856015590555,
+        "policy_errors": []
+      },
+      "renderer_initialized": false
+    }
+  ],
+  "git_head": "22d9ba23cdb659ef63c8b4c6df57e87e9cd59392",
+  "source_sha256": {
+    "src/nerv/world/clearance.py": "66be19210f40caa3a93546fa0f5b290d94f422d619ee6a33b3dbba7d4c57cb41",
+    "src/nerv/body/families/humanoid.py": "3828a40ea370e48c4df6da8d46a87d1b99e89d6e2e91744d3cb8071690481d32",
+    "src/nerv/world/mujoco_node.py": "1e3f606a73f26b7a682b47599eaf28345dfc160275148b2f866bc07ddceea373",
+    "bodies/humanoid-unitree-g1/body.yaml": "0ab3430b5412c5d2507b96f2ca80dd56bc4f09d47de6839b872ab101257dafa7",
+    "worlds/build/house-g1.xml": "504d12a89c4923e0998e5468c69b50cbf6731ef597c5dc0a37001c5f36a51a0b",
+    "worlds/build/apt-g1.xml": "de8cab9a9c54da8e00a77eab20957ac93f241801ec1ca1643ccfbf8594854e6e",
+    "policies/g1-29dof-turn/policy.onnx": "07400671a8fffae172d261688bc84f0e60d3d656156b564dbdc0a4638fb695c6",
+    "policies/g1-29dof-turn/contract.json": "1fdbe2ecc5d60945b5b630074425b053dbbca058b6a55be91833697083c8d6ef"
+  },
+  "passed": true
+}

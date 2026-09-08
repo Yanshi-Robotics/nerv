@@ -1,0 +1,304 @@
+{
+  "id": "apt_mid_tabletop",
+  "xy": [
+    -2.8,
+    6.96
+  ],
+  "yaw": -1.5707963267948966,
+  "direction": [
+    0.0,
+    -1.0
+  ],
+  "obstacle": "furn_dn_table",
+  "kind": "thin_mid_height_tabletop",
+  "passed": true,
+  "static_before_preparation": {
+    "forward": {
+      "valid": true,
+      "reason": "clear",
+      "travel_clearance_m": 0.65,
+      "support_drop_m": 0.0,
+      "support_rise_m": 0.00032344549521336197,
+      "turn_clear": true,
+      "sample_count": 520
+    },
+    "turn": {
+      "valid": true,
+      "reason": "clear",
+      "travel_clearance_m": 0.65,
+      "support_drop_m": 0.0,
+      "support_rise_m": 0.00032344549521336197,
+      "turn_clear": true,
+      "sample_count": 1242
+    },
+    "centreline_collision_height_probes": {
+      "dining_ws0": {
+        "distance_m": 5.410727882051358,
+        "heights_world_m": [
+          0.07967655450478665,
+          0.1228235722019782,
+          0.16597058989916974,
+          0.20911760759636128,
+          0.2522646252935528,
+          0.29541164299074435,
+          0.33855866068793594,
+          0.3817056783851275,
+          0.424852696082319,
+          0.46799971377951055,
+          0.5111467314767021,
+          0.5542937491738936,
+          0.5974407668710852,
+          0.8131758553570428,
+          0.8563228730542344,
+          0.8994698907514259,
+          0.9426169084486175,
+          0.985763926145809,
+          1.0289109438430004,
+          1.072057961540192,
+          1.1152049792373837,
+          1.1583519969345752,
+          1.2014990146317668,
+          1.2446460323289583,
+          1.2877930500261499,
+          1.3309400677233414,
+          1.374087085420533,
+          1.4172341031177245,
+          1.460381120814916,
+          1.5035281385121075,
+          1.546675156209299,
+          1.5898221739064906
+        ]
+      },
+      "furn_dn_table_apron_n": {
+        "distance_m": 1.1907278820513576,
+        "heights_world_m": [
+          0.6405877845682767,
+          0.6837348022654682
+        ]
+      },
+      "furn_dn_table_top": {
+        "distance_m": 1.1507278820513582,
+        "heights_world_m": [
+          0.7268818199626598,
+          0.7700288376598513
+        ]
+      }
+    }
+  },
+  "static_before_action": {
+    "forward": {
+      "valid": true,
+      "reason": "clear",
+      "travel_clearance_m": 0.65,
+      "support_drop_m": 0.0,
+      "support_rise_m": 0.00032344549521336197,
+      "turn_clear": true,
+      "sample_count": 520
+    },
+    "turn": {
+      "valid": true,
+      "reason": "clear",
+      "travel_clearance_m": 0.65,
+      "support_drop_m": 0.0,
+      "support_rise_m": 0.00032344549521336197,
+      "turn_clear": true,
+      "sample_count": 1242
+    },
+    "centreline_collision_height_probes": {
+      "dining_ws0": {
+        "distance_m": 5.410727882051358,
+        "heights_world_m": [
+          0.07967655450478665,
+          0.1228235722019782,
+          0.16597058989916974,
+          0.20911760759636128,
+          0.2522646252935528,
+          0.29541164299074435,
+          0.33855866068793594,
+          0.3817056783851275,
+          0.424852696082319,
+          0.46799971377951055,
+          0.5111467314767021,
+          0.5542937491738936,
+          0.5974407668710852,
+          0.8131758553570428,
+          0.8563228730542344,
+          0.8994698907514259,
+          0.9426169084486175,
+          0.985763926145809,
+          1.0289109438430004,
+          1.072057961540192,
+          1.1152049792373837,
+          1.1583519969345752,
+          1.2014990146317668,
+          1.2446460323289583,
+          1.2877930500261499,
+          1.3309400677233414,
+          1.374087085420533,
+          1.4172341031177245,
+          1.460381120814916,
+          1.5035281385121075,
+          1.546675156209299,
+          1.5898221739064906
+        ]
+      },
+      "furn_dn_table_apron_n": {
+        "distance_m": 1.1907278820513576,
+        "heights_world_m": [
+          0.6405877845682767,
+          0.6837348022654682
+        ]
+      },
+      "furn_dn_table_top": {
+        "distance_m": 1.1507278820513582,
+        "heights_world_m": [
+          0.7268818199626598,
+          0.7700288376598513
+        ]
+      }
+    }
+  },
+  "before": {
+    "sim_time": 3.0,
+    "spawned": true,
+    "pd_mode": "implicit",
+    "base": {
+      "x": -2.807,
+      "y": 6.951,
+      "z": 0.79,
+      "yaw_deg": 271.0
+    },
+    "tilt_deg": 0.6,
+    "fallen": false,
+    "realtime_ratio": 1.0,
+    "epoch": "b8f82ad7d8914ec1988902c366455695",
+    "room_key": "dining",
+    "room_label": "餐厅"
+  },
+  "action": {
+    "ok": true,
+    "message": "walked 0.81 m then braked: obstacle ahead",
+    "data": {
+      "moved_m": 0.809,
+      "turned_deg": 1.8,
+      "fallen": false,
+      "reason": "braked",
+      "front_m": 0.33,
+      "motion_clearance": {
+        "valid": true,
+        "reason": "obstacle",
+        "travel_clearance_m": 0.3253551701641213,
+        "support_drop_m": 0.0,
+        "support_rise_m": 0.002488366580725279,
+        "turn_clear": true,
+        "sample_count": 520
+      },
+      "braked": true,
+      "stalled": false,
+      "sim_time": 5.01,
+      "target_m": 3.0,
+      "elapsed_s": 2.0
+    }
+  },
+  "after": {
+    "sim_time": 8.01,
+    "spawned": true,
+    "pd_mode": "implicit",
+    "base": {
+      "x": -2.849,
+      "y": 6.124,
+      "z": 0.789,
+      "yaw_deg": 272.9
+    },
+    "tilt_deg": 0.6,
+    "fallen": false,
+    "realtime_ratio": 1.0,
+    "epoch": "b8f82ad7d8914ec1988902c366455695",
+    "room_key": "dining",
+    "room_label": "餐厅"
+  },
+  "static_after_action": {
+    "forward": {
+      "valid": true,
+      "reason": "obstacle",
+      "travel_clearance_m": 0.14475188927603874,
+      "support_drop_m": 0.0,
+      "support_rise_m": 0.0002937088234473556,
+      "turn_clear": true,
+      "sample_count": 520
+    },
+    "turn": {
+      "valid": true,
+      "reason": "obstacle",
+      "travel_clearance_m": 0.0,
+      "support_drop_m": 0.0,
+      "support_rise_m": 0.0002937088234473556,
+      "turn_clear": false,
+      "sample_count": 1242
+    },
+    "centreline_collision_height_probes": {
+      "dining_ws0": {
+        "distance_m": 4.584499261831533,
+        "heights_world_m": [
+          0.07970629117655265,
+          0.12283324622877421,
+          0.16596020128099576,
+          0.20908715633321734,
+          0.25221411138543887,
+          0.29534106643766045,
+          0.33846802148988203,
+          0.38159497654210356,
+          0.42472193159432514,
+          0.4678488866465467,
+          0.5109758416987682,
+          0.5541027967509898,
+          0.5972297518032114,
+          0.8128645270643191,
+          0.8559914821165407,
+          0.8991184371687623,
+          0.9422453922209838,
+          0.9853723472732054,
+          1.028499302325427,
+          1.0716262573776485,
+          1.1147532124298702,
+          1.1578801674820918,
+          1.2010071225343133,
+          1.2441340775865348,
+          1.2872610326387564,
+          1.330387987690978,
+          1.3735149427431996,
+          1.4166418977954212,
+          1.4597688528476427,
+          1.5028958078998642,
+          1.5460227629520857,
+          1.5891497180043075
+        ]
+      },
+      "furn_dn_table_apron_n": {
+        "distance_m": 0.36449926183153236,
+        "heights_world_m": [
+          0.6403567068554329,
+          0.6834836619076544
+        ]
+      },
+      "furn_dn_table_top": {
+        "distance_m": 0.324499261831533,
+        "heights_world_m": [
+          0.726610616959876,
+          0.7697375720120976
+        ]
+      }
+    }
+  },
+  "metrics": {
+    "samples": 246,
+    "min_feet_before_boundary_m": 0.20743349706675218,
+    "max_hazard_penetration_m": 0.0,
+    "max_tilt_deg": 3.7,
+    "min_root_z": 0.769,
+    "fell": false,
+    "post_stop_max_speed_m_s": 0.0047722399385638405,
+    "policy_errors": []
+  },
+  "renderer_initialized": false
+}

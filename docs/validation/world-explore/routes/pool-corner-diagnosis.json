@@ -1,0 +1,977 @@
+{
+  "created": "2026-09-08",
+  "scope": "Static default-joint geometry; not actual gait replay",
+  "source_sha256": {
+    "src/nerv/world/clearance.py": "66be19210f40caa3a93546fa0f5b290d94f422d619ee6a33b3dbba7d4c57cb41",
+    "bodies/humanoid-unitree-g1/body.yaml": "0ab3430b5412c5d2507b96f2ca80dd56bc4f09d47de6839b872ab101257dafa7",
+    "worlds/scenes/house/estate.py": "3e11bf89f6cf35d36534d938c3972e4a7341df210df877c9dde8fde2e4f75484",
+    "worlds/scenes/paths.py": "6973348b0d91cb44448f9ab0ad626636fbdf69141910c36a13f97268771fcfb9",
+    "worlds/build/house-g1.xml": "504d12a89c4923e0998e5468c69b50cbf6731ef597c5dc0a37001c5f36a51a0b"
+  },
+  "cases": [
+    {
+      "label": "recorded_root_default_joints",
+      "pose": [
+        17.495,
+        -7.421,
+        0.8,
+        359.1
+      ],
+      "turn_envelope_radius_m": 0.33648296502791714,
+      "result": {
+        "valid": true,
+        "reason": "obstacle",
+        "travel_clearance_m": 0.0,
+        "support_drop_m": 0.015797817345147874,
+        "support_rise_m": 0.0,
+        "turn_clear": false,
+        "sample_count": 1215
+      },
+      "obstacle_rays_within_envelope": {
+        "h2_pergola_post17.5_-7.0": {
+          "min_distance_m": 0.3312987324815394,
+          "count": 39,
+          "first_origin": [
+            17.495,
+            -7.421,
+            0.09579781734514786
+          ],
+          "first_direction": [
+            -0.04245691271028344,
+            0.9990982987489826,
+            0.0
+          ]
+        }
+      },
+      "support_hits": {
+        "h2_estate_ground2_2": {
+          "min_distance_m": 0.09579781734514788,
+          "count": 162
+        }
+      }
+    },
+    {
+      "label": "nominal_current_corner",
+      "pose": [
+        17.5,
+        -7.5,
+        0.8,
+        0
+      ],
+      "turn_envelope_radius_m": 0.33648296502791764,
+      "result": {
+        "valid": true,
+        "reason": "clear",
+        "travel_clearance_m": 0.65,
+        "support_drop_m": 0.015797817345147847,
+        "support_rise_m": 0.0,
+        "turn_clear": true,
+        "sample_count": 1215
+      },
+      "obstacle_rays_within_envelope": {},
+      "support_hits": {
+        "h2_estate_ground2_2": {
+          "min_distance_m": 0.09579781734514785,
+          "count": 162
+        }
+      }
+    },
+    {
+      "label": "existing_authored_approach_corner",
+      "pose": [
+        17.5,
+        -8.0,
+        0.8,
+        0
+      ],
+      "turn_envelope_radius_m": 0.33648296502791764,
+      "result": {
+        "valid": true,
+        "reason": "clear",
+        "travel_clearance_m": 0.65,
+        "support_drop_m": 0.015797817345147847,
+        "support_rise_m": 0.0,
+        "turn_clear": true,
+        "sample_count": 1215
+      },
+      "obstacle_rays_within_envelope": {},
+      "support_hits": {
+        "h2_estate_ground2_2": {
+          "min_distance_m": 0.09579781734514785,
+          "count": 162
+        }
+      }
+    },
+    {
+      "label": "candidate_tolerance_0_yaw0",
+      "pose": [
+        17.68,
+        -8.0,
+        0.8,
+        0
+      ],
+      "turn_envelope_radius_m": 0.33648296502791764,
+      "result": {
+        "valid": true,
+        "reason": "clear",
+        "travel_clearance_m": 0.65,
+        "support_drop_m": 0.015797817345147847,
+        "support_rise_m": 0.0,
+        "turn_clear": true,
+        "sample_count": 1215
+      },
+      "obstacle_rays_within_envelope": {},
+      "support_hits": {
+        "h2_estate_ground2_2": {
+          "min_distance_m": 0.09579781734514785,
+          "count": 162
+        }
+      }
+    },
+    {
+      "label": "candidate_tolerance_0_yaw90",
+      "pose": [
+        17.68,
+        -8.0,
+        0.8,
+        90
+      ],
+      "turn_envelope_radius_m": 0.3364829650279164,
+      "result": {
+        "valid": true,
+        "reason": "clear",
+        "travel_clearance_m": 0.65,
+        "support_drop_m": 0.015797817345147985,
+        "support_rise_m": 0.0,
+        "turn_clear": true,
+        "sample_count": 1215
+      },
+      "obstacle_rays_within_envelope": {},
+      "support_hits": {
+        "h2_estate_ground2_2": {
+          "min_distance_m": 0.09579781734514799,
+          "count": 162
+        }
+      }
+    },
+    {
+      "label": "candidate_tolerance_0_yaw180",
+      "pose": [
+        17.68,
+        -8.0,
+        0.8,
+        180
+      ],
+      "turn_envelope_radius_m": 0.336482965027915,
+      "result": {
+        "valid": true,
+        "reason": "clear",
+        "travel_clearance_m": 0.65,
+        "support_drop_m": 0.015797817345147847,
+        "support_rise_m": 0.0,
+        "turn_clear": true,
+        "sample_count": 1215
+      },
+      "obstacle_rays_within_envelope": {},
+      "support_hits": {
+        "h2_estate_ground2_2": {
+          "min_distance_m": 0.09579781734514785,
+          "count": 162
+        }
+      }
+    },
+    {
+      "label": "candidate_tolerance_0_yaw270",
+      "pose": [
+        17.68,
+        -8.0,
+        0.8,
+        270
+      ],
+      "turn_envelope_radius_m": 0.3364829650279168,
+      "result": {
+        "valid": true,
+        "reason": "clear",
+        "travel_clearance_m": 0.65,
+        "support_drop_m": 0.015797817345147985,
+        "support_rise_m": 0.0,
+        "turn_clear": true,
+        "sample_count": 1215
+      },
+      "obstacle_rays_within_envelope": {},
+      "support_hits": {
+        "h2_estate_ground2_2": {
+          "min_distance_m": 0.09579781734514799,
+          "count": 162
+        }
+      }
+    },
+    {
+      "label": "candidate_tolerance_45_yaw0",
+      "pose": [
+        17.627279220613577,
+        -7.872720779386421,
+        0.8,
+        0
+      ],
+      "turn_envelope_radius_m": 0.33648296502791764,
+      "result": {
+        "valid": true,
+        "reason": "clear",
+        "travel_clearance_m": 0.65,
+        "support_drop_m": 0.015797817345147847,
+        "support_rise_m": 0.0,
+        "turn_clear": true,
+        "sample_count": 1215
+      },
+      "obstacle_rays_within_envelope": {},
+      "support_hits": {
+        "h2_estate_ground2_2": {
+          "min_distance_m": 0.09579781734514785,
+          "count": 162
+        }
+      }
+    },
+    {
+      "label": "candidate_tolerance_45_yaw90",
+      "pose": [
+        17.627279220613577,
+        -7.872720779386421,
+        0.8,
+        90
+      ],
+      "turn_envelope_radius_m": 0.33648296502791675,
+      "result": {
+        "valid": true,
+        "reason": "clear",
+        "travel_clearance_m": 0.65,
+        "support_drop_m": 0.015797817345147985,
+        "support_rise_m": 0.0,
+        "turn_clear": true,
+        "sample_count": 1215
+      },
+      "obstacle_rays_within_envelope": {},
+      "support_hits": {
+        "h2_estate_ground2_2": {
+          "min_distance_m": 0.09579781734514799,
+          "count": 162
+        }
+      }
+    },
+    {
+      "label": "candidate_tolerance_45_yaw180",
+      "pose": [
+        17.627279220613577,
+        -7.872720779386421,
+        0.8,
+        180
+      ],
+      "turn_envelope_radius_m": 0.336482965027915,
+      "result": {
+        "valid": true,
+        "reason": "clear",
+        "travel_clearance_m": 0.65,
+        "support_drop_m": 0.015797817345147847,
+        "support_rise_m": 0.0,
+        "turn_clear": true,
+        "sample_count": 1215
+      },
+      "obstacle_rays_within_envelope": {},
+      "support_hits": {
+        "h2_estate_ground2_2": {
+          "min_distance_m": 0.09579781734514785,
+          "count": 162
+        }
+      }
+    },
+    {
+      "label": "candidate_tolerance_45_yaw270",
+      "pose": [
+        17.627279220613577,
+        -7.872720779386421,
+        0.8,
+        270
+      ],
+      "turn_envelope_radius_m": 0.3364829650279168,
+      "result": {
+        "valid": true,
+        "reason": "clear",
+        "travel_clearance_m": 0.65,
+        "support_drop_m": 0.015797817345147985,
+        "support_rise_m": 0.0,
+        "turn_clear": true,
+        "sample_count": 1215
+      },
+      "obstacle_rays_within_envelope": {},
+      "support_hits": {
+        "h2_estate_ground2_2": {
+          "min_distance_m": 0.09579781734514799,
+          "count": 162
+        }
+      }
+    },
+    {
+      "label": "candidate_tolerance_90_yaw0",
+      "pose": [
+        17.5,
+        -7.82,
+        0.8,
+        0
+      ],
+      "turn_envelope_radius_m": 0.33648296502791764,
+      "result": {
+        "valid": true,
+        "reason": "clear",
+        "travel_clearance_m": 0.65,
+        "support_drop_m": 0.015797817345147847,
+        "support_rise_m": 0.0,
+        "turn_clear": true,
+        "sample_count": 1215
+      },
+      "obstacle_rays_within_envelope": {},
+      "support_hits": {
+        "h2_estate_ground2_2": {
+          "min_distance_m": 0.09579781734514785,
+          "count": 162
+        }
+      }
+    },
+    {
+      "label": "candidate_tolerance_90_yaw90",
+      "pose": [
+        17.5,
+        -7.82,
+        0.8,
+        90
+      ],
+      "turn_envelope_radius_m": 0.33648296502791675,
+      "result": {
+        "valid": true,
+        "reason": "clear",
+        "travel_clearance_m": 0.65,
+        "support_drop_m": 0.015797817345147985,
+        "support_rise_m": 0.0,
+        "turn_clear": true,
+        "sample_count": 1215
+      },
+      "obstacle_rays_within_envelope": {},
+      "support_hits": {
+        "h2_estate_ground2_2": {
+          "min_distance_m": 0.09579781734514799,
+          "count": 162
+        }
+      }
+    },
+    {
+      "label": "candidate_tolerance_90_yaw180",
+      "pose": [
+        17.5,
+        -7.82,
+        0.8,
+        180
+      ],
+      "turn_envelope_radius_m": 0.33648296502791675,
+      "result": {
+        "valid": true,
+        "reason": "clear",
+        "travel_clearance_m": 0.65,
+        "support_drop_m": 0.015797817345147847,
+        "support_rise_m": 0.0,
+        "turn_clear": true,
+        "sample_count": 1215
+      },
+      "obstacle_rays_within_envelope": {},
+      "support_hits": {
+        "h2_estate_ground2_2": {
+          "min_distance_m": 0.09579781734514785,
+          "count": 162
+        }
+      }
+    },
+    {
+      "label": "candidate_tolerance_90_yaw270",
+      "pose": [
+        17.5,
+        -7.82,
+        0.8,
+        270
+      ],
+      "turn_envelope_radius_m": 0.3364829650279168,
+      "result": {
+        "valid": true,
+        "reason": "clear",
+        "travel_clearance_m": 0.65,
+        "support_drop_m": 0.015797817345147985,
+        "support_rise_m": 0.0,
+        "turn_clear": true,
+        "sample_count": 1215
+      },
+      "obstacle_rays_within_envelope": {},
+      "support_hits": {
+        "h2_estate_ground2_2": {
+          "min_distance_m": 0.09579781734514799,
+          "count": 162
+        }
+      }
+    },
+    {
+      "label": "candidate_tolerance_135_yaw0",
+      "pose": [
+        17.372720779386423,
+        -7.872720779386421,
+        0.8,
+        0
+      ],
+      "turn_envelope_radius_m": 0.33648296502791764,
+      "result": {
+        "valid": true,
+        "reason": "clear",
+        "travel_clearance_m": 0.65,
+        "support_drop_m": 0.015797817345147847,
+        "support_rise_m": 0.0,
+        "turn_clear": true,
+        "sample_count": 1215
+      },
+      "obstacle_rays_within_envelope": {},
+      "support_hits": {
+        "h2_estate_ground2_2": {
+          "min_distance_m": 0.09579781734514785,
+          "count": 162
+        }
+      }
+    },
+    {
+      "label": "candidate_tolerance_135_yaw90",
+      "pose": [
+        17.372720779386423,
+        -7.872720779386421,
+        0.8,
+        90
+      ],
+      "turn_envelope_radius_m": 0.33648296502791675,
+      "result": {
+        "valid": true,
+        "reason": "clear",
+        "travel_clearance_m": 0.65,
+        "support_drop_m": 0.015797817345147985,
+        "support_rise_m": 0.0,
+        "turn_clear": true,
+        "sample_count": 1215
+      },
+      "obstacle_rays_within_envelope": {},
+      "support_hits": {
+        "h2_estate_ground2_2": {
+          "min_distance_m": 0.09579781734514799,
+          "count": 162
+        }
+      }
+    },
+    {
+      "label": "candidate_tolerance_135_yaw180",
+      "pose": [
+        17.372720779386423,
+        -7.872720779386421,
+        0.8,
+        180
+      ],
+      "turn_envelope_radius_m": 0.336482965027915,
+      "result": {
+        "valid": true,
+        "reason": "clear",
+        "travel_clearance_m": 0.65,
+        "support_drop_m": 0.015797817345147847,
+        "support_rise_m": 0.0,
+        "turn_clear": true,
+        "sample_count": 1215
+      },
+      "obstacle_rays_within_envelope": {},
+      "support_hits": {
+        "h2_estate_ground2_2": {
+          "min_distance_m": 0.09579781734514785,
+          "count": 162
+        }
+      }
+    },
+    {
+      "label": "candidate_tolerance_135_yaw270",
+      "pose": [
+        17.372720779386423,
+        -7.872720779386421,
+        0.8,
+        270
+      ],
+      "turn_envelope_radius_m": 0.3364829650279168,
+      "result": {
+        "valid": true,
+        "reason": "clear",
+        "travel_clearance_m": 0.65,
+        "support_drop_m": 0.015797817345147985,
+        "support_rise_m": 0.0,
+        "turn_clear": true,
+        "sample_count": 1215
+      },
+      "obstacle_rays_within_envelope": {},
+      "support_hits": {
+        "h2_estate_ground2_2": {
+          "min_distance_m": 0.09579781734514799,
+          "count": 162
+        }
+      }
+    },
+    {
+      "label": "candidate_tolerance_180_yaw0",
+      "pose": [
+        17.32,
+        -8.0,
+        0.8,
+        0
+      ],
+      "turn_envelope_radius_m": 0.33648296502791764,
+      "result": {
+        "valid": true,
+        "reason": "clear",
+        "travel_clearance_m": 0.65,
+        "support_drop_m": 0.015797817345147847,
+        "support_rise_m": 0.0,
+        "turn_clear": true,
+        "sample_count": 1215
+      },
+      "obstacle_rays_within_envelope": {},
+      "support_hits": {
+        "h2_estate_ground2_2": {
+          "min_distance_m": 0.09579781734514785,
+          "count": 162
+        }
+      }
+    },
+    {
+      "label": "candidate_tolerance_180_yaw90",
+      "pose": [
+        17.32,
+        -8.0,
+        0.8,
+        90
+      ],
+      "turn_envelope_radius_m": 0.3364829650279164,
+      "result": {
+        "valid": true,
+        "reason": "clear",
+        "travel_clearance_m": 0.65,
+        "support_drop_m": 0.015797817345147985,
+        "support_rise_m": 0.0,
+        "turn_clear": true,
+        "sample_count": 1215
+      },
+      "obstacle_rays_within_envelope": {},
+      "support_hits": {
+        "h2_estate_ground2_2": {
+          "min_distance_m": 0.09579781734514799,
+          "count": 162
+        }
+      }
+    },
+    {
+      "label": "candidate_tolerance_180_yaw180",
+      "pose": [
+        17.32,
+        -8.0,
+        0.8,
+        180
+      ],
+      "turn_envelope_radius_m": 0.336482965027915,
+      "result": {
+        "valid": true,
+        "reason": "clear",
+        "travel_clearance_m": 0.65,
+        "support_drop_m": 0.015797817345147847,
+        "support_rise_m": 0.0,
+        "turn_clear": true,
+        "sample_count": 1215
+      },
+      "obstacle_rays_within_envelope": {},
+      "support_hits": {
+        "h2_estate_ground2_2": {
+          "min_distance_m": 0.09579781734514785,
+          "count": 162
+        }
+      }
+    },
+    {
+      "label": "candidate_tolerance_180_yaw270",
+      "pose": [
+        17.32,
+        -8.0,
+        0.8,
+        270
+      ],
+      "turn_envelope_radius_m": 0.3364829650279168,
+      "result": {
+        "valid": true,
+        "reason": "clear",
+        "travel_clearance_m": 0.65,
+        "support_drop_m": 0.015797817345147985,
+        "support_rise_m": 0.0,
+        "turn_clear": true,
+        "sample_count": 1215
+      },
+      "obstacle_rays_within_envelope": {},
+      "support_hits": {
+        "h2_estate_ground2_2": {
+          "min_distance_m": 0.09579781734514799,
+          "count": 162
+        }
+      }
+    },
+    {
+      "label": "candidate_tolerance_225_yaw0",
+      "pose": [
+        17.372720779386423,
+        -8.127279220613579,
+        0.8,
+        0
+      ],
+      "turn_envelope_radius_m": 0.33648296502791764,
+      "result": {
+        "valid": true,
+        "reason": "clear",
+        "travel_clearance_m": 0.65,
+        "support_drop_m": 0.015797817345147847,
+        "support_rise_m": 0.0,
+        "turn_clear": true,
+        "sample_count": 1215
+      },
+      "obstacle_rays_within_envelope": {},
+      "support_hits": {
+        "h2_estate_ground2_2": {
+          "min_distance_m": 0.09579781734514785,
+          "count": 162
+        }
+      }
+    },
+    {
+      "label": "candidate_tolerance_225_yaw90",
+      "pose": [
+        17.372720779386423,
+        -8.127279220613579,
+        0.8,
+        90
+      ],
+      "turn_envelope_radius_m": 0.3364829650279164,
+      "result": {
+        "valid": true,
+        "reason": "clear",
+        "travel_clearance_m": 0.65,
+        "support_drop_m": 0.015797817345147985,
+        "support_rise_m": 0.0,
+        "turn_clear": true,
+        "sample_count": 1215
+      },
+      "obstacle_rays_within_envelope": {},
+      "support_hits": {
+        "h2_estate_ground2_2": {
+          "min_distance_m": 0.09579781734514799,
+          "count": 162
+        }
+      }
+    },
+    {
+      "label": "candidate_tolerance_225_yaw180",
+      "pose": [
+        17.372720779386423,
+        -8.127279220613579,
+        0.8,
+        180
+      ],
+      "turn_envelope_radius_m": 0.336482965027915,
+      "result": {
+        "valid": true,
+        "reason": "clear",
+        "travel_clearance_m": 0.65,
+        "support_drop_m": 0.015797817345147847,
+        "support_rise_m": 0.0,
+        "turn_clear": true,
+        "sample_count": 1215
+      },
+      "obstacle_rays_within_envelope": {},
+      "support_hits": {
+        "h2_estate_ground2_2": {
+          "min_distance_m": 0.09579781734514785,
+          "count": 162
+        }
+      }
+    },
+    {
+      "label": "candidate_tolerance_225_yaw270",
+      "pose": [
+        17.372720779386423,
+        -8.127279220613579,
+        0.8,
+        270
+      ],
+      "turn_envelope_radius_m": 0.3364829650279164,
+      "result": {
+        "valid": true,
+        "reason": "clear",
+        "travel_clearance_m": 0.65,
+        "support_drop_m": 0.015797817345147985,
+        "support_rise_m": 0.0,
+        "turn_clear": true,
+        "sample_count": 1215
+      },
+      "obstacle_rays_within_envelope": {},
+      "support_hits": {
+        "h2_estate_ground2_2": {
+          "min_distance_m": 0.09579781734514799,
+          "count": 162
+        }
+      }
+    },
+    {
+      "label": "candidate_tolerance_270_yaw0",
+      "pose": [
+        17.5,
+        -8.18,
+        0.8,
+        0
+      ],
+      "turn_envelope_radius_m": 0.33648296502791586,
+      "result": {
+        "valid": true,
+        "reason": "clear",
+        "travel_clearance_m": 0.65,
+        "support_drop_m": 0.015797817345147847,
+        "support_rise_m": 0.0,
+        "turn_clear": true,
+        "sample_count": 1215
+      },
+      "obstacle_rays_within_envelope": {},
+      "support_hits": {
+        "h2_estate_ground2_2": {
+          "min_distance_m": 0.09579781734514785,
+          "count": 162
+        }
+      }
+    },
+    {
+      "label": "candidate_tolerance_270_yaw90",
+      "pose": [
+        17.5,
+        -8.18,
+        0.8,
+        90
+      ],
+      "turn_envelope_radius_m": 0.3364829650279164,
+      "result": {
+        "valid": true,
+        "reason": "clear",
+        "travel_clearance_m": 0.65,
+        "support_drop_m": 0.015797817345147985,
+        "support_rise_m": 0.0,
+        "turn_clear": true,
+        "sample_count": 1215
+      },
+      "obstacle_rays_within_envelope": {},
+      "support_hits": {
+        "h2_estate_ground2_2": {
+          "min_distance_m": 0.09579781734514799,
+          "count": 162
+        }
+      }
+    },
+    {
+      "label": "candidate_tolerance_270_yaw180",
+      "pose": [
+        17.5,
+        -8.18,
+        0.8,
+        180
+      ],
+      "turn_envelope_radius_m": 0.336482965027915,
+      "result": {
+        "valid": true,
+        "reason": "clear",
+        "travel_clearance_m": 0.65,
+        "support_drop_m": 0.015797817345147847,
+        "support_rise_m": 0.0,
+        "turn_clear": true,
+        "sample_count": 1215
+      },
+      "obstacle_rays_within_envelope": {},
+      "support_hits": {
+        "h2_estate_ground2_2": {
+          "min_distance_m": 0.09579781734514785,
+          "count": 162
+        }
+      }
+    },
+    {
+      "label": "candidate_tolerance_270_yaw270",
+      "pose": [
+        17.5,
+        -8.18,
+        0.8,
+        270
+      ],
+      "turn_envelope_radius_m": 0.3364829650279164,
+      "result": {
+        "valid": true,
+        "reason": "clear",
+        "travel_clearance_m": 0.65,
+        "support_drop_m": 0.015797817345147985,
+        "support_rise_m": 0.0,
+        "turn_clear": true,
+        "sample_count": 1215
+      },
+      "obstacle_rays_within_envelope": {},
+      "support_hits": {
+        "h2_estate_ground2_2": {
+          "min_distance_m": 0.09579781734514799,
+          "count": 162
+        }
+      }
+    },
+    {
+      "label": "candidate_tolerance_315_yaw0",
+      "pose": [
+        17.627279220613577,
+        -8.127279220613579,
+        0.8,
+        0
+      ],
+      "turn_envelope_radius_m": 0.33648296502791764,
+      "result": {
+        "valid": true,
+        "reason": "clear",
+        "travel_clearance_m": 0.65,
+        "support_drop_m": 0.015797817345147847,
+        "support_rise_m": 0.0,
+        "turn_clear": true,
+        "sample_count": 1215
+      },
+      "obstacle_rays_within_envelope": {},
+      "support_hits": {
+        "h2_estate_ground2_2": {
+          "min_distance_m": 0.09579781734514785,
+          "count": 162
+        }
+      }
+    },
+    {
+      "label": "candidate_tolerance_315_yaw90",
+      "pose": [
+        17.627279220613577,
+        -8.127279220613579,
+        0.8,
+        90
+      ],
+      "turn_envelope_radius_m": 0.3364829650279164,
+      "result": {
+        "valid": true,
+        "reason": "clear",
+        "travel_clearance_m": 0.65,
+        "support_drop_m": 0.015797817345147985,
+        "support_rise_m": 0.0,
+        "turn_clear": true,
+        "sample_count": 1215
+      },
+      "obstacle_rays_within_envelope": {},
+      "support_hits": {
+        "h2_estate_ground2_2": {
+          "min_distance_m": 0.09579781734514799,
+          "count": 162
+        }
+      }
+    },
+    {
+      "label": "candidate_tolerance_315_yaw180",
+      "pose": [
+        17.627279220613577,
+        -8.127279220613579,
+        0.8,
+        180
+      ],
+      "turn_envelope_radius_m": 0.336482965027915,
+      "result": {
+        "valid": true,
+        "reason": "clear",
+        "travel_clearance_m": 0.65,
+        "support_drop_m": 0.015797817345147847,
+        "support_rise_m": 0.0,
+        "turn_clear": true,
+        "sample_count": 1215
+      },
+      "obstacle_rays_within_envelope": {},
+      "support_hits": {
+        "h2_estate_ground2_2": {
+          "min_distance_m": 0.09579781734514785,
+          "count": 162
+        }
+      }
+    },
+    {
+      "label": "candidate_tolerance_315_yaw270",
+      "pose": [
+        17.627279220613577,
+        -8.127279220613579,
+        0.8,
+        270
+      ],
+      "turn_envelope_radius_m": 0.3364829650279164,
+      "result": {
+        "valid": true,
+        "reason": "clear",
+        "travel_clearance_m": 0.65,
+        "support_drop_m": 0.015797817345147985,
+        "support_rise_m": 0.0,
+        "turn_clear": true,
+        "sample_count": 1215
+      },
+      "obstacle_rays_within_envelope": {},
+      "support_hits": {
+        "h2_estate_ground2_2": {
+          "min_distance_m": 0.09579781734514799,
+          "count": 162
+        }
+      }
+    }
+  ],
+  "post": {
+    "id": 2600,
+    "name": "h2_pergola_post17.5_-7.0",
+    "center": [
+      17.5,
+      -7.0,
+      1.55
+    ],
+    "half_extent": [
+      0.09,
+      0.09,
+      1.55
+    ],
+    "contype": 1,
+    "conaffinity": 1
+  },
+  "query": {
+    "horizon_m": 0.65,
+    "sample_spacing_m": 0.08,
+    "height_spacing_m": 0.04,
+    "height_offsets_m": [
+      0.08,
+      0.28,
+      0.6,
+      0.95,
+      1.2
+    ],
+    "envelope_margin_m": 0.04,
+    "max_drop_m": 0.08,
+    "max_rise_m": 0.03,
+    "support_probe_margin_m": 0.05,
+    "support_seam_tolerance_m": 0.002,
+    "support_body_names": [
+      "left_ankle_roll_link",
+      "right_ankle_roll_link"
+    ],
+    "motion": "turn"
+  },
+  "candidate_tolerance_samples_clear": true
+}

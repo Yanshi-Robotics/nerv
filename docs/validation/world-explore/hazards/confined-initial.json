@@ -1,0 +1,635 @@
+{
+  "created_utc": "2026-09-08T05:43:10Z",
+  "mode": "CPU WorldSim + original G1 released policy + LocalBus",
+  "physics_clock": "WorldSim only; observer does not call mj_step",
+  "initial_pose": "Normal reset before each case; no pose writes or pinning during actions",
+  "limit_seconds": 280.0,
+  "source_sha256": {
+    "temp/world-explore/confined/verify_confined.py": "44b4237e2b2adc6bd9cef56916e3861c6a0300309dbb876dffb03fd3e5aec980",
+    "src/nerv/world/mujoco_node.py": "7da61c52f6ce17c3e1ec81153724534dccc1caa3322fe0f3d93c46b3e67b185e",
+    "src/nerv/world/clearance.py": "66be19210f40caa3a93546fa0f5b290d94f422d619ee6a33b3dbba7d4c57cb41",
+    "src/nerv/body/families/humanoid.py": "3828a40ea370e48c4df6da8d46a87d1b99e89d6e2e91744d3cb8071690481d32",
+    "bodies/humanoid-unitree-g1/body.yaml": "0ab3430b5412c5d2507b96f2ca80dd56bc4f09d47de6839b872ab101257dafa7",
+    "policies/g1-29dof-turn/policy.onnx": "07400671a8fffae172d261688bc84f0e60d3d656156b564dbdc0a4638fb695c6",
+    "policies/g1-29dof-turn/contract.json": "1fdbe2ecc5d60945b5b630074425b053dbbca058b6a55be91833697083c8d6ef",
+    "worlds/build/apt-g1.xml": "397d0330f435d5560896b3232adadde0c84c8ebce8d6a6ea7c0833212a78f15e"
+  },
+  "world_source_hash": "623afe6d5c365cfe5e50a82cb43ca907eb01d46d4db4406c344fcd35d1855ac9",
+  "cases": [
+    {
+      "id": "narrow_door_eastbound",
+      "kind": "door",
+      "sign": 1,
+      "xy": [
+        -2.5,
+        -4.4
+      ],
+      "yaw": 0.0,
+      "source_door": {
+        "orient": "v",
+        "coord": -1.5,
+        "center": -4.4,
+        "width": 0.95,
+        "floor": 0,
+        "note": "客卫→洗衣房"
+      },
+      "tool": "move_forward",
+      "args": {
+        "meters": 2.0
+      },
+      "passed": true,
+      "initial_reset": {
+        "sim_time": 0.0,
+        "spawned": true,
+        "pd_mode": "implicit",
+        "base": {
+          "x": -2.5,
+          "y": -4.4,
+          "z": 0.8,
+          "yaw_deg": 0.0
+        },
+        "tilt_deg": 0.0,
+        "fallen": false,
+        "realtime_ratio": 0.07,
+        "epoch": "6a715f67068848c39794edfa743d8a17",
+        "room_key": "guest_bath",
+        "room_label": "客卫",
+        "exact_xy": [
+          -2.5,
+          -4.4
+        ],
+        "yaw_rad": 0.0,
+        "speed_m_s": 0.0,
+        "policy_error": ""
+      },
+      "initial_contacts": [],
+      "initial_clearance": {
+        "forward": {
+          "valid": true,
+          "reason": "clear",
+          "travel_clearance_m": 0.65,
+          "support_drop_m": 0.01579781734514786,
+          "support_rise_m": 0.0,
+          "turn_clear": true,
+          "sample_count": 510
+        },
+        "turn": {
+          "valid": true,
+          "reason": "clear",
+          "travel_clearance_m": 0.65,
+          "support_drop_m": 0.01579781734514786,
+          "support_rise_m": 0.0,
+          "turn_clear": true,
+          "sample_count": 1215
+        }
+      },
+      "initial_settle_metrics": {
+        "physics_steps": 1505,
+        "max_all_contact_penetration_m": 0.0059820915435596115,
+        "max_obstacle_penetration_m": 0.0,
+        "max_tilt_deg": 0.7,
+        "max_speed_m_s": 0.43432177695977253,
+        "post_stop_max_speed_m_s": 0.0,
+        "fell": false,
+        "policy_errors": [],
+        "physical_obstacle_contacts": {},
+        "observer_error": null
+      },
+      "before": {
+        "sim_time": 3.02,
+        "spawned": true,
+        "pd_mode": "implicit",
+        "base": {
+          "x": -2.496,
+          "y": -4.405,
+          "z": 0.79,
+          "yaw_deg": 1.4
+        },
+        "tilt_deg": 0.4,
+        "fallen": false,
+        "realtime_ratio": 1.03,
+        "epoch": "6a715f67068848c39794edfa743d8a17",
+        "room_key": "guest_bath",
+        "room_label": "客卫",
+        "exact_xy": [
+          -2.495828101901275,
+          -4.404585410272361
+        ],
+        "yaw_rad": 0.02358778373463304,
+        "speed_m_s": 0.0026867395651981115,
+        "policy_error": ""
+      },
+      "contacts_before_action": [],
+      "clearance_before_action": {
+        "forward": {
+          "valid": true,
+          "reason": "clear",
+          "travel_clearance_m": 0.65,
+          "support_drop_m": 0.0,
+          "support_rise_m": 0.0003241095363234886,
+          "turn_clear": true,
+          "sample_count": 520
+        },
+        "turn": {
+          "valid": true,
+          "reason": "clear",
+          "travel_clearance_m": 0.65,
+          "support_drop_m": 0.0,
+          "support_rise_m": 0.0003241095363234886,
+          "turn_clear": true,
+          "sample_count": 1242
+        }
+      },
+      "action": {
+        "ok": true,
+        "message": "walked forward 2.21 m",
+        "data": {
+          "moved_m": 2.207,
+          "turned_deg": 4.4,
+          "fallen": false,
+          "reason": "reached",
+          "front_m": null,
+          "motion_clearance": {
+            "valid": true,
+            "reason": "clear",
+            "travel_clearance_m": 0.65,
+            "support_drop_m": 0.0,
+            "support_rise_m": 0.000517614443398498,
+            "turn_clear": true,
+            "sample_count": 530
+          },
+          "braked": false,
+          "stalled": false,
+          "sim_time": 7.41,
+          "target_m": 2.0,
+          "elapsed_s": 4.47
+        }
+      },
+      "after": {
+        "sim_time": 10.41,
+        "spawned": true,
+        "pd_mode": "implicit",
+        "base": {
+          "x": -0.263,
+          "y": -4.367,
+          "z": 0.789,
+          "yaw_deg": 6.3
+        },
+        "tilt_deg": 0.6,
+        "fallen": false,
+        "realtime_ratio": 1.05,
+        "epoch": "6a715f67068848c39794edfa743d8a17",
+        "room_key": "laundry",
+        "room_label": "洗衣房",
+        "exact_xy": [
+          -0.26334456765463876,
+          -4.3670523059818285
+        ],
+        "yaw_rad": 0.1093026379597588,
+        "speed_m_s": 0.00258383647973196,
+        "policy_error": ""
+      },
+      "metrics": {
+        "physics_steps": 3695,
+        "max_all_contact_penetration_m": 0.00631293681145004,
+        "max_obstacle_penetration_m": 0.0,
+        "max_tilt_deg": 4.0,
+        "max_speed_m_s": 0.7375147687223489,
+        "post_stop_max_speed_m_s": 0.00400403934935632,
+        "fell": false,
+        "policy_errors": [],
+        "physical_obstacle_contacts": {},
+        "observer_error": null
+      },
+      "measured_displacement_m": 2.2327990201986463,
+      "measured_turn_deg": 4.911099388678799,
+      "beyond_wall_m": 1.2366554323453611
+    },
+    {
+      "id": "narrow_door_westbound",
+      "kind": "door",
+      "sign": -1,
+      "xy": [
+        -0.5,
+        -4.4
+      ],
+      "yaw": 3.141592653589793,
+      "source_door": {
+        "orient": "v",
+        "coord": -1.5,
+        "center": -4.4,
+        "width": 0.95,
+        "floor": 0,
+        "note": "客卫→洗衣房"
+      },
+      "tool": "move_forward",
+      "args": {
+        "meters": 2.0
+      },
+      "passed": true,
+      "initial_reset": {
+        "sim_time": 0.0,
+        "spawned": true,
+        "pd_mode": "implicit",
+        "base": {
+          "x": -0.5,
+          "y": -4.4,
+          "z": 0.8,
+          "yaw_deg": 180.0
+        },
+        "tilt_deg": 0.0,
+        "fallen": false,
+        "realtime_ratio": 1.05,
+        "epoch": "6a715f67068848c39794edfa743d8a17",
+        "room_key": "laundry",
+        "room_label": "洗衣房",
+        "exact_xy": [
+          -0.5,
+          -4.4
+        ],
+        "yaw_rad": 3.141592653589793,
+        "speed_m_s": 0.0,
+        "policy_error": ""
+      },
+      "initial_contacts": [],
+      "initial_clearance": {
+        "forward": {
+          "valid": true,
+          "reason": "clear",
+          "travel_clearance_m": 0.65,
+          "support_drop_m": 0.01579781734514786,
+          "support_rise_m": 0.0,
+          "turn_clear": true,
+          "sample_count": 510
+        },
+        "turn": {
+          "valid": true,
+          "reason": "clear",
+          "travel_clearance_m": 0.65,
+          "support_drop_m": 0.01579781734514786,
+          "support_rise_m": 0.0,
+          "turn_clear": true,
+          "sample_count": 1215
+        }
+      },
+      "initial_settle_metrics": {
+        "physics_steps": 1505,
+        "max_all_contact_penetration_m": 0.00500497803249792,
+        "max_obstacle_penetration_m": 0.0,
+        "max_tilt_deg": 0.7,
+        "max_speed_m_s": 0.43414523512469083,
+        "post_stop_max_speed_m_s": 0.0,
+        "fell": false,
+        "policy_errors": [],
+        "physical_obstacle_contacts": {},
+        "observer_error": null
+      },
+      "before": {
+        "sim_time": 3.02,
+        "spawned": true,
+        "pd_mode": "implicit",
+        "base": {
+          "x": -0.507,
+          "y": -4.394,
+          "z": 0.79,
+          "yaw_deg": 180.9
+        },
+        "tilt_deg": 0.5,
+        "fallen": false,
+        "realtime_ratio": 1.0,
+        "epoch": "6a715f67068848c39794edfa743d8a17",
+        "room_key": "laundry",
+        "room_label": "洗衣房",
+        "exact_xy": [
+          -0.5071326370321684,
+          -4.394486328560334
+        ],
+        "yaw_rad": -3.1251038880655817,
+        "speed_m_s": 0.0022472311690465,
+        "policy_error": ""
+      },
+      "contacts_before_action": [],
+      "clearance_before_action": {
+        "forward": {
+          "valid": true,
+          "reason": "clear",
+          "travel_clearance_m": 0.65,
+          "support_drop_m": 0.0,
+          "support_rise_m": 0.0003256320450044231,
+          "turn_clear": true,
+          "sample_count": 520
+        },
+        "turn": {
+          "valid": true,
+          "reason": "clear",
+          "travel_clearance_m": 0.65,
+          "support_drop_m": 0.0,
+          "support_rise_m": 0.0003256320450044231,
+          "turn_clear": true,
+          "sample_count": 1242
+        }
+      },
+      "action": {
+        "ok": true,
+        "message": "walked forward 2.22 m",
+        "data": {
+          "moved_m": 2.219,
+          "turned_deg": 3.2,
+          "fallen": false,
+          "reason": "reached",
+          "front_m": null,
+          "motion_clearance": {
+            "valid": true,
+            "reason": "clear",
+            "travel_clearance_m": 0.65,
+            "support_drop_m": 0.0,
+            "support_rise_m": 0.005781588896132214,
+            "turn_clear": true,
+            "sample_count": 477
+          },
+          "braked": false,
+          "stalled": false,
+          "sim_time": 7.41,
+          "target_m": 2.0,
+          "elapsed_s": 4.44
+        }
+      },
+      "after": {
+        "sim_time": 10.42,
+        "spawned": true,
+        "pd_mode": "implicit",
+        "base": {
+          "x": -2.75,
+          "y": -4.42,
+          "z": 0.789,
+          "yaw_deg": 184.2
+        },
+        "tilt_deg": 0.6,
+        "fallen": false,
+        "realtime_ratio": 1.03,
+        "epoch": "6a715f67068848c39794edfa743d8a17",
+        "room_key": "guest_bath",
+        "room_label": "客卫",
+        "exact_xy": [
+          -2.7502953638785774,
+          -4.420495614879532
+        ],
+        "yaw_rad": -3.0683015133530755,
+        "speed_m_s": 0.002568872097224662,
+        "policy_error": ""
+      },
+      "metrics": {
+        "physics_steps": 3700,
+        "max_all_contact_penetration_m": 0.006862824689527941,
+        "max_obstacle_penetration_m": 0.0,
+        "max_tilt_deg": 3.7,
+        "max_speed_m_s": 0.6789251877051818,
+        "post_stop_max_speed_m_s": 0.0042660933219263765,
+        "fell": false,
+        "policy_errors": [],
+        "physical_obstacle_contacts": {},
+        "observer_error": null
+      },
+      "measured_displacement_m": 2.243313509540709,
+      "measured_turn_deg": 3.2545363373472354,
+      "beyond_wall_m": 1.2502953638785774
+    },
+    {
+      "id": "foyer_south_wall_turn",
+      "kind": "turn",
+      "xy": [
+        4.0,
+        -7.09
+      ],
+      "yaw": 0.0,
+      "source_room": "foyer",
+      "source_rect": [
+        1.5,
+        -7.5,
+        6.5,
+        -1.4
+      ],
+      "tool": "turn_left",
+      "args": {
+        "degrees": 90.0
+      },
+      "passed": false,
+      "initial_reset": {
+        "sim_time": 0.0,
+        "spawned": true,
+        "pd_mode": "implicit",
+        "base": {
+          "x": 4.0,
+          "y": -7.09,
+          "z": 0.8,
+          "yaw_deg": 0.0
+        },
+        "tilt_deg": 0.0,
+        "fallen": false,
+        "realtime_ratio": 1.02,
+        "epoch": "6a715f67068848c39794edfa743d8a17",
+        "room_key": "foyer",
+        "room_label": "入户玄关",
+        "exact_xy": [
+          4.0,
+          -7.09
+        ],
+        "yaw_rad": 0.0,
+        "speed_m_s": 0.0,
+        "policy_error": ""
+      },
+      "initial_contacts": [
+        {
+          "robot": "",
+          "obstacle": "front_door",
+          "penetration_m": 0.0062255576989169725
+        },
+        {
+          "robot": "",
+          "obstacle": "front_door",
+          "penetration_m": 0.006339651656294798
+        },
+        {
+          "robot": "",
+          "obstacle": "front_door",
+          "penetration_m": 0.006506265451093007
+        },
+        {
+          "robot": "",
+          "obstacle": "front_door",
+          "penetration_m": 0.006394533313896389
+        },
+        {
+          "robot": "",
+          "obstacle": "front_door",
+          "penetration_m": 0.01935152373964666
+        },
+        {
+          "robot": "",
+          "obstacle": "front_door",
+          "penetration_m": 0.019333705865953732
+        },
+        {
+          "robot": "",
+          "obstacle": "foyer_ws0",
+          "penetration_m": 0.005227518260148222
+        },
+        {
+          "robot": "",
+          "obstacle": "foyer_ws0",
+          "penetration_m": 0.005228341552589554
+        },
+        {
+          "robot": "",
+          "obstacle": "foyer_ws0",
+          "penetration_m": 0.005242236947853306
+        },
+        {
+          "robot": "",
+          "obstacle": "foyer_ws0",
+          "penetration_m": 0.005241508216941248
+        },
+        {
+          "robot": "",
+          "obstacle": "front_door",
+          "penetration_m": 0.025227518260147797
+        },
+        {
+          "robot": "",
+          "obstacle": "front_door",
+          "penetration_m": 0.02522834155258913
+        },
+        {
+          "robot": "",
+          "obstacle": "front_door",
+          "penetration_m": 0.02524223694785288
+        },
+        {
+          "robot": "",
+          "obstacle": "front_door",
+          "penetration_m": 0.025241508216940822
+        }
+      ],
+      "initial_clearance": {
+        "forward": {
+          "valid": true,
+          "reason": "obstacle",
+          "travel_clearance_m": 0.47372676141980574,
+          "support_drop_m": 0.01579781734514786,
+          "support_rise_m": 0.0,
+          "turn_clear": true,
+          "sample_count": 510
+        },
+        "turn": {
+          "valid": true,
+          "reason": "obstacle",
+          "travel_clearance_m": 0.0,
+          "support_drop_m": 0.01579781734514786,
+          "support_rise_m": 0.0,
+          "turn_clear": false,
+          "sample_count": 1215
+        }
+      },
+      "error": "RuntimeError: Initial source-derived pose intersects non-floor geometry"
+    }
+  ],
+  "floor_support_geoms": [
+    "kitchen_floor",
+    "dining_floor",
+    "great_room_floor",
+    "library_floor",
+    "stair_f62_floor",
+    "gallery_floor",
+    "east_hall_floor",
+    "guest_bed_floor",
+    "guest_bath_floor",
+    "laundry_floor",
+    "foyer_floor",
+    "media_floor",
+    "primary_bed_floor",
+    "study_floor",
+    "mezzanine_floor",
+    "sitting_floor",
+    "stair_f63_floor",
+    "upper_hall_floor",
+    "dressing_floor",
+    "primary_bath_floor",
+    "closet_floor",
+    "gym_floor",
+    "family_floor",
+    "terrace_room_floor"
+  ],
+  "door_geometry": {
+    "source": {
+      "orient": "v",
+      "coord": -1.5,
+      "center": -4.4,
+      "width": 0.95,
+      "floor": 0,
+      "note": "客卫→洗衣房"
+    },
+    "physical_jambs": [
+      {
+        "geom": "guest_bath_dfe0_l",
+        "low": [
+          -1.655,
+          -4.9,
+          0.0
+        ],
+        "high": [
+          -1.485,
+          -4.85,
+          2.45
+        ]
+      },
+      {
+        "geom": "guest_bath_dfe0_r",
+        "low": [
+          -1.655,
+          -3.9499999999999997,
+          0.0
+        ],
+        "high": [
+          -1.485,
+          -3.9,
+          2.45
+        ]
+      },
+      {
+        "geom": "laundry_dfw0_l",
+        "low": [
+          -1.515,
+          -4.9,
+          0.0
+        ],
+        "high": [
+          -1.345,
+          -4.85,
+          2.45
+        ]
+      },
+      {
+        "geom": "laundry_dfw0_r",
+        "low": [
+          -1.515,
+          -3.9499999999999997,
+          0.0
+        ],
+        "high": [
+          -1.345,
+          -3.9,
+          2.45
+        ]
+      }
+    ],
+    "clear_y": [
+      -4.85,
+      -3.9499999999999997
+    ],
+    "clear_width_m": 0.8999999999999999
+  },
+  "renderer_initialized": false,
+  "elapsed_wall_s": 23.714112624991685,
+  "budget_expired": false,
+  "passed": false
+}

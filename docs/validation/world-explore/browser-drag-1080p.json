@@ -1,0 +1,25 @@
+{
+  "date": "2026-09-08",
+  "queue": 117,
+  "method": "Actual CUA pointer drags over the loaded canvas; measured rendered-frame delta over wall time, including automation transport. No animation or synthetic DOM event injection.",
+  "observations": [
+    {
+      "scene": "apt",
+      "width": 1920,
+      "height": 1080,
+      "drags": 40,
+      "frames": 320,
+      "elapsedMs": 6015
+    },
+    {
+      "scene": "house",
+      "view": "courtyard",
+      "width": 1920,
+      "height": 1080,
+      "drags": 40,
+      "frames": 322,
+      "elapsedMs": 6008
+    }
+  ],
+  "cleanup": "Viewport override reset and owned tab closed. Clicking the current navigation button did not exit the guide; no zero-canvas claim is made for that click."
+}

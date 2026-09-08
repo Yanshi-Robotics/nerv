@@ -1,0 +1,43 @@
+{
+  "created_utc": "2026-09-08T05:49:50.332655+00:00",
+  "candidate_sha256": "a16c6f63b23e47417af9a68f9ee45c5d2e120cb95b18d9cdac33da4585a49740",
+  "compilation": "passed",
+  "checks": [
+    {
+      "command": [
+        "/home/jeff/0001-Yanshi-Group/Projects/nerv/.venv/bin/python",
+        "temp/world-explore/confined/verify_confined.py",
+        "--help"
+      ],
+      "exit_code": 0,
+      "output": "usage: verify_confined.py [-h] --output OUTPUT\n                          [--repository-root REPOSITORY_ROOT]\n                          [--limit-seconds LIMIT_SECONDS]\n                          [--case {narrow_door_eastbound,narrow_door_westbound,foyer_south_wall_turn}]\n                          [--wall-pose {geometry-clear,original}]\n\nVerify a narrow doorway and turn-space rejection using the real CPU G1 policy.\nWorldSim owns the only physics clock; no renderer, ports, pose pinning or\nreplacement gait is used. Each independent initial pose is set by normal\nreset.\n\noptions:\n  -h, --help            show this help message and exit\n  --output OUTPUT\n  --repository-root REPOSITORY_ROOT\n                        NERV root; override only when running the temporary\n                        candidate\n  --limit-seconds LIMIT_SECONDS\n  --case {narrow_door_eastbound,narrow_door_westbound,foyer_south_wall_turn}\n  --wall-pose {geometry-clear,original}\n                        Measured body-envelope clearance, or the rejected\n                        original initial point\n"
+    },
+    {
+      "command": [
+        "/home/jeff/0001-Yanshi-Group/Projects/nerv/.venv/bin/python",
+        "-m",
+        "ruff",
+        "check",
+        "temp/world-explore/confined/verify_confined.py"
+      ],
+      "exit_code": 0,
+      "output": "All checks passed!\n"
+    },
+    {
+      "command": [
+        "/home/jeff/0001-Yanshi-Group/Projects/nerv/.venv/bin/python",
+        "-m",
+        "ruff",
+        "format",
+        "--check",
+        "temp/world-explore/confined/verify_confined.py"
+      ],
+      "exit_code": 0,
+      "output": "1 file already formatted\n"
+    }
+  ],
+  "physical_runs": {
+    "run-001": false,
+    "run-002": true
+  }
+}

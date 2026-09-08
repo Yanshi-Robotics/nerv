@@ -1,0 +1,234 @@
+{
+  "scene": "apt",
+  "repetitions": 1,
+  "passed": true,
+  "routes": [
+    {
+      "name": "entry_gallery",
+      "repetition": 1,
+      "reached": [
+        {
+          "goal": [
+            4.0,
+            -6.6,
+            0.0
+          ],
+          "actual": {
+            "x": 4.005,
+            "y": -6.595,
+            "z": 0.79,
+            "yaw_deg": 91.1
+          },
+          "error_m": 0.007071067811865324,
+          "tilt_deg": 0.5
+        },
+        {
+          "goal": [
+            3.625,
+            -5.3,
+            0.0
+          ],
+          "actual": {
+            "x": 3.688,
+            "y": -5.417,
+            "z": 0.788,
+            "yaw_deg": 293.8
+          },
+          "error_m": 0.13288340754210068,
+          "tilt_deg": 0.8
+        },
+        {
+          "goal": [
+            3.25,
+            -4.0,
+            0.0
+          ],
+          "actual": {
+            "x": 3.136,
+            "y": -4.002,
+            "z": 0.789,
+            "yaw_deg": 112.4
+          },
+          "error_m": 0.11401754250991367,
+          "tilt_deg": 1.1
+        },
+        {
+          "goal": [
+            2.875,
+            -2.7,
+            0.0
+          ],
+          "actual": {
+            "x": 2.731,
+            "y": -2.686,
+            "z": 0.788,
+            "yaw_deg": 107.5
+          },
+          "error_m": 0.14467895493125474,
+          "tilt_deg": 0.6
+        },
+        {
+          "goal": [
+            2.5,
+            -1.4000000000000004,
+            0.0
+          ],
+          "actual": {
+            "x": 2.405,
+            "y": -1.41,
+            "z": 0.788,
+            "yaw_deg": 104.8
+          },
+          "error_m": 0.09552486587271415,
+          "tilt_deg": 0.7
+        },
+        {
+          "goal": [
+            2.5,
+            0.0,
+            0.0
+          ],
+          "actual": {
+            "x": 2.563,
+            "y": -0.006,
+            "z": 0.788,
+            "yaw_deg": 86.7
+          },
+          "error_m": 0.06328506932918712,
+          "tilt_deg": 0.6
+        },
+        {
+          "goal": [
+            3.0,
+            0.0,
+            0.0
+          ],
+          "actual": {
+            "x": 3.002,
+            "y": -0.011,
+            "z": 0.788,
+            "yaw_deg": 344.6
+          },
+          "error_m": 0.011180339887498909,
+          "tilt_deg": 0.9
+        },
+        {
+          "goal": [
+            2.5,
+            0.0,
+            0.0
+          ],
+          "actual": {
+            "x": 2.49,
+            "y": 0.022,
+            "z": 0.788,
+            "yaw_deg": 178.0
+          },
+          "error_m": 0.024166091947189054,
+          "tilt_deg": 0.9
+        },
+        {
+          "goal": [
+            2.5,
+            -1.4,
+            0.0
+          ],
+          "actual": {
+            "x": 2.568,
+            "y": -1.399,
+            "z": 0.788,
+            "yaw_deg": 275.8
+          },
+          "error_m": 0.06800735254367728,
+          "tilt_deg": 0.8
+        },
+        {
+          "goal": [
+            2.875,
+            -2.6999999999999997,
+            0.0
+          ],
+          "actual": {
+            "x": 2.795,
+            "y": -2.718,
+            "z": 0.788,
+            "yaw_deg": 284.7
+          },
+          "error_m": 0.08200000000000013,
+          "tilt_deg": 0.7
+        },
+        {
+          "goal": [
+            3.25,
+            -3.9999999999999996,
+            0.0
+          ],
+          "actual": {
+            "x": 3.232,
+            "y": -4.015,
+            "z": 0.788,
+            "yaw_deg": 290.9
+          },
+          "error_m": 0.023430749027719886,
+          "tilt_deg": 0.6
+        },
+        {
+          "goal": [
+            3.625,
+            -5.299999999999999,
+            0.0
+          ],
+          "actual": {
+            "x": 3.647,
+            "y": -5.288,
+            "z": 0.788,
+            "yaw_deg": 291.6
+          },
+          "error_m": 0.025059928172282524,
+          "tilt_deg": 0.8
+        },
+        {
+          "goal": [
+            4.0,
+            -6.6,
+            0.0
+          ],
+          "actual": {
+            "x": 4.097,
+            "y": -6.589,
+            "z": 0.788,
+            "yaw_deg": 290.3
+          },
+          "error_m": 0.09762171889492657,
+          "tilt_deg": 0.6
+        }
+      ],
+      "returned": {
+        "goal": [
+          4.005,
+          -6.595
+        ],
+        "actual": {
+          "x": 4.097,
+          "y": -6.589,
+          "z": 0.788,
+          "yaw_deg": 290.3
+        },
+        "error_m": 0.09219544457292936,
+        "tilt_deg": 0.6
+      },
+      "passed": true
+    }
+  ],
+  "source_sha256": {
+    "tools/acceptance/verify_routes.py": "5aede362585d667651b51cc96677afc6f057756ea000c1ad058b5abd00b102f9",
+    "src/nerv/body/families/humanoid.py": "3828a40ea370e48c4df6da8d46a87d1b99e89d6e2e91744d3cb8071690481d32",
+    "src/nerv/world/clearance.py": "66be19210f40caa3a93546fa0f5b290d94f422d619ee6a33b3dbba7d4c57cb41",
+    "src/nerv/world/mujoco_node.py": "7da61c52f6ce17c3e1ec81153724534dccc1caa3322fe0f3d93c46b3e67b185e",
+    "bodies/humanoid-unitree-g1/body.yaml": "0ab3430b5412c5d2507b96f2ca80dd56bc4f09d47de6839b872ab101257dafa7",
+    "worlds/scenes/paths.py": "6c6ce4557f73cfdb5bc80ce39f608e2bf995947e9b7c754988ac7a29528c451a",
+    "worlds/build/apt-g1.xml": "397d0330f435d5560896b3232adadde0c84c8ebce8d6a6ea7c0833212a78f15e"
+  },
+  "MUJOCO_GL": "disable",
+  "session": "s_1788847059958464573"
+}

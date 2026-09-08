@@ -1,0 +1,445 @@
+{
+  "created": "2026-09-08T05:59:06Z",
+  "queue": "queued-cli",
+  "mode": "Actual WorldSim, released G1 standing policy, LocalBus, production scene_command/render thread",
+  "ports": false,
+  "resident_access": false,
+  "pinning": false,
+  "scenes": [
+    {
+      "scene": "apt",
+      "phases": [
+        {
+          "requested": "day",
+          "reported": "day",
+          "fallen": false
+        },
+        {
+          "requested": "morning",
+          "reported": "morning",
+          "fallen": false
+        },
+        {
+          "requested": "dusk",
+          "reported": "dusk",
+          "fallen": false
+        },
+        {
+          "requested": "night",
+          "reported": "night",
+          "fallen": false
+        }
+      ],
+      "mutations": [
+        {
+          "phase": "day",
+          "thread": "nerv-world-render",
+          "physics_before": {
+            "qpos": "4f02210e43d9dd1e9d697aa1810a1e55cc7bbcb254ab937880045b509f49350b",
+            "qvel": "f91c207c91452b9ed4459e07b6f75f1af97ef178a2961ad4510197de108addf4",
+            "qacc": "3777423dfd1efc08065e58aa9ca4997eed2f7e682a0942e4238be276d2f7327d",
+            "qacc_warmstart": "3777423dfd1efc08065e58aa9ca4997eed2f7e682a0942e4238be276d2f7327d",
+            "act": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "ctrl": "c4fcd50d9f0c893c46288b57d8e62b18523145956b249b6ecd6c21718be49065",
+            "qfrc_applied": "5d23b6f32cd3500aed908f6979a9068603ed3c54ddf477d41614b78ef2a76549",
+            "xfrc_applied": "d60d6cd6fbd560cb387c6294aeab1e088bc4dbf4b85b8341702120cfd5fcde32",
+            "mocap_pos": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "mocap_quat": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "time": 3.0899999999998813,
+            "model_physics": {
+              "body_mass": "d737f0cc4a96185813164347923c3fab616842e4f873ade263e593f4824e78e7",
+              "body_inertia": "77e0405facacbcb175e83eb46591d6fe7066f2043fb8cb82135356641429a604",
+              "geom_contype": "ec0a72fd7588200a6ae7d7f2c98130c8f7ec3824d35b45bb6107ae92e1ff83fb",
+              "geom_conaffinity": "ec0a72fd7588200a6ae7d7f2c98130c8f7ec3824d35b45bb6107ae92e1ff83fb",
+              "geom_friction": "c7c1f1dc8c4e4fc5bdf0a44b08f093ddfa9f2305813dd2719fbe5ea10b4e54db",
+              "jnt_range": "e8d664824472da522ad43f037a62294eb2dc243b94b2987cd2f2fa17886c0a4c",
+              "dof_damping": "9a001cfa07b2176431cf280395eb18257140b39b12ee8d5df4ce5093f39ff27c"
+            },
+            "epoch": "5824505bee5047b1817b76b2abacd941"
+          },
+          "physics_after": {
+            "qpos": "4f02210e43d9dd1e9d697aa1810a1e55cc7bbcb254ab937880045b509f49350b",
+            "qvel": "f91c207c91452b9ed4459e07b6f75f1af97ef178a2961ad4510197de108addf4",
+            "qacc": "3777423dfd1efc08065e58aa9ca4997eed2f7e682a0942e4238be276d2f7327d",
+            "qacc_warmstart": "3777423dfd1efc08065e58aa9ca4997eed2f7e682a0942e4238be276d2f7327d",
+            "act": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "ctrl": "c4fcd50d9f0c893c46288b57d8e62b18523145956b249b6ecd6c21718be49065",
+            "qfrc_applied": "5d23b6f32cd3500aed908f6979a9068603ed3c54ddf477d41614b78ef2a76549",
+            "xfrc_applied": "d60d6cd6fbd560cb387c6294aeab1e088bc4dbf4b85b8341702120cfd5fcde32",
+            "mocap_pos": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "mocap_quat": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "time": 3.0899999999998813,
+            "model_physics": {
+              "body_mass": "d737f0cc4a96185813164347923c3fab616842e4f873ade263e593f4824e78e7",
+              "body_inertia": "77e0405facacbcb175e83eb46591d6fe7066f2043fb8cb82135356641429a604",
+              "geom_contype": "ec0a72fd7588200a6ae7d7f2c98130c8f7ec3824d35b45bb6107ae92e1ff83fb",
+              "geom_conaffinity": "ec0a72fd7588200a6ae7d7f2c98130c8f7ec3824d35b45bb6107ae92e1ff83fb",
+              "geom_friction": "c7c1f1dc8c4e4fc5bdf0a44b08f093ddfa9f2305813dd2719fbe5ea10b4e54db",
+              "jnt_range": "e8d664824472da522ad43f037a62294eb2dc243b94b2987cd2f2fa17886c0a4c",
+              "dof_damping": "9a001cfa07b2176431cf280395eb18257140b39b12ee8d5df4ce5093f39ff27c"
+            },
+            "epoch": "5824505bee5047b1817b76b2abacd941"
+          },
+          "unchanged": true,
+          "texture_before": "8406897e60ccab06c3070b136c2b573fcd91949e01c1c6b327b78f81e2c64e23",
+          "texture_after": "8406897e60ccab06c3070b136c2b573fcd91949e01c1c6b327b78f81e2c64e23",
+          "warnings": [],
+          "renderer_context": 127099787224288
+        },
+        {
+          "phase": "morning",
+          "thread": "nerv-world-render",
+          "physics_before": {
+            "qpos": "353729deff7bed6fa43d4d037d6685a7195c2a1f2acd1f264809c37a5f174728",
+            "qvel": "24b6f0033af4a5ecc7bb5923094b068f0722f1dfdff39e5fc35b508be29cca05",
+            "qacc": "c29d9dedc0484f4baefaace8f8f75f9f6b42b85e0f53c0ef0b4e9dc3fc7cee9e",
+            "qacc_warmstart": "c29d9dedc0484f4baefaace8f8f75f9f6b42b85e0f53c0ef0b4e9dc3fc7cee9e",
+            "act": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "ctrl": "c4fcd50d9f0c893c46288b57d8e62b18523145956b249b6ecd6c21718be49065",
+            "qfrc_applied": "cd5f2ca9b75f5427fda975bd51bc0bec92acfc4f94274f0f71e3de34cf1757be",
+            "xfrc_applied": "d60d6cd6fbd560cb387c6294aeab1e088bc4dbf4b85b8341702120cfd5fcde32",
+            "mocap_pos": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "mocap_quat": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "time": 3.2899999999998593,
+            "model_physics": {
+              "body_mass": "d737f0cc4a96185813164347923c3fab616842e4f873ade263e593f4824e78e7",
+              "body_inertia": "77e0405facacbcb175e83eb46591d6fe7066f2043fb8cb82135356641429a604",
+              "geom_contype": "ec0a72fd7588200a6ae7d7f2c98130c8f7ec3824d35b45bb6107ae92e1ff83fb",
+              "geom_conaffinity": "ec0a72fd7588200a6ae7d7f2c98130c8f7ec3824d35b45bb6107ae92e1ff83fb",
+              "geom_friction": "c7c1f1dc8c4e4fc5bdf0a44b08f093ddfa9f2305813dd2719fbe5ea10b4e54db",
+              "jnt_range": "e8d664824472da522ad43f037a62294eb2dc243b94b2987cd2f2fa17886c0a4c",
+              "dof_damping": "9a001cfa07b2176431cf280395eb18257140b39b12ee8d5df4ce5093f39ff27c"
+            },
+            "epoch": "5824505bee5047b1817b76b2abacd941"
+          },
+          "physics_after": {
+            "qpos": "353729deff7bed6fa43d4d037d6685a7195c2a1f2acd1f264809c37a5f174728",
+            "qvel": "24b6f0033af4a5ecc7bb5923094b068f0722f1dfdff39e5fc35b508be29cca05",
+            "qacc": "c29d9dedc0484f4baefaace8f8f75f9f6b42b85e0f53c0ef0b4e9dc3fc7cee9e",
+            "qacc_warmstart": "c29d9dedc0484f4baefaace8f8f75f9f6b42b85e0f53c0ef0b4e9dc3fc7cee9e",
+            "act": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "ctrl": "c4fcd50d9f0c893c46288b57d8e62b18523145956b249b6ecd6c21718be49065",
+            "qfrc_applied": "cd5f2ca9b75f5427fda975bd51bc0bec92acfc4f94274f0f71e3de34cf1757be",
+            "xfrc_applied": "d60d6cd6fbd560cb387c6294aeab1e088bc4dbf4b85b8341702120cfd5fcde32",
+            "mocap_pos": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "mocap_quat": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "time": 3.2899999999998593,
+            "model_physics": {
+              "body_mass": "d737f0cc4a96185813164347923c3fab616842e4f873ade263e593f4824e78e7",
+              "body_inertia": "77e0405facacbcb175e83eb46591d6fe7066f2043fb8cb82135356641429a604",
+              "geom_contype": "ec0a72fd7588200a6ae7d7f2c98130c8f7ec3824d35b45bb6107ae92e1ff83fb",
+              "geom_conaffinity": "ec0a72fd7588200a6ae7d7f2c98130c8f7ec3824d35b45bb6107ae92e1ff83fb",
+              "geom_friction": "c7c1f1dc8c4e4fc5bdf0a44b08f093ddfa9f2305813dd2719fbe5ea10b4e54db",
+              "jnt_range": "e8d664824472da522ad43f037a62294eb2dc243b94b2987cd2f2fa17886c0a4c",
+              "dof_damping": "9a001cfa07b2176431cf280395eb18257140b39b12ee8d5df4ce5093f39ff27c"
+            },
+            "epoch": "5824505bee5047b1817b76b2abacd941"
+          },
+          "unchanged": true,
+          "texture_before": "8406897e60ccab06c3070b136c2b573fcd91949e01c1c6b327b78f81e2c64e23",
+          "texture_after": "a039e1c934b4949bba8097d0c49b9b462a950701a96a7a9bcaae7fa9d61f0c05",
+          "warnings": [],
+          "renderer_context": 127099787224288
+        },
+        {
+          "phase": "dusk",
+          "thread": "nerv-world-render",
+          "physics_before": {
+            "qpos": "7fc72921c91a9745bedca5aea071ed46f67a6eeec2153aa50782b631d1b92610",
+            "qvel": "9a4d26492fe80db39a5f62cef9235903cff82d48869a28df009159684b63afd2",
+            "qacc": "6c6e4b8fde44e365697edd865237a4673c92315b7cab4e288c8b6c5402caa2d3",
+            "qacc_warmstart": "6c6e4b8fde44e365697edd865237a4673c92315b7cab4e288c8b6c5402caa2d3",
+            "act": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "ctrl": "c4fcd50d9f0c893c46288b57d8e62b18523145956b249b6ecd6c21718be49065",
+            "qfrc_applied": "f9a134828fef61eaf74d5e09ea084bc8a8edfd553f2c73565fadfd5ebefc1800",
+            "xfrc_applied": "d60d6cd6fbd560cb387c6294aeab1e088bc4dbf4b85b8341702120cfd5fcde32",
+            "mocap_pos": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "mocap_quat": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "time": 3.4799999999998383,
+            "model_physics": {
+              "body_mass": "d737f0cc4a96185813164347923c3fab616842e4f873ade263e593f4824e78e7",
+              "body_inertia": "77e0405facacbcb175e83eb46591d6fe7066f2043fb8cb82135356641429a604",
+              "geom_contype": "ec0a72fd7588200a6ae7d7f2c98130c8f7ec3824d35b45bb6107ae92e1ff83fb",
+              "geom_conaffinity": "ec0a72fd7588200a6ae7d7f2c98130c8f7ec3824d35b45bb6107ae92e1ff83fb",
+              "geom_friction": "c7c1f1dc8c4e4fc5bdf0a44b08f093ddfa9f2305813dd2719fbe5ea10b4e54db",
+              "jnt_range": "e8d664824472da522ad43f037a62294eb2dc243b94b2987cd2f2fa17886c0a4c",
+              "dof_damping": "9a001cfa07b2176431cf280395eb18257140b39b12ee8d5df4ce5093f39ff27c"
+            },
+            "epoch": "5824505bee5047b1817b76b2abacd941"
+          },
+          "physics_after": {
+            "qpos": "7fc72921c91a9745bedca5aea071ed46f67a6eeec2153aa50782b631d1b92610",
+            "qvel": "9a4d26492fe80db39a5f62cef9235903cff82d48869a28df009159684b63afd2",
+            "qacc": "6c6e4b8fde44e365697edd865237a4673c92315b7cab4e288c8b6c5402caa2d3",
+            "qacc_warmstart": "6c6e4b8fde44e365697edd865237a4673c92315b7cab4e288c8b6c5402caa2d3",
+            "act": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "ctrl": "c4fcd50d9f0c893c46288b57d8e62b18523145956b249b6ecd6c21718be49065",
+            "qfrc_applied": "f9a134828fef61eaf74d5e09ea084bc8a8edfd553f2c73565fadfd5ebefc1800",
+            "xfrc_applied": "d60d6cd6fbd560cb387c6294aeab1e088bc4dbf4b85b8341702120cfd5fcde32",
+            "mocap_pos": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "mocap_quat": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "time": 3.4799999999998383,
+            "model_physics": {
+              "body_mass": "d737f0cc4a96185813164347923c3fab616842e4f873ade263e593f4824e78e7",
+              "body_inertia": "77e0405facacbcb175e83eb46591d6fe7066f2043fb8cb82135356641429a604",
+              "geom_contype": "ec0a72fd7588200a6ae7d7f2c98130c8f7ec3824d35b45bb6107ae92e1ff83fb",
+              "geom_conaffinity": "ec0a72fd7588200a6ae7d7f2c98130c8f7ec3824d35b45bb6107ae92e1ff83fb",
+              "geom_friction": "c7c1f1dc8c4e4fc5bdf0a44b08f093ddfa9f2305813dd2719fbe5ea10b4e54db",
+              "jnt_range": "e8d664824472da522ad43f037a62294eb2dc243b94b2987cd2f2fa17886c0a4c",
+              "dof_damping": "9a001cfa07b2176431cf280395eb18257140b39b12ee8d5df4ce5093f39ff27c"
+            },
+            "epoch": "5824505bee5047b1817b76b2abacd941"
+          },
+          "unchanged": true,
+          "texture_before": "a039e1c934b4949bba8097d0c49b9b462a950701a96a7a9bcaae7fa9d61f0c05",
+          "texture_after": "99a48e7948ef3c6e22961f3d44d2e1de601b313e5012cfd6564c9d13a1cd33f4",
+          "warnings": [],
+          "renderer_context": 127099787224288
+        },
+        {
+          "phase": "night",
+          "thread": "nerv-world-render",
+          "physics_before": {
+            "qpos": "9926fca7a7446ad0a8556e8891019b6548490ae14c37ed867cc6b445ef5d0098",
+            "qvel": "760961649ed08571203ebd73c76a078fd6f7a13f46df72dcf2336040014386a1",
+            "qacc": "bb02acae9875c40207dea2069ebfa80fd65964b08d5b4541efc81ee3d92f892a",
+            "qacc_warmstart": "bb02acae9875c40207dea2069ebfa80fd65964b08d5b4541efc81ee3d92f892a",
+            "act": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "ctrl": "c4fcd50d9f0c893c46288b57d8e62b18523145956b249b6ecd6c21718be49065",
+            "qfrc_applied": "608dd3f622f53cfdbbbd6238ab4abd92c909b7f4df50567a6648df5e60195e79",
+            "xfrc_applied": "d60d6cd6fbd560cb387c6294aeab1e088bc4dbf4b85b8341702120cfd5fcde32",
+            "mocap_pos": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "mocap_quat": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "time": 3.6799999999998163,
+            "model_physics": {
+              "body_mass": "d737f0cc4a96185813164347923c3fab616842e4f873ade263e593f4824e78e7",
+              "body_inertia": "77e0405facacbcb175e83eb46591d6fe7066f2043fb8cb82135356641429a604",
+              "geom_contype": "ec0a72fd7588200a6ae7d7f2c98130c8f7ec3824d35b45bb6107ae92e1ff83fb",
+              "geom_conaffinity": "ec0a72fd7588200a6ae7d7f2c98130c8f7ec3824d35b45bb6107ae92e1ff83fb",
+              "geom_friction": "c7c1f1dc8c4e4fc5bdf0a44b08f093ddfa9f2305813dd2719fbe5ea10b4e54db",
+              "jnt_range": "e8d664824472da522ad43f037a62294eb2dc243b94b2987cd2f2fa17886c0a4c",
+              "dof_damping": "9a001cfa07b2176431cf280395eb18257140b39b12ee8d5df4ce5093f39ff27c"
+            },
+            "epoch": "5824505bee5047b1817b76b2abacd941"
+          },
+          "physics_after": {
+            "qpos": "9926fca7a7446ad0a8556e8891019b6548490ae14c37ed867cc6b445ef5d0098",
+            "qvel": "760961649ed08571203ebd73c76a078fd6f7a13f46df72dcf2336040014386a1",
+            "qacc": "bb02acae9875c40207dea2069ebfa80fd65964b08d5b4541efc81ee3d92f892a",
+            "qacc_warmstart": "bb02acae9875c40207dea2069ebfa80fd65964b08d5b4541efc81ee3d92f892a",
+            "act": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "ctrl": "c4fcd50d9f0c893c46288b57d8e62b18523145956b249b6ecd6c21718be49065",
+            "qfrc_applied": "608dd3f622f53cfdbbbd6238ab4abd92c909b7f4df50567a6648df5e60195e79",
+            "xfrc_applied": "d60d6cd6fbd560cb387c6294aeab1e088bc4dbf4b85b8341702120cfd5fcde32",
+            "mocap_pos": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "mocap_quat": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+            "time": 3.6799999999998163,
+            "model_physics": {
+              "body_mass": "d737f0cc4a96185813164347923c3fab616842e4f873ade263e593f4824e78e7",
+              "body_inertia": "77e0405facacbcb175e83eb46591d6fe7066f2043fb8cb82135356641429a604",
+              "geom_contype": "ec0a72fd7588200a6ae7d7f2c98130c8f7ec3824d35b45bb6107ae92e1ff83fb",
+              "geom_conaffinity": "ec0a72fd7588200a6ae7d7f2c98130c8f7ec3824d35b45bb6107ae92e1ff83fb",
+              "geom_friction": "c7c1f1dc8c4e4fc5bdf0a44b08f093ddfa9f2305813dd2719fbe5ea10b4e54db",
+              "jnt_range": "e8d664824472da522ad43f037a62294eb2dc243b94b2987cd2f2fa17886c0a4c",
+              "dof_damping": "9a001cfa07b2176431cf280395eb18257140b39b12ee8d5df4ce5093f39ff27c"
+            },
+            "epoch": "5824505bee5047b1817b76b2abacd941"
+          },
+          "unchanged": true,
+          "texture_before": "99a48e7948ef3c6e22961f3d44d2e1de601b313e5012cfd6564c9d13a1cd33f4",
+          "texture_after": "3ad8fe0990ffb18450ee39cb903a91b57341b97a983bd0fd3a7fad0e5a5d5cd9",
+          "warnings": [],
+          "renderer_context": 127099787224288
+        }
+      ],
+      "frames": [
+        {
+          "view": "head",
+          "phase": "day",
+          "path": "apt/head/day.png",
+          "sim_time": 3.109999999999879,
+          "pixel_sha256": "4b10f1d29b5ac211557be49f00a53c4dc76d3e6a8d5240c5ef76881efa6844b4",
+          "file_sha256": "6a34d52b147c48cf3dbd10c438363274ed43eff413c638a7f0b3b5eb70e4723d",
+          "mean_luminance": 137.36732530381943,
+          "std_luminance": 35.299711817087655,
+          "fraction_over_20": 0.9975716145833333
+        },
+        {
+          "view": "chase",
+          "phase": "day",
+          "path": "apt/chase/day.png",
+          "sim_time": 3.1699999999998725,
+          "pixel_sha256": "05a3f484b5b3df969aa0759dcfc513ac30d2666321a3b2528ea4ec70e6c8ade8",
+          "file_sha256": "634c2cf53535cbaa9c175e3182dc1929b67f3c18363b7538cc7a5deb15199b29",
+          "mean_luminance": 88.5997048611111,
+          "std_luminance": 20.458221166097225,
+          "fraction_over_20": 0.9999967447916667
+        },
+        {
+          "view": "living",
+          "phase": "day",
+          "path": "apt/living/day.png",
+          "sim_time": 3.219999999999867,
+          "pixel_sha256": "7d1720063bc10769de78150595fa54d5d8e426590bc517d40aa929302be13517",
+          "file_sha256": "4ecb695f498ce01f290225f89cf77476abd3bbf0119bb19df923eb51337d356f",
+          "mean_luminance": 112.13523763020834,
+          "std_luminance": 43.29224680199379,
+          "fraction_over_20": 0.9776627604166667
+        },
+        {
+          "view": "head",
+          "phase": "morning",
+          "path": "apt/head/morning.png",
+          "sim_time": 3.309999999999857,
+          "pixel_sha256": "63618e2dd2230d109456558b6be1df21bec3c0344a1f20c9a34336e0aa60cfe0",
+          "file_sha256": "371cf5d7b255c477ca2dee71f27e01a807dded31096aef6b8a1fd01fab2cf116",
+          "mean_luminance": 123.72019856770834,
+          "std_luminance": 35.240037100544086,
+          "fraction_over_20": 0.9973600260416666
+        },
+        {
+          "view": "chase",
+          "phase": "morning",
+          "path": "apt/chase/morning.png",
+          "sim_time": 3.3699999999998504,
+          "pixel_sha256": "a473317bbbfc12ae85ae1bb870abdc440de36c68dd736314bec4bd83b3d34cb6",
+          "file_sha256": "4ee847a6558aec84da27ad0f7eff122957d7dc38b7ee1ab927dba74a107fbdea",
+          "mean_luminance": 70.63139214409722,
+          "std_luminance": 20.87734868396996,
+          "fraction_over_20": 0.9989908854166667
+        },
+        {
+          "view": "living",
+          "phase": "morning",
+          "path": "apt/living/morning.png",
+          "sim_time": 3.419999999999845,
+          "pixel_sha256": "671613f395ce5f84545976a464cc568b1988c72d2d7d39e713681c3121c80251",
+          "file_sha256": "38c9a64255fb83cbd0aae1f81df0b2a47b2b69cb4c0ac4bd2935dbc3e16df6e5",
+          "mean_luminance": 117.17349826388887,
+          "std_luminance": 63.96862974985076,
+          "fraction_over_20": 0.9703873697916666
+        },
+        {
+          "view": "head",
+          "phase": "dusk",
+          "path": "apt/head/dusk.png",
+          "sim_time": 3.499999999999836,
+          "pixel_sha256": "d91fba0faa3bba36d862e8c57b7df3f3792bbfc1311db7884c8e8b92cf467a29",
+          "file_sha256": "f9efffd9a12fb8d420e2ff5184a05a983b3dc28f75c821174b777654f8dc11bb",
+          "mean_luminance": 141.0347048611111,
+          "std_luminance": 36.902289307885674,
+          "fraction_over_20": 0.99302734375
+        },
+        {
+          "view": "chase",
+          "phase": "dusk",
+          "path": "apt/chase/dusk.png",
+          "sim_time": 3.5599999999998295,
+          "pixel_sha256": "34c71ce219aeee0cb192dc999270d0ea5632b6d056f1d792237daa6ede7f9dba",
+          "file_sha256": "5b1b7262a00feea77d5320962eb61ca1baa0ec7bc9af2deb22368e651b43e0e6",
+          "mean_luminance": 86.29255642361112,
+          "std_luminance": 22.61293761293939,
+          "fraction_over_20": 0.9999446614583334
+        },
+        {
+          "view": "living",
+          "phase": "dusk",
+          "path": "apt/living/dusk.png",
+          "sim_time": 3.609999999999824,
+          "pixel_sha256": "0489649cf64bfccc73264c96412cc399e1aea5b695239b58e95f6be60f9f9f38",
+          "file_sha256": "d150a66e00d6077936b2e178921671a616849c2d49780b8dc6bf620c4d2a8f53",
+          "mean_luminance": 106.48801866319442,
+          "std_luminance": 44.956848423380904,
+          "fraction_over_20": 0.98052734375
+        },
+        {
+          "view": "head",
+          "phase": "night",
+          "path": "apt/head/night.png",
+          "sim_time": 3.699999999999814,
+          "pixel_sha256": "1a5446632b08a5104deb046ebc98278a02e35c8807d1b8e77bf54ccca5e974c0",
+          "file_sha256": "054358cf744eb37260f443732e3ec142639bd8669deee61b94bbf48ff15508a1",
+          "mean_luminance": 63.67644314236111,
+          "std_luminance": 18.191491123571897,
+          "fraction_over_20": 0.9381380208333333
+        },
+        {
+          "view": "chase",
+          "phase": "night",
+          "path": "apt/chase/night.png",
+          "sim_time": 3.7499999999998086,
+          "pixel_sha256": "f4d280bb0b3bb180d925afe26f96690d392e32254a8331048eaa01492b3274a8",
+          "file_sha256": "34c3b0afcb4a774481b970aaebc69dbd8df73cb29dcbadb84a0fd7e91074fd2f",
+          "mean_luminance": 35.885855034722226,
+          "std_luminance": 12.316070924447542,
+          "fraction_over_20": 0.9489876302083333
+        },
+        {
+          "view": "living",
+          "phase": "night",
+          "path": "apt/living/night.png",
+          "sim_time": 3.799999999999803,
+          "pixel_sha256": "9d214ca09892dbd34933a6a3fe7669c56532aaa32a1395d7fc3c779b82dc1a2f",
+          "file_sha256": "5a637698d8b00b1aa425bf2458ef5a3a1e637071a78cd38f7102248165c11cce",
+          "mean_luminance": 42.874516059027776,
+          "std_luminance": 18.799732240397752,
+          "fraction_over_20": 0.8617024739583333
+        }
+      ],
+      "camera_views": {
+        "living": {
+          "lookat": [
+            2.5,
+            3.3,
+            1.25
+          ],
+          "distance": 1.0,
+          "azimuth": 90.0,
+          "elevation": 0.0
+        }
+      },
+      "passed": true,
+      "unique_per_view": {
+        "head": 4,
+        "chase": 4,
+        "living": 4
+      },
+      "status_after": {
+        "sim_time": 3.85,
+        "spawned": true,
+        "pd_mode": "implicit",
+        "base": {
+          "x": 4.006,
+          "y": -6.594,
+          "z": 0.79,
+          "yaw_deg": 91.3
+        },
+        "tilt_deg": 0.6,
+        "fallen": false,
+        "realtime_ratio": 1.12,
+        "epoch": "5824505bee5047b1817b76b2abacd941",
+        "room_key": "foyer",
+        "room_label": "入户玄关"
+      },
+      "policy_error": "",
+      "owned_instance_stopped": true
+    }
+  ],
+  "passed": true,
+  "source_sha256": {
+    "src/nerv/world/mujoco_node.py": "7da61c52f6ce17c3e1ec81153724534dccc1caa3322fe0f3d93c46b3e67b185e",
+    "src/nerv/world/scene_operator.py": "4fb31472c35f4af01c6ec3ced0210c0f8bd7e4bc47c82b96ffea3bf7ef8333ab",
+    "bodies/humanoid-unitree-g1/body.yaml": "0ab3430b5412c5d2507b96f2ca80dd56bc4f09d47de6839b872ab101257dafa7",
+    "worlds/scenes/operator.py": "9dcb51727224b0badac1bf21a341d10df0f932ceeb4d97054295c5b778539f9c",
+    "worlds/scenes/time_cycle.py": "bd45c7b1dc9faf1d55797d70d2f6ab092e8200fcc4a272439aa182e7390a5f34",
+    "worlds/scenes/apply_time_preset.py": "7ef289bfc315263b98feed398ba424ab78c841eb66fdc3a47a0df3a11f02d943",
+    "policies/g1-29dof-turn/policy.onnx": "07400671a8fffae172d261688bc84f0e60d3d656156b564dbdc0a4638fb695c6",
+    "worlds/build/apt-g1.xml": "397d0330f435d5560896b3232adadde0c84c8ebce8d6a6ea7c0833212a78f15e",
+    "worlds/scenes/apt/layout.py": "7f010b273ad197ccbbc98dd5804fce9e2aab7a4711c95997a18671e9c7c7417e",
+    "worlds/scenes/apt/shots.py": "3de1158161f881b7a7fb0405478f8fbbfbde4cbe324ff30cf1b0de0742e8606c"
+  },
+  "world_source_hash": {
+    "apt": "93af7a09421a2cc209c3179e565188514067fad333e82f4eec86d50e6951f87f"
+  },
+  "finished": "2026-09-08T05:59:16Z"
+}

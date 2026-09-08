@@ -1,0 +1,16 @@
+{
+  "worlds_commit": "b0793444c2f5813e4a52de25e6715567436058ce",
+  "mujoco_version": "3.12.0",
+  "model_sha256": "397d0330f435d5560896b3232adadde0c84c8ebce8d6a6ea7c0833212a78f15e",
+  "xml_option": {},
+  "xml_flags": [],
+  "compiled_timestep": 0.002,
+  "compiled_disableflags": 0,
+  "compiled_enableflags": 0,
+  "native_ccd_flags": {
+    "mjtDisableBit": {
+      "mjDSBL_NATIVECCD": 131072
+    },
+    "mjtEnableBit": {}
+  }
+}

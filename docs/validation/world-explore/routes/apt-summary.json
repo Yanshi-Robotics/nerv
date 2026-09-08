@@ -1,0 +1,42 @@
+{
+  "passed": true,
+  "completed_utc": "2026-09-08T05:21:51Z",
+  "worlds_commit": "b0793444c2f5813e4a52de25e6715567436058ce",
+  "native_ccd_enabled": true,
+  "model_sha256": "397d0330f435d5560896b3232adadde0c84c8ebce8d6a6ea7c0833212a78f15e",
+  "source_hash_matches_current": {
+    "temp/world-explore/verify_routes.py": true,
+    "src/nerv/body/families/humanoid.py": true,
+    "src/nerv/world/clearance.py": true,
+    "src/nerv/world/mujoco_node.py": true,
+    "bodies/humanoid-unitree-g1/body.yaml": true,
+    "worlds/scenes/paths.py": true,
+    "worlds/build/apt-g1.xml": true
+  },
+  "routes": {
+    "entry_gallery": {
+      "passed": 5,
+      "attempted": 5,
+      "target_samples": 65,
+      "max_target_error_m": 0.14300349646075103,
+      "max_sampled_target_tilt_deg": 3.6,
+      "max_return_error_m": 0.11343720729989837
+    },
+    "living_dining": {
+      "passed": 5,
+      "attempted": 5,
+      "target_samples": 145,
+      "max_target_error_m": 0.179017457249286,
+      "max_sampled_target_tilt_deg": 1.2,
+      "max_return_error_m": 0.08450443775329183
+    },
+    "kitchen_access": {
+      "passed": 5,
+      "attempted": 5,
+      "target_samples": 195,
+      "max_target_error_m": 0.1638169710378019,
+      "max_sampled_target_tilt_deg": 1.2,
+      "max_return_error_m": 0.08030566605165546
+    }
+  }
+}
