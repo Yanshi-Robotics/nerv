@@ -9,8 +9,9 @@ Data plane, readable by the platform too: **sensor streams** mounted in the worl
 Control plane, platform and operator only: launch, /health, spawn, /reset, /status
   (ground truth), /stream (chase camera), epoch.
 
-Transport for simulation: ZMQ REQ/REP with JSON messages (images base64) on the bus
-socket; HTTP for the control plane. For hardware the bus endpoint is the driver itself.
+Transport for simulation: ZMQ REQ clients and a ROUTER server with JSON messages (images
+base64). Camera requests have an independent channel/worker; HTTP carries the control
+plane. For hardware the bus endpoint is the driver itself.
 """
 from __future__ import annotations
 
@@ -26,6 +27,7 @@ OP_RESET = "reset"
 OP_SENSORS = "sensors"     # list sensor streams the world publishes
 OP_SENSOR = "sensor"       # one frame of one stream
 OP_RAYS = "rays"           # horizontal range rays from the body origin
+OP_CLEARANCE = "clearance" # physical obstacle/support samples in the body's local frame
 OP_EPOCH = "epoch"
 OP_CLOSE = "close"
 
@@ -83,6 +85,8 @@ class MotorBus(Protocol):
     def sensor(self, name: str) -> tuple[bytes, str]: ...      # (data, mime)
 
     def rays(self, angles_deg: list[float], max_range_m: float) -> list[float]: ...
+
+    def clearance(self, query: dict) -> dict: ...
 
     def epoch(self) -> str: ...
 

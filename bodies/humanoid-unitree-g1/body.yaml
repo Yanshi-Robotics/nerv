@@ -26,8 +26,19 @@ locomotion:
   default_turn_deg: 45
   settle_s: 0.6
   lidar_range_m: 8.0
-  brake_margin_m: 0.20
+  brake_margin_m: 0.35             # measured ~0.21 m settling travel + 0.1 s scan cadence at 0.6 m/s
   brake_cone_deg: 40
+  clearance:
+    horizon_m: 0.65               # look ahead beyond the live body envelope
+    sample_spacing_m: 0.08        # maximum lateral/ground sampling interval
+    height_spacing_m: 0.04        # fill between named levels to detect thin tables/shelves
+    height_offsets_m: [0.08, 0.28, 0.60, 0.95, 1.20] # above measured sole height
+    envelope_margin_m: 0.04       # allow small gait sway beyond current collision geometry
+    max_drop_m: 0.08              # flat-ground policy: reject stairs and pool edges
+    max_rise_m: 0.08              # tolerate contact settling and small floor transitions
+    support_probe_margin_m: 0.05  # start downward rays above allowed floor variation
+    support_seam_tolerance_m: 0.002 # all four 2 mm neighbours must support an exact box seam
+    scan_period_s: 0.10           # recheck motion in simulation time, independently of 50 Hz policy
   stall_timeout_s: 1.5
   fall_tilt_rad: 0.8
   fall_height_m: 0.18

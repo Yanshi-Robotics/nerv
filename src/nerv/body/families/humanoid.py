@@ -7,7 +7,7 @@ run the ONNX network, write joint targets — and offers three skills to the bra
   turn_left(degrees)     turn on the spot, closed loop on the yaw
   turn_right(degrees)
 A skill ends when the measured quantity reaches the target, when the body stalls (a wall), when
-the front cone gets too close (brake, forward walking only), when the body falls, on timeout or
+physical obstacles or missing support enter the braking/turn envelope, when the body falls, on timeout or
 on stop. What comes back is MEASURED (displacement, turn), never the command echoed.
 
 Everything about the policy comes from its release directory (body.yaml `skills.*.policy`):
@@ -51,7 +51,7 @@ DEFAULT_LOCOMOTION: dict = {
     "default_turn_deg": 45.0,
     "settle_s": 0.6,               # stand still this long (sim s) after a skill, so the next frame is sharp
     "lidar_range_m": 8.0,          # a ray that hits nothing reports this
-    "brake_margin_m": 0.20,        # brake line = measured front extent + this margin
+    "brake_margin_m": 0.20,        # remaining travel outside the live physical envelope; body.yaml tunes it
     "brake_cone_deg": 40.0,        # width of the cone watched while walking forward
     "brake_rays": 5,               # rays across that cone; the nearest one counts
     "stall_timeout_s": 1.5,        # no progress for this long (sim s) = stuck against something
@@ -84,6 +84,7 @@ PD_MODE_FROM_RELEASE = "release"
 REASON_REACHED, REASON_BRAKED, REASON_STALLED = "reached", "braked", "stalled"
 REASON_FALLEN, REASON_BUDGET, REASON_STOPPED, REASON_SIM_DEAD = "fallen", "budget", "stopped", "sim_dead"
 REASON_HELD = "held"
+REASON_CLEARANCE = "clearance_unavailable"
 # why the body is holding its pose: the operator pressed the emergency stop, or it fell
 HOLD_OPERATOR, HOLD_FALLEN = "operator", "fallen"
 
@@ -218,6 +219,11 @@ class HumanoidBody:
             raise ValueError(f"the humanoid skills must share one policy release; body.yaml names {sorted(dirs)}")
         self.policy = PolicyRelease(dirs.pop())
         act = spec.get("actuators") or {}
+        self._clearance_query = dict(self.loco.get("clearance") or {})
+        self._clearance_period = float(self._clearance_query.pop("scan_period_s", 0))
+        self._clearance_query["support_body_names"] = list(act.get("foot_bodies") or [])
+        if not math.isfinite(self._clearance_period) or self._clearance_period <= 0:
+            raise ValueError("locomotion.clearance.scan_period_s must be finite and positive")
         if act.get("source", "contract") != "contract":
             raise ValueError(f"actuators.source {act.get('source')!r}: only 'contract' is supported")
         mode = str(act.get("pd_mode") or PD_MODE_FROM_RELEASE)
@@ -452,6 +458,25 @@ class HumanoidBody:
         r = self.bus.rays([float(d) for _n, d in CLEARANCE_BEARINGS], float(self.loco["lidar_range_m"]))
         return {name: round(v, 2) for (name, _d), v in zip(CLEARANCE_BEARINGS, r)}
 
+    def _motion_clearance(self, kind: str) -> tuple[str | None, dict]:
+        """Fail closed on missing measurements; the world returns no scene identities."""
+        try:
+            query = dict(self._clearance_query, motion="forward" if kind == "dist" else "turn")
+            measurement = self.bus.clearance(query)
+            if not measurement.get("valid"):
+                reason = ("scene_test_active" if measurement.get("reason") == "scene_test_active"
+                          else REASON_CLEARANCE)
+                return reason, measurement
+            distance = float(measurement["travel_clearance_m"])
+            if not math.isfinite(distance) or distance < 0:
+                raise ValueError("invalid travel clearance")
+            blocked = (distance <= float(self.loco["brake_margin_m"]) if kind == "dist"
+                       else not measurement["turn_clear"])
+            return REASON_BRAKED if blocked else None, measurement
+        except Exception as error:
+            return REASON_CLEARANCE, {"valid": False, "reason": "unavailable",
+                                      "message": str(error)}
+
     def _sleep_sim(self, seconds: float, should_abort) -> None:
         if seconds <= 0:
             return
@@ -481,9 +506,20 @@ class HumanoidBody:
         t_end = st.t + max(0.0, budget_s)
         reason, braked_at = REASON_BUDGET, None
         wd_sim, wd_wall = st.t, time.perf_counter()
-        self._set_command(vx, vy, wz)
+        safety_reason, clearance = self._motion_clearance(kind)
+        next_scan = st.t + self._clearance_period
+        # No nonzero velocity command reaches the gait before the first valid scan.
+        self._set_command(0.0, 0.0, 0.0)
+        if should_abort():
+            safety_reason = REASON_STOPPED
+        if safety_reason is None:
+            self._set_command(vx, vy, wz)
         try:
             while True:
+                if safety_reason is not None:
+                    reason = safety_reason
+                    braked_at = clearance.get("travel_clearance_m")
+                    break
                 st = self.bus.read()
                 if st.t >= t_end:
                     break
@@ -498,11 +534,11 @@ class HumanoidBody:
                 if self._fallen(st):
                     reason = REASON_FALLEN
                     break
-                if kind == "dist":
-                    front = self._front_cone()
-                    if front < self.brake_stop_m:       # stop, never steer around: that is the brain's call
-                        braked_at, reason = front, REASON_BRAKED
-                        break
+                if st.t >= next_scan:
+                    safety_reason, clearance = self._motion_clearance(kind)
+                    next_scan = st.t + self._clearance_period
+                    if safety_reason is not None:
+                        continue
                 x, y = (st.odom_xy + [0.0, 0.0])[:2]
                 acc_yaw += _wrap(st.odom_yaw - prev_yaw)
                 prev_yaw = st.odom_yaw
@@ -528,6 +564,7 @@ class HumanoidBody:
         return {"moved_m": round(math.hypot(x1 - x0, y1 - y0), 3), "turned_deg": round(math.degrees(acc_yaw), 1),
                 "fallen": self._fallen(st), "reason": reason,
                 "front_m": round(braked_at, 2) if braked_at is not None else None,
+                "motion_clearance": clearance,
                 "braked": reason == REASON_BRAKED, "stalled": reason == REASON_STALLED,
                 "sim_time": round(st.t, 3)}
 
@@ -546,12 +583,14 @@ class HumanoidBody:
             return {"ok": False, "message": f"stopped by the operator after {moved:.2f} m", "data": r}
         if r["reason"] == REASON_SIM_DEAD:
             return {"ok": False, "message": f"the world stopped answering after {moved:.2f} m", "data": r}
+        if r["reason"] in (REASON_CLEARANCE, "scene_test_active"):
+            return {"ok": False, "message": f"walking inhibited: {r['reason']}", "data": r}
         if r["reason"] == REASON_BRAKED:
             if moved < float(L["brake_zero_move_m"]):
-                return {"ok": True, "message": (f"did not move: only {r['front_m']:.2f} m ahead, already at "
-                                                f"the safety distance — this heading is blocked"), "data": r}
-            return {"ok": True, "message": (f"walked {moved:.2f} m then stopped: only {r['front_m']:.2f} m "
-                                            f"ahead, braked at the safety distance"), "data": r}
+                return {"ok": True, "message": (f"did not move: {r['motion_clearance']['reason']} within "
+                                                f"the safety distance"), "data": r}
+            return {"ok": True, "message": (f"walked {moved:.2f} m then braked: "
+                                            f"{r['motion_clearance']['reason']} ahead"), "data": r}
         if r["reason"] == REASON_STALLED or moved < meters * float(L["stuck_min_ratio"]):
             return {"ok": True, "message": f"walked only {moved:.2f} m and got stuck — blocked by a wall "
                                            f"or furniture", "data": r}
@@ -573,6 +612,9 @@ class HumanoidBody:
             return {"ok": False, "message": f"stopped by the operator after turning {turned:.0f}°", "data": r}
         if r["reason"] == REASON_SIM_DEAD:
             return {"ok": False, "message": f"the world stopped answering after {turned:.0f}°", "data": r}
+        if r["reason"] in (REASON_CLEARANCE, "scene_test_active", REASON_BRAKED):
+            return {"ok": False, "message": (f"turn stopped after {turned:.0f}°: "
+                                             f"{r['motion_clearance'].get('reason', r['reason'])}"), "data": r}
         msg = f"turned {side} {turned:.0f}°"
         if r["moved_m"] >= float(L["turn_report_move_m"]):
             msg += f", drifting {r['moved_m']:.2f} m"
@@ -585,8 +627,8 @@ class HumanoidBody:
             {"name": "move_forward", "kind": KIND_SKILL,
              "description": (f"Walk straight ahead a distance in metres (at most {L['max_move_m']:g} per call). "
                              f"The body walks with its real gait, so the distance covered is measured, not "
-                             f"assumed; it brakes on its own when the front cone gets too close and stops "
-                             f"if it runs into a wall or furniture. Either way you are told how far it "
+                             f"assumed; it checks physical obstacles at multiple heights and ground support, "
+                             f"braking before blocked or unsupported space. You are told how far it "
                              f"went and how much room is left ahead. It never steers around obstacles: "
                              f"where to go, and what to do when blocked, is your decision."),
              "parameters": {"type": "object",

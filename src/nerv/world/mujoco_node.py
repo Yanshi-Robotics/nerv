@@ -36,11 +36,12 @@ os.environ.setdefault("MUJOCO_GL", "egl")     # headless rendering; a display is
 import mujoco  # noqa: E402
 import numpy as np  # noqa: E402
 
-from ..nerve.world import (OP_CLOSE, OP_EPOCH, OP_RAYS, OP_READ, OP_RESET, OP_SENSOR,  # noqa: E402
+from ..nerve.world import (OP_CLEARANCE, OP_CLOSE, OP_EPOCH, OP_RAYS, OP_READ, OP_RESET, OP_SENSOR,  # noqa: E402
                            OP_SENSORS, OP_SPAWN, OP_WRITE, PD_EXPLICIT, PD_IMPLICIT,
                            PD_POSITION_ACTUATOR)
 from .bus_server import BusServer  # noqa: E402
 from .scene_operator import SceneOperator, DEFAULTS as SCENE_DEFAULTS  # noqa: E402
+from .clearance import ClearanceScanner  # noqa: E402
 
 # ---- named defaults: every one of these can be overridden from world.yaml `physics:` ------------
 DEFAULT_PHYSICS: dict[str, Any] = {
@@ -339,6 +340,8 @@ class WorldSim:
                     if self.scene_operator:
                         self.scene_operator.tick()
                     mujoco.mj_step(self.model, self.data)
+                    if self.scene_operator:
+                        self.scene_operator.runtime.observe_step()
                 self._update_imu(tick_sim)
             now = time.perf_counter()
             self._last_advance_wall = now
@@ -450,6 +453,7 @@ class WorldSim:
             self.spawn_pose = self._resolve_spawn_pose()
             self._configure_damping()
             self._build_ray_mask()
+            self._clearance_scanner = ClearanceScanner(self.model, self.base_body)
             self._place()
             self._measure_front_extent()
             self.spawned = True
@@ -608,6 +612,14 @@ class WorldSim:
             if msg.get("kd") is not None and len(msg["kd"]) == len(self.joint_names):
                 self.kd = np.asarray(msg["kd"], np.float64)
                 self._configure_damping()
+
+    def clearance(self, query: dict) -> dict:
+        with self._lock:
+            if self.scene_operator and self.scene_operator.active():
+                return {"valid": False, "reason": "scene_test_active"}
+            if not self.spawned:
+                return {"valid": False, "reason": "unavailable", "message": "body has not spawned"}
+            return self._clearance_scanner.measure(self.data, query)
 
     def rays(self, angles_deg: list[float], max_range_m: float) -> list[float]:
         max_range_m = float(max_range_m)
@@ -803,6 +815,8 @@ def make_bus_handler(sim: WorldSim) -> Callable[[dict], dict]:
         if op == OP_RAYS:
             return {"ranges": sim.rays(list(msg.get("angles_deg") or []),
                                        float(msg.get("max_range_m", 0.0)))}
+        if op == OP_CLEARANCE:
+            return sim.clearance(dict(msg.get("query") or {}))
         if op == OP_EPOCH:
             return {"epoch": sim.epoch}
         if op == OP_CLOSE:

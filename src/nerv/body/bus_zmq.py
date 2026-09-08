@@ -1,7 +1,7 @@
 """ZMQ client for the NERV/World motor bus (the simulation endpoint).
 
-REQ/REP, one JSON object per message (see nerve.wire). A lock serialises callers: the policy
-thread and the observation reader share one socket.
+REQ messages, one JSON object per message (see nerve.wire). Motor and camera requests
+use independent channels so a slow frame cannot hold the policy or emergency-stop lock.
 """
 from __future__ import annotations
 
@@ -10,7 +10,7 @@ import threading
 import zmq
 
 from ..nerve import wire
-from ..nerve.world import (OP_CLOSE, OP_EPOCH, OP_RAYS, OP_READ, OP_RESET, OP_SENSOR, OP_SENSORS,
+from ..nerve.world import (OP_CLEARANCE, OP_CLOSE, OP_EPOCH, OP_RAYS, OP_READ, OP_RESET, OP_SENSOR, OP_SENSORS,
                            OP_SPAWN, OP_WRITE, ActuatorSpec, BusCommand, BusState)
 
 
@@ -18,33 +18,52 @@ class BusError(RuntimeError):
     pass
 
 
-class ZmqBus:
-    def __init__(self, url: str, timeout_ms: int = 5000) -> None:
-        self.url = url
+class _RequestChannel:
+    """Serialized REQ exchange, with a fresh socket after a missed reply."""
+    def __init__(self, url: str, timeout_ms: int) -> None:
+        self.url, self.timeout_ms = url, timeout_ms
         self._ctx = zmq.Context.instance()
-        self._sock = self._ctx.socket(zmq.REQ)
-        self._sock.setsockopt(zmq.RCVTIMEO, timeout_ms)
-        self._sock.setsockopt(zmq.SNDTIMEO, timeout_ms)
-        self._sock.setsockopt(zmq.LINGER, 0)
-        self._sock.connect(url)
         self._lock = threading.Lock()
+        self._closed = False
+        self._sock = self._connect()
 
-    def _req(self, msg: dict) -> dict:
+    def _connect(self):
+        sock = self._ctx.socket(zmq.REQ)
+        sock.setsockopt(zmq.RCVTIMEO, self.timeout_ms)
+        sock.setsockopt(zmq.SNDTIMEO, self.timeout_ms)
+        sock.setsockopt(zmq.LINGER, 0)
+        sock.connect(self.url)
+        return sock
+
+    def request(self, msg: dict) -> dict:
         with self._lock:
+            if self._closed:
+                raise BusError("bus is closed")
             try:
                 self._sock.send(wire.dumps(msg))
                 rep = wire.loads(self._sock.recv())
-            except zmq.ZMQError as e:
-                # A REQ socket that missed a reply is wedged; rebuild it.
+            except zmq.ZMQError as error:
                 self._sock.close(0)
-                self._sock = self._ctx.socket(zmq.REQ)
-                self._sock.setsockopt(zmq.RCVTIMEO, 5000)
-                self._sock.setsockopt(zmq.LINGER, 0)
-                self._sock.connect(self.url)
-                raise BusError(f"bus {msg.get('op')} failed: {e}") from e
+                self._sock = self._connect()
+                raise BusError(f"bus {msg.get('op')} failed: {error}") from error
         if not rep.get("ok", False):
             raise BusError(rep.get("error") or f"bus {msg.get('op')} refused")
         return rep
+
+    def close(self) -> None:
+        with self._lock:
+            self._closed = True
+            self._sock.close(0)
+
+
+class ZmqBus:
+    def __init__(self, url: str, timeout_ms: int = 5000) -> None:
+        self.url = url
+        self._motor = _RequestChannel(url, timeout_ms)
+        self._camera = _RequestChannel(url, timeout_ms)
+
+    def _req(self, msg: dict) -> dict:
+        return self._motor.request(msg)
 
     def spawn(self, spec: ActuatorSpec) -> dict:
         return self._req({"op": OP_SPAWN, "joint_names": spec.joint_names, "pd_mode": spec.pd_mode,
@@ -74,12 +93,15 @@ class ZmqBus:
         return list(self._req({"op": OP_SENSORS}).get("sensors", []))
 
     def sensor(self, name: str) -> tuple[bytes, str]:
-        r = self._req({"op": OP_SENSOR, "name": name})
+        r = self._camera.request({"op": OP_SENSOR, "name": name})
         return wire.b64d(r["data"]), r.get("mime", "image/jpeg")
 
     def rays(self, angles_deg: list[float], max_range_m: float) -> list[float]:
         return list(self._req({"op": OP_RAYS, "angles_deg": angles_deg,
                                "max_range_m": max_range_m}).get("ranges", []))
+
+    def clearance(self, query: dict) -> dict:
+        return self._req({"op": OP_CLEARANCE, "query": query})
 
     def epoch(self) -> str:
         return str(self._req({"op": OP_EPOCH}).get("epoch", ""))
@@ -89,4 +111,5 @@ class ZmqBus:
             self._req({"op": OP_CLOSE})
         except Exception:
             pass
-        self._sock.close(0)
+        self._motor.close()
+        self._camera.close()
