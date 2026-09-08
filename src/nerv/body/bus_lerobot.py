@@ -116,6 +116,9 @@ class LerobotBus:
     def rays(self, angles_deg, max_range_m):
         return []
 
+    def clearance(self, query: dict) -> dict:
+        return {"valid": False, "reason": "unavailable", "message": "no clearance sensor"}
+
     def epoch(self) -> str:
         return str(int(self._t0))
 
