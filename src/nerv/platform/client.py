@@ -290,6 +290,21 @@ class WorldControl:
         except Exception:
             return None
 
+    def scene_get(self, resource: str) -> dict:
+        response = self._http.get(self.base + "/scene/" + resource)
+        response.raise_for_status()
+        return response.json()
+
+    def scene_post(self, operation: str, payload: dict) -> dict:
+        response = self._http.post(self.base + "/scene/" + operation, json=payload)
+        response.raise_for_status()
+        return response.json()
+
+    def scene_frame(self, credentials: dict):
+        response = self._http.get(self.base + "/scene/frame", params=credentials)
+        response.raise_for_status()
+        return response.content, response.headers.get("X-Sim-Time", "")
+
     def online(self) -> bool:
         return self.health() is not None
 
