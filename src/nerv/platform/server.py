@@ -201,9 +201,17 @@ def node_config(key: str, inp: ConfigIn) -> dict:
     c = nerv.node_client(key)
     if c is None:
         raise HTTPException(404, "no such node")
-    if (key.startswith("body:") and inp.key == "armed" and inp.value.lower() in ("true", "1", "yes", "on")
-            and nerv.scene_tests.blocks(key.partition(":")[2])):
-        raise HTTPException(409, "End scene testing before arming the body")
+    if key.startswith("body:"):
+        body = key.partition(":")[2]
+        # Match the body protocol's accepted enable values, including whitespace.
+        enabling = inp.key == "armed" and inp.value.strip().lower() in ("1", "true", "yes", "on", "armed")
+        with nerv.body_control_lock(body):
+            # Recheck after waiting: scene entry may have acquired control meanwhile.
+            if enabling and nerv.scene_tests.blocks(body):
+                raise HTTPException(409, "End scene testing before arming the body")
+            r = c.set_config(inp.key, inp.value)
+            c.refresh()
+            return r
     r = c.set_config(inp.key, inp.value)
     c.refresh()
     return r
