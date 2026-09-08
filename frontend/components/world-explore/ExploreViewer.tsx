@@ -6,7 +6,7 @@ import { GLTFLoader } from "three/addons/loaders/GLTFLoader.js";
 import { OrbitControls } from "three/addons/controls/OrbitControls.js";
 
 import { useI18n } from "@/lib/i18n";
-import { exploreAsset, localized, type Bounds, type ExploreManifest, type XYZ } from "@/lib/world-explore";
+import { exploreAsset, isExteriorFacility, localized, type Bounds, type ExploreManifest, type XYZ } from "@/lib/world-explore";
 
 export type ExploreSelection = { kind: "room" | "facility"; id: string } | null;
 export type ExploreLevel = number | "all" | "courtyard";
@@ -71,6 +71,10 @@ export default function ExploreViewer({ manifest, floor, labels, facilities, sur
     const abort = new AbortController();
     let disposed = false;
     let frame = 0;
+    let drawnFrames = 0;
+    let previousAnimatedFrame: number | null = null;
+    let animationFrames = 0;
+    let animationMilliseconds = 0;
     let renderer: THREE.WebGLRenderer;
     try { renderer = new THREE.WebGLRenderer({ antialias: true, alpha: false }); }
     catch { setError("WebGL 2 is unavailable. Use a browser with hardware acceleration."); setLoading(false); return; }
@@ -158,6 +162,10 @@ export default function ExploreViewer({ manifest, floor, labels, facilities, sur
     function render(now: number) {
       frame = 0;
       if (disposed) return;
+      if (tween && previousAnimatedFrame !== null) {
+        animationFrames += 1;
+        animationMilliseconds += now - previousAnimatedFrame;
+      }
       if (tween) {
         const progress = Math.min(1, (now - tween.start) / VIEW_DURATION_MS);
         const eased = progress * progress * (3 - 2 * progress);
@@ -168,7 +176,11 @@ export default function ExploreViewer({ manifest, floor, labels, facilities, sur
       }
       renderer.render(scene, camera);
       placeLabels();
+      previousAnimatedFrame = tween ? now : null;
       // Read-only diagnostics for the browser acceptance harness; no continuous telemetry.
+      element!.dataset.drawnFrames = String(++drawnFrames);
+      element!.dataset.animationFrames = String(animationFrames);
+      element!.dataset.animationSeconds = String(animationMilliseconds / 1000);
       element!.dataset.renderCalls = String(renderer.info.render.calls);
       element!.dataset.geometries = String(renderer.info.memory.geometries);
       element!.dataset.textures = String(renderer.info.memory.textures);
@@ -189,6 +201,8 @@ export default function ExploreViewer({ manifest, floor, labels, facilities, sur
       if (meta.role === "background") return currentOptions.surroundings;
       if (typeof currentOptions.floor !== "number") return true;
       if (meta.role === "ceiling" || meta.role === "roof") return false;
+      // A slab belongs to the floor it supports, even when its thickness overlaps the level below.
+      if (meta.role === "floor") return meta.floor === currentOptions.floor;
       if (meta.role === "exterior") return currentOptions.floor === manifest.floors[0]?.id;
       return (meta.levels ?? [meta.floor]).includes(currentOptions.floor);
     }
@@ -238,15 +252,16 @@ export default function ExploreViewer({ manifest, floor, labels, facilities, sur
       }
       const selected = next.selection?.kind === "room" ? manifest.rooms.find((r) => r.id === next.selection?.id)
         : manifest.facilities.find((f) => f.id === next.selection?.id);
+      const points = selected && "points" in selected ? selected.points : null;
       let selectedBounds: THREE.Box3 | null = null;
-      if (selected?.bounds) selectedBounds = convertBounds(selected.bounds);
+      if (points?.length) selectedBounds = new THREE.Box3().setFromPoints(points.map(convert));
+      else if (selected?.bounds) selectedBounds = convertBounds(selected.bounds);
       else if (selected && "anchor" in selected) selectedBounds = new THREE.Box3().setFromCenterAndSize(convert(selected.anchor), new THREE.Vector3(1, 1, 1));
-      highlight.visible = !!selectedBounds;
+      highlight.visible = !!selectedBounds && !points?.length;
       if (selectedBounds) {
         highlight.box.copy(selectedBounds);
         if (next.selection?.kind === "room") highlight.box.max.y = highlight.box.min.y + 0.08;
       }
-      const points = selected && "points" in selected ? selected.points : null;
       route.visible = !!points?.length;
       if (points?.length) {
         route.geometry.dispose();
@@ -270,7 +285,7 @@ export default function ExploreViewer({ manifest, floor, labels, facilities, sur
     function createMarkers() {
       const sources = [
         ...manifest.rooms.map((room) => ({ kind: "room" as const, item: room, point: convert([...(room.bounds[0].map((v, i) => (v + room.bounds[1][i]) / 2))] as XYZ), exterior: !!room.exterior })),
-        ...manifest.facilities.map((facility) => ({ kind: "facility" as const, item: facility, point: convert(facility.anchor), exterior: manifest.rooms.find((r) => r.id === facility.room)?.exterior ?? facility.kind === "boundary" })),
+        ...manifest.facilities.map((facility) => ({ kind: "facility" as const, item: facility, point: convert(facility.anchor), exterior: isExteriorFacility(facility, manifest.rooms) })),
       ];
       for (const source of sources) {
         const button = document.createElement("button");

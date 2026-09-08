@@ -327,7 +327,6 @@
     "Scene test": "Scene test",
     "Operator only": "Operator only",
     "Exit scene test": "Exit scene test",
-    "Scene testing stops the current task and disarms the robot after it settles. You can then operate furniture from the inspection camera.": "Scene testing stops the current task and disarms the robot after it settles. You can then operate furniture from the inspection camera.",
     "Waiting for the robot to settle…": "Waiting for the robot to settle…",
     "Start scene test": "Start scene test",
     "This world does not offer scene tests.": "This world does not offer scene tests.",
@@ -429,6 +428,8 @@
     "Selected joint": "Selected joint",
     "Contact exceeded the tolerance. Reset the scene to retry.": "Contact exceeded the tolerance. Reset the scene to retry.",
     "Scene request timed out": "Scene request timed out",
-    "(operator: reset the entire scene — robot, furniture and props are back at their initial positions; time of day is unchanged)": "(operator: reset the entire scene — robot, furniture and props are back at their initial positions; time of day is unchanged)"
+    "(operator: reset the entire scene — robot, furniture and props are back at their initial positions; time of day is unchanged)": "(operator: reset the entire scene — robot, furniture and props are back at their initial positions; time of day is unchanged)",
+    "Scene testing stops the current task and disarms the robot after it settles. Inspect facilities and use the controls supported by this world.": "Scene testing stops the current task and disarms the robot after it settles. Inspect facilities and use the controls supported by this world.",
+    "Select a facility to inspect its location and test instructions. Furniture in this world is fixed.": "Select a facility to inspect its location and test instructions. Furniture in this world is fixed."
   }
 }

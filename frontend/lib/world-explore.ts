@@ -37,7 +37,7 @@ export type SceneState = {
   ok?: boolean; available: boolean; active: boolean; epoch: string; session: string | null; owner: string | null;
   phase: string; phases: string[]; held: number | null; reason: string; view: SceneView;
   selection: { names: string[]; body: number; point: XYZ; distance: number } | null;
-  joints: Record<string, { value?: number; fraction?: number; position?: XYZ; held?: boolean; result?: string }>;
+  joints: Record<string, { value?: number; fraction?: number; body?: string; position?: XYZ; held?: boolean; result?: string }>;
   task: SceneTask;
 };
 export type SceneLease = { owner: string; token: string; epoch: string; lease_seconds: number };
@@ -99,4 +99,9 @@ export function abandonScene(sid: string, lease: SceneLease): void {
   const body = JSON.stringify(lease);
   if (navigator.sendBeacon?.(url, new Blob([body], { type: "application/json" }))) return;
   void fetch(url, { method: "POST", headers: { "Content-Type": "application/json" }, body, keepalive: true }).catch(() => {});
+}
+
+/** A boundary inside a room is still indoors; only unassigned routes are exterior. */
+export function isExteriorFacility(facility: ExploreFacility, rooms: ExploreRoom[]): boolean {
+  return facility.room ? !!rooms.find((room) => room.id === facility.room)?.exterior : facility.kind === "boundary";
 }

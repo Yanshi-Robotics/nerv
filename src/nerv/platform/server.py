@@ -287,6 +287,8 @@ def scene_test_frame(sid: str, owner: str, token: str, epoch: str):
         client, credentials = nerv.scene_tests.credentials(sid, dict(owner=owner, token=token, epoch=epoch))
         content, stamp = client.scene_frame(credentials)
         return Response(content, media_type="image/jpeg", headers={"Cache-Control": "no-store", "X-Sim-Time": stamp})
+    except FileNotFoundError:
+        raise HTTPException(404, "No such session")
     except (ValueError, KeyError) as error:
         raise HTTPException(409, str(error))
     except httpx.HTTPError:
@@ -299,6 +301,8 @@ def scene_test_read(sid: str, resource: str):
         raise HTTPException(404, "Unknown scene resource")
     try:
         return nerv.scene_tests.read(sid, resource)
+    except FileNotFoundError:
+        raise HTTPException(404, "No such session")
     except (ValueError, KeyError) as error:
         raise HTTPException(409, str(error))
     except httpx.HTTPError:
@@ -313,6 +317,8 @@ def scene_test_operation(sid: str, operation: str, payload: dict):
         if operation not in ("heartbeat", "release", "command"):
             raise HTTPException(404, "Unknown scene operation")
         return nerv.scene_tests.action(sid, operation, payload)
+    except FileNotFoundError:
+        raise HTTPException(404, "No such session")
     except (ValueError, KeyError) as error:
         raise HTTPException(409, str(error))
     except httpx.HTTPError:

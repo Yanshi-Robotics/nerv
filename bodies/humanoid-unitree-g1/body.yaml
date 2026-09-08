@@ -35,7 +35,7 @@ locomotion:
     height_offsets_m: [0.08, 0.28, 0.60, 0.95, 1.20] # above measured sole height
     envelope_margin_m: 0.04       # allow small gait sway beyond current collision geometry
     max_drop_m: 0.08              # flat-ground policy: reject stairs and pool edges
-    max_rise_m: 0.08              # tolerate contact settling and small floor transitions
+    max_rise_m: 0.03              # flat gait stops before low curbs; 7.5 cm pool coping caused a fall
     support_probe_margin_m: 0.05  # start downward rays above allowed floor variation
     support_seam_tolerance_m: 0.002 # all four 2 mm neighbours must support an exact box seam
     scan_period_s: 0.10           # recheck motion in simulation time, independently of 50 Hz policy

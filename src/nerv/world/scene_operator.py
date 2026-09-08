@@ -25,6 +25,7 @@ DEFAULTS = {
     "scene_task_period_s": 0.05,       # task evaluation at 20 Hz, force control at physics rate
     "scene_target_line_px": 2.0,       # operator-only task volume edges, in renderer pixels
 }
+MAX_COMMAND_SEQUENCE = 2**53 - 1  # Largest exact integer shared by JSON/JavaScript clients.
 
 
 def vector(value, length=3):
@@ -83,7 +84,8 @@ class SceneOperator:
             raise ValueError("Wait for the robot to stop and stand steadily")
         self.cancel()
         self.lease = {"session": session, "owner": owner, "token": secrets.token_urlsafe(24),
-                      "epoch": epoch, "expires": self.clock() + self.config["scene_lease_s"]}
+                      "epoch": epoch, "expires": self.clock() + self.config["scene_lease_s"],
+                      "sequence": 0}
         return {"token": self.lease["token"], "lease_seconds": self.config["scene_lease_s"],
                 "epoch": epoch, "owner": owner}
 
@@ -96,6 +98,15 @@ class SceneOperator:
             raise ValueError("The world changed")
         if renew:
             self.lease["expires"] = self.clock() + self.config["scene_lease_s"]
+
+    def commit_command(self, sequence, credentials):
+        """Reject delayed pre-cancel commands at the actual execution boundary."""
+        self.check(**credentials)
+        if type(sequence) is not int or not 0 < sequence <= MAX_COMMAND_SEQUENCE:
+            raise ValueError("A positive safe integer scene command sequence is required")
+        if sequence <= self.lease["sequence"]:
+            raise ValueError("Scene command was superseded by a later command")
+        self.lease["sequence"] = sequence
 
     def tick(self):
         if self.active():
@@ -239,7 +250,9 @@ class SceneOperator:
                 "owner": self.lease["owner"] if active else None,
                 "phase": self.runtime.phase, "phases": list(self.runtime.phases),
                 "selection": selection, "held": int(ix.held[0]) if ix.held else None,
-                "joints": {name: ix.status(name) for name in ix.joints},
+                "joints": {name: {**ix.status(name), "body": mujoco.mj_id2name(
+                    self.sim.model, mujoco.mjtObj.mjOBJ_BODY,
+                    int(self.sim.model.jnt_bodyid[jid]))} for name, jid in ix.joints.items()},
                 "task": self.runtime.task_status(), "reason": self.last_reason,
                 "view": {"lookat": self.camera.lookat.tolist(), "azimuth": float(self.camera.azimuth),
                          "elevation": float(self.camera.elevation), "distance": float(self.camera.distance)}}

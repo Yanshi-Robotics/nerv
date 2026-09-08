@@ -39,6 +39,7 @@ export default function SceneTestPanel({ sessionId, onClose, onStateChanged }: {
   const [lease, setLease] = useState<SceneLease | null>(null);
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
+  const [resetPending, setResetPending] = useState(false);
   const [facility, setFacility] = useState("");
   const [target, setTarget] = useState(0);
   const [jointChoice, setJointChoice] = useState("");
@@ -46,9 +47,12 @@ export default function SceneTestPanel({ sessionId, onClose, onStateChanged }: {
   const mounted = useRef(true);
   const leaseRef = useRef<SceneLease | null>(null);
   const stateRef = useRef<SceneState | null>(null);
+  const confirmedView = useRef<SceneView | null>(null);
   const owner = useRef("");
   const lifecycle = useRef(0);
   const commandSequence = useRef(0);
+  const commandTail = useRef<Promise<unknown>>(Promise.resolve());
+  const commandGeneration = useRef(0);
   const commandsPending = useRef(0);
   const leaseRenewedAt = useRef(0);
   const lastXY = useRef<[number, number]>([0, 0]);
@@ -61,6 +65,7 @@ export default function SceneTestPanel({ sessionId, onClose, onStateChanged }: {
   const update = useCallback((next: SceneState) => {
     if (!mounted.current) return;
     stateRef.current = next;
+    confirmedView.current = next.view;
     setState(next);
     if (!next.active && leaseRef.current) {
       leaseRef.current = null;
@@ -129,19 +134,33 @@ export default function SceneTestPanel({ sessionId, onClose, onStateChanged }: {
     return () => { stopped = true; clearInterval(timer); clearInterval(watchdog); };
   }, [lease, sessionId, update, relinquish]);
 
-  const command = useCallback(async (action: string, values: Record<string, unknown> = {}) => {
+  const command = useCallback((action: string, values: Record<string, unknown> | (() => Record<string, unknown>) = {}) => {
     const current = leaseRef.current;
-    if (!current) return false;
+    if (!current) return Promise.resolve(false);
     const sequence = ++commandSequence.current;
+    // Camera moves and their following drag rays must reach physics in order.
+    // Cancel/release bypass pending requests, invalidate queued work and rely on
+    // the world's sequence watermark to reject any older request already in flight.
+    const urgent = action === "cancel" || action === "release";
+    if (urgent) commandGeneration.current += 1;
+    const generation = commandGeneration.current;
     commandsPending.current += 1;
-    try {
-      const next = await sceneRequest(sessionId, "command", { ...current, action, ...values });
-      if (leaseRef.current?.token === current.token && sequence === commandSequence.current) { update(next); setError(""); }
-      return true;
-    } catch (e) {
-      if (mounted.current && leaseRef.current?.token === current.token && sequence === commandSequence.current) setError((e as Error).message);
-      return false;
-    } finally { commandsPending.current -= 1; }
+    const send = async () => {
+      try {
+        if (leaseRef.current?.token !== current.token || generation !== commandGeneration.current) return false;
+        const payload = typeof values === "function" ? values() : values;
+        const next = await sceneRequest(sessionId, "command", { ...current, action, ...payload, sequence });
+        if (leaseRef.current?.token === current.token && generation === commandGeneration.current) confirmedView.current = next.view;
+        if (leaseRef.current?.token === current.token && sequence === commandSequence.current) { update(next); setError(""); }
+        return true;
+      } catch (e) {
+        if (mounted.current && leaseRef.current?.token === current.token && sequence === commandSequence.current) setError((e as Error).message);
+        return false;
+      } finally { commandsPending.current -= 1; }
+    };
+    const result = urgent ? send() : commandTail.current.then(send, send);
+    commandTail.current = result;
+    return result;
   }, [sessionId, update]);
 
   useEffect(() => {
@@ -182,7 +201,7 @@ export default function SceneTestPanel({ sessionId, onClose, onStateChanged }: {
     try { if (current) await sceneRequest(sessionId, "release", current); } catch { /* The server deadline revokes a disconnected owner. */ }
   }
   async function reset() {
-    if (!confirm(t("Reset the whole scene? The robot, furniture and props return to their initial positions. The current time of day is kept."))) return;
+    setResetPending(false);
     setBusy(true);
     relinquish(); setLease(null);
     try {
@@ -222,15 +241,20 @@ export default function SceneTestPanel({ sessionId, onClose, onStateChanged }: {
   async function grab() {
     if (await command("grab", { xy: lastXY.current })) setDepth(stateRef.current?.selection?.distance ?? depth);
   }
-  function view(patch: Partial<SceneView>) {
-    void command("view", { ...state?.view, ...patch });
+  function view(change: (current: SceneView) => Partial<SceneView>) {
+    void command("view", () => {
+      const current = confirmedView.current;
+      if (!current) throw new Error("Scene camera is unavailable");
+      return change(current);
+    });
   }
   function pan(horizontal: number, vertical: number) {
-    if (!state?.view) return;
-    const az = state.view.azimuth * Math.PI / 180, el = state.view.elevation * Math.PI / 180;
-    const right = [Math.sin(az), -Math.cos(az), 0];
-    const up = [-Math.sin(el) * Math.cos(az), -Math.sin(el) * Math.sin(az), Math.cos(el)];
-    view({ lookat: state.view.lookat.map((value, i) => value + VIEW_PAN_M * (horizontal * right[i] + vertical * up[i])) as [number, number, number] });
+    view((current) => {
+      const az = current.azimuth * Math.PI / 180, el = current.elevation * Math.PI / 180;
+      const right = [Math.sin(az), -Math.cos(az), 0];
+      const up = [-Math.sin(el) * Math.cos(az), -Math.sin(el) * Math.sin(az), Math.cos(el)];
+      return { lookat: current.lookat.map((value, i) => value + VIEW_PAN_M * (horizontal * right[i] + vertical * up[i])) as [number, number, number] };
+    });
   }
   const items = catalogue?.facilities ?? [];
   const selectedNames = state?.selection?.names ?? [];
@@ -240,6 +264,8 @@ export default function SceneTestPanel({ sessionId, onClose, onStateChanged }: {
     ?? joints.find((f) => f.joint === focused?.joint)?.joint ?? joints[0]?.joint;
   const selectedState = selectedJoint ? state?.joints[selectedJoint] : null;
   const isMovable = selectedNames.some((name) => state?.joints[name]?.position);
+  const inspectedMovables = Object.entries(state?.joints ?? {}).filter(([name, value]) =>
+    value.position && (selectedNames.includes(name) || value.held || value.body === focused?.body));
   const statusLabel = (key: string) => t(RESULT_LABELS[key] ?? key);
   const btn = "rounded-md border border-neutral-700 bg-neutral-800 px-2 py-1.5 text-[11px] text-neutral-200 hover:bg-neutral-700 disabled:opacity-40";
 
@@ -252,7 +278,7 @@ export default function SceneTestPanel({ sessionId, onClose, onStateChanged }: {
       </header>
       {!lease ? (
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 p-5 text-center">
-          <p className="max-w-md text-xs leading-relaxed text-neutral-400">{t("Scene testing stops the current task and disarms the robot after it settles. You can then operate furniture from the inspection camera.")}</p>
+          <p className="max-w-md text-xs leading-relaxed text-neutral-400">{t("Scene testing stops the current task and disarms the robot after it settles. Inspect facilities and use the controls supported by this world.")}</p>
           <button className={`${btn} border-blue-600 bg-blue-600 text-white`} disabled={busy || !state?.available} onClick={enter}>
             {busy ? t("Waiting for the robot to settle…") : t("Start scene test")}
           </button>
@@ -266,7 +292,7 @@ export default function SceneTestPanel({ sessionId, onClose, onStateChanged }: {
               <select aria-label={t("Facility")} className="min-w-0 flex-1 rounded border border-neutral-700 bg-neutral-800 p-1.5 text-neutral-200" value={facility} disabled={state?.held != null}
                 onChange={(e) => { setFacility(e.target.value); setJointChoice(items.find((f) => f.id === e.target.value)?.joint ?? ""); lastXY.current = [0, 0]; void command("focus", { facility: e.target.value }); }}>
                 <option value="" disabled>{t("Choose a facility")}</option>
-                {items.map((f) => <option key={f.id} value={f.id}>{localized(f.label, lang)} · {f.room ? localized(catalogue?.rooms.find((r) => r.id === f.room)?.label, lang) : t("Outdoor")}</option>)}
+                {items.map((f) => <option key={f.id} value={f.id}>{localized(f.label, lang)}{f.room ? ` · ${localized(catalogue?.rooms.find((r) => r.id === f.room)?.label, lang)}` : ""}</option>)}
               </select>
             </label>
             <select aria-label={t("Time of day")} value={state?.phase ?? "day"} onChange={(e) => void command("time", { phase: e.target.value })} className="rounded border border-neutral-700 bg-neutral-800 p-1.5 text-[11px]">
@@ -277,12 +303,12 @@ export default function SceneTestPanel({ sessionId, onClose, onStateChanged }: {
             <SceneFrame sessionId={sessionId} lease={lease} onPointerDown={pointerDown} onPointerMove={pointerMove} onPointerUp={pointerUp} onError={setError} />
             <div className="absolute bottom-2 right-2 flex max-w-[95%] flex-wrap justify-end gap-1 rounded-md bg-neutral-950/90 p-1" role="group" aria-label={t("Inspection camera")}>
               {[
-                { label: "Orbit left", text: "◀", patch: { azimuth: (state?.view.azimuth ?? 0) - VIEW_ORBIT_DEG } },
-                { label: "Orbit right", text: "▶", patch: { azimuth: (state?.view.azimuth ?? 0) + VIEW_ORBIT_DEG } },
-                { label: "Tilt up", text: "▲", patch: { elevation: (state?.view.elevation ?? 0) + VIEW_TILT_DEG } },
-                { label: "Tilt down", text: "▼", patch: { elevation: (state?.view.elevation ?? 0) - VIEW_TILT_DEG } },
-                { label: "Zoom in", text: "+", patch: { distance: (state?.view.distance ?? 1) / VIEW_ZOOM_FACTOR } },
-                { label: "Zoom out", text: "−", patch: { distance: (state?.view.distance ?? 1) * VIEW_ZOOM_FACTOR } },
+                { label: "Orbit left", text: "◀", patch: (v: SceneView) => ({ azimuth: v.azimuth - VIEW_ORBIT_DEG }) },
+                { label: "Orbit right", text: "▶", patch: (v: SceneView) => ({ azimuth: v.azimuth + VIEW_ORBIT_DEG }) },
+                { label: "Tilt up", text: "▲", patch: (v: SceneView) => ({ elevation: v.elevation + VIEW_TILT_DEG }) },
+                { label: "Tilt down", text: "▼", patch: (v: SceneView) => ({ elevation: v.elevation - VIEW_TILT_DEG }) },
+                { label: "Zoom in", text: "+", patch: (v: SceneView) => ({ distance: v.distance / VIEW_ZOOM_FACTOR }) },
+                { label: "Zoom out", text: "−", patch: (v: SceneView) => ({ distance: v.distance * VIEW_ZOOM_FACTOR }) },
               ].map((c) => <button key={c.label} className={btn} title={t(c.label)} aria-label={t(c.label)} onClick={() => view(c.patch)}>{c.text}</button>)}
               <span className="mx-0.5 border-l border-neutral-600" />
               <button className={btn} title={t("Pan left")} aria-label={t("Pan left")} onClick={() => pan(-1, 0)}>←</button>
@@ -292,7 +318,7 @@ export default function SceneTestPanel({ sessionId, onClose, onStateChanged }: {
             </div>
           </div>
           <div className="max-h-[42%] shrink-0 space-y-2 overflow-auto p-3 text-[11px]">
-            <p className="text-neutral-400">{state?.held != null ? t("Drag the object in the image. Releasing the pointer releases the object. Adjust depth to move it closer or farther.") : t("Click the visible moving part to select it. Selection checks occlusion and a two-metre reach.")}</p>
+            <p className="text-neutral-400">{state?.held != null ? t("Drag the object in the image. Releasing the pointer releases the object. Adjust depth to move it closer or farther.") : items.some((item) => item.kind === "joint" || item.kind === "movable") ? t("Click the visible moving part to select it. Selection checks occlusion and a two-metre reach.") : t("Select a facility to inspect its location and test instructions. Furniture in this world is fixed.")}</p>
             {focused && <p className="text-neutral-500">{localized(focused.test, lang)}</p>}
             {joints.length > 0 && <div className="flex flex-wrap items-center gap-2">
               <select aria-label={t("Selected joint")} value={selectedJoint} onChange={(e) => setJointChoice(e.target.value)} className="max-w-full rounded border border-neutral-700 bg-neutral-800 px-2 py-1.5">
@@ -311,13 +337,20 @@ export default function SceneTestPanel({ sessionId, onClose, onStateChanged }: {
                 </label>
                 <button className={btn} onClick={() => { latestDrag.current = null; void command("release"); }}>{t("Release object")}</button>
               </>}
-              {selectedNames.map((name) => state?.joints[name]?.position && <span key={name} className="font-mono text-neutral-400">{state.joints[name].position?.map((v) => v.toFixed(2)).join(", ")} m</span>)}
             </div>}
+            {inspectedMovables.map(([name, value]) => <p key={name} className="tabular-nums text-neutral-400">{value.position?.map((v) => v.toFixed(2)).join(", ")} m · {statusLabel(value.result ?? "idle")}</p>)}
             <div className="flex flex-wrap items-center gap-2">
               <span role="status" className="min-w-0 flex-1 text-neutral-500">{statusLabel(state?.reason ?? "idle")}</span>
               <button className={btn} onClick={() => { latestDrag.current = null; dragging.current = false; void command("cancel"); }}>{t("Cancel interaction")}</button>
-              <button className={btn} onClick={reset} disabled={busy}>{t("Reset whole scene")}</button>
+              <button className={btn} onClick={() => setResetPending(true)} disabled={busy}>{t("Reset whole scene")}</button>
             </div>
+            {resetPending && <div role="alertdialog" aria-modal="false" aria-label={t("Reset whole scene")} className="space-y-2 rounded-lg border border-amber-700 bg-neutral-950 p-3">
+              <p>{t("Reset the whole scene? The robot, furniture and props return to their initial positions. The current time of day is kept.")}</p>
+              <div className="flex gap-2">
+                <button className={btn} onClick={() => void reset()} disabled={busy}>{t("Reset whole scene")}</button>
+                <button className={btn} onClick={() => setResetPending(false)}>{t("Cancel")}</button>
+              </div>
+            </div>}
             {error && <p role="alert" className="text-red-400">{t(error)}</p>}
             {state?.task.supported && <div className="rounded-lg border border-neutral-700 p-2" aria-label={t("Task progress")}>
               <p className="font-medium">{localized(state.task.label, lang)}</p>

@@ -91,3 +91,15 @@ def test_reset_and_fall_end_lease_without_changing_object_positions(operator):
     control.tick()
     assert not control.active()
     assert control.last_reason == "robot_fallen"
+
+
+def test_status_keeps_object_identity_after_camera_clears_selection(operator):
+    control, _ = operator
+    control.view({"lookat": [1, 0, 1]})
+    control.command("grab", {"xy": [0, 0]})
+    control.view({"azimuth": 105})
+    control.command("release", {})
+    state = control.state()
+    assert state["selection"] is None and state["held"] is None
+    assert state["joints"]["ix_can"]["body"] == "can"
+    assert len(state["joints"]["ix_can"]["position"]) == 3

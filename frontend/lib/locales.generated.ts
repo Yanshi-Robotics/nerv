@@ -348,7 +348,6 @@ export const LOCALES: Record<string, Locale> = {
       "Scene test": "Scene test",
       "Operator only": "Operator only",
       "Exit scene test": "Exit scene test",
-      "Scene testing stops the current task and disarms the robot after it settles. You can then operate furniture from the inspection camera.": "Scene testing stops the current task and disarms the robot after it settles. You can then operate furniture from the inspection camera.",
       "Waiting for the robot to settle…": "Waiting for the robot to settle…",
       "Start scene test": "Start scene test",
       "This world does not offer scene tests.": "This world does not offer scene tests.",
@@ -450,7 +449,9 @@ export const LOCALES: Record<string, Locale> = {
       "Selected joint": "Selected joint",
       "Contact exceeded the tolerance. Reset the scene to retry.": "Contact exceeded the tolerance. Reset the scene to retry.",
       "Scene request timed out": "Scene request timed out",
-      "(operator: reset the entire scene — robot, furniture and props are back at their initial positions; time of day is unchanged)": "(operator: reset the entire scene — robot, furniture and props are back at their initial positions; time of day is unchanged)"
+      "(operator: reset the entire scene — robot, furniture and props are back at their initial positions; time of day is unchanged)": "(operator: reset the entire scene — robot, furniture and props are back at their initial positions; time of day is unchanged)",
+      "Scene testing stops the current task and disarms the robot after it settles. Inspect facilities and use the controls supported by this world.": "Scene testing stops the current task and disarms the robot after it settles. Inspect facilities and use the controls supported by this world.",
+      "Select a facility to inspect its location and test instructions. Furniture in this world is fixed.": "Select a facility to inspect its location and test instructions. Furniture in this world is fixed."
     }
   },
   "zh": {
@@ -782,7 +783,6 @@ export const LOCALES: Record<string, Locale> = {
       "Scene test": "场景测试",
       "Operator only": "仅供操作员使用",
       "Exit scene test": "退出场景测试",
-      "Scene testing stops the current task and disarms the robot after it settles. You can then operate furniture from the inspection camera.": "场景测试会中断当前任务，待机器人站稳后解除使能。随后可通过观察镜头操作家具。",
       "Waiting for the robot to settle…": "正在等待机器人站稳…",
       "Start scene test": "开始场景测试",
       "This world does not offer scene tests.": "此世界不支持场景测试。",
@@ -884,7 +884,9 @@ export const LOCALES: Record<string, Locale> = {
       "Selected joint": "选中关节",
       "Contact exceeded the tolerance. Reset the scene to retry.": "接触穿透超过容差，请重置场景后重试。",
       "Scene request timed out": "场景请求超时",
-      "(operator: reset the entire scene — robot, furniture and props are back at their initial positions; time of day is unchanged)": "（操作员：已重置整个场景，机器人、家具和道具均已回到初始位置，时段保持不变）"
+      "(operator: reset the entire scene — robot, furniture and props are back at their initial positions; time of day is unchanged)": "（操作员：已重置整个场景，机器人、家具和道具均已回到初始位置，时段保持不变）",
+      "Scene testing stops the current task and disarms the robot after it settles. Inspect facilities and use the controls supported by this world.": "场景测试会中断当前任务，等待机器人站稳后解除使能。随后可查看设施，并使用本地图支持的控件。",
+      "Select a facility to inspect its location and test instructions. Furniture in this world is fixed.": "选择设施可查看位置及测试说明。本地图的家具为固定陈设。"
     }
   }
 };
