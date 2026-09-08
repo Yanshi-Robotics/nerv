@@ -1,0 +1,10 @@
+{
+  "captured_unix": 1788850322.5123136,
+  "live_lease_present": true,
+  "generic_enable_alias_http_status": 409,
+  "refusal": {
+    "detail": "End scene testing before arming the body"
+  },
+  "passed": true,
+  "session_disarmed": true
+}

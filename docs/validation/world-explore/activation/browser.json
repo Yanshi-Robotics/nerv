@@ -1,0 +1,48 @@
+{
+  "actual_browser": "in-app browser",
+  "url": "http://localhost:8000/",
+  "apt": {
+    "canvasCount": 1,
+    "viewer": {
+      "animationFrames": "0",
+      "animationSeconds": "0",
+      "drawnFrames": "2",
+      "geometries": "187",
+      "renderCalls": "196",
+      "testid": "explore-viewer",
+      "textures": "23"
+    }
+  },
+  "house": {
+    "canvasCount": 1,
+    "viewer": {
+      "animationFrames": "26",
+      "animationSeconds": "0.5166000000000058",
+      "drawnFrames": "30",
+      "geometries": "491",
+      "renderCalls": "267",
+      "testid": "explore-viewer",
+      "textures": "14"
+    }
+  },
+  "after_exit": {
+    "canvasCount": 0
+  },
+  "scene_test": {
+    "entered": true,
+    "camera_images": {
+      "body": [
+        640,
+        480
+      ],
+      "operator": [
+        640,
+        480
+      ]
+    },
+    "facility_focus": "Fridge Door · Kitchen",
+    "exited": true
+  },
+  "house_selection": "Swimming pool",
+  "house_level": "Courtyard"
+}

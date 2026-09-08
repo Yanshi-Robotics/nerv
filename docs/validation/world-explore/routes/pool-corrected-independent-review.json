@@ -1,0 +1,17 @@
+{
+  "created": "2026-09-08",
+  "reviewer": "scene_contract_audit/pool_failure_review",
+  "mode": "Independent read-only recomputation from final report and five raw journals; no simulation or service access",
+  "blockers": [],
+  "confirmed": [
+    "Five corrected-route passes, each with 137 targets: 685 targets and 1178 actions total",
+    "Per-round actions are 222, 230, 237, 236 and 253; no earlier-route passes are included",
+    "Every action succeeded; failed, braked and stuck counts are zero",
+    "Maximum target error is 0.159370253 m, within the unchanged 0.18 m tolerance",
+    "Maximum fixed-home error is 0.043104524 m; maximum measured-repeat-start return error is 0.042011903 m",
+    "Round 4 final target and return records are separate sample times with millimetre-scale pose differences; the summaries do not mix these references",
+    "One simulation session; each subsequent full starting pose equals the previous returned pose, consistent with continuous execution without resets",
+    "All ten captured source/config/XML/policy SHA-256 values remain unchanged at review time"
+  ],
+  "limits": "Actual operator-commanded simulation routes with target/action-boundary records; not exhaustive per-physics-step contact auditing, autonomous planning or hardware acceptance"
+}

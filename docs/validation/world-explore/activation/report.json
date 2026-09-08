@@ -1,0 +1,32 @@
+{
+  "date": "2026-09-08",
+  "passed": true,
+  "queue_job": 123,
+  "queue_exit_code": 0,
+  "activation_source_commit": "571f74818c59d4d2e90403f66ad3229e3a7fbf78",
+  "world_commit": "dd1f24d888b2d898ec5aa6a112f96b9bc711322f",
+  "old_resident_pid": 1167052,
+  "new_resident_pid": 2082910,
+  "old_sessions_preserved": 14,
+  "old_observation_images_preserved": 22,
+  "copied_session_logs": 591,
+  "copied_node_logs": 5,
+  "old_frontend_files_preserved": 70,
+  "new_frontend_files": 82,
+  "verified_candidate_html_sha256": "27fe42f093871bf57276c75b0609e603e6a82641b3f692812b131aecdcb7ef3b",
+  "helper_sha256": "6d5d07ec068f46bda0fc2aa2cd635257606f41f020373c5c24ea46954a0d386f",
+  "old_session_content": "All fields except status and armed compared exactly; original observation bytes rechecked including through the new image API. Private histories and backup contents are not published.",
+  "live_browser": "Scene testing, two 640x480 images, actual furniture focus, rejected generic enable alias, both Explore models, courtyard and pool description; zero canvases after leaving Explore.",
+  "limits": "Post-activation smoke check. The long physics, routes and performance measurements are separate isolated acceptance runs.",
+  "finished_utc": "2026-09-08T06:55:23.119083+00:00",
+  "independent_post_activation_review": {
+    "passed": true,
+    "scope": "A separate read-only agent compared the original snapshot with after.json, current session files and current HTTP API; rehashed preserved pictures, log prefixes and both user WIP files.",
+    "original_sessions_identical_except_allowed_state_fields": 14,
+    "image_hashes_identical": 22,
+    "session_log_prefixes_identical": 591,
+    "node_log_prefixes_identical": 5,
+    "user_wip_hashes_identical": 2,
+    "review_timing": "After activation; not a pre-switch review."
+  }
+}
