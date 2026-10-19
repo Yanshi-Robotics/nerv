@@ -10,6 +10,14 @@ One NERV instance binds one robot and one environment. One active conversation h
 
 The agent can start a skill, observe while it runs, receive another instruction and cancel the execution. The operator prepares and enables the device and can apply an emergency stop. Releasing the stop returns to disarmed standby and invalidates the previous task.
 
+## Architecture
+
+The agent harness, robot runtime, world and tool services meet through NERV. The host routes observations and tool calls, checks control permissions and records session events. Robot drivers and policy inference run in a separate worker environment.
+
+<div align="center"><img src="docs/images/structure.svg" alt="NERV connects the agent harness, independent robot runtime, world and tool services, with separate observation and operator control paths" width="860"></div>
+
+The harness composes session memory, context management and a model provider. A runtime declares its sensors and skills; the frontend reads those capabilities. Simulation and real hardware have separate environment bindings. Operator scene controls and simulator ground truth stay outside the agent's observation. See [the architecture guide](docs/architecture.md) for the module boundaries.
+
 ## Current status
 
 The source version is **0.6.0**. The local `v0.5.0` tag preserves the audited baseline. Version 1.0.0 requires the physical acceptance described in [the acceptance guide](docs/acceptance.md).
@@ -65,6 +73,39 @@ Set `NERV_LEROBOT_PYTHON` to that interpreter, `SO101_PORT`, the calibrated `SO1
 
 A person then selects Real hardware, creates the session, presses **Prepare device**, reviews the worker tool manifest, loads the policy and enables control. Manifest review is an initial setup step; individual agent tool calls need no approval. Preparation connects the device and may enable motor torque. Model loading sends no motion. Skill completion retains the device session. The emergency stop is a software pose hold, not a power cut or a substitute for a hardware stop.
 
+## Demo and interface
+
+The following recording and screenshots come from earlier G1 simulation versions. They show the existing navigation and operator views; the model controls and device preparation flow have changed in 0.6.
+
+<div align="center"><img src="docs/images/walk-to-the-living-room.gif" alt="Earlier G1 simulation: a language model observes the head camera and calls the gait skill to walk to the living room" width="960"></div>
+
+The instruction is “Walk to the living room.” The recording shows one unedited turn at 2.5× speed; an [original-speed MP4](docs/media/walk-to-the-living-room.mp4) is also available. The agent uses head-camera observations and calls the gait skill. The chase camera is an operator view.
+
+<div align="center"><img src="docs/images/web-session.png" alt="Earlier simulation session interface with robot observation, operator chase camera and conversation" width="960"></div>
+
+The session view places sensors beside the conversation. Robot observations and operator-only views are separate. Runtime sensor names determine which camera streams appear.
+
+<details>
+<summary>More interface and simulation views</summary>
+
+Teleoperation exposes the declared robot tools and emergency stop. The dashboard shows registry entries, node state and sessions.
+
+<div align="center"><img src="docs/images/web-teleop.png" alt="Earlier teleoperation interface with emergency stop and tool cards" width="960"></div>
+
+<div align="center"><img src="docs/images/web-dashboard.png" alt="Earlier dashboard showing registry, nodes, trust and sessions" width="960"></div>
+
+World Explore displays apartment and house assets. Scene testing is an operator function: its task state and results do not enter agent observations or certify an autonomous robot skill. The G1's released flat-ground gait does not provide furniture manipulation, grasping, autonomous sitting or stair traversal.
+
+<div align="center"><img src="docs/images/world-explore/apt-scene-test.png" alt="Operator scene test with a can on the refrigerator shelf and the door closed" width="960"></div>
+
+<div align="center"><img src="docs/images/world-explore/apt-cutaway.png" alt="World Explore apartment cutaway with rooms and facility markers" width="960"></div>
+
+<div align="center"><img src="docs/images/world-explore/house-west_pool-night.png" alt="MuJoCo house pool terrace and western path at night" width="960"></div>
+
+The [world validation guide](docs/validation/world-explore/README.md) covers scene tests, G1 routes and browser views.
+
+</details>
+
 ## Visual models
 
 The registration panel exposes model ID, endpoint, protocol, image capability evidence, tool support, request limits and reasoning effort. Chat reads the same registry. Pure text models and Mock do not appear in the running catalogue or act as fallbacks.
@@ -74,6 +115,10 @@ Sol and Astra use Responses API for tools. DeepSeek has a separate Responses ada
 Image input, tool calls and continuation are tested independently with a non-robot probe. A changed endpoint, model configuration, effort or credential invalidates the matching readiness check. Registration and API readiness do not imply physical acceptance. See [VLM configuration](docs/vlm.md).
 
 ## Agent harness
+
+<div align="center"><img src="docs/images/flow.svg" alt="Managed skill execution: observe, persist and check the tool call, receive an execution ID, supervise the local policy and report the observed outcome" width="860"></div>
+
+The diagram follows a managed skill such as ACT. Starting it returns an execution ID; the agent continues observing and checking execution state while the worker runs its local policy. Direct read tools and existing G1 skills can return their result within the tool call. Local stop and supervision checks remain active while a model request is pending.
 
 The default `AgentHarness` receives its host Link, model provider, context manager and compactor through replaceable boundaries. It never owns a robot object or loads ACT.
 

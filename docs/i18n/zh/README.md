@@ -10,6 +10,14 @@ NERV 将视觉语言模型与机器人、传感器和技能连接起来。Agent 
 
 Agent 可以启动技能，在执行中继续观察、接收新指令，并决定何时取消。操作员负责准备设备、启用控制和急停。解除急停后，设备回到未使能的待命状态，之前的任务作废。
 
+## 架构
+
+Agent harness、机器人运行后端、世界和工具服务通过 NERV 协作。宿主转发观测与工具调用、检查控制权限，并保存会话事件。机器人驱动与策略推理运行在独立的 worker 环境中。
+
+<div align="center"><img src="../../images/structure.svg" alt="NERV 连接 Agent harness、独立机器人运行后端、世界与工具服务，并区分观测和操作员控制路径" width="860"></div>
+
+Harness 组合会话记忆、上下文管理器和模型供应商接口。运行后端声明传感器与技能，界面读取这些能力。仿真与现实各有独立的环境绑定。操作员的场景控制和仿真真值不进入 Agent 观测。模块职责见[架构文档](../../architecture.md)。
+
 ## 当前状态
 
 当前源码版本为 **0.6.0**。本地 `v0.5.0` 标签保留审计基线。1.0.0 的发布条件见[实机验收指南](../../acceptance.md)。
@@ -65,6 +73,39 @@ python3 -m venv .venv-lerobot
 
 由操作员选择现实环境、创建会话，点击“准备设备”，审阅 worker 的工具清单，加载策略后启用控制。工具清单审阅属于初始设置，Agent 的每次工具调用不需要人工批准。准备设备会建立连接，并可能启用电机力矩；加载模型不会发送动作。技能结束后设备保持连接。软件急停保持姿态，不等同于断电，也不能代替硬件急停。
 
+## 演示与界面
+
+以下录像和截图来自早期 G1 仿真版本，展示原有的导航与操作员视图。0.6 版已调整模型设置和设备准备流程。
+
+<div align="center"><img src="../../images/walk-to-the-living-room.gif" alt="早期 G1 仿真：语言模型观察头部相机，并调用步态技能走向客厅" width="960"></div>
+
+收到“Walk to the living room.”后，Agent 根据头部相机画面调用步态技能。录像展示一轮完整指令，未剪辑，以 2.5 倍速播放，另有[原速 MP4](../../media/walk-to-the-living-room.mp4)。追拍相机仅供操作员查看。
+
+<div align="center"><img src="../../images/web-session.png" alt="早期仿真会话界面：机器人观测、操作员追拍画面与对话" width="960"></div>
+
+会话界面并列显示传感器画面与对话，并区分机器人观测和操作员专用视图。运行后端提供的传感器名称决定显示哪些相机。
+
+<details>
+<summary>更多界面与仿真场景</summary>
+
+遥控界面提供机器人声明的工具和急停入口；控制面板显示注册项、节点状态与会话。
+
+<div align="center"><img src="../../images/web-teleop.png" alt="早期遥控界面：急停与按工具生成的控制卡片" width="960"></div>
+
+<div align="center"><img src="../../images/web-dashboard.png" alt="早期控制面板：注册表、节点、信任状态与会话" width="960"></div>
+
+World Explore 展示公寓与住宅资产。场景测试由操作员进行，其任务状态和结果不进入 Agent 观测，也不证明机器人具有相应自主技能。G1 已发布的平地步态不提供家具操作、抓取、自主坐下或上下楼梯技能。
+
+<div align="center"><img src="../../images/world-explore/apt-scene-test.png" alt="操作员场景测试：罐子放在冰箱层板上，冰箱门已关闭" width="960"></div>
+
+<div align="center"><img src="../../images/world-explore/apt-cutaway.png" alt="World Explore 公寓剖面：房间与设施标记" width="960"></div>
+
+<div align="center"><img src="../../images/world-explore/house-west_pool-night.png" alt="MuJoCo 住宅夜景中的泳池露台与西侧步道" width="960"></div>
+
+场景测试、G1 路线和浏览器视图的说明见[世界验证指南](../../validation/world-explore/README.md)。
+
+</details>
+
 ## 视觉模型
 
 独立注册面板提供模型 ID、API 地址、协议、图像能力依据、工具支持、请求限制和推理强度。聊天区读取同一注册表。纯文字模型和 Mock 不进入正式运行目录，也不作为自动回退。
@@ -74,6 +115,10 @@ Sol 和 Astra 带工具时使用 Responses API，DeepSeek 使用独立的 Respon
 接口检测通过不操作机器人的测试工具，分别检查图像输入、工具调用和多轮续接。地址、模型配置、强度或凭据改变后，原有检测不再适用。注册和接口检测通过均不代表实机验收。详见[视觉模型配置](../../vlm.md)。
 
 ## Agent harness
+
+<div align="center"><img src="../../images/flow.svg" alt="持续技能执行流程：观测、保存并检查工具调用、取得执行编号、监督本地策略并报告观测到的结果" width="860"></div>
+
+图中展示 ACT 这类持续运行的技能。启动后先返回执行编号，Agent 可以在 worker 运行本地策略时继续观察、查询执行状态。直接读取类工具和已有 G1 技能也可在工具调用中返回结果。等待模型响应时，本地停止和监督机制继续生效。
 
 默认的 `AgentHarness` 通过可替换接口获得宿主 Link、模型供应商、上下文管理器和摘要器，不持有机器人对象，也不加载 ACT。
 
