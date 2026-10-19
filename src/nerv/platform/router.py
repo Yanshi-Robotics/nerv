@@ -14,6 +14,7 @@ import logging
 import queue
 import threading
 import time
+import uuid
 from typing import Callable
 
 from .. import config
@@ -34,7 +35,8 @@ class Turn:
     def __init__(self, store: SessionStore, session: Session, brain, body: RemoteBody | None,
                  world: WorldControl | None, tools: list[RemoteTool], gate: SafetyGate,
                  emit: Callable[[dict], None], max_steps: int = config.MAX_STEPS,
-                 time_budget_s: float = config.TURN_TIME_BUDGET_S, world_name: str = "") -> None:
+                 time_budget_s: float = config.TURN_TIME_BUDGET_S, world_name: str = "",
+                 current: Callable[[], bool] | None = None) -> None:
         self.store, self.session, self.brain = store, session, brain
         self.body, self.world, self.tool_nodes, self.gate = body, world, tools, gate
         self.emit = emit
@@ -47,6 +49,41 @@ class Turn:
         self._tools: list[ToolSpec] | None = None
         self._routes: dict[str, tuple[str, object, ToolSpec]] = {}   # name → (origin, node, spec)
         self.trace = {"inputs": [], "thinking": [], "reply": ""}
+        self._current = current or (lambda: True)
+        self._continuation: dict = {}
+        self._observation: dict = {}
+        self.run_id = uuid.uuid4().hex
+
+    def is_current(self) -> bool:
+        return (self._current() and not self._stop and not interrupt.is_set(self.session.id)
+                and time.monotonic() < self.deadline
+                and self.store.exists(self.session.id) and self.store.is_active(self.session.id))
+
+    def memory(self):
+        return self.store.memory(self.session.id)
+
+    def raw_history(self) -> list[dict]:
+        entries = self.memory().messages()
+        return context.build(entries, token_budget=sum(len(str(m)) for m in entries) + 1)
+
+    def model_reply(self, reply) -> None:
+        self._continuation = getattr(reply, "continuation", {})
+        self.memory().append("model_usage", {"model": self.brain.model,
+                                             "usage": getattr(reply, "usage", None)})
+        if self.body and self._observation:
+            self.body.post("/supervision", {"epoch": self.session.epoch,
+                                           "frame_seq": self._observation.get("frame_seq")})
+
+    def executing(self) -> bool:
+        if not self.body:
+            return False
+        value = self.body.post("/executions/status")
+        return bool(value.get("running"))
+
+    def supervise_wait(self) -> None:
+        end = time.monotonic() + config.SUPERVISION_WAIT_S
+        while time.monotonic() < end and self.is_current():
+            time.sleep(min(config.BRIDGE_WATCHDOG_POLL_S, end - time.monotonic()))
 
     # -- tool sheet -----------------------------------------------------------------------
     def tools(self) -> list[ToolSpec]:
@@ -73,6 +110,11 @@ class Turn:
                 out.append(spec)
                 self._routes[t.name] = ("tool", node, spec)
         self._tools = out
+        for td in (prompts.HISTORY_SEARCH_TOOL, prompts.HISTORY_READ_TOOL):
+            spec = ToolSpec(td["name"], td["description"], td["parameters"], "read")
+            if spec.name not in self._routes:
+                self._tools.append(spec)
+                self._routes[spec.name] = ("memory", self, spec)
         return out
 
     def system_context(self) -> dict:
@@ -102,6 +144,9 @@ class Turn:
                         val = c.get("label") or val
                 lines.append(f"· {o.get('label') or o.get('key')}: {val}")
         ctx["config_lines"] = lines
+        if self._observation:
+            import json
+            ctx["config_lines"].append("Current sensor state: " + json.dumps(self._observation, default=str))
         return ctx
 
     def history(self) -> list[dict]:
@@ -123,6 +168,7 @@ class Turn:
             obs = self.body.perceive()
             obs.state["ambient_refused"] = str(e)
         self.store.append_perception(self.session.id, obs.state, obs.images)
+        self._observation = dict(obs.state)
         first = obs.image_png
         b64 = base64.b64encode(first).decode() if first else None
         self.trace["inputs"].append({"state": obs.state, "n_images": len(obs.images)})
@@ -134,15 +180,21 @@ class Turn:
 
     # -- think ------------------------------------------------------------------------------
     def think(self, msg: Think) -> None:
+        if not self.is_current():
+            return
         tcs = [{"id": c.call_id, "name": c.name, "arguments": c.arguments} for c in msg.tool_calls]
         self.store.append(self.session.id, {"role": "assistant", "text": msg.text or "",
-                                            "tool_calls": tcs, "brain": self.session.brain})
+                                            "tool_calls": tcs, "brain": self.session.brain,
+                                            "continuation": self._continuation})
+        self._continuation = {}
         self.trace["thinking"].append({"text": msg.text or "", "tool_calls": tcs, "tool_results": []})
         if msg.text:
             self.emit({"type": op.EV_THINKING, "text": msg.text})
 
     # -- gate + act -------------------------------------------------------------------------
     def call_tool(self, call: CallTool) -> ToolResult:
+        if not self.is_current():
+            return ToolResult(call.call_id, call.name, False, "Run invalidated before dispatch")
         self.emit({"type": op.EV_TOOL_CALL, "name": call.name, "args": call.arguments})
         self.tools()
         route = self._routes.get(call.name)
@@ -150,6 +202,20 @@ class Turn:
             res = ActionResult(False, prompts.UNKNOWN_TOOL_RESULT.format(name=call.name))
             return self._finish(call, res)
         origin, node, spec = route
+        if origin == "memory":
+            try:
+                if call.name == prompts.HISTORY_SEARCH_TOOL["name"]:
+                    data = self.memory().search(str(call.arguments.get("query", "")),
+                                                int(call.arguments.get("limit", 10)))
+                else:
+                    data = self.memory().read_range(int(call.arguments.get("start", 1)),
+                                                    int(call.arguments.get("limit", 20)))
+                    data = [{**e, "data": {k: v for k, v in e["data"].items()
+                                            if k not in ("continuation",)}} for e in data
+                            if e["kind"] == "message"]
+                return self._finish(call, ActionResult(True, "Session history", {"events": data}))
+            except (ValueError, TypeError) as error:
+                return self._finish(call, ActionResult(False, str(error)))
         ok, reason = self.gate.check(call.name, call.arguments, kind=spec.kind, origin=origin,
                                      armed=self.session.armed, spec=spec)
         self.emit({"type": op.EV_GATE, "name": call.name, "allowed": ok, "reason": reason})
@@ -166,16 +232,21 @@ class Turn:
             q.put({"type": op.EV_PROGRESS, "name": call.name, "message": message or "", "progress": progress})
 
         def _aborted() -> bool:
-            return interrupt.is_set(self.session.id)
+            return not self.is_current()
 
         def _work():
+            self.memory().flush()
+            if not self.is_current():
+                return
             holder["res"] = node.invoke(call.name, _on_progress=_on_progress, _should_abort=_aborted,
-                                        **call.arguments)
+                                         **call.arguments)
 
         ctx = contextvars.copy_context()
         th = threading.Thread(target=ctx.run, args=(_work,), daemon=True)
         th.start()
         while th.is_alive():
+            if not self.is_current():
+                return ToolResult(call.call_id, call.name, False, "Run invalidated; result unknown")
             try:
                 self.emit(q.get(timeout=config.BRIDGE_WATCHDOG_POLL_S))
             except queue.Empty:
@@ -187,8 +258,12 @@ class Turn:
         return self._finish(call, res)
 
     def _finish(self, call: CallTool, res: ActionResult) -> ToolResult:
+        if not self.is_current():
+            return ToolResult.from_action(call.call_id, call.name, res)
+        import json
+        content = json.dumps({"message": res.message, "data": res.data}, default=str) if res.data else res.message
         self.store.append(self.session.id, {"role": "tool", "id": call.call_id, "name": call.name,
-                                            "content": res.message, "data": res.data})
+                                            "content": content, "data": res.data})
         if self.trace["thinking"]:
             self.trace["thinking"][-1]["tool_results"].append({"name": call.name, "ok": res.ok,
                                                                "message": res.message})
@@ -197,6 +272,8 @@ class Turn:
 
     # -- the brain's own registers ----------------------------------------------------------
     def set_register(self, msg: SetRegister) -> ToolResult:
+        if not self.is_current():
+            return ToolResult("", msg.kind, False, "Run invalidated")
         args = dict(msg.value or {})
         call_id = str(args.pop("call_id", "") or f"reg-{self.step}")
         sid = self.session.id
@@ -242,8 +319,11 @@ class Turn:
 
     # -- say / stop ---------------------------------------------------------------------------
     def say(self, msg: Say) -> None:
+        if not self.is_current():
+            return
         self.store.append(self.session.id, {"role": "assistant", "text": msg.text or "",
-                                            "brain": self.session.brain})
+                                            "brain": self.session.brain, "continuation": self._continuation})
+        self._continuation = {}
         self.trace["reply"] = msg.text or ""
         self.emit({"type": op.EV_REPLY, "text": msg.text or ""})
         self.done = True
@@ -271,15 +351,19 @@ class Turn:
     # -- driver -------------------------------------------------------------------------------
     def run(self, user_text: str) -> dict:
         self.store.append(self.session.id, {"role": "user", "text": user_text})
-        interrupt.clear(self.session.id)
+        self.memory().append("run_started", {"run_id": self.run_id, "model": self.brain.model})
         self.emit({"type": op.EV_START, "brain": self.session.brain, "model": self.brain.model})
         try:
             self.brain.run_turn(self, UserMessage(user_text))
         except Exception as e:
             _log.exception("brain turn failed")
+            if self.body:
+                self.body.post("/stop")
             self.say(Say(messages.BRAIN_CALL_FAILED_REPLY.format(error=f"{type(e).__name__}: {e}")))
         if not self.done:
             self.say(Say(""))
         self.emit({"type": op.EV_DONE})
+        self.memory().append("run_ended", {"run_id": self.run_id, "stop": self._stop,
+                                           "current": self._current()})
         return {"reply": self.trace["reply"], "trace": self.trace, "brain": self.session.brain,
                 "model": self.brain.model, "stop_reason": self._stop}

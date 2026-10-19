@@ -25,6 +25,12 @@ class Settings(BaseSettings):
                                       description="Wall clock per turn (seconds).")
     context_token_budget: int = Field(6000, validation_alias="NERV_CONTEXT_BUDGET", ge=100,
                                       description="Sliding-window budget for history.")
+    request_token_budget: int = Field(32768, validation_alias="NERV_REQUEST_TOKEN_BUDGET", ge=1024,
+                                     description="Conservative total request budget, including images and output.")
+    image_token_allowance: int = Field(2048, validation_alias="NERV_IMAGE_TOKEN_ALLOWANCE", ge=1,
+                                      description="Estimated input allowance per image; not billed token usage.")
+    supervision_wait_s: float = Field(1, validation_alias="NERV_SUPERVISION_WAIT_S", gt=0,
+                                      description="Bounded host wait between model supervision observations.")
     notes_max: int = Field(20, validation_alias="NERV_NOTES_MAX", ge=1)
     note_max_chars: int = Field(120, validation_alias="NERV_NOTE_MAX_CHARS", ge=10)
 
@@ -91,6 +97,9 @@ _settings = Settings()
 MAX_STEPS = _settings.max_steps
 TURN_TIME_BUDGET_S = _settings.turn_time_budget_s
 CONTEXT_TOKEN_BUDGET = _settings.context_token_budget
+REQUEST_TOKEN_BUDGET = _settings.request_token_budget
+IMAGE_TOKEN_ALLOWANCE = _settings.image_token_allowance
+SUPERVISION_WAIT_S = _settings.supervision_wait_s
 NOTES_MAX = _settings.notes_max
 NOTE_MAX_CHARS = _settings.note_max_chars
 GUIDANCE_MAX_CHARS = _settings.guidance_max_chars
