@@ -5,6 +5,13 @@ The 0.1.x entries below are the pre-release trail.
 
 ## [Unreleased]
 
+## [0.5.0] — 2026-10-19
+
+Audited development baseline after moving the checkout. Recreated the local Python
+entry points and editable installation at the current checkout. Existing v0.2.0
+history and both submodule revisions are retained. Context, turn and gate baseline:
+10 tests passed. This checkpoint does not certify hardware or current cloud APIs.
+
 The 2026-09-08 interaction update adds operator testing for apt's 22 appliance joints
 and nine movable objects, measured refrigerator-task evaluation, interruption and reset
 handling, house lighting phases, and collision-based ground-support and turning checks.
