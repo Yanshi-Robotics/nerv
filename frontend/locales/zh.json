@@ -475,6 +475,7 @@
     "(operator: released the emergency stop; the old task is cancelled. The robot is disarmed and waiting for new authorization and a new instruction.)": "（操作员已解除急停，旧任务已取消。机器人处于未使能的待命状态，等待重新授权和新指令。）",
     "(This VLM is not ready. Configure and validate it in Visual models.)": "（该视觉模型尚未就绪，请在“视觉模型”面板中配置并检测接口。）",
     "One instance binds one robot and one environment. The registry provides its tools and sensors; the active conversation owns control.": "一个实例绑定一台机器人和一个运行环境。注册表提供工具和传感器，当前控制对话拥有操作权。",
-    "Choose a robot and its startup environment.": "选择机器人及其启动环境。"
+    "Choose a robot and its startup environment.": "选择机器人及其启动环境。",
+    "(Task paused: the request could not fit the context budget after compaction. Original history is retained.)": "（任务已暂停：压缩后的请求仍超出上下文预算。原始历史记录已保留。）"
   }
 }

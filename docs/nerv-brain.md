@@ -73,3 +73,7 @@ The default harness also exposes `is_current()`, `memory()`, `raw_history()`, `m
 `executing()` and `supervise_wait()` through Link. It receives a replaceable context manager and
 compactor. Storage is host supplied; tools and actuator permissions remain in the host.
 See [the architecture](architecture.md) for durable source ranges, recovery and generation rules.
+
+Incomplete provider responses remain in raw `model_response` events. They do not enter live
+continuation history. A request that cannot fit after compaction returns an explicit pause
+message and keeps the original journal.

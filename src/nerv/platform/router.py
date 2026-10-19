@@ -18,6 +18,7 @@ import uuid
 from typing import Callable
 
 from .. import config
+from ..harness.context import ContextOverflow
 from ..brain import prompts
 from ..nerve.body import ActionResult, ToolSpec
 from ..nerve.brain import CallTool, Say, SetRegister, Think, ToolResult, UserMessage
@@ -69,10 +70,14 @@ class Turn:
         return context.build(entries, token_budget=sum(len(str(m)) for m in entries) + 1)
 
     def model_reply(self, reply) -> None:
-        self._continuation = getattr(reply, "continuation", {})
+        completed = getattr(reply, "finish_status", "completed") == "completed"
+        self._continuation = getattr(reply, "continuation", {}) if completed else {}
+        self.memory().append("model_response", {"run_id": self.run_id, "model": self.brain.model,
+            "text": reply.text, "tool_calls": [dataclasses.asdict(call) for call in reply.tool_calls],
+            "continuation": getattr(reply, "continuation", {}), "finish_status": reply.finish_status})
         self.memory().append("model_usage", {"model": self.brain.model,
                                              "usage": getattr(reply, "usage", None)})
-        if self.body and self._observation:
+        if completed and self.body and self._observation:
             self.body.post("/supervision", {"epoch": (self.body.health() or {}).get("epoch"),
                                            "frame_seq": self._observation.get("frame_seq")})
 
@@ -384,7 +389,9 @@ class Turn:
             with self._guard:
                 if self.body and self._current():
                     self.body.post("/stop")
-            self.say(Say(messages.BRAIN_CALL_FAILED_REPLY.format(error=type(e).__name__)))
+            message = (messages.CONTEXT_BUDGET_REPLY if isinstance(e, ContextOverflow)
+                       else messages.BRAIN_CALL_FAILED_REPLY.format(error=type(e).__name__))
+            self.say(Say(message))
         if not self.done:
             self.say(Say(""))
         self.emit({"type": op.EV_DONE})

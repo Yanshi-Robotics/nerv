@@ -475,6 +475,7 @@
     "(operator: released the emergency stop; the old task is cancelled. The robot is disarmed and waiting for new authorization and a new instruction.)": "(operator: released the emergency stop; the old task is cancelled. The robot is disarmed and waiting for new authorization and a new instruction.)",
     "(This VLM is not ready. Configure and validate it in Visual models.)": "(This VLM is not ready. Configure and validate it in Visual models.)",
     "One instance binds one robot and one environment. The registry provides its tools and sensors; the active conversation owns control.": "One instance binds one robot and one environment. The registry provides its tools and sensors; the active conversation owns control.",
-    "Choose a robot and its startup environment.": "Choose a robot and its startup environment."
+    "Choose a robot and its startup environment.": "Choose a robot and its startup environment.",
+    "(Task paused: the request could not fit the context budget after compaction. Original history is retained.)": "(Task paused: the request could not fit the context budget after compaction. Original history is retained.)"
   }
 }

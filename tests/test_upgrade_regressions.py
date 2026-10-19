@@ -139,3 +139,20 @@ def test_installed_package_versions_match_source():
     from importlib.metadata import version
     from nerv import __version__
     assert version("nerv") == version("nerv-runtime-sdk") == version("nerv-runtime-lerobot") == __version__
+
+
+def test_context_overflow_pauses_with_a_clear_reply_and_preserves_raw_history(tmp_path):
+    from nerv.harness.context import ContextOverflow
+    class Brain:
+        model = "fixture"
+        def run_turn(self, *_):
+            raise ContextOverflow("fixture budget exhaustion")
+    store = SessionStore(str(tmp_path))
+    session, _ = store.new("test", None, None)
+    calls = []
+    turn = Turn(store, session, Brain(), SimpleNamespace(post=lambda path: calls.append(path)), None,
+                [], SafetyGate(), lambda _: None)
+    outcome = turn.run("preserve this request")
+    assert "Task paused" in outcome["reply"] and "context budget" in outcome["reply"]
+    assert calls == ["/stop"]
+    assert store.get(session.id).messages[0]["text"] == "preserve this request"

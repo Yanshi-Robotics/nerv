@@ -9,6 +9,7 @@ STOP_REPLIES = {"steps": MAX_STEPS_REPLY, "time": TIME_BUDGET_REPLY, "interrupt"
 
 UNKNOWN_BRAIN_REPLY = "(That brain is not one this platform knows about.)"
 BRAIN_NOT_CONFIGURED_REPLY = "(This VLM is not ready. Configure and validate it in Visual models.)"
+CONTEXT_BUDGET_REPLY = "(Task paused: the request could not fit the context budget after compaction. Original history is retained.)"
 BRAIN_CALL_FAILED_LEAD = "(The brain call failed.)"
 BRAIN_CALL_FAILED_REPLY = BRAIN_CALL_FAILED_LEAD + " {error}"
 TELEOP_STEP = "(operator teleop: {name})"
