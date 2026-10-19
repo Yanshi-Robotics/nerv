@@ -15,6 +15,8 @@ The 0.1.x entries below are the pre-release trail.
   preparation, policy loading, managed execution and disarmed emergency-release behavior.
 - Added visual-only model registration, write-only credentials, per-model effort and separate
   image/tool/continuation checks. Added startup robot/environment selection and named camera views.
+- Context overflow now returns an explicit pause message; incomplete provider responses are
+  retained in raw events without replaying their continuation as live tool calls.
 - Physical acceptance, paid API verification and full rendered G1 regression remain separate.
   This development snapshot does not qualify for 1.0.0.
 

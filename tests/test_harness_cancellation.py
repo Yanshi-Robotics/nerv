@@ -45,3 +45,22 @@ def test_restart_marks_unfinished_run_unknown_without_replay(tmp_path):
     memory.recover_runs()
     interrupted = [e for e in memory.events() if e["kind"] == "run_interrupted"]
     assert len(interrupted) == 1 and interrupted[0]["data"]["outcome"] == "unknown"
+
+
+def test_incomplete_response_is_recorded_but_never_replayed_as_live_continuation(tmp_path):
+    class Provider:
+        model, vision = "fixture", True
+        def chat(self, *_):
+            return LLMReply("unfinished", [ToolCall("partial", "move", {})], {"total":10},
+                            {"identity":"fixture", "items":[{"type":"function_call", "call_id":"partial"}]}, "incomplete")
+    store = SessionStore(str(tmp_path))
+    session, _ = store.new("test", None, None)
+    brain = AgentHarness(Provider(), "fixture", ContextManager(10000, 100, 100))
+    turn = Turn(store, session, brain, None, None, [], SafetyGate(), lambda _:None)
+    turn.run("hello")
+    saved = store.get(session.id).messages
+    assert not any(message.get("tool_calls") for message in saved)
+    assert not any(message.get("continuation") for message in saved)
+    responses = [event for event in store.memory(session.id).events() if event["kind"] == "model_response"]
+    assert responses[0]["data"]["finish_status"] == "incomplete"
+    assert responses[0]["data"]["continuation"]["items"][0]["call_id"] == "partial"
