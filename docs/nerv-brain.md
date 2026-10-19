@@ -54,3 +54,16 @@ in `brain/providers/factory.py`; model ids come from `config.py`.
 
 Everything the model reads is English and lives in `brain/prompts.py`. It is told to answer in
 the person's language.
+# Session harness
+
+The default brain runs through `AgentHarness`. The host supplies observations,
+tool dispatch, session memory and cancellation; the harness never owns hardware.
+Each session keeps an append-only event journal. Task notes and compacted context
+are derived views, and historical messages remain available through session-scoped
+search and range tools. A summary carries its source range and cannot replace an
+incomplete tool group. Request budgets include instructions, tools, current images,
+provider continuation and output reserve; token estimates are distinct from usage.
+
+Restarting restores conversation records, not robot execution. Unfinished runs are
+marked interrupted with an unknown physical outcome, and their tools are not replayed.
+

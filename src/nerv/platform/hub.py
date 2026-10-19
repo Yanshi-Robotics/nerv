@@ -49,6 +49,10 @@ class Nerv:
         self._arm_locks: dict[str, threading.RLock] = {}
         self._arm_locks_guard = threading.Lock()
         self.scene_tests = SceneTests(self)
+        self._runs: dict[str, threading.Event] = {}
+        self._runs_lock = threading.RLock()
+        for session in self.store.all():
+            self.store.memory(session.id).recover_runs()
 
     # -- node clients ---------------------------------------------------------------------
     def body_client(self, name: str) -> RemoteBody | None:
@@ -93,7 +97,7 @@ class Nerv:
     def brain(self, name: str):
         b = self._brains.get(name)
         if b is None:
-            b = brain_plugin.load(name)
+            b = brain_plugin.load(name, wrap=lambda llm: slog.LoggingLLM(llm, name))
             self._brains[name] = b
         return b
 
@@ -211,6 +215,9 @@ class Nerv:
         return {"ok": True, "armed": armed, "body": forwarded}
 
     def stop(self, sid: str) -> None:
+        with self._runs_lock:
+            if sid in self._runs:
+                self._runs[sid].set()
         interrupt.request(sid)
         self.scene_tests.interrupt(sid)
         s = self.store.get(sid)
@@ -229,6 +236,9 @@ class Nerv:
 
     def estop(self, sid: str) -> dict:
         """Hold the pose now: interrupt the turn, stop the skill, latch the joints. Never a power cut."""
+        with self._runs_lock:
+            if sid in self._runs:
+                self._runs[sid].set()
         interrupt.request(sid)
         self.scene_tests.interrupt(sid)
         s = self.store.get(sid)
@@ -308,8 +318,9 @@ class Nerv:
         body = self.body_client(s.body) if s.body else None
         world = self.world_client(s.world, s.body) if (s.world and s.body) else None
         tools = [c for c in (self.tool_client(t) for t in s.tools) if c is not None]
+        token = self._runs.get(sid)
         return Turn(self.store, s, self.brain(s.brain), body, world, tools, self.gate, emit,
-                    world_name=s.world or "")
+                    world_name=s.world or "", current=(lambda: not token.is_set()) if token else None)
 
     def handle_stream(self, sid: str, text: str) -> Iterator[dict]:
         s = self.store.get(sid)
@@ -331,6 +342,12 @@ class Nerv:
             yield {"type": op.EV_REPLY, "text": messages.UNKNOWN_BRAIN_REPLY}
             yield {"type": op.EV_DONE}
             return
+        with self._runs_lock:
+            if old := self._runs.get(sid):
+                old.set()
+            token = threading.Event()
+            self._runs[sid] = token
+            interrupt.clear(sid)
         q: queue.Queue = queue.Queue()
         turn = self._turn(sid, q.put)
 
@@ -339,6 +356,9 @@ class Nerv:
                 try:
                     turn.run(text)
                 finally:
+                    with self._runs_lock:
+                        if self._runs.get(sid) is token:
+                            self._runs.pop(sid, None)
                     q.put(None)
 
         th = threading.Thread(target=_run, daemon=True)
@@ -369,7 +389,7 @@ class Nerv:
         out = []
         for spec in turn.tools():
             origin, node, _ = turn._routes[spec.name]
-            out.append({"name": spec.name, "kind": spec.kind, "origin": origin, "node": node.name,
+            out.append({"name": spec.name, "kind": spec.kind, "origin": origin, "node": getattr(node, "name", "session-memory"),
                         "description": spec.description, "parameters": spec.parameters})
         return out
 

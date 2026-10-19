@@ -46,8 +46,12 @@ def build(messages: list[dict], token_budget: int | None = None) -> list[dict]:
         elif role == "assistant":
             tcs = [ToolCall(t["id"], t["name"], t.get("arguments", {})) for t in m.get("tool_calls", [])]
             out.append({"role": "assistant", "text": m.get("text", ""), "tool_calls": tcs})
+            if m.get("continuation"):
+                out[-1]["continuation"] = m["continuation"]
         elif role == "tool":
             out.append({"role": "tool", "id": m["id"], "name": m["name"], "content": m["content"]})
+        if "seq" in m:
+            out[-1]["seq"] = m["seq"]
     return out
 
 
