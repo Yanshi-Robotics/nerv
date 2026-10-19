@@ -56,3 +56,12 @@ The body's guidance goes into the system prompt and its tool descriptions into t
 so a body contributes nothing until the operator approved its manifest (SHA-256 of tools +
 guidance, bound to the node's identity `body:<name>`, not its URL — a re-launch on another port stays approved). Changed manifest → asked again with a diff. `NERV_TRUST_ALL=1` is
 the development escape hatch. `nerv conformance <url>` checks a node against this page.
+
+## Runtime SDK (0.6)
+
+Production workers use the independently installable `nerv-runtime-sdk`. A provider is discovered
+in its own environment. Runtime metadata does not connect equipment; explicit preparation and
+policy loading are separate. The extended HTTP/MCP contract, command generations, named sensors,
+managed execution and local supervision are documented in [the SDK guide](runtime-sdk.md).
+Releasing emergency hold disarms and invalidates the old task. Ordinary cancel, hold, return to
+a pose, disconnect and torque release are separate operations.

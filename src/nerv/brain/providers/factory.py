@@ -58,13 +58,19 @@ def _registry() -> dict[str, dict]:
 
 
 def list_brains() -> list[dict]:
-    return [{"name": n, "vendor": s["vendor"], "label": s["label"], "model": s["model"],
-             "hosting": s["hosting"], "available": s["ready"]()} for n, s in _registry().items()]
+    from ...vlm.store import ModelRegistry
+    return [{**m, "name": m["id"], "vendor": m["provider"], "hosting": "api"}
+            for m in ModelRegistry().list()]
 
 
 def make_llm(name: str | None = None) -> LLM:
-    name = name or config.DEFAULT_BRAIN
-    reg = _registry()
-    if name not in reg:
-        raise KeyError(f"Unknown brain: {name}. Available: {', '.join(reg)}")
-    return reg[name]["build"]()
+    from ...vlm.store import ModelRegistry
+    registry = ModelRegistry()
+    name = name or registry.selection() or "deepseek-flash"
+    # Retained solely for explicit software fixtures / legacy history. The HTTP
+    # application accepts only the visual registry and never falls back here.
+    if name == "mock":
+        return MockLLM()
+    if not any(m["id"] == name and m["available"] for m in registry.list()):
+        raise KeyError("Select an enabled VLM and validate image, tools and continuation first")
+    return registry.provider(name)

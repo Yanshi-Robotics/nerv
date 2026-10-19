@@ -269,7 +269,7 @@ export default function NervDashboard({ embedded = false, onOpenLogs, onNodesCha
         </div>
 
         <p className="text-sm leading-relaxed text-neutral-400">
-          {t("A session is brain × body × world. NERV launches one body node per body, one world node per (world, body) pair and one tool node per tool; the brain talks to bodies and tools only, and a world reaches the brain only through the sensor streams a session opts into.")}{" "}
+          {t("One instance binds one robot and one environment. The registry provides its tools and sensors; the active conversation owns control.")}{" "}
           {t("This page shows what the registry declares, which nodes are up, where each stands with you (trust), and every signal that crosses NERV. For one session's full chain, see")}{" "}
           {embedded && onOpenLogs ? (
             <button onClick={onOpenLogs} className="text-blue-400 hover:underline">Session Logs</button>

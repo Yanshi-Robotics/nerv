@@ -39,7 +39,7 @@ class ScriptedBrain:
 @pytest.mark.skipif(any(not os.path.isfile(k) for k in NEEDS), reason="needs the worlds and policies submodules")
 def test_scripted_brain_walks_one_metre(tmp_path, monkeypatch):
     monkeypatch.setenv("NERV_TRUST_ALL", "1")
-    monkeypatch.setattr(config, "NODE_PORTS", "8180-8189")
+    monkeypatch.setattr(config, "NODE_PORTS", "8112-8131")
     hub = Nerv(store=SessionStore(str(tmp_path / "s")))
     brain = ScriptedBrain()
     hub._brains["scripted"] = brain

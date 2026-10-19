@@ -74,7 +74,7 @@ def _sanitize_pairs(kept: list[dict]) -> list[dict]:
             for tid, name in want:
                 if tid not in got:
                     out.append({"role": "tool", "id": tid, "name": name,
-                                "content": prompts.ORPHAN_TOOL_RESULT})
+                                "content": prompts.ORPHAN_TOOL_RESULT, **({"seq": m["seq"]} if "seq" in m else {})})
             i = j
         else:
             i += 1

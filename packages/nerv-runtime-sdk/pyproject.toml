@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nerv-runtime-sdk"
+version = "0.6.0"
+description = "Hardware-independent runtime protocol and worker for NERV adapters"
+requires-python = ">=3.11"
+license = "MIT"
+dependencies = ["pydantic>=2.6", "mcp>=1.2,<2", "fastapi>=0.115", "uvicorn>=0.32", "pillow>=10", "anyio>=4"]
+
+[project.scripts]
+nerv-runtime = "nerv_runtime_sdk.worker:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]

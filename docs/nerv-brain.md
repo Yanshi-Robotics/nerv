@@ -48,13 +48,14 @@ tool sheet and the images; if the model answered in words, say it and stop; othe
 `Think` and the calls, then check `stop_reason()`. The gate runs inside `call_tool`; the brain
 does not see it as a step.
 
-Providers behind the loop: Claude (Anthropic SDK), OpenAI-compatible (OpenAI, Ollama, any
-gateway), mock (no key: calls the first read-only tool and answers). The registry is one table
-in `brain/providers/factory.py`; model ids come from `config.py`.
+The default loop uses the visual registry in `vlm/` and its private configuration. OpenAI and
+DeepSeek have separate Responses adapters. Historical provider implementations and the explicit
+Mock software fixture are retained for regression; they are excluded from the production list.
 
 Everything the model reads is English and lives in `brain/prompts.py`. It is told to answer in
 the person's language.
-# Session harness
+
+## Session harness
 
 The default brain runs through `AgentHarness`. The host supplies observations,
 tool dispatch, session memory and cancellation; the harness never owns hardware.
@@ -67,3 +68,8 @@ provider continuation and output reserve; token estimates are distinct from usag
 Restarting restores conversation records, not robot execution. Unfinished runs are
 marked interrupted with an unknown physical outcome, and their tools are not replayed.
 
+
+The default harness also exposes `is_current()`, `memory()`, `raw_history()`, `model_reply()`,
+`executing()` and `supervise_wait()` through Link. It receives a replaceable context manager and
+compactor. Storage is host supplied; tools and actuator permissions remain in the host.
+See [the architecture](architecture.md) for durable source ranges, recovery and generation rules.

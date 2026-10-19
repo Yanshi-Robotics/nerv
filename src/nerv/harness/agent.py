@@ -5,17 +5,23 @@ from ..brain import prompts
 from ..brain.react import ReactBrain
 from ..nerve.brain import CallTool, Say, SetRegister, Think
 from .context import ContextManager
+from .compaction import ModelCompactor
 
 
 class AgentHarness(ReactBrain):
-    def __init__(self, llm, name: str, context: ContextManager):
+    def __init__(self, llm, name: str, context: ContextManager, compactor=None):
         super().__init__(llm, name)
         self.context_manager = context
+        self.compactor = compactor or ModelCompactor()
 
     def run_turn(self, link, user) -> None:
         from ..brain.react import _meta_tools
+        def chat(*args):
+            extra = {"cancelled": lambda: not link.is_current()} if getattr(self.llm, "cancellable", False) else {}
+            return self.llm.chat(*args, **extra)
         while True:
             if not link.is_current():
+                link.stop_reason()
                 return
             obs = link.observe()
             images = obs.images if obs and self.vision else None
@@ -24,26 +30,24 @@ class AgentHarness(ReactBrain):
             memory = link.memory()
 
             def summarize(history, previous):
-                # This is an independent request: no tools, images or provider
-                # continuation from the running agent are granted to the compactor.
-                plain = [{k: v for k, v in m.items() if k not in ("continuation", "seq")}
-                         for m in history]
-                import json
-                reply = self.llm.chat(prompts.COMPACTION_SYSTEM,
-                                      [{"role": "user", "text": json.dumps(
-                                          {"previous_summary": previous, "events": plain}, default=str)}], [], None)
-                if reply.tool_calls:
-                    raise ValueError("summarizer returned tool calls")
-                return reply.text or "", self.model, reply.usage
+                text, usage = self.compactor.summarize(chat, history, previous)
+                return text, self.model, usage
 
             system, history = self.context_manager.prepare(
                 self._system(link), link.raw_history(), tools, images, memory, summarize,
                 cancelled=lambda: not link.is_current())
             memory.flush()
             if not link.is_current():
+                link.stop_reason()
                 return
-            reply = self.llm.chat(system, history, tools, images)
+            memory.append("model_request_started", {"run_id": getattr(link, "run_id", ""), "model": self.model,
+                                                     "budget_is_estimate": True})
             if not link.is_current():
+                link.stop_reason()
+                return
+            reply = chat(system, history, tools, images)
+            if not link.is_current():
+                link.stop_reason()
                 return
             link.model_reply(reply)
             if reply.finish_status != "completed":
@@ -51,6 +55,7 @@ class AgentHarness(ReactBrain):
             if not reply.tool_calls:
                 # A reply cannot silently abandon a still-running robot skill.
                 if link.executing():
+                    link.think(Think(reply.text or "", []))
                     link.supervise_wait()
                     if link.stop_reason():
                         return

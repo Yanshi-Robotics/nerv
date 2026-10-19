@@ -363,8 +363,13 @@ class HumanoidBody:
                 action = p.act(obs)
                 prev_action = action
                 targets = p.default_pos + action * p.action_scale
-                self.bus.write(BusCommand(targets=targets.tolist()))
-                self._last_targets = targets.tolist()
+                # A hold may latch while inference is outside this lock. The
+                # final actuator write must recheck the same hold state.
+                with self._hold_lock:
+                    if self._held:
+                        continue
+                    self.bus.write(BusCommand(targets=targets.tolist()))
+                    self._last_targets = targets.tolist()
                 self._policy_error = ""
             except Exception as e:
                 self._policy_error = f"{type(e).__name__}: {e}"

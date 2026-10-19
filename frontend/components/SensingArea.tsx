@@ -2,6 +2,8 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { useI18n } from "@/lib/i18n";
+import { NodeTrust } from "./NodeTrust";
+import RuntimeControls from "./RuntimeControls";
 import SceneTestPanel from "./SceneTestPanel";
 import {
   getPerception,
@@ -88,7 +90,7 @@ export default function SensingArea({
   // 视图选择按会话持久化
   useEffect(() => {
     if (!sid) return;
-    setViews(readViews(sid));
+    setViews(session?.mode === "real" ? [VIEW_OBSERVATION] : readViews(sid));
     setExpanded(null);
   }, [sid]);
   const toggleView = (id: ViewId) =>
@@ -161,6 +163,9 @@ export default function SensingArea({
   const tiles = useMemo(() => {
     if (!session || !hasBody || !active) return [];
     const out: { id: ViewId; label: string; sub?: string; muted?: boolean; body: ReactNode }[] = [];
+    if (session.mode === "real" && bodyNode) {
+      for (const name of bodyNode.sensors ?? []) out.push({id: `runtime:${name}`, label: name, sub: t("Live sensor"), body: <Stream nonce={nonce} url={bodyOnline ? `${bodyNode.url}/streams/${encodeURIComponent(name)}` : null} alt={name} missing={t("No fresh camera frame")} />});
+    }
     for (const v of views) {
       if (v === VIEW_OBSERVATION) {
         const images = perc?.images ?? [];
@@ -251,6 +256,8 @@ export default function SensingArea({
 
   return (
     <section className="relative flex min-w-0 flex-col overflow-hidden">
+      {active && <RuntimeControls session={session} onChanged={onStateChanged} />}
+      {active && bodyNode?.trust && bodyNode.trust.state !== "trusted" && <div className="border-b border-neutral-800 px-3 py-2"><NodeTrust node={bodyNode} onChanged={onStateChanged} /></div>}
       {/* ---- 视图选择 ---- */}
       <div className="flex flex-wrap items-center gap-1.5 border-b border-neutral-800 bg-neutral-900/60 px-3 py-2">
         <div className="flex flex-wrap items-center gap-3" role="group" aria-label={t("Views")}>

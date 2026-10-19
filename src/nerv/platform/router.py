@@ -36,7 +36,7 @@ class Turn:
                  world: WorldControl | None, tools: list[RemoteTool], gate: SafetyGate,
                  emit: Callable[[dict], None], max_steps: int = config.MAX_STEPS,
                  time_budget_s: float = config.TURN_TIME_BUDGET_S, world_name: str = "",
-                 current: Callable[[], bool] | None = None) -> None:
+                 current: Callable[[], bool] | None = None, guard=None, control_token=None) -> None:
         self.store, self.session, self.brain = store, session, brain
         self.body, self.world, self.tool_nodes, self.gate = body, world, tools, gate
         self.emit = emit
@@ -49,6 +49,8 @@ class Turn:
         self._tools: list[ToolSpec] | None = None
         self._routes: dict[str, tuple[str, object, ToolSpec]] = {}   # name → (origin, node, spec)
         self.trace = {"inputs": [], "thinking": [], "reply": ""}
+        self.control_token = control_token
+        self._guard = guard or threading.RLock()
         self._current = current or (lambda: True)
         self._continuation: dict = {}
         self._observation: dict = {}
@@ -71,7 +73,7 @@ class Turn:
         self.memory().append("model_usage", {"model": self.brain.model,
                                              "usage": getattr(reply, "usage", None)})
         if self.body and self._observation:
-            self.body.post("/supervision", {"epoch": self.session.epoch,
+            self.body.post("/supervision", {"epoch": (self.body.health() or {}).get("epoch"),
                                            "frame_seq": self._observation.get("frame_seq")})
 
     def executing(self) -> bool:
@@ -118,6 +120,7 @@ class Turn:
         return out
 
     def system_context(self) -> dict:
+        self.session.armed = self.store.get(self.session.id).armed
         ctx: dict = {"body": None, "armed": self.session.armed}
         if self.body is None:
             return ctx
@@ -167,8 +170,16 @@ class Turn:
             _log.error("observation refused: %s", e)
             obs = self.body.perceive()
             obs.state["ambient_refused"] = str(e)
-        self.store.append_perception(self.session.id, obs.state, obs.images)
-        self._observation = dict(obs.state)
+        required = (self.body.health() or {}).get("supervision_sensors", [])
+        received = {image["name"] for image in obs.images if image.get("png")}
+        with self._guard:
+            if not self.is_current():
+                return None
+            if required and not set(required) <= received:
+                self.body.post("/stop")
+                raise RuntimeError("required visual supervision frames are unavailable")
+            self.store.append_perception(self.session.id, obs.state, obs.images)
+            self._observation = dict(obs.state)
         first = obs.image_png
         b64 = base64.b64encode(first).decode() if first else None
         self.trace["inputs"].append({"state": obs.state, "n_images": len(obs.images)})
@@ -216,6 +227,11 @@ class Turn:
                 return self._finish(call, ActionResult(True, "Session history", {"events": data}))
             except (ValueError, TypeError) as error:
                 return self._finish(call, ActionResult(False, str(error)))
+        if origin == "body" and spec.kind in ("primitive", "skill"):
+            required = (self.body.health() or {}).get("supervision_sensors", [])
+            if required and not self._observation.get("frame_seq"):
+                return self._finish(call, ActionResult(False, "Observe all required visual sensors before starting motion"))
+        self.session.armed = self.store.get(self.session.id).armed
         ok, reason = self.gate.check(call.name, call.arguments, kind=spec.kind, origin=origin,
                                      armed=self.session.armed, spec=spec)
         self.emit({"type": op.EV_GATE, "name": call.name, "allowed": ok, "reason": reason})
@@ -238,8 +254,9 @@ class Turn:
             self.memory().flush()
             if not self.is_current():
                 return
+            extra = {"_control_token": self.control_token} if origin == "body" and self.control_token else {}
             holder["res"] = node.invoke(call.name, _on_progress=_on_progress, _should_abort=_aborted,
-                                         **call.arguments)
+                                         **extra, **call.arguments)
 
         ctx = contextvars.copy_context()
         th = threading.Thread(target=ctx.run, args=(_work,), daemon=True)
@@ -329,6 +346,8 @@ class Turn:
         self.done = True
 
     def stop_reason(self) -> str | None:
+        if not self._current():
+            return "superseded"
         if self._stop:
             return self._stop
         reason = None
@@ -340,6 +359,8 @@ class Turn:
             reason = "time"
         if reason:
             self._stop = reason
+            if self.body and self._current():
+                self.body.post("/stop")
             interrupt.clear(self.session.id)
             text = messages.STOP_REPLIES[reason]
             self.store.append(self.session.id, {"role": "assistant", "text": text, "brain": self.session.brain})
@@ -350,20 +371,48 @@ class Turn:
 
     # -- driver -------------------------------------------------------------------------------
     def run(self, user_text: str) -> dict:
+        if not self._current() or not self.store.exists(self.session.id):
+            return {"reply": "", "trace": self.trace, "brain": self.session.brain,
+                    "model": self.brain.model, "stop_reason": "superseded"}
         self.store.append(self.session.id, {"role": "user", "text": user_text})
         self.memory().append("run_started", {"run_id": self.run_id, "model": self.brain.model})
         self.emit({"type": op.EV_START, "brain": self.session.brain, "model": self.brain.model})
         try:
             self.brain.run_turn(self, UserMessage(user_text))
         except Exception as e:
-            _log.exception("brain turn failed")
-            if self.body:
-                self.body.post("/stop")
-            self.say(Say(messages.BRAIN_CALL_FAILED_REPLY.format(error=f"{type(e).__name__}: {e}")))
+            _log.error("brain turn failed: %s", type(e).__name__)
+            with self._guard:
+                if self.body and self._current():
+                    self.body.post("/stop")
+            self.say(Say(messages.BRAIN_CALL_FAILED_REPLY.format(error=type(e).__name__)))
         if not self.done:
             self.say(Say(""))
         self.emit({"type": op.EV_DONE})
-        self.memory().append("run_ended", {"run_id": self.run_id, "stop": self._stop,
+        if self.store.exists(self.session.id):
+            self.memory().append("run_ended", {"run_id": self.run_id, "stop": self._stop,
                                            "current": self._current()})
         return {"reply": self.trace["reply"], "trace": self.trace, "brain": self.session.brain,
                 "model": self.brain.model, "stop_reason": self._stop}
+
+
+def _current_commit(method):
+    def guarded(self, *args, **kwargs):
+        with self._guard:
+            if not self.is_current():
+                return None
+            return method(self, *args, **kwargs)
+    return guarded
+
+
+for _method in ("think", "say", "set_register", "_finish", "model_reply"):
+    setattr(Turn, _method, _current_commit(getattr(Turn, _method)))
+
+
+def _owned_stop(method):
+    def stop(self):
+        with self._guard:
+            return method(self)
+    return stop
+
+
+Turn.stop_reason = _owned_stop(Turn.stop_reason)

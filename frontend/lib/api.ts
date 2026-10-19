@@ -21,11 +21,12 @@ export type Brain = {
   model: string;
   hosting: "api" | "local";
   available: boolean;
+  efforts?: string[]; effort?: string | null;
 };
 
 // ---- registry (bodies / worlds / tools declared on disk) ---------------------------------
 export type SensorDecl = { name: string; description: string; camera: string; width: number; height: number };
-export type BusEndpoint = { kind: string; python: string; settings: Record<string, unknown>; verified: boolean };
+export type BusEndpoint = { enabled: boolean; kind: string; python: string; settings: Record<string, unknown>; verified: boolean };
 export type BodySpec = {
   name: string;
   family: string;
@@ -171,6 +172,8 @@ export type SessionSummary = {
   body: string | null; // null = conversation only
   world: string | null;
   status: SessionStatus;
+  mode: "sim" | "real";
+  binding: string;
   created_at: string;
   title: string;
   sensors: string[]; // ambient streams the brain also sees
@@ -195,6 +198,7 @@ export type SessionFull = SessionSummary & { messages: RecMsg[] };
 
 export type NewSession = {
   brain?: string;
+  mode?: "sim" | "real";
   body?: string | null;
   world?: string | null;
   sensors: string[];
@@ -277,11 +281,12 @@ export async function resetSessionWorld(id: string): Promise<{ ok: boolean; mess
 }
 
 export async function setSessionBrain(id: string, brain: string): Promise<void> {
-  await fetch(`${BASE}/api/sessions/${encodeURIComponent(id)}/brain`, {
+  const r = await fetch(`${BASE}/api/sessions/${encodeURIComponent(id)}/brain`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ brain }),
   });
+  if (!r.ok) throw new ApiError(await detailOf(r), r.status);
 }
 
 // ARM / DISARM：硬件只有在 armed 时才许动。只有人能按这个键；大脑没有这个工具。
@@ -300,7 +305,7 @@ export async function armSession(id: string, armed: boolean): Promise<{ ok: bool
 // progress · tool_result · reply · done。stop_reason 只在这一轮被闸门收尾时才有。
 export type ChatEvent =
   | { type: "start"; brain: string; model: string }
-  | { type: "perception"; image_b64: string | null; state: Record<string, unknown>; n_images: number; cameras: string[] }
+  | { type: "perception"; image_b64: string | null; state: Record<string, unknown>; n_images: number; cameras: string[]; images?: {name: string; b64: string}[] }
   | { type: "thinking"; text: string }
   | { type: "tool_call"; name: string; args: Record<string, unknown> }
   | { type: "gate"; name: string; allowed: boolean; reason: string } // 安全门的裁决；allowed=false 时这一步不会执行
@@ -358,11 +363,11 @@ export async function streamChat(session: string, text: string, onEvent: (e: Cha
 // ---- teleop (operator remote control) -----------------------------------------------------
 // 这个会话里大脑会看到的工具单：身体的动词（read / primitive / skill）+ 工具节点的函数。
 // 遥控面板照着它生成表单——⛔ 前端不知道任何具体身体有哪些动词，全从这里读。
-export type ToolKind = "read" | "primitive" | "skill";
+export type ToolKind = "read" | "primitive" | "skill" | "control";
 export type ToolSheetEntry = {
   name: string;
   kind: ToolKind;
-  origin: "body" | "tool";
+  origin: "body" | "tool" | "memory";
   node: string;
   description: string;
   parameters: JsonSchema;
@@ -516,3 +521,25 @@ export async function getSessionLogs(limit = 500, session = ""): Promise<{ entri
   const j = (await r.json()) as { entries: SignalEntry[]; sessions?: string[] };
   return { entries: j.entries, sessions: j.sessions ?? [] };
 }
+
+export type VlmModel = {
+  id: string; provider: string; label: string; model: string; base_url: string;
+  protocol: string; credential_ref: string; input_modalities: string[];
+  supports_tools: boolean; efforts: string[]; evidence: string;
+  context_window: number | null; max_output_tokens: number; request_timeout_s: number; enabled: boolean;
+  credential: { configured: boolean; source: string | null; writable: boolean };
+  checks: Record<string, string>; effort: string | null; available: boolean;
+  physical?: { status: string };
+};
+async function modelRequest(path: string, method = "GET", body?: unknown) {
+  const response = await fetch(`${BASE}/api/${path}`, { method, headers: {"Content-Type":"application/json"}, ...(body === undefined ? {} : {body: JSON.stringify(body)}) });
+  if (!response.ok) throw new ApiError(await detailOf(response), response.status);
+  return response.json();
+}
+export const getVlm = (): Promise<{models: VlmModel[]; selection: string; task_locked: boolean}> => modelRequest("vlm");
+export const putVlm = (model: VlmModel) => modelRequest(`vlm/${encodeURIComponent(model.id)}`, "PUT", model);
+export const selectVlm = (id: string, effort: string | null) => modelRequest(`vlm/${encodeURIComponent(id)}/select`, "POST", {effort});
+export const validateVlm = (id: string) => modelRequest(`vlm/${encodeURIComponent(id)}/validate`, "POST", {});
+export const saveCredential = (reference: string, value: string | null) => modelRequest(`credentials/${encodeURIComponent(reference)}`, "PUT", {value});
+export const runtimeOperation = (session: string, operation: string, payload = {}) => modelRequest(`sessions/${encodeURIComponent(session)}/runtime/${operation}`, "POST", payload);
+export const runtimeStatus = (session: string) => modelRequest(`sessions/${encodeURIComponent(session)}/runtime`);

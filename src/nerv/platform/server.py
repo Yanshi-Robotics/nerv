@@ -11,12 +11,14 @@ import httpx
 
 from fastapi import FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, Response, StreamingResponse
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import FileResponse, Response, StreamingResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from .. import __version__, config, paths
 from ..brain.providers import list_brains
+from ..vlm.store import ModelRegistry, VisualModel
 from . import messages, trust
 from . import explore
 from .hub import Nerv
@@ -25,6 +27,14 @@ from .session import log as slog
 nerv = Nerv()
 app = FastAPI(title="NERV", version=__version__)
 app.add_middleware(CORSMiddleware, allow_origins=config.CORS_ORIGINS, allow_methods=["*"], allow_headers=["*"])
+
+
+@app.exception_handler(RequestValidationError)
+async def private_validation_error(_request, error):
+    # Never reflect a rejected credential or request body into a 422 response.
+    return JSONResponse(status_code=422, content={"detail": [
+        {key: value for key, value in item.items() if key in ("loc", "msg", "type")}
+        for item in error.errors()]})
 
 
 @app.on_event("shutdown")
@@ -38,6 +48,7 @@ class NewSessionIn(BaseModel):
     world: Optional[str] = None
     sensors: list[str] = []
     tools: Optional[list[str]] = None
+    mode: str = "sim"
 
 
 class ChatIn(BaseModel):
@@ -70,11 +81,115 @@ class StopSimulationIn(BaseModel):
 
 
 def _default_brain() -> str:
-    brains = {b["name"]: b for b in list_brains()}
-    d = brains.get(config.DEFAULT_BRAIN)
-    if d is None or d["available"]:
-        return config.DEFAULT_BRAIN
-    return next((n for n, b in brains.items() if b["available"]), config.DEFAULT_BRAIN)
+    return ModelRegistry().selection() or "deepseek-flash"
+
+
+def _models_idle():
+    if nerv._runs or any(c.post("/executions/status").get("running") for c in nerv._bodies.values()):
+        raise HTTPException(409, "Finish the active task before changing model configuration")
+
+
+@app.get("/api/vlm")
+def vlm_models():
+    registry = ModelRegistry()
+    binding = nerv.binding_signature()
+    return {"models": registry.list(binding), "binding_signature": binding,
+            "selection": registry.selection(), "task_locked": bool(nerv._runs)}
+
+
+@app.put("/api/vlm/{model_id}")
+def vlm_save(model_id: str, model: VisualModel):
+    _models_idle()
+    if model.id != model_id:
+        raise HTTPException(400, "model id does not match the URL")
+    ModelRegistry().upsert(model.model_dump())
+    nerv._brains.clear()
+    return {"ok": True}
+
+
+class CredentialIn(BaseModel):
+    value: str | None = None
+
+
+@app.put("/api/credentials/{reference}")
+def credential_save(reference: str, payload: CredentialIn):
+    _models_idle()
+    registry = ModelRegistry()
+    try:
+        registry.credentials.set(reference, payload.value)
+        registry.invalidate_credential(reference)
+        nerv._brains.clear()
+        return {"ok": True, **registry.credentials.describe(reference)}
+    except (ValueError, PermissionError) as error:
+        raise HTTPException(400, str(error))
+
+
+class SelectionIn(BaseModel):
+    effort: str | None = None
+
+
+@app.post("/api/vlm/{model_id}/select")
+def vlm_select(model_id: str, payload: SelectionIn):
+    _models_idle()
+    try:
+        ModelRegistry().select(model_id, payload.effort)
+        nerv._brains.clear()
+        return {"ok": True}
+    except (ValueError, KeyError) as error:
+        raise HTTPException(400, str(error))
+
+
+class PhysicalAcceptanceIn(BaseModel):
+    binding_signature: str
+    signature: str
+    status: str
+    evidence: str
+
+
+@app.post("/api/vlm/{model_id}/acceptance")
+def vlm_acceptance(model_id: str, payload: PhysicalAcceptanceIn):
+    _models_idle()
+    try:
+        if not payload.binding_signature or payload.binding_signature != nerv.binding_signature():
+            raise ValueError("physical evidence does not match the current prepared robot binding")
+        ModelRegistry().record_acceptance(model_id, payload.signature, payload.status, payload.evidence,
+                                          payload.binding_signature)
+        return {"ok": True}
+    except (ValueError, KeyError) as error:
+        raise HTTPException(400, str(error))
+
+
+@app.post("/api/vlm/{model_id}/validate")
+def vlm_validate(model_id: str):
+    _models_idle()
+    try:
+        return ModelRegistry().validate(model_id)
+    except (ValueError, KeyError) as error:
+        raise HTTPException(400, str(error))
+
+
+@app.post("/api/sessions/{sid}/runtime/{operation:path}")
+def runtime_operation(sid: str, operation: str, payload: dict):
+    if not nerv.store.exists(sid):
+        raise HTTPException(404, "no such session")
+    session = nerv.store.get(sid)
+    if nerv._control_error(session) or not session.body:
+        raise HTTPException(409, "this session does not control the robot")
+    if sid in nerv._runs:
+        raise HTTPException(409, "finish the active task before preparing or loading")
+    if operation not in ("prepare", "policies/load"):
+        raise HTTPException(404, "unknown runtime operation")
+    client = nerv.body_client(session.body)
+    result = client.post("/" + operation, payload)
+    client.refresh()
+    return result
+
+
+@app.get("/api/sessions/{sid}/runtime")
+def runtime_status(sid: str):
+    session = nerv.store.get(sid)
+    client = nerv.body_client(session.body) if session.body else None
+    return client.status() if client else {"prepared": False}
 
 
 # ---- registry / brains ---------------------------------------------------------------------
@@ -234,7 +349,9 @@ def node_status(key: str) -> dict:
 @app.post("/api/sessions")
 def new_session(inp: NewSessionIn) -> dict:
     try:
-        return nerv.new_session(inp.brain or _default_brain(), inp.body, inp.world, inp.sensors, inp.tools)
+        if (inp.brain or _default_brain()) not in {b["name"] for b in list_brains()}:
+            raise ValueError("select a registered visual model")
+        return nerv.new_session(inp.brain or _default_brain(), inp.body, inp.world, inp.sensors, inp.tools, inp.mode)
     except (ValueError, KeyError, RuntimeError, TimeoutError, FileNotFoundError) as e:
         raise HTTPException(400, e.args[0] if e.args else str(e))
 
@@ -255,6 +372,8 @@ def get_session(sid: str) -> dict:
 @app.delete("/api/sessions/{sid}")
 def delete_session(sid: str) -> dict:
     nerv.stop(sid) if nerv.store.exists(sid) else None
+    if sid in nerv._runs:
+        raise HTTPException(409, "Wait for the interrupted model request to exit before deleting its session")
     return {"ok": nerv.store.delete(sid)}
 
 
@@ -339,6 +458,11 @@ def set_brain(sid: str, inp: BrainIn) -> dict:
         raise HTTPException(404, "no such session")
     if inp.brain not in {b["name"] for b in list_brains()}:
         raise HTTPException(400, messages.UNKNOWN_BRAIN_REPLY)
+    session = nerv.store.get(sid)
+    client = nerv.body_client(session.body) if session.body else None
+    if sid in nerv._runs or (client and client.post("/executions/status").get("running")):
+        raise HTTPException(409, "Finish the active task before changing models")
+    ModelRegistry().remember(inp.brain)
     nerv.store.set_brain(sid, inp.brain)
     nerv.store.append(sid, {"role": "brain_divider", "brain": inp.brain})
     return {"ok": True}
@@ -372,19 +496,25 @@ def teleop(sid: str, inp: TeleopIn) -> StreamingResponse:
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
+def _chat_ready(sid):
+    if not nerv.store.exists(sid):
+        raise HTTPException(404, "no such session")
+    selected = nerv.store.get(sid).brain
+    if not any(model["name"] == selected and model["available"] for model in list_brains()):
+        raise HTTPException(400, messages.BRAIN_NOT_CONFIGURED_REPLY)
+
+
 # ---- chat ------------------------------------------------------------------------------------
 @app.post("/api/chat")
 def chat(inp: ChatIn) -> dict:
-    if not nerv.store.exists(inp.session):
-        raise HTTPException(404, "no such session")
+    _chat_ready(inp.session)
     out = nerv.handle(inp.session, inp.text)
     return {"reply": out["reply"], "stop_reason": out["stop_reason"]}
 
 
 @app.post("/api/chat/stream")
 def chat_stream(inp: ChatIn) -> StreamingResponse:
-    if not nerv.store.exists(inp.session):
-        raise HTTPException(404, "no such session")
+    _chat_ready(inp.session)
 
     def gen():
         for ev in slog.bound_stream(inp.session, nerv.handle_stream(inp.session, inp.text)):
