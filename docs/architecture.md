@@ -1,73 +1,67 @@
-# Architecture
+# NERV architecture
 
-NERV is the wiring between four kinds of node. It owns none of them.
+NERV 0.6 separates task reasoning from device ownership. One instance holds one robot/environment binding; one active session has control. The frontend consumes registry capabilities instead of testing robot names.
 
-<img src="images/structure.svg" alt="NERV structure" width="860">
+The [accepted decision](decisions/0001-modular-runtime-harness.md) records the deployment and lifecycle choices.
 
-| Node | Role | Process |
+## Boundaries
+
+| Component | Owns | Cannot own |
 |---|---|---|
-| Brain | System 2. Reasons once per step; answers the person; asks NERV to observe and to call tools | a plugin inside `nerv serve` (in-process today) |
-| Body | System 1. Verbs (primitives and skills), policy loops at 30–50 Hz, the sensor summary | one process per body, in the interpreter its bus endpoint needs |
-| World | physics, motor firmware, cameras, rays (simulation); reality (hardware) | one process per (world, body) in simulation; none for hardware |
-| Tool | pure computation | one process per tool |
+| Host | sessions, control generations, arming, local node clients, logs | vendor robot objects, policy tensors |
+| AgentHarness | model requests, tool decisions, supervision loop, cancellation | actuator access or permission changes |
+| SessionMemory | durable raw events and session-scoped historical views | another session's data or live robot state |
+| ContextManager / Compactor | request estimates, complete groups, source-linked summaries | deletion of raw history or robot tools |
+| ModelProvider | wire protocol, streamed terminal response, usage, reasoning continuation | robot lifecycle |
+| Runtime worker | device, sensors, local policy loop, dispatch authority | model credentials or other workers' devices |
+| World worker | existing simulation, motor bus, operator scene controls | agent decisions |
 
-## Five interfaces, two planes each
+The harness accepts a model, context manager and replaceable compactor. Storage and permissioned tools come from the host Link. `brain/plugin.py` is the application composition point; harness storage and budgeting do not import the platform or its configuration.
 
-| Interface | Between | Data plane (the brain may see) | Control plane (NERV and the operator only) |
-|---|---|---|---|
-| NERV/Operator | person ⇄ NERV | — | registry, sessions, chat + events, stop, arm |
-| NERV/Brain | NERV ⇄ brain | `UserMessage`, `ToolResult` in; `Think`, `CallTool`, `SetRegister`, `Say` out | load, capabilities, usage |
-| NERV/Body | NERV ⇄ body (MCP) | tools, `nerv://observation`, guidance, config, capabilities | `/health /status /config /stop /hold /release /stream` |
-| NERV/World | body ⇄ world (bus) · NERV ⇄ world (sensors) | motor bus; sensor streams | launch, `/health` (epoch), spawn, `/reset`, `/status`, `/stream` |
-| NERV/Tool | NERV ⇄ tool (MCP) | tools | `/health` |
+## Robot objects
 
-The rule that keeps the whole thing honest: ground truth never crosses from the control plane to
-the data plane. A simulated world knows where the robot is; the brain learns it the way a real
-robot would — from the body's senses and from what its actions measured.
+`RobotProfile` identifies the model or variant and its semantic configuration. `EnvironmentBinding` identifies a sim or real connection, provider and environment settings. `RobotRuntime` implements lifecycle and current capabilities. `PolicyArtifact` records a format, files, fingerprints, input/output contract and operating conditions.
 
-## One instruction, two clocks
+A skill connects those contracts to an implementation. It may use a learned policy or vendor controller. A tool is the skill interface shown to the model. Neither the SDK nor core translates every robot into LeRobot.
 
-<img src="images/flow.svg" alt="see, think, gate, act" width="860">
+The reserved `BindingTransition` describes source, target and expected epoch only. No runtime switching endpoint exists. Calibration and evidence must not transfer from sim to real by matching names.
 
-See: the brain asks to observe; NERV assembles one frame from the body's observation and any
-ambient streams the session declared. Think: one model call — answer, or pick a tool. Gate: NERV
-checks the session is armed, the verb is allowed and the arguments are inside what the body
-declared; a refusal comes back as a tool result the brain can act on. Act: a primitive writes a
-target and settles; a skill starts a policy loop on the body node that reads the bus, runs the
-policy, writes joint targets and repeats until done, timed out or stopped, sending progress
-heartbeats on the way and a measured result at the end. Then the brain sees again, until it
-answers in words or one of three stops fires (interrupt > step ceiling > wall clock), each a
-pause the person can resume.
+## Session data
 
-## Session assembly
+`memory/sessions/<id>/events.jsonl` is authoritative. Events have contiguous sequence numbers, timestamps, kind and data. Every append is flushed and fsynced. File locks serialize allocation; a host lock serializes snapshot read/modify/write. Metadata snapshots derive task/notes and messages from the journal. A retained `.json.legacy` source allows an interrupted initial migration to resume.
 
-A session is brain × body × world (+ the tool nodes, + the ambient sensors it subscribes to).
-`platform/registry/compat.py` decides whether the pair exists: the world must list the body in
-`supports` (a sim world names the arena file) and the body must have a bus endpoint for the
-world's kind. Then the launcher starts the world node, the body node (in the interpreter its
-endpoint requires) and the tools, waits for each `/health`, records the world's epoch, and the
-session starts disarmed. Trust is checked on the first handshake: an unapproved node contributes
-no tools and no guidance until the operator approves its manifest.
+Images live under the session's `imgs/` directory. Perception records contain relative references, capture state and observation/frame receipts. History tools have no session argument and return only the current session. Provider continuation is excluded from history search/read results.
 
-## Where things live
+Interrupted tools are represented as unknown outcomes when constructing a complete provider tool group; this does not assert that a robot action succeeded. Unfinished run events receive `run_interrupted` on startup. Nothing replays a tool call.
 
-```
-src/nerv/nerve/       the five interfaces: message types, motor bus, sensors, conformance
-src/nerv/platform/    registry, sessions, observation assembly, router, gate, launcher, trust, HTTP, CLI
-src/nerv/brain/       the brain plugin: see–think–gate–act loop, model providers, prompts
-src/nerv/body/        body node: MCP server, skill runner, families (humanoid, arm), bus endpoints
-src/nerv/world/       world node: MuJoCo physics, motor firmware, cameras, rays, bus server
-src/nerv/tool/        tool node: the calculator
-bodies/ tools/        the registry: one directory, one YAML, one guidance.md per entry
-worlds/               submodule nerv-world: scenes, robot models, arenas and the world descriptors
-policies/             submodule nerv-policies: released policies (policy.onnx + contract.json + release.yaml)
-```
+## Model context
 
-## Future paths (not built)
+The request estimate includes the system text and registers, summary, neutral history and provider items, tool schemas, an allowance per image and output reservation. Provider usage is stored independently. Models with known context capacities also bound the local request budget.
 
-- NERV/Tap: subscribe to every signal and record datasets (LeRobot format).
-- NERV/Peer: several NERVs, several robots.
-- ROS: a robot joins as a NERV/Body bridge, services as NERV/Tool bridges.
-- Edge: NERV, the brain and the body on the robot's own computer; only NERV/World reaches hardware.
-- Arena composition at runtime (MuJoCo `MjSpec.attach`) instead of prebuilt `supports` arenas.
-- A retrieval tool for long-term knowledge; a grasp skill for the arm once a policy is trained.
+The context manager compacts only completed old groups before the newest user request. A separate tool-free model request sees the old text and previous summary. Commit requires a nonempty, smaller result, unchanged source fingerprint, enough remaining budget and a live request. Every summary records its source range, model, usage and journal time. Original events remain available.
+
+## Control generations
+
+Each incoming instruction invalidates the previous turn token. Durable text/register commits share the host's generation lock. A worker receives an immutable controller ID, monotonically increasing request generation and random token; late claims and late tool calls are refused. A new claim does not cancel a running ACT execution: the new agent turn must observe and reassess it.
+
+For ACT, the command token is checked again immediately around execution startup after potentially slow model loading. The adapter then captures a dispatch generation; the final native `send_action` and generation revocation share a lock. Cancelling clears queued ACT work by ending that runner and resetting its action buffer. A fresh execution cannot start until the previous worker has exited and its measured hold has completed.
+
+The simulation adapter forwards cancellation to its existing SkillRunner. Acquiring the runner and clearing its stop flag happen under the same command guard used by the SDK. Normal G1 stopping continues to use the existing skill's braking/settling behavior.
+
+## Local supervision
+
+ACT captures both cameras and motor positions from one LeRobot owner. Browser streams and agent observations read those camera sources, while policy inference and native actuator writes stay in the adapter process. Stale frames fail locally, including when inference outlives its observation freshness limit.
+
+The host renews supervision after a current model response using the runtime epoch and an issued observation receipt. The local watchdog cancels an execution when supervision expires, without waiting for a cloud request. Compaction or a slow provider cannot keep motion authorized indefinitely.
+
+Stopping acknowledges that the old policy generation cannot dispatch further targets; it does not claim instantaneous physical standstill. A measured pose hold is a separate native write. Emergency stop latches hold and disarms. Release returns disarmed standby and clears the old task; it never resumes it. Disconnect and torque release are separate adapter operations.
+
+## Model registry
+
+The private registry stores editable visual model declarations, per-model effort, selected model and interface checks. Keys have environment-over-private-store precedence. The frontend receives only credential status. Worker environments contain a small allowlist and explicitly declared artifact paths, never model API keys.
+
+Readiness is tied to a hash of model configuration, effort and credential. Image/tool/continuation checks use no robot. Physical acceptance is separately tied to that request signature, the prepared robot binding fingerprint and a retained operator evidence record. The host refuses configuration changes during active turns or managed robot execution.
+
+## Preserved systems
+
+Worlds and policies remain unchanged submodules. Existing world scene ownership, epoch, operator controls, trust and truth-isolation checks remain in the host. Retained legacy brain providers and the explicit Mock software fixture are excluded from the production visual model list. Legacy body entrypoints remain for regression references; production launch uses the runtime SDK.

@@ -1,10 +1,11 @@
 """The body camera budget includes acquisition and does not block the HTTP loop."""
 import asyncio
 import threading
+from types import SimpleNamespace
 
 import pytest
 
-from nerv.body import node
+from nerv_runtime_sdk import node
 from nerv.body.skills import StopFlag
 from test_body_node import FakeArm
 
@@ -23,7 +24,7 @@ def test_camera_work_counts_toward_period_and_runs_off_loop(monkeypatch, work_s,
         clock[0] += delay
     impl.stream_jpeg = frame
     monkeypatch.setattr(node.time, "perf_counter", lambda: clock[0])
-    monkeypatch.setattr(asyncio, "sleep", sleep)
+    monkeypatch.setattr(node, "asyncio", SimpleNamespace(sleep=sleep))
     body = node.BodyNode(impl, guidance="test", stop=StopFlag(), armed=False, stream_fps=10)
     endpoint = next(r.endpoint for r in node.build_app(body, []).routes if r.path == "/stream")
     async def receive():

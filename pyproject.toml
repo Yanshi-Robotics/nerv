@@ -12,6 +12,7 @@ license = "MIT"
 authors = [{ name = "Jeff Liu" }]
 keywords = ["robotics", "llm", "mcp", "mujoco", "lerobot", "embodied-ai"]
 dependencies = [
+  "nerv-runtime-sdk==0.6.0",
   "pydantic>=2.6",
   "pydantic-settings>=2.6",
   "python-dotenv>=1.0",
@@ -25,20 +26,26 @@ dependencies = [
 ]
 
 [project.optional-dependencies]
-platform = ["anthropic>=0.69", "openai>=1.0"]
+platform = ["anthropic>=0.69", "openai>=1.66"]
 sim = ["mujoco>=3.2", "numpy>=1.26", "onnxruntime>=1.17", "pyzmq>=25"]
-all = ["anthropic>=0.69", "openai>=1.0", "mujoco>=3.2", "numpy>=1.26", "onnxruntime>=1.17", "pyzmq>=25"]
+all = ["anthropic>=0.69", "openai>=1.66", "mujoco>=3.2", "numpy>=1.26", "onnxruntime>=1.17", "pyzmq>=25"]
 lerobot = ["lerobot>=0.6,<0.7", "pyzmq>=25"]
 dev = ["pytest>=8", "ruff>=0.15,<0.17", "pyzmq>=25", "numpy>=1.26"]
 
 [project.scripts]
 nerv = "nerv.platform.cli:main"
 
+[project.entry-points."nerv.runtime_providers"]
+builtin = "nerv.runtime.builtin:BuiltinProvider"
+
 [tool.setuptools]
 package-dir = { "" = "src" }
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
+[tool.setuptools.package-data]
+"nerv.vlm" = ["catalog.json"]
 
 [tool.setuptools.dynamic]
 version = { attr = "nerv._version.__version__" }

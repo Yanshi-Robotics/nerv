@@ -10,6 +10,7 @@ import {
   imgUrl,
   interruptSession,
   setSessionBrain,
+  selectVlm,
   streamChat,
   type Brain,
   type ChatEvent,
@@ -262,6 +263,7 @@ export default function ChatPanel({
     const v = new URLSearchParams(window.location.search).get("expand");
     return v === "all" || v === "none" ? v : "auto";
   });
+  const requestGeneration = useRef(0);
   const bottomRef = useRef<HTMLDivElement>(null);
   const openFor = (isLive: boolean) => (expand === "all" ? true : expand === "none" ? false : isLive);
 
@@ -283,9 +285,14 @@ export default function ChatPanel({
   }, [session?.id, brainLabel]);
 
   useEffect(() => {
+    requestGeneration.current += 1;
+    setBusy(false); setLive(null);
     reload();
     setTeleop(false); // 换会话就退出遥控
-  }, [reload]);
+  // History labels may refresh while a request is running; only changing the
+  // selected session/model invalidates this panel's local stream.
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [session?.id, session?.brain]);
   useEffect(() => {
     if (!teleop) bottomRef.current?.scrollIntoView();
   }, [items, live, busy, teleop]);
@@ -296,8 +303,8 @@ export default function ChatPanel({
 
   async function switchBrain(name: string) {
     if (!session) return;
-    await setSessionBrain(session.id, name);
-    onSessionsChanged();
+    try { await setSessionBrain(session.id, name); onSessionsChanged(); }
+    catch (error) { setArmErr((error as Error).message); }
   }
 
   async function toggleArm() {
@@ -305,7 +312,7 @@ export default function ChatPanel({
     if (!session.armed) {
       // 身体节点报的总线不是 zmq（仿真）= 后面是真机：上膛前问一句。
       const bus = bodyNode?.meta?.bus;
-      if (bus !== "zmq" && !confirm(t("This body node reports a real bus ({bus}) — arming lets the hardware move. Arm it?", { bus: String(bus ?? "unknown") }))) return;
+      if (session.mode === "real" && !confirm(t("This body node reports a real bus ({bus}) — arming lets the hardware move. Arm it?", { bus: String(bus ?? "unknown") }))) return;
     }
     setArmBusy(true);
     setArmErr("");
@@ -331,13 +338,14 @@ export default function ChatPanel({
 
   async function send() {
     const text = input.trim();
-    if (!text || !session || !active || busy || teleop) return;
+    if (!text || !session || !active || teleop) return;
+    const generation = ++requestGeneration.current;
     setInput("");
     setBusy(true);
     const base: Turn = { user: text, inputs: [], thinking: [], reply: "" };
     setLive(base);
     // 不可变更新：每次都基于 prev 返回新 Turn，绝不在 updater 里 mutate（严格模式会跑两遍）。
-    const upd = (fn: (t: Turn) => Turn) => setLive((prev) => fn(prev ?? base));
+    const upd = (fn: (t: Turn) => Turn) => { if (requestGeneration.current === generation) setLive((prev) => fn(prev ?? base)); };
     const appendResult = (line: string) =>
       upd((turn) => {
         if (!turn.thinking.length) return { ...turn, thinking: [{ text: "", tool_calls: [], tool_results: [line] }] };
@@ -350,7 +358,7 @@ export default function ChatPanel({
           upd((turn) => ({
             ...turn,
             inputs: [...turn.inputs, {
-              images: e.image_b64 ? [{ name: (e.cameras ?? [])[0] ?? "", src: `data:image/png;base64,${e.image_b64}` }] : [],
+              images: e.images?.map(image => ({name:image.name, src:`data:image/png;base64,${image.b64}`})) ?? (e.image_b64 ? [{ name: (e.cameras ?? [])[0] ?? "", src: `data:image/png;base64,${e.image_b64}` }] : []),
               state: e.state,
             }],
           }));
@@ -368,6 +376,7 @@ export default function ChatPanel({
     } catch (e) {
       upd((turn) => ({ ...turn, reply: `${t("(cannot reach the backend)")} ${(e as Error).message ?? ""}` }));
     } finally {
+      if (requestGeneration.current !== generation) return;
       await reload();
       setLive(null);
       setBusy(false);
@@ -402,7 +411,7 @@ export default function ChatPanel({
         {session && (
           <div className="mt-1.5 truncate text-[11px] text-neutral-400" title={curBrain ? `${t(curBrain.vendor)} · ${curBrain.model}` : undefined}>
             {/* 会话 = 大脑 × 身体 × 世界。三样都在这一行。 */}
-            {session.world ? `🌍 ${session.world} · 🤖 ${session.body}` : t("Conversation only")} · 🧠 {t(brainLabel(session.brain))}
+            {session.body ? `🤖 ${session.body} · ${session.world || t("Real hardware")}` : t("Conversation only")} · 🧠 {t(brainLabel(session.brain))}
           </div>
         )}
       </header>
@@ -442,6 +451,7 @@ export default function ChatPanel({
           {/* ---- 一行三个控件：大脑 · 上膛 · 遥控 ---- */}
           <div className="flex items-center gap-2 px-3 pt-2">
             <BrainPicker brains={brains} current={session.brain} disabled={!active || busy} onPick={switchBrain} />
+            {!!curBrain?.efforts?.length && <select aria-label={t("Reasoning effort")} className="max-w-24 rounded border border-neutral-600 bg-neutral-800 text-[10px]" disabled={!active || busy} value={curBrain.effort ?? ""} onChange={event => selectVlm(session.brain, event.target.value || null).then(onSessionsChanged).catch(e => setArmErr(e.message))}><option value="">{t("Provider default")}</option>{curBrain.efforts.map(effort => <option key={effort} value={effort}>{effort}</option>)}</select>}
             {hasBody && (
               <button onClick={toggleArm} disabled={armBusy || !active} role="switch" aria-checked={session.armed}
                 title={session.armed
@@ -490,8 +500,9 @@ export default function ChatPanel({
               )}
               <div className="flex gap-2">
                 <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} disabled={teleop}
-                  placeholder={teleop ? t("teleop mode — chat is paused") : busy ? t("Wait for this turn to finish…") : t("Give the brain an instruction…")}
+                  placeholder={teleop ? t("teleop mode — chat is paused") : busy ? t("Send a new instruction while the skill is running…") : t("Give the brain an instruction…")}
                   className="flex-1 rounded-xl bg-neutral-800 px-3 py-2 text-sm outline-none placeholder:text-neutral-500 disabled:opacity-50" />
+                {busy && input.trim() && <button onClick={send} className="rounded-xl bg-blue-600 px-3 py-2 text-sm">{t("Send")}</button>}
                 {busy ? (
                   <button onClick={stop} disabled={stopping}
                     title={t("Stop this turn (it finishes the current step; say “continue” to resume)")}

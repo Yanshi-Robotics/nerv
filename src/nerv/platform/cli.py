@@ -102,7 +102,9 @@ def _review_trust(hub, s: dict) -> None:
 
 
 def _new_session(hub, a) -> str:
-    s = hub.new_session(a.brain or config.DEFAULT_BRAIN, a.body, a.world, a.sensors or [], None)
+    from ..vlm.store import ModelRegistry
+    selected = ModelRegistry().selection() or config.DEFAULT_BRAIN
+    s = hub.new_session(a.brain or selected, a.body, a.world, a.sensors or [], None, a.mode)
     print(f"session {s['id']}  brain={s['brain']} body={s['body']} world={s['world']} armed={s['armed']}")
     _review_trust(hub, s)
     return s["id"]
@@ -221,6 +223,7 @@ def main(argv: list[str] | None = None) -> int:
     def _sess_args(p):
         p.add_argument("--brain", default="")
         p.add_argument("--body", default=None)
+        p.add_argument("--mode", choices=["sim", "real"], default="sim")
         p.add_argument("--world", default=None)
         p.add_argument("--sensors", nargs="*", default=[], help="ambient streams to include")
         p.add_argument("--arm", action="store_true", help="arm the session at start (sim only!)")

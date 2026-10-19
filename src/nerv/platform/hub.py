@@ -8,8 +8,12 @@ from __future__ import annotations
 import queue
 import threading
 import time
+import uuid
+import hashlib
+import json
 from functools import wraps
 from typing import Callable, Iterator
+from types import SimpleNamespace
 
 from ..brain import plugin as brain_plugin
 from ..nerve import operator as op
@@ -51,8 +55,19 @@ class Nerv:
         self.scene_tests = SceneTests(self)
         self._runs: dict[str, threading.Event] = {}
         self._runs_lock = threading.RLock()
+        self._bound_runtime: tuple | None = None
+        self._control_owner = uuid.uuid4().hex
+        self._control_generation = 0
         for session in self.store.all():
-            self.store.memory(session.id).recover_runs()
+            memory = self.store.memory(session.id)
+            before = len(memory.events())
+            memory.recover_runs()
+            if len(memory.events()) > before:
+                self.store.set_armed(session.id, False)
+                if session.body:
+                    self.store.set_status(session.id, op.SESSION_RECONNECT)
+                self.store.append(session.id, {"role": "assistant", "brain": "operator",
+                    "text": "Host restarted: unfinished execution outcome is unknown. No actions were replayed; reconnect and observe before any new task."})
 
     # -- node clients ---------------------------------------------------------------------
     def body_client(self, name: str) -> RemoteBody | None:
@@ -150,9 +165,17 @@ class Nerv:
     # -- sessions ---------------------------------------------------------------------------
     @_node_lifecycle
     def new_session(self, brain: str, body: str | None, world: str | None,
-                    sensors: list[str] | None = None, tools: list[str] | None = None) -> dict:
-        if (body is None) != (world is None):
-            raise ValueError("give both a body and a world, or neither (conversation only)")
+                    sensors: list[str] | None = None, tools: list[str] | None = None,
+                    mode: str = "sim") -> dict:
+        if world and not body:
+            raise ValueError("a simulated world requires a robot profile")
+        if world:
+            mode = self.registry.world(world).kind
+        if body and mode == "sim" and not world:
+            raise ValueError("select a simulation world")
+        binding = (body, mode, world)
+        if body and self._bound_runtime and self._bound_runtime != binding:
+            raise ValueError("this NERV instance is bound to one robot/environment; close the instance before selecting another")
         epoch = ""
         tool_names = list(tools) if tools is not None else list(self.registry.tools)
         if body and world:
@@ -169,6 +192,18 @@ class Nerv:
             bad = [s for s in (sensors or []) if s not in offered]
             if bad:
                 raise ValueError(f"world `{world}` does not publish sensor streams {bad}; it offers {sorted(offered)}")
+        elif body:
+            spec = self.registry.body(body)
+            if mode not in spec.buses:
+                raise ValueError("this robot has no registered binding for the selected environment")
+            handle = self.launcher.ensure_runtime(spec, mode)
+            epoch = str(handle.meta.get("epoch", ""))
+        if body:
+            self._bound_runtime = binding
+        previous = [s for s in self.store.all() if s.body and s.status == op.SESSION_ACTIVE]
+        enabled = any(s.body == body and s.armed for s in previous)
+        for old in previous:
+            self.stop(old.id)
         for t in tool_names:
             try:
                 self.launcher.ensure_tool(self.registry.tool(t))
@@ -176,6 +211,8 @@ class Nerv:
                 slog.record("operator", {"event": "tool_launch_failed", "tool": t, "error": str(e)})
                 tool_names = [x for x in tool_names if x != t]
         s, frozen = self.store.new(brain, body, world, sensors=sensors, tools=tool_names, epoch=epoch)
+        s.mode, s.binding, s.armed = mode, f"{body}:{mode}:{world or ''}" if body else "", enabled
+        self.store.save(s)
         for sid in frozen:
             interrupt.request(sid)
             self.scene_tests.interrupt(sid)
@@ -218,15 +255,15 @@ class Nerv:
         with self._runs_lock:
             if sid in self._runs:
                 self._runs[sid].set()
-        interrupt.request(sid)
-        self.scene_tests.interrupt(sid)
-        s = self.store.get(sid)
-        if self._control_error(s):
-            return
-        if s.body:
-            c = self.body_client(s.body)
-            if c is not None:
-                c.post("/stop")
+            interrupt.request(sid)
+            self.scene_tests.interrupt(sid)
+            s = self.store.get(sid)
+            if self._control_error(s):
+                return
+            if s.body:
+                c = self.body_client(s.body)
+                if c is not None:
+                    c.post("/stop")
 
     # -- operator control plane: emergency stop (hold the pose), release, reset --------------
     def _operator_note(self, sid: str, event: str, text: str, **fields) -> None:
@@ -250,6 +287,8 @@ class Nerv:
         if c is None:
             return {"ok": False, "held": False, "message": f"the body `{s.body}` is not reachable"}
         res = c.hold("operator")
+        self.store.set_armed(sid, False)
+        self.store.set_core_task(sid, "")
         self._operator_note(sid, "estop", messages.ESTOP_NOTE, body=res)
         return {"ok": bool(res.get("ok")), "held": bool(res.get("held", res.get("ok"))),
                 "message": str(res.get("message", ""))}
@@ -265,6 +304,8 @@ class Nerv:
             return {"ok": False, "held": True, "message": f"the body `{s.body}` is not reachable"}
         res = c.release()
         if res.get("ok"):
+            self.store.set_armed(sid, False)
+            self.store.set_core_task(sid, "")
             self._operator_note(sid, "release", messages.RELEASE_NOTE, body=res)
         else:
             slog.record("operator", {"event": "release_refused", "session": sid, "body": res})
@@ -294,7 +335,15 @@ class Nerv:
         return {"ok": bool(res.get("ok")), "message": str(res.get("message", "")), "body": body}
 
     def _epoch_ok(self, s) -> bool:
-        if not (s.body and s.world):
+        if not s.body:
+            return True
+        if not s.world:
+            client = self.body_client(s.body)
+            now = (client.health() or {}).get("epoch", "") if client else ""
+            if not now or (s.epoch and now != s.epoch):
+                self.store.set_status(s.id, op.SESSION_RECONNECT)
+                self.store.set_armed(s.id, False)
+                return False
             return True
         handle = self.launcher.nodes.get(f"body:{s.body}")
         if handle and handle.meta.get("world") and handle.meta["world"] != s.world:
@@ -312,15 +361,47 @@ class Nerv:
             return False
         return True
 
+    def binding_signature(self):
+        if not self._bound_runtime:
+            return None
+        body, mode, world = self._bound_runtime
+        client = self.body_client(body)
+        health, state = (client.health(), client.status()) if client else (None, None)
+        if not health or not state or (mode == "real" and not state.get("prepared")):
+            return None
+        payload = {"profile": self.registry.body(body).model_dump(), "mode": mode, "world": world,
+                   "epoch": health.get("epoch"), "preparation": state.get("preparation", {}),
+                   "runtime_manifest": health.get("runtime_manifest", {}),
+                   "artifacts": [{k: v for k, v in policy.items() if k != "loaded"}
+                                 for policy in state.get("policies", [])]}
+        return hashlib.sha256(json.dumps(payload, sort_keys=True).encode()).hexdigest()
+
     # -- turns ------------------------------------------------------------------------------
-    def _turn(self, sid: str, emit) -> Turn:
+    def _turn(self, sid: str, emit, token=None, operator=False) -> Turn:
         s = self.store.get(sid)
         body = self.body_client(s.body) if s.body else None
         world = self.world_client(s.world, s.body) if (s.world and s.body) else None
         tools = [c for c in (self.tool_client(t) for t in s.tools) if c is not None]
-        token = self._runs.get(sid)
-        return Turn(self.store, s, self.brain(s.brain), body, world, tools, self.gate, emit,
-                    world_name=s.world or "", current=(lambda: not token.is_set()) if token else None)
+        brain = SimpleNamespace(name="operator", model="operator", vision=False) if operator else self.brain(s.brain)
+        return Turn(self.store, s, brain, body, world, tools, self.gate, emit,
+                    world_name=s.world or "", current=(lambda: not token.is_set()) if token else None, guard=self._runs_lock, control_token=getattr(token, "control_token", None))
+
+    def _claim_run(self, sid, session):
+        with self._runs_lock:
+            if old := self._runs.get(sid):
+                old.set()
+            token = threading.Event()
+            self._runs[sid] = token
+            token.control_token = uuid.uuid4().hex
+            self._control_generation += 1
+            if body := self.body_client(session.body) if session.body else None:
+                claimed = body.post("/control/claim", {"token": token.control_token, "owner": self._control_owner,
+                                                      "generation": self._control_generation})
+                if not claimed.get("ok"):
+                    token.set()
+                    raise RuntimeError("runtime refused the control generation")
+            interrupt.clear(sid)
+        return token
 
     def handle_stream(self, sid: str, text: str) -> Iterator[dict]:
         s = self.store.get(sid)
@@ -342,14 +423,9 @@ class Nerv:
             yield {"type": op.EV_REPLY, "text": messages.UNKNOWN_BRAIN_REPLY}
             yield {"type": op.EV_DONE}
             return
-        with self._runs_lock:
-            if old := self._runs.get(sid):
-                old.set()
-            token = threading.Event()
-            self._runs[sid] = token
-            interrupt.clear(sid)
+        token = self._claim_run(sid, s)
         q: queue.Queue = queue.Queue()
-        turn = self._turn(sid, q.put)
+        turn = self._turn(sid, q.put, token)
 
         def _run():
             with slog.session_scope(sid):
@@ -385,7 +461,7 @@ class Nerv:
         s = self.store.get(sid)
         if s.status != op.SESSION_ACTIVE:
             return []
-        turn = self._turn(sid, lambda ev: None)
+        turn = self._turn(sid, lambda ev: None, operator=True)
         out = []
         for spec in turn.tools():
             origin, node, _ = turn._routes[spec.name]
@@ -413,8 +489,9 @@ class Nerv:
                    "message": messages.SESSION_NOT_ACTIVE.format(status=op.SESSION_RECONNECT)}
             yield {"type": op.EV_DONE}
             return
+        token = self._claim_run(sid, s)
         q: queue.Queue = queue.Queue()
-        turn = self._turn(sid, q.put)
+        turn = self._turn(sid, q.put, token, operator=True)
         call_id = f"teleop-{int(time.time() * 1000)}"
 
         def _run():
@@ -425,6 +502,9 @@ class Nerv:
                     turn.think(Think(messages.TELEOP_STEP.format(name=name), [CallTool(call_id, name, arguments)]))
                     turn.call_tool(CallTool(call_id, name, arguments))
                 finally:
+                    with self._runs_lock:
+                        if self._runs.get(sid) is token:
+                            self._runs.pop(sid, None)
                     q.put(None)
 
         th = threading.Thread(target=_run, daemon=True)

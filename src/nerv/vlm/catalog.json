@@ -1,0 +1,79 @@
+[
+  {
+    "id": "deepseek-flash",
+    "provider": "deepseek",
+    "label": "DeepSeek V4.1 Flash",
+    "model": "deepseek-flash",
+    "base_url": "https://api.deepseek.com",
+    "protocol": "deepseek_responses",
+    "credential_ref": "DEEPSEEK_API_KEY",
+    "input_modalities": [
+      "text",
+      "image"
+    ],
+    "supports_tools": true,
+    "efforts": [
+      "none",
+      "low",
+      "high",
+      "max"
+    ],
+    "evidence": "https://api-docs.deepseek.com/zh-cn/quick_start/pricing/",
+    "context_window": 1000000,
+    "provider_output_limit": 384000,
+    "provider_default_effort": "high",
+    "limits_basis": "Conservative decimal interpretation of documented 1M/384K."
+  },
+  {
+    "id": "openai-sol",
+    "provider": "openai",
+    "label": "GPT-6.1 Sol",
+    "model": "gpt-6.1-sol",
+    "base_url": "https://api.openai.com/v1",
+    "protocol": "responses",
+    "credential_ref": "OPENAI_API_KEY",
+    "input_modalities": [
+      "text",
+      "image"
+    ],
+    "supports_tools": true,
+    "efforts": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ],
+    "evidence": "https://developers.openai.com/api/docs/models/gpt-6.1-sol",
+    "context_window": 1050000,
+    "provider_output_limit": 128000,
+    "provider_default_effort": "medium",
+    "limits_basis": "Official model page, checked 2026-10-19."
+  },
+  {
+    "id": "openai-astra",
+    "provider": "openai",
+    "label": "GPT-6 Astra",
+    "model": "gpt-6-astra",
+    "base_url": "https://api.openai.com/v1",
+    "protocol": "responses",
+    "credential_ref": "OPENAI_API_KEY",
+    "input_modalities": [
+      "text",
+      "image"
+    ],
+    "supports_tools": true,
+    "efforts": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ],
+    "evidence": "https://developers.openai.com/api/docs/models/gpt-6-astra",
+    "context_window": 1050000,
+    "provider_output_limit": 128000,
+    "provider_default_effort": null,
+    "limits_basis": "Official model page, checked 2026-10-19."
+  }
+]

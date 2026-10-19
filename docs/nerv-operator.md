@@ -138,3 +138,17 @@ water flow. G1 manipulation and stair-climbing skills are separate work.
 
 The CLI (`nerv chat`, `nerv run`, `nerv session`) uses the same hub in-process; the web app is a
 static export served at `/` when `frontend/out` exists.
+
+## Modular startup and model control (0.6)
+
+Session creation accepts `mode: sim|real`. Real bindings have no world worker and are not prepared
+automatically. `POST /api/sessions/{sid}/runtime/prepare` explicitly prepares the current device;
+`POST …/runtime/policies/load {id}` loads a registered policy; `GET …/runtime` reads readiness and
+execution. Only the active control session can prepare or load.
+
+`GET /api/vlm` returns visual registrations and status-only credentials. `PUT /api/vlm/{id}` edits
+a declaration; `PUT /api/credentials/{reference} {value}` writes/removes a private key without echo.
+`POST /api/vlm/{id}/select {effort}` remembers a model and its supported effort; null uses the
+supplier default. `POST …/validate` is an explicitly billable non-robot image/tool/continuation
+check. `POST …/acceptance {signature,binding_signature,status,evidence}` records operator physical evidence separately.
+Changing active task settings is refused. See [VLM configuration](vlm.md).

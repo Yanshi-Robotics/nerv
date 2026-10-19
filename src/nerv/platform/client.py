@@ -129,7 +129,7 @@ class _McpNode:
 
     # -- invoke ---------------------------------------------------------------------------
     def invoke(self, name: str, *, _on_progress: Optional[Callable] = None,
-               _should_abort: Optional[Callable[[], bool]] = None, **kwargs: Any) -> ActionResult:
+               _should_abort: Optional[Callable[[], bool]] = None, _control_token: str | None = None, **kwargs: Any) -> ActionResult:
         if self._caps is None:
             self.capabilities()
         t0 = time.perf_counter()
@@ -145,7 +145,11 @@ class _McpNode:
                 except Exception:
                     pass
 
+        if _control_token:
+            kwargs["_nerv_control"] = _control_token
         async def op(s):
+            if _should_abort and _should_abort():
+                raise mcp_bridge.CallAborted()
             r = await s.call_tool(name, kwargs, progress_callback=_cb)
             text = "".join(c.text for c in r.content if getattr(c, "text", None))
             return (not bool(getattr(r, "isError", False))), text, (r.structuredContent or {})

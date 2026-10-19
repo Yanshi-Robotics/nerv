@@ -13,6 +13,6 @@ def load(name: str, wrap=None) -> AgentHarness:
     llm = make_llm(name)
     if wrap:
         llm = wrap(llm)
-    return AgentHarness(llm, name, ContextManager(config.REQUEST_TOKEN_BUDGET,
-                                                config.MAX_TOKENS,
+    return AgentHarness(llm, name, ContextManager(min(config.REQUEST_TOKEN_BUDGET, getattr(llm, "context_window", None) or config.REQUEST_TOKEN_BUDGET),
+                                                getattr(llm, "max_output_tokens", config.MAX_TOKENS),
                                                 config.IMAGE_TOKEN_ALLOWANCE))

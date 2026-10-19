@@ -8,12 +8,12 @@ INTERRUPTED_REPLY = '(Stopped. Say "continue" and I will pick up where I left of
 STOP_REPLIES = {"steps": MAX_STEPS_REPLY, "time": TIME_BUDGET_REPLY, "interrupt": INTERRUPTED_REPLY}
 
 UNKNOWN_BRAIN_REPLY = "(That brain is not one this platform knows about.)"
-BRAIN_NOT_CONFIGURED_REPLY = "(That brain is not configured. Set it up in .env and restart.)"
+BRAIN_NOT_CONFIGURED_REPLY = "(This VLM is not ready. Configure and validate it in Visual models.)"
 BRAIN_CALL_FAILED_LEAD = "(The brain call failed.)"
 BRAIN_CALL_FAILED_REPLY = BRAIN_CALL_FAILED_LEAD + " {error}"
 TELEOP_STEP = "(operator teleop: {name})"
 # operator control-plane actions, written into the session so the brain knows what happened
 ESTOP_NOTE = "(operator: emergency stop — the body is holding its pose and will not move until released)"
-RELEASE_NOTE = "(operator: released the emergency stop — the body may move again)"
+RELEASE_NOTE = "(operator: released the emergency stop; the old task is cancelled. The robot is disarmed and waiting for new authorization and a new instruction.)"
 RESET_NOTE = "(operator: reset the entire scene — robot, furniture and props are back at their initial positions; time of day is unchanged)"
 SESSION_NOT_ACTIVE = "(This session is {status}; start a new one to continue.)"

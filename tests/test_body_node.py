@@ -124,10 +124,12 @@ def test_hold_is_an_emergency_stop_that_keeps_the_pose_not_a_power_cut():
         assert node.stop.is_set()                                   # a running skill would end now
         assert b.health()["held"] is True
         r = b.invoke("set_angle", deg=20)
-        assert not r.ok and "holding" in r.message and impl.angle == 10   # nothing moved
+        assert not r.ok and "not armed" in r.message and impl.angle == 10   # nothing moved
         assert b.invoke("read_angle").ok                            # reads are never refused
         assert b.perceive().state["held"] is True                   # the brain is told
         assert b.release()["ok"] and b.health()["held"] is False
+        assert not b.invoke("set_angle", deg=20).ok
+        assert b.set_config("armed", "true")["ok"]
         assert b.invoke("set_angle", deg=20).ok and impl.angle == 20
     finally:
         srv.should_exit = True

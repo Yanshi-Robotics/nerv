@@ -5,6 +5,19 @@ The 0.1.x entries below are the pre-release trail.
 
 ## [Unreleased]
 
+## [0.6.0] — development snapshot, 2026-10-19
+
+- Added durable session journals, legacy migration, scoped history queries, whole-tool-group
+  compaction, request budgeting, cancellable Responses providers and generation-guarded commits.
+- Extracted independent runtime SDK and entry-point discovery; wrapped the existing simulator
+  and added the LeRobot 0.6.1 native ACT adapter with shared cameras and local supervision.
+- Registered the original snack_into_box artifact by file fingerprint. Added explicit device
+  preparation, policy loading, managed execution and disarmed emergency-release behavior.
+- Added visual-only model registration, write-only credentials, per-model effort and separate
+  image/tool/continuation checks. Added startup robot/environment selection and named camera views.
+- Physical acceptance, paid API verification and full rendered G1 regression remain separate.
+  This development snapshot does not qualify for 1.0.0.
+
 ## [0.5.0] — 2026-10-19
 
 Audited development baseline after moving the checkout. Recreated the local Python

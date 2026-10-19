@@ -59,8 +59,8 @@ class Session:
 
 
 class SessionStore:
-    def __init__(self, root: str = _ROOT) -> None:
-        self.root = os.path.abspath(root)
+    def __init__(self, root: str | None = None) -> None:
+        self.root = os.path.abspath(root or os.environ.get("NERV_SESSION_ROOT") or _ROOT)
         os.makedirs(self.root, exist_ok=True)
         self._lock = threading.RLock()
 
@@ -89,6 +89,10 @@ class SessionStore:
         clean = [{k: v for k, v in m.items() if k != "seq"} for m in s.messages]
         if clean[:len(recorded)] != recorded:
             raise ValueError("session history is append-only")
+        if not events:
+            initial = asdict(s)
+            initial.pop("messages")
+            memory.append("metadata", initial)
         for message in clean[len(recorded):]:
             memory.append("message", message)
         metadata = asdict(s)
@@ -104,6 +108,15 @@ class SessionStore:
         memory = self.memory(sid)
         if memory.path.exists():
             events = memory.events()
+            legacy = self._path(sid) + ".legacy"
+            if os.path.isfile(legacy) and not any(event["kind"] == "migration_completed" for event in events):
+                with open(legacy, encoding="utf-8") as file:
+                    original = Session(**json.load(file))
+                # Resume a migration interrupted between durable events. The
+                # retained source remains authoritative until its completion.
+                self.save(original)
+                memory.append("migration_completed", {"source": "legacy_json", "messages": len(original.messages)})
+                events = memory.events()
             metadata = next((e["data"] for e in reversed(events) if e["kind"] == "metadata"), None)
             if metadata is None:
                 raise ValueError("session journal has no metadata")
@@ -116,16 +129,19 @@ class SessionStore:
         return self.load(sid)
 
     def exists(self, sid: str) -> bool:
-        return os.path.exists(self._path(sid))
+        return os.path.exists(self._path(sid)) or os.path.isfile(os.path.join(self.root, sid, "events.jsonl"))
 
     def all(self) -> list[Session]:
         out = []
-        for fn in os.listdir(self.root):
-            if fn.endswith(".json"):
-                try:
-                    out.append(self.load(fn[:-5]))
-                except Exception:
-                    pass
+        ids = set()
+        for entry in os.scandir(self.root):
+            if entry.is_file() and entry.name.endswith(".json"):
+                ids.add(entry.name[:-5])
+            elif entry.is_dir() and os.path.isfile(os.path.join(entry.path, "events.jsonl")):
+                ids.add(entry.name)
+        for sid in ids:
+            # Corrupt journals must be visible as errors, never silently dropped.
+            out.append(self.load(sid))
         out.sort(key=lambda s: s.created_at, reverse=True)
         return out
 

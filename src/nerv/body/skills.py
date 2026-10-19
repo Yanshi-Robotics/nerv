@@ -6,6 +6,7 @@ every tick. It ends on done / stalled / fallen / timeout / stop and returns a me
 """
 from __future__ import annotations
 
+from contextlib import nullcontext
 import threading
 import time
 from typing import Callable
@@ -28,14 +29,16 @@ class StopFlag:
 class SkillRunner:
     def __init__(self, stop: StopFlag) -> None:
         self.stop = stop
+        self._control = threading.local()
         self._active = threading.Lock()
         self.running: str = ""
 
     def run(self, name: str, fn: Callable, _progress=None) -> dict:
-        if not self._active.acquire(blocking=False):
-            return {"ok": False, "message": f"another skill ({self.running}) is still running"}
-        self.stop.clear()
-        self.running = name
+        with getattr(self._control, "guard", nullcontext)():
+            if not self._active.acquire(blocking=False):
+                return {"ok": False, "message": f"another skill ({self.running}) is still running"}
+            self.stop.clear()
+            self.running = name
         t0 = time.monotonic()
 
         def progress(p: float, msg: str = "") -> None:

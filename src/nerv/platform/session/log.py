@@ -152,15 +152,18 @@ class LoggingLLM:
         self.model = getattr(inner, "model", name)
         self.vision = getattr(inner, "vision", False)
 
-    def chat(self, system: str, history: list, tools: list, images):
+    def __getattr__(self, name):
+        return getattr(self._inner, name)
+
+    def chat(self, system: str, history: list, tools: list, images, **kwargs):
         t0 = time.perf_counter()
         reply = None
         error = ""
         try:
-            reply = self._inner.chat(system, history, tools, images)
+            reply = self._inner.chat(system, history, tools, images, **kwargs)
             return reply
         except Exception as e:
-            error = f"{type(e).__name__}: {e}"
+            error = type(e).__name__
             raise
         finally:
             try:

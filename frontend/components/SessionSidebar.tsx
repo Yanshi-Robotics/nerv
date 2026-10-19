@@ -1,5 +1,5 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 import { createSession, deleteSession, type Registry, type SessionSummary } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
@@ -15,7 +15,7 @@ const CONVERSATION_ONLY = ""; // world 选中值空串 = 只聊天，不起身�
 //   收起 ≈ 56px：展开键 + 一列带提示的图标键（新建、仪表盘、日志、主题）；列表和上限藏起来
 // 折叠状态由 app/page.tsx 持有（栅格列宽要跟着变），存 localStorage 的 `nerv-sidebar`。
 // 右侧显示的面板；Dashboard 和 Logs 不是跳页，是换掉右边两栏，侧栏不动。
-export type Panel = "session" | "dashboard" | "logs" | "explore";
+export type Panel = "session" | "dashboard" | "logs" | "explore" | "models";
 
 export default function SessionSidebar({
   sessions,
@@ -42,6 +42,7 @@ export default function SessionSidebar({
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [mode, setMode] = useState<"sim" | "real">("sim");
   const [world, setWorld] = useState(CONVERSATION_ONLY);
   const [body, setBody] = useState("");
   const [brain, setBrain] = useState("");
@@ -53,13 +54,8 @@ export default function SessionSidebar({
   const worldSpec = worlds.find((w) => w.name === world) ?? null;
 
   // 这个世界容得下哪些身体：注册表的兼容矩阵说了算——界面灰掉的，就是后端会拒绝的。
-  const compat = useMemo(() => {
-    const m = new Map<string, { ok: boolean; reason: string }>();
-    for (const c of registry?.matrix ?? []) if (c.world === world) m.set(c.body, { ok: c.ok, reason: c.reason });
-    return m;
-  }, [registry, world]);
-
   function openForm() {
+    setMode("sim");
     setWorld(CONVERSATION_ONLY);
     setBody("");
     setSensors([]);
@@ -69,15 +65,6 @@ export default function SessionSidebar({
     if (collapsed) onToggleCollapsed(); // 表单住在展开态里：收起时按「+」先展开
   }
 
-  function pickWorld(name: string) {
-    setWorld(name);
-    setSensors([]);
-    // 默认选第一个这个世界支持的身体；没有就留空，让用户看到全灰的下拉和原因。
-    const m = new Map<string, boolean>();
-    for (const c of registry?.matrix ?? []) if (c.world === name) m.set(c.body, c.ok);
-    setBody(bodies.find((b) => m.get(b.name))?.name ?? "");
-  }
-
   async function doCreate() {
     if (busy) return;
     setBusy(true);
@@ -85,8 +72,9 @@ export default function SessionSidebar({
     try {
       const created = await createSession({
         brain: brain || undefined,
-        body: world ? body || null : null,
-        world: world || null,
+        body: body || null,
+        mode,
+        world: mode === "sim" ? world || null : null,
         sensors: world ? sensors : [],
       });
       setCreating(false);
@@ -130,6 +118,7 @@ export default function SessionSidebar({
             className={`${iconBtn} ${panel === "explore" ? "bg-neutral-800 text-neutral-100" : ""}`}>
             <ExploreIcon />
           </button>
+          <button onClick={() => onPanel("models")} className={iconBtn} title={t("Visual models")}>VLM</button>
           <button onClick={() => onPanel("logs")} title="Session Logs" aria-label="Session Logs" aria-pressed={panel === "logs"}
             className={`${iconBtn} ${panel === "logs" ? "bg-neutral-800 text-neutral-100" : ""}`}>
             <LogsIcon />
@@ -161,47 +150,30 @@ export default function SessionSidebar({
 
       {creating && (
         <div className="space-y-3 border-b border-neutral-800 p-3 text-xs">
-          <div className="text-[11px] text-neutral-500">{t("A session is brain × body × world.")}</div>
+          <div className="text-[11px] text-neutral-500">{t("Choose a robot and its startup environment.")}</div>
 
           <label className="block">
-            <div className="mb-1 text-neutral-400">{t("World")}</div>
-            <select value={world} onChange={(e) => pickWorld(e.target.value)} className={selectCls}>
-              <option value={CONVERSATION_ONLY}>{t("— conversation only (no body, no world) —")}</option>
-              {worlds.map((w) => (
-                <option key={w.name} value={w.name}>{w.label || w.name} · {w.kind}</option>
-              ))}
+            <div className="mb-1 text-neutral-400">{t("Robot")}</div>
+            <select value={body} className={selectCls} onChange={event => { setBody(event.target.value); setWorld(""); setSensors([]); }}>
+              <option value="">{t("Conversation only")}</option>
+              {bodies.map(robot => <option key={robot.name} value={robot.name}>{robot.label || robot.name}</option>)}
             </select>
           </label>
-
-          {world && (
-            <label className="block">
-              <div className="mb-1 text-neutral-400">{t("Body")}</div>
-              <select value={body} onChange={(e) => setBody(e.target.value)} className={selectCls}>
-                {!body && <option value="">{t("— pick a body —")}</option>}
-                {bodies.map((b) => {
-                  const c = compat.get(b.name);
-                  const ok = c?.ok ?? false;
-                  return (
-                    <option key={b.name} value={b.name} disabled={!ok} title={ok ? undefined : c?.reason}>
-                      {b.label || b.name} · {b.family}{ok ? "" : ` — ${t("not supported here")}`}
-                    </option>
-                  );
-                })}
-              </select>
-              {body && !compat.get(body)?.ok && <div className="mt-1 text-[11px] text-amber-400">{compat.get(body)?.reason}</div>}
-              {/* 灰掉的原因：<option> 的 title 大多数浏览器不显示，所以把原因也列在下面。 */}
-              {bodies.some((b) => !compat.get(b.name)?.ok) && (
-                <details className="mt-1 text-[10px] text-neutral-500">
-                  <summary className="cursor-pointer">{t("why some bodies are greyed out")}</summary>
-                  <ul className="mt-0.5 space-y-0.5">
-                    {bodies.filter((b) => !compat.get(b.name)?.ok).map((b) => (
-                      <li key={b.name}><span className="font-mono">{b.name}</span>: {compat.get(b.name)?.reason ?? t("(not in the matrix)")}</li>
-                    ))}
-                  </ul>
-                </details>
-              )}
-            </label>
-          )}
+          {body && <>
+            <div className="grid grid-cols-2 gap-2" role="group" aria-label={t("Environment")}>
+              {(["sim", "real"] as const).map(environment => {
+                const available = !!bodies.find(robot => robot.name === body)?.buses[environment]?.enabled;
+                return <button key={environment} disabled={!available} onClick={() => { setMode(environment); setWorld(""); setSensors([]); }} aria-pressed={mode === environment} className={`rounded-md border p-2 disabled:opacity-40 ${mode === environment ? "border-blue-500 bg-blue-950" : "border-neutral-700"}`}>
+                  {t(environment === "sim" ? "Simulation" : "Real hardware")}{!available && <span className="block text-[10px]">{t("Not configured")}</span>}
+                </button>;
+              })}
+            </div>
+            {mode === "sim" && <label className="block"><div className="mb-1 text-neutral-400">{t("World")}</div>
+              <select value={world} onChange={event => { setWorld(event.target.value); setSensors([]); }} className={selectCls}>
+                <option value="">{t("Select a simulation world")}</option>
+                {worlds.filter(w => w.kind === "sim").map(w => <option key={w.name} value={w.name} disabled={!registry?.matrix.some(cell => cell.world === w.name && cell.body === body && cell.ok)}>{w.label || w.name}</option>)}
+              </select></label>}
+          </>}
 
           {worldSpec && worldSpec.ambient.length > 0 && (
             <div>
@@ -277,6 +249,7 @@ export default function SessionSidebar({
           <button onClick={() => onPanel("dashboard")} className={`${navRow} ${panel === "dashboard" ? "bg-neutral-800 text-neutral-100" : ""}`} title={t("NERV dashboard")} aria-pressed={panel === "dashboard"}>
             <DashboardIcon /> <span>{t("Dashboard")}</span>
           </button>
+          <button onClick={() => onPanel("models")} className={navRow}>{t("Visual models")}</button>
           <button onClick={() => onPanel("explore")} className={`${navRow} ${panel === "explore" ? "bg-neutral-800 text-neutral-100" : ""}`} title="Nerv World Explore" aria-pressed={panel === "explore"}>
             <ExploreIcon /> <span>Nerv World Explore</span>
           </button>

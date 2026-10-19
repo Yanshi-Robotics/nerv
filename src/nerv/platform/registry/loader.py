@@ -49,6 +49,7 @@ def _resolve_paths(data: dict) -> dict:
     for sk in (data.get("skills") or {}).values():
         if isinstance(sk, dict):
             _resolve(sk, "policy")
+            _resolve(sk, "manifest")
     return data
 
 

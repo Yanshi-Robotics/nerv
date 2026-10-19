@@ -20,6 +20,8 @@ knobs from world.yaml / body.yaml (through the registry) or from the command lin
 """
 from __future__ import annotations
 
+import asyncio
+
 import argparse
 import importlib.util
 import io
@@ -828,7 +830,6 @@ def make_bus_handler(sim: WorldSim) -> Callable[[dict], dict]:
 
 # ---- HTTP control plane -----------------------------------------------------------------------------------
 def build_app(sim: WorldSim, cors_origins: list[str]):
-    import asyncio
 
     import anyio.to_thread
     from fastapi import FastAPI

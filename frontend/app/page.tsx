@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 
+import VlmPanel from "@/components/VlmPanel";
 import ChatPanel from "@/components/ChatPanel";
 import NervDashboard from "@/components/NervDashboard";
 import SensingArea from "@/components/SensingArea";
@@ -45,6 +46,7 @@ export default function Home() {
 
   const refreshSessions = useCallback(async () => {
     const s = await listSessions().catch(() => []);
+    setRegistry(await getRegistry().catch(() => null));
     setSessions(s);
     return s;
   }, []);
@@ -67,7 +69,7 @@ export default function Home() {
   }, [refreshNodes, refreshSessions]);
 
   const current = sessions.find((x) => x.id === currentId) || null;
-  const bodyNode = current?.body ? nodes.find((n) => n.key === `body:${current.body}` && n.meta.world === current.world) ?? null : null;
+  const bodyNode = current?.body ? nodes.find((n) => n.key === `body:${current.body}` && (n.meta.world || null) === current.world) ?? null : null;
   const worldNode = current?.world && current.body ? nodes.find((n) => n.key === `world:${current.world}/${current.body}`) ?? null : null;
 
   return (
@@ -98,6 +100,7 @@ export default function Home() {
         }}
       />
 
+      {panel === "models" && <div className="col-span-2 min-h-0 overflow-hidden"><VlmPanel onChanged={() => getRegistry().then(setRegistry)} /></div>}
       {panel === "dashboard" && (
         <div className="col-span-2 min-h-0 min-w-0 overflow-hidden">
           <NervDashboard embedded onOpenLogs={() => setPanel("logs")} onNodesChanged={() => { refreshNodes(); refreshSessions(); }} />
