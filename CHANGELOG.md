@@ -5,6 +5,10 @@ The 0.1.x entries below are the pre-release trail.
 
 ## [Unreleased]
 
+- Set the supported MuJoCo simulation baseline to 3.12, matching the qualified workbench environment.
+- Enable SO-101 simulation with single-object basket placement, three-snack sorting and five-disk Hanoi worlds. Add replaceable rigid/native-flex objects, cameras, offline task measurements and asset qualification in the worlds submodule.
+- Add validated `spawn.initial_joints` world configuration, retained during initialization and whole-scene reset. Keep task truth outside body observations and the real ACT binding independent.
+
 ## [0.6.1] — development snapshot, 2026-10-20
 
 - Added provider-level, write-only API key settings for OpenAI, DeepSeek, Gemini, xAI
