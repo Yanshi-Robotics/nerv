@@ -1,6 +1,6 @@
 # NERV
 
-[简体中文](docs/i18n/zh/README.md) · [Architecture](docs/architecture.md) · [Runtime SDK](docs/runtime-sdk.md) · [VLM configuration](docs/vlm.md)
+[简体中文](i18n/zh/README.md) · [Architecture](#architecture) · [Runtime SDK](#runtime-plugins) · [VLM configuration](#visual-models)
 
 NERV connects a visual language model to a robot, its sensors and its skills. The agent chooses tasks and tools; a local runtime owns the device and controls action dispatch.
 
@@ -14,13 +14,13 @@ The agent can start a skill, observe while it runs, receive another instruction 
 
 The agent harness, robot runtime, world and tool services meet through NERV. The host routes observations and tool calls, checks control permissions and records session events. Robot drivers and policy inference run in a separate worker environment.
 
-<div align="center"><img src="docs/images/structure.svg" alt="NERV connects the agent harness, independent robot runtime, world and tool services, with separate observation and operator control paths" width="860"></div>
+<div align="center"><img src="assets/readme/images/structure.svg" alt="NERV connects the agent harness, independent robot runtime, world and tool services, with separate observation and operator control paths" width="860"></div>
 
-The harness composes session memory, context management and a model provider. A runtime declares its sensors and skills; the frontend reads those capabilities. Simulation and real hardware have separate environment bindings. Operator scene controls and simulator ground truth stay outside the agent's observation. See [the architecture guide](docs/architecture.md) for the module boundaries.
+The harness composes session memory, context management and a model provider. A runtime declares its sensors and skills; the frontend reads those capabilities. Simulation and real hardware have separate environment bindings. Operator scene controls and simulator ground truth stay outside the agent's observation. The [interface types](src/nerv/nerve/) define the module boundaries.
 
 ## Current status
 
-The source version is **0.6.0**. The local `v0.5.0` tag preserves the audited baseline. Version 1.0.0 requires the physical acceptance described in [the acceptance guide](docs/acceptance.md).
+The source version is **0.6.0**. The local `v0.5.0` tag preserves the audited baseline. Version 1.0.0 requires operator physical acceptance with frozen trials and fault checks.
 
 | Connection | Current scope |
 |---|---|
@@ -77,11 +77,11 @@ A person then selects Real hardware, creates the session, presses **Prepare devi
 
 The following recording and screenshots come from earlier G1 simulation versions. They show the existing navigation and operator views; the model controls and device preparation flow have changed in 0.6.
 
-<div align="center"><img src="docs/images/walk-to-the-living-room.gif" alt="Earlier G1 simulation: a language model observes the head camera and calls the gait skill to walk to the living room" width="960"></div>
+<div align="center"><img src="assets/readme/images/walk-to-the-living-room.gif" alt="Earlier G1 simulation: a language model observes the head camera and calls the gait skill to walk to the living room" width="960"></div>
 
-The instruction is “Walk to the living room.” The recording shows one unedited turn at 2.5× speed; an [original-speed MP4](docs/media/walk-to-the-living-room.mp4) is also available. The agent uses head-camera observations and calls the gait skill. The chase camera is an operator view.
+The instruction is “Walk to the living room.” The recording shows one unedited turn at 2.5× speed; an [original-speed MP4](assets/readme/media/walk-to-the-living-room.mp4) is also available. The agent uses head-camera observations and calls the gait skill. The chase camera is an operator view.
 
-<div align="center"><img src="docs/images/web-session.png" alt="Earlier simulation session interface with robot observation, operator chase camera and conversation" width="960"></div>
+<div align="center"><img src="assets/readme/images/web-session.png" alt="Earlier simulation session interface with robot observation, operator chase camera and conversation" width="960"></div>
 
 The session view places sensors beside the conversation. Robot observations and operator-only views are separate. Runtime sensor names determine which camera streams appear.
 
@@ -90,19 +90,19 @@ The session view places sensors beside the conversation. Robot observations and 
 
 Teleoperation exposes the declared robot tools and emergency stop. The dashboard shows registry entries, node state and sessions.
 
-<div align="center"><img src="docs/images/web-teleop.png" alt="Earlier teleoperation interface with emergency stop and tool cards" width="960"></div>
+<div align="center"><img src="assets/readme/images/web-teleop.png" alt="Earlier teleoperation interface with emergency stop and tool cards" width="960"></div>
 
-<div align="center"><img src="docs/images/web-dashboard.png" alt="Earlier dashboard showing registry, nodes, trust and sessions" width="960"></div>
+<div align="center"><img src="assets/readme/images/web-dashboard.png" alt="Earlier dashboard showing registry, nodes, trust and sessions" width="960"></div>
 
 World Explore displays apartment and house assets. Scene testing is an operator function: its task state and results do not enter agent observations or certify an autonomous robot skill. The G1's released flat-ground gait does not provide furniture manipulation, grasping, autonomous sitting or stair traversal.
 
-<div align="center"><img src="docs/images/world-explore/apt-scene-test.png" alt="Operator scene test with a can on the refrigerator shelf and the door closed" width="960"></div>
+<div align="center"><img src="assets/readme/images/world-explore/apt-scene-test.png" alt="Operator scene test with a can on the refrigerator shelf and the door closed" width="960"></div>
 
-<div align="center"><img src="docs/images/world-explore/apt-cutaway.png" alt="World Explore apartment cutaway with rooms and facility markers" width="960"></div>
+<div align="center"><img src="assets/readme/images/world-explore/apt-cutaway.png" alt="World Explore apartment cutaway with rooms and facility markers" width="960"></div>
 
-<div align="center"><img src="docs/images/world-explore/house-west_pool-night.png" alt="MuJoCo house pool terrace and western path at night" width="960"></div>
+<div align="center"><img src="assets/readme/images/world-explore/house-west_pool-night.png" alt="MuJoCo house pool terrace and western path at night" width="960"></div>
 
-The [world validation guide](docs/validation/world-explore/README.md) covers scene tests, G1 routes and browser views.
+The [world-library tools](worlds/docs/explore/README.md) cover scene tests, G1 routes and browser views.
 
 </details>
 
@@ -112,11 +112,11 @@ The registration panel exposes model ID, endpoint, protocol, image capability ev
 
 Sol and Astra use Responses API for tools. DeepSeek has a separate Responses adapter. Effort options are model specific; an unspecified effort leaves the parameter out so the supplier applies its default. The last model and each model's effort are remembered. Changes are refused during an active turn or execution.
 
-Image input, tool calls and continuation are tested independently with a non-robot probe. A changed endpoint, model configuration, effort or credential invalidates the matching readiness check. Registration and API readiness do not imply physical acceptance. See [VLM configuration](docs/vlm.md).
+Image input, tool calls and continuation are tested independently with a non-robot probe. A changed endpoint, model configuration, effort or credential invalidates the matching readiness check. Registration and API readiness do not imply physical acceptance. The model registry records these checks separately.
 
 ## Agent harness
 
-<div align="center"><img src="docs/images/flow.svg" alt="Managed skill execution: observe, persist and check the tool call, receive an execution ID, supervise the local policy and report the observed outcome" width="860"></div>
+<div align="center"><img src="assets/readme/images/flow.svg" alt="Managed skill execution: observe, persist and check the tool call, receive an execution ID, supervise the local policy and report the observed outcome" width="860"></div>
 
 The diagram follows a managed skill such as ACT. Starting it returns an execution ID; the agent continues observing and checking execution state while the worker runs its local policy. Direct read tools and existing G1 skills can return their result within the tool call. Local stop and supervision checks remain active while a model request is pending.
 
@@ -134,7 +134,7 @@ Restart marks unfinished runs as interrupted with unknown results. It restores h
 
 `describe()` and imports must have no device or GPU side effects. Preparation, policy loading, enabling, execution, cancellation, emergency stop, release and disconnect are separate operations. Profiles, environment bindings and policy artifacts are separate contracts. The host does not inject its source tree or model credentials into workers.
 
-Follow [the adapter guide](docs/runtime-sdk.md) for a registration example, protocol endpoints and read-only conformance checks.
+The [runtime SDK](packages/nerv-runtime-sdk/src/nerv_runtime_sdk/) defines provider discovery, protocol endpoints and read-only conformance checks.
 
 ## Validation
 
@@ -161,6 +161,6 @@ The release sequence is 0.5.0 baseline, 0.6.x development, then 1.0.0 after the 
 
 ## Development
 
-[AGENTS.md](AGENTS.md) describes repository boundaries. Public protocol references: [Brain](docs/nerv-brain.md), [Body](docs/nerv-body.md), [World](docs/nerv-world.md), [Operator](docs/nerv-operator.md), [Tool](docs/nerv-tool.md). Scenes and policies remain separate submodules.
+[AGENTS.md](AGENTS.md) describes repository boundaries. The [interface types](src/nerv/nerve/) and [runtime SDK](packages/nerv-runtime-sdk/src/nerv_runtime_sdk/) define the service contracts. Scenes and policies remain separate submodules.
 
 NERV is distributed under the [MIT license](LICENSE). Vendor SDKs, model weights, training data and external assets retain their own licenses.
