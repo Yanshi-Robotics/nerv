@@ -71,7 +71,7 @@ snapshots. A restart never replays motion; releasing emergency hold disarms and 
 Real preparation can energize motors. Only the operator may trigger it or physical testing.
 Local tests, tensor forward passes, API validation and real task evidence are separate gates.
 Use 0.5.0 as the audited baseline, 0.6.x for development, and 1.0.0 only after the 10-trial and
-fault-test acceptance in `docs/acceptance.md`. Update both README languages and matching interface
+fault-test acceptance in `docs/版本与验收/1.0.0/acceptance.md`. Update both README languages and matching interface
 contracts with runtime or lifecycle changes. Install local packages before testing:
 
 ```
@@ -79,3 +79,17 @@ contracts with runtime or lifecycle changes. Install local packages before testi
 .venv/bin/python -m pip install --no-deps -e ./packages/nerv-runtime-lerobot
 .venv/bin/python -m ruff check src packages tests
 ```
+
+## Documentation and commit policy
+
+- Every NERV commit subject and body must be written in English. Do not append a Chinese
+  translation or footer. This repository-specific requirement overrides generic bilingual
+  commit templates. Keep commits focused and never include Co-Authored-By trailers.
+- `docs/` is local-only and ignored by Git. Never force-add research, internal plans or
+  validation evidence from that directory. Removing tracked documents from the index does
+  not remove them from existing Git history.
+- Public reader entry points are `README.md` and `i18n/zh/README.md`; their images and videos
+  live in `assets/readme/`. Verify public links with `python3 scripts/check_readme.py`.
+- Local documentation starts at `docs/README.md`. Architecture and protocol notes live in
+  `docs/架构与接口/`; release acceptance in `docs/版本与验收/`; development and validation
+  records in `docs/开发记录/` and `docs/验证记录/`; topic research has its own named directory.
