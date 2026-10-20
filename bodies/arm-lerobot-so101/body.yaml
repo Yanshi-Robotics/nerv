@@ -1,4 +1,4 @@
-# SO-101 real runtime: native LeRobot ACT. Legacy simulation binding is disabled.
+# SO-101: native LeRobot ACT in reality; position-controlled primitives in simulation.
 name: arm-lerobot-so101
 family: arm
 label: SO-101 arm (LeRobot)
@@ -14,7 +14,7 @@ skills:
 actuators:
   joints: [shoulder_pan, shoulder_lift, elbow_flex, wrist_flex, wrist_roll, gripper]
   gripper: gripper
-  pd_mode: position_actuator      # sim: the SO-ARM100 MJCF position actuators hold the target
+  pd_mode: position_actuator      # sim: the SO-101 MJCF position actuators hold the target
   rate_hz: 50
   max_step_deg: 30                # a single nudge may not exceed this
   min_duration_s: 0.3
@@ -23,7 +23,7 @@ actuators:
   settle_tol_deg: 2.0
 buses:
   sim:
-    enabled: false                 # retained legacy scene data, not a current runtime binding
+    enabled: true                  # workbench scenes verified locally; no simulated ACT claim
     kind: zmq                      # runs in the same venv as NERV
   real:
     kind: lerobot

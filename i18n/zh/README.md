@@ -26,7 +26,8 @@ Harness 组合会话记忆、上下文管理器和模型供应商接口。运行
 |---|---|
 | SO-101／现实 | LeRobot 0.6.1 适配器、俯视与腕部相机、原生 ACT 加载、持续执行和本地监督。尚待实机验收。 |
 | G1／仿真 | 保留现有 MuJoCo 世界与步态控制器，CPU llvmpipe 渲染与控制回归已通过。 |
-| SO-101／仿真；G1／现实 | 保留旧配置，当前绑定已禁用。 |
+| SO-101／仿真 | 三套 MuJoCo 桌面预设，可替换刚性与柔性物体，提供俯视／腕部相机和有限幅度的关节／夹爪控制。尚无任务策略或仿真 ACT 部署。 |
+| G1／现实 | 保留旧配置，当前绑定已禁用。 |
 | 视觉模型 | 预置 OpenAI、DeepSeek、Gemini、xAI 和 Anthropic 的视觉模型，按供应商管理密钥，按型号选择推理强度。接口检测与实机验收分别记录。 |
 
 ACT 技能使用原实验 100,000 步的 `snack_into_box` 检查点。仓库只保存文件哈希与输入契约，不包含模型权重。策略是否自行返回 Rest，仍须实机检验。
@@ -60,7 +61,15 @@ git submodule update --init --recursive
 
 在界面选择 G1、仿真和兼容世界。原有世界生命周期、场景工具和操作员视图继续保留。场景真值与第三人称相机不进入 Agent 的观测。
 
-SO-101 使用独立的适配器环境，其中只安装 SDK 与 LeRobot 适配器：
+SO-101 仿真使用同一组仿真依赖，在界面选择 `so101-pick-place`、`so101-sort-snacks` 或 `so101-hanoi-five`。[桌面场景说明](../../worlds/scenes/so101_workbench/README.md)提供物品替换、弹性柔性体与布片、源配置和验证方式。重新生成三套标准场景：
+
+```bash
+.venv/bin/python worlds/tools/make_workbench.py --all
+```
+
+复位恢复指定的机械臂初始姿态和全部物体状态。场景验证覆盖物理、相机、电机指令和末端位置可达性；自主抓取与无碰撞路径仍需对应控制器和实验验证。
+
+SO-101 现实环境使用独立的适配器环境，其中只安装 SDK 与 LeRobot 适配器：
 
 ```bash
 python3 -m venv .venv-lerobot

@@ -26,7 +26,8 @@ The source version is **0.6.1**. The local `v0.5.0` tag preserves the audited ba
 |---|---|
 | SO-101 / real | LeRobot 0.6.1 adapter, top and wrist cameras, native ACT loading, managed execution and local watchdog. Physical acceptance pending. |
 | G1 / simulation | Existing MuJoCo worlds and gait controller retained; rendered/control regression passed with CPU llvmpipe. |
-| SO-101 / simulation; G1 / real | Disabled bindings retained as legacy configuration. No current execution support. |
+| SO-101 / simulation | Three MuJoCo table presets, rigid and deformable object replacement, top/wrist cameras and bounded joint/gripper control. No task policy or simulated ACT deployment. |
+| G1 / real | Disabled binding retained as legacy configuration. No current execution support. |
 | Visual models | Curated VLMs from OpenAI, DeepSeek, Gemini, xAI and Anthropic, with provider keys and native effort choices. API and physical checks are separate. |
 
 The ACT artifact is the original 100,000-step `snack_into_box` checkpoint. The repository contains its file hashes and input contract, not its weights. Whether the policy itself returns to Rest remains a physical test requirement.
@@ -60,7 +61,15 @@ git submodule update --init --recursive
 
 Select G1, Simulation and a compatible world. The existing world lifecycle, scene tools and operator views remain available. Operator scene state and third-person cameras do not enter the agent's observation.
 
-For SO-101, create a separate adapter environment. Install only the SDK and LeRobot adapter there:
+For SO-101 simulation, use the same simulation dependencies and select `so101-pick-place`, `so101-sort-snacks` or `so101-hanoi-five`. The [workbench guide](worlds/scenes/so101_workbench/README.md) explains object replacement, native elastic packets and cloth, source configuration and scene qualification. Regenerate the standard scenes with:
+
+```bash
+.venv/bin/python worlds/tools/make_workbench.py --all
+```
+
+The simulator restores a named starting pose and all object states on reset. Scene qualification checks physics, cameras, motor dispatch and endpoint reach; autonomous grasping and collision-free planning require their own controller and evaluation.
+
+For SO-101 real hardware, create a separate adapter environment. Install only the SDK and LeRobot adapter there:
 
 ```bash
 python3 -m venv .venv-lerobot
