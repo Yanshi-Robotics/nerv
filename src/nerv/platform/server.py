@@ -9,7 +9,7 @@ from typing import Optional
 
 import httpx
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.exceptions import RequestValidationError
 from fastapi.responses import FileResponse, Response, StreamingResponse, JSONResponse
@@ -47,13 +47,24 @@ class NewSessionIn(BaseModel):
     body: Optional[str] = None
     world: Optional[str] = None
     sensors: list[str] = []
-    tools: Optional[list[str]] = None
+    agent_tools: Optional[list[str]] = None
     mode: str = "sim"
+    world_configuration: dict = {}
 
 
 class ChatIn(BaseModel):
     session: str
     text: str
+
+
+class TaskOperationIn(BaseModel):
+    operation: str
+    arguments: dict = {}
+
+
+class TaskModelIn(BaseModel):
+    model: str
+    effort: str | None = None
 
 
 class ArmIn(BaseModel):
@@ -259,7 +270,8 @@ def nodes() -> list:
                 d = c.trust_decision()
                 item["trust"] = {"state": d.state, "reason": d.reason, "changes": d.changes}
                 caps = c.capabilities()
-                item["tools"] = [t.name for t in caps.tools]
+                item["robot_actions"] = [t.name for t in caps.robot_actions]
+                item["agent_tools"] = [t.name for t in caps.agent_tools]
                 item["family"] = caps.family
                 item["sensors"] = caps.sensors
             except Exception as e:
@@ -282,7 +294,7 @@ def node_manifest(key: str) -> dict:
         raise HTTPException(404, "no such node")
     raw = c.raw_capabilities()
     d = c.trust_decision()
-    return {"key": key, "url": c.base, "manifest": trust.manifest(c.base, raw.tools, raw.guidance),
+    return {"key": key, "domain": "robot_actions" if key.startswith("body:") else "agent_tools", "url": c.base, "manifest": trust.manifest(c.base, raw.operations, raw.guidance),
             "trust": {"state": d.state, "reason": d.reason, "changes": d.changes},
             "family": raw.family, "sensors": raw.sensors}
 
@@ -353,7 +365,7 @@ def new_session(inp: NewSessionIn) -> dict:
     try:
         if (inp.brain or _default_brain()) not in {b["name"] for b in list_brains()}:
             raise ValueError("select a registered visual model")
-        return nerv.new_session(inp.brain or _default_brain(), inp.body, inp.world, inp.sensors, inp.tools, inp.mode)
+        return nerv.new_session(inp.brain or _default_brain(), inp.body, inp.world, inp.sensors, inp.agent_tools, inp.mode, inp.world_configuration)
     except (ValueError, KeyError, RuntimeError, TimeoutError, FileNotFoundError) as e:
         raise HTTPException(400, e.args[0] if e.args else str(e))
 
@@ -383,8 +395,92 @@ def delete_session(sid: str) -> dict:
 def interrupt_session(sid: str) -> dict:
     if not nerv.store.exists(sid):
         raise HTTPException(404, "no such session")
-    nerv.stop(sid)
+    nerv.stop_reply(sid)
     return {"ok": True}
+
+
+@app.get("/api/sessions/{sid}/world-control")
+def world_control_descriptor(sid: str):
+    try:
+        return nerv.world_controls.capabilities(sid)
+    except (ValueError, KeyError) as error:
+        raise HTTPException(409, str(error)) from error
+
+
+@app.post("/api/sessions/{sid}/world-control")
+def world_control_invoke(sid: str, payload: dict):
+    try:
+        if "instance_id" not in payload or "revision" not in payload:
+            raise ValueError("Instance and revision are required")
+        return nerv.world_controls.invoke(sid, payload["command"], payload.get("arguments", {}),
+            instance_id=payload["instance_id"], revision=payload["revision"])
+    except Exception as error:
+        raise HTTPException(409, str(error)) from error
+
+
+@app.get("/api/sessions/{sid}/robot-tasks")
+def robot_tasks(sid: str, after: int = Query(0, ge=0)):
+    if not nerv.store.exists(sid):
+        raise HTTPException(404, "no such session")
+    return nerv.tasks.snapshot(sid, after)
+
+
+@app.post("/api/sessions/{sid}/robot-tasks")
+def robot_task_operation(sid: str, inp: TaskOperationIn):
+    if not nerv.store.exists(sid):
+        raise HTTPException(404, "no such session")
+    try:
+        from jsonschema import validate
+        schema = next((schema for name, _, schema in nerv.tasks.capabilities() if name == inp.operation), None)
+        if schema is None:
+            raise ValueError("Unknown task operation")
+        validate(inp.arguments, schema)
+        return nerv.tasks.invoke(sid, inp.operation, inp.arguments)
+    except Exception as error:
+        raise HTTPException(409, str(error))
+
+
+@app.get("/api/sessions/{sid}/robot-events")
+def robot_events(sid: str, request: Request, after: int = Query(0, ge=0)):
+    if not nerv.store.exists(sid):
+        raise HTTPException(404, "no such session")
+
+    async def events():
+        import asyncio
+        try:
+            cursor = max(after, int(request.headers.get("last-event-id", "0")))
+        except ValueError:
+            cursor = after
+        while nerv.store.exists(sid) and not await request.is_disconnected():
+            snapshot = await asyncio.to_thread(nerv.tasks.snapshot, sid, cursor)
+            cursor = snapshot["cursor"]
+            yield "id: " + str(cursor) + "\ndata: " + json.dumps(snapshot) + "\n\n"
+            await asyncio.sleep(config.ROBOT_EVENTS_POLL_S)
+    return StreamingResponse(events(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache"})
+
+
+@app.post("/api/sessions/{sid}/task-model")
+def task_model(sid: str, inp: TaskModelIn):
+    if not nerv.store.exists(sid):
+        raise HTTPException(404, "no such session")
+    registry = ModelRegistry()
+    try:
+        model = registry.model(inp.model)
+        if inp.effort is not None and inp.effort not in model.efforts:
+            raise ValueError("Unsupported reasoning effort")
+        if nerv.tasks.snapshot(sid)["task"] and nerv.tasks.snapshot(sid)["task"]["status"] in (
+                "starting", "running", "updating", "stopping"):
+            raise ValueError("Finish the current task before changing its model")
+        with nerv.store.transaction():
+            session = nerv.store.get(sid)
+            if session.status != "active":
+                raise ValueError("Task model settings require an active session")
+            session.task_model, session.task_effort = inp.model, inp.effort
+            nerv.store.save(session)
+        return {"ok": True}
+    except (KeyError, ValueError) as error:
+        raise HTTPException(409, str(error))
 
 
 @app.post("/api/sessions/{sid}/estop")
@@ -460,10 +556,8 @@ def set_brain(sid: str, inp: BrainIn) -> dict:
         raise HTTPException(404, "no such session")
     if inp.brain not in {b["name"] for b in list_brains()}:
         raise HTTPException(400, messages.UNKNOWN_BRAIN_REPLY)
-    session = nerv.store.get(sid)
-    client = nerv.body_client(session.body) if session.body else None
-    if sid in nerv._runs or (client and client.post("/executions/status").get("running")):
-        raise HTTPException(409, "Finish the active task before changing models")
+    if sid in nerv._runs:
+        raise HTTPException(409, "Finish the Agent reply before changing its model")
     ModelRegistry().remember(inp.brain)
     nerv.store.set_brain(sid, inp.brain)
     nerv.store.append(sid, {"role": "brain_divider", "brain": inp.brain})
@@ -475,6 +569,15 @@ def arm(sid: str, inp: ArmIn) -> dict:
     if not nerv.store.exists(sid):
         raise HTTPException(404, "no such session")
     return nerv.arm(sid, inp.armed)
+
+
+@app.get("/api/sessions/{sid}/capabilities")
+def session_capabilities(sid: str) -> dict:
+    if not nerv.store.exists(sid):
+        raise HTTPException(404, "no such session")
+    entries = nerv.tool_sheet(sid)
+    return {domain: [entry for entry in entries if entry["domain"] == domain]
+            for domain in ("agent_tools", "robot_actions")}
 
 
 @app.get("/api/sessions/{sid}/tools")

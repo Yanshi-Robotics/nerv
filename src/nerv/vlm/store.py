@@ -237,13 +237,13 @@ class ModelRegistry:
                     data["checks"].pop(model["id"], None)
             private_write(self.path, data)
 
-    def provider(self, model_id: str):
+    def provider(self, model_id: str, *, effort=..., frozen_spec=None):
         from ..brain.providers.responses import ResponsesLLM
-        model = self.model(model_id)
+        model = VisualModel.model_validate(frozen_spec) if frozen_spec else self.model(model_id)
         key = self.credentials.resolve(model.credential_ref)
         if not key:
             raise ValueError("configure this provider's API key first")
-        effort = self._read()["efforts"].get(model_id)
+        effort = self._read()["efforts"].get(model_id) if effort is ... else effort
         if effort is not None and effort not in model.efforts:
             raise ValueError("stored effort is no longer supported; select a valid setting")
         if model.protocol == "anthropic_messages":

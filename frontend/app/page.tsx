@@ -68,13 +68,19 @@ export default function Home() {
     return () => clearInterval(id);
   }, [refreshNodes, refreshSessions]);
 
+  useEffect(() => {
+    const created = (event: Event) => {setCurrentId((event as CustomEvent<string>).detail); refreshSessions(); refreshNodes();};
+    window.addEventListener("nerv-instance-created", created);
+    return () => window.removeEventListener("nerv-instance-created", created);
+  }, [refreshSessions, refreshNodes]);
+
   const current = sessions.find((x) => x.id === currentId) || null;
   const bodyNode = current?.body ? nodes.find((n) => n.key === `body:${current.body}` && (n.meta.world || null) === current.world) ?? null : null;
   const worldNode = current?.world && current.body ? nodes.find((n) => n.key === `world:${current.world}/${current.body}`) ?? null : null;
 
   return (
     <main
-      className={`grid h-screen bg-neutral-950 text-neutral-100 transition-[grid-template-columns] duration-200 ease-out ${
+      className={`nerv-shell grid h-screen bg-neutral-950 text-neutral-100 transition-[grid-template-columns] duration-200 ease-out ${
         collapsed ? "grid-cols-[56px_minmax(0,1fr)_440px]" : "grid-cols-[240px_minmax(0,1fr)_440px]"
       }`}
     >

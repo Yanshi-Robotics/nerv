@@ -73,6 +73,7 @@ class WorldSpec(BaseModel):
     spawn: dict = Field(default_factory=dict)                  # {"module": ..., "attr": ...} or xyz/yaw
     ambient: list[SensorDecl] = Field(default_factory=list)
     physics: dict = Field(default_factory=dict)
+    configuration: dict = Field(default_factory=dict)
     explore: str = ""                  # generated display manifest, relative to assets_root
     python: str = ""
     guidance: str = ""

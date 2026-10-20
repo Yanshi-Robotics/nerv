@@ -31,6 +31,8 @@ class Settings(BaseSettings):
                                       description="Estimated input allowance per image; not billed token usage.")
     supervision_wait_s: float = Field(1, validation_alias="NERV_SUPERVISION_WAIT_S", gt=0,
                                       description="Bounded host wait between model supervision observations.")
+    robot_events_poll_s: float = Field(0.5, validation_alias="NERV_ROBOT_EVENTS_POLL_S", gt=0,
+                                      description="Task event refresh interval; independent of local safety supervision.")
     notes_max: int = Field(20, validation_alias="NERV_NOTES_MAX", ge=1)
     note_max_chars: int = Field(120, validation_alias="NERV_NOTE_MAX_CHARS", ge=10)
 
@@ -113,6 +115,7 @@ NODE_CONNECT_TIMEOUT = _settings.node_connect_timeout
 NODE_LIVENESS_TIMEOUT = _settings.node_liveness_timeout
 NODE_INVOKE_HARD_CAP = _settings.node_invoke_hard_cap
 BRIDGE_WATCHDOG_POLL_S = _settings.bridge_watchdog_poll_s
+ROBOT_EVENTS_POLL_S = _settings.robot_events_poll_s
 BRIDGE_GRACE_S = _settings.bridge_grace_s
 TOOL_TIMEOUT = _settings.tool_timeout
 NODE_PORTS = _settings.node_ports

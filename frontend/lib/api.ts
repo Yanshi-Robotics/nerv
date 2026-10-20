@@ -40,6 +40,7 @@ export type BodySpec = {
   dir: string;
 };
 export type WorldSpec = {
+  configuration?: {schema: PropertySchema};
   name: string;
   kind: "sim" | "real";
   label: string;
@@ -57,7 +58,7 @@ export type MatrixCell = { world: string; body: string; ok: boolean; reason: str
 export type Registry = {
   bodies: BodySpec[];
   worlds: WorldSpec[];
-  tools: ToolSpec[];
+  agent_tools: ToolSpec[];
   matrix: MatrixCell[];
   brains: Brain[];
   default_brain: string;
@@ -96,7 +97,8 @@ export type NodeInfo = {
   meta: Record<string, unknown>;
   online?: boolean;
   trust?: NodeTrust; // body / tool 才有（world 节点不进信任门：大脑从不读它的文字）
-  tools?: string[];
+  robot_actions?: string[];
+  agent_tools?: string[];
   family?: string;
   sensors?: string[];
 };
@@ -167,6 +169,7 @@ export async function getNodeStatus(key: string): Promise<Record<string, unknown
 // ---- sessions ---------------------------------------------------------------------------
 export type SessionStatus = "active" | "frozen" | "reconnect_required";
 export type SessionSummary = {
+  task_model?: string; task_effort?: string | null;
   id: string;
   brain: string;
   body: string | null; // null = conversation only
@@ -177,32 +180,33 @@ export type SessionSummary = {
   created_at: string;
   title: string;
   sensors: string[]; // ambient streams the brain also sees
-  tools: string[]; // tool nodes mounted
+  agent_tools: string[]; // auxiliary nodes mounted
   armed: boolean; // hardware may move only when true
   epoch: string;
   core_task: string; // 一句话：我在干什么（大脑自己写）
   notes: string[]; // 一条条：我发现了什么
 };
 
-export type ToolCall = { id: string; name: string; arguments: Record<string, unknown> };
+export type ToolCall = { id: string; name: string; domain?: string; capability_name?: string; arguments: Record<string, unknown> };
 
 // 会话记录里的一条（后端落盘格式）
 export type RecMsg =
   | { role: "user"; text: string; ts?: string }
   | { role: "perception"; image_ref: string | null; images?: { name: string; ref: string }[]; state: Record<string, unknown>; ts?: string }
   | { role: "assistant"; text: string; tool_calls?: ToolCall[]; brain?: string; ts?: string }
-  | { role: "tool"; id: string; name: string; content: string; ts?: string }
+  | { role: "tool"; id: string; name: string; domain?: string; capability_name?: string; content: string; ts?: string }
   | { role: "brain_divider"; brain: string; ts?: string };
 
 export type SessionFull = SessionSummary & { messages: RecMsg[] };
 
 export type NewSession = {
+  world_configuration?: Record<string, unknown>;
   brain?: string;
   mode?: "sim" | "real";
   body?: string | null;
   world?: string | null;
   sensors: string[];
-  tools?: string[];
+  agent_tools?: string[];
 };
 
 /** 后端用 4xx + {detail} 说"不行"（注册表拒绝这对组合、节点起不来、会话不存在）。
@@ -304,6 +308,9 @@ export async function armSession(id: string, armed: boolean): Promise<{ ok: bool
 // 流式聊天的事件（SSE），一轮按这个顺序产生：start · perception · thinking · tool_call · gate ·
 // progress · tool_result · reply · done。stop_reason 只在这一轮被闸门收尾时才有。
 export type ChatEvent =
+  | {type: "instance_created"; session_id: string}
+  | {type: "capability_call"; domain: string; name: string; args: Record<string, unknown>}
+  | {type: "capability_result"; domain: string; name: string; ok: boolean; message: string}
   | { type: "start"; brain: string; model: string }
   | { type: "perception"; image_b64: string | null; state: Record<string, unknown>; n_images: number; cameras: string[]; images?: {name: string; b64: string}[] }
   | { type: "thinking"; text: string }
@@ -365,6 +372,7 @@ export async function streamChat(session: string, text: string, onEvent: (e: Cha
 // 遥控面板照着它生成表单——⛔ 前端不知道任何具体身体有哪些动词，全从这里读。
 export type ToolKind = "read" | "primitive" | "skill" | "control";
 export type ToolSheetEntry = {
+  domain: "robot_actions" | "agent_tools";
   name: string;
   kind: ToolKind;
   origin: "body" | "tool" | "memory";
@@ -387,9 +395,10 @@ export type JsonSchema = {
 };
 
 export async function getSessionTools(id: string): Promise<ToolSheetEntry[]> {
-  const r = await fetch(`${BASE}/api/sessions/${encodeURIComponent(id)}/tools`);
+  const r = await fetch(`${BASE}/api/sessions/${encodeURIComponent(id)}/capabilities`);
   if (!r.ok) throw new ApiError(await detailOf(r), r.status);
-  return (await r.json()) as ToolSheetEntry[];
+  const domains = await r.json();
+  return [...domains.robot_actions, ...domains.agent_tools] as ToolSheetEntry[];
 }
 
 // 操作员直接调一个工具。同一道闸门、同一批节点、同一份日志，事件与 chat 流完全一样
@@ -548,3 +557,23 @@ export const validateVlm = (id: string) => modelRequest(`vlm/${encodeURIComponen
 export const saveCredential = (reference: string, value: string | null) => modelRequest(`credentials/${encodeURIComponent(reference)}`, "PUT", {value});
 export const runtimeOperation = (session: string, operation: string, payload = {}) => modelRequest(`sessions/${encodeURIComponent(session)}/runtime/${operation}`, "POST", payload);
 export const runtimeStatus = (session: string) => modelRequest(`sessions/${encodeURIComponent(session)}/runtime`);
+
+// Business domains stay distinct even when provider APIs encode calls as functions.
+export type PropertyField = { type: string; title?: string; description?: string; default?: unknown; enum?: string[]; oneOf?: { const: string; title: string; title_locales?: Record<string, string>; description_locales?: Record<string, string>; description?: string }[] };
+export type PropertySchema = { properties?: Record<string, PropertyField> };
+export type WorldDescriptor = { instance_id: string; revision: number; configuration: PropertySchema; state: {configuration?: Record<string, unknown>}; commands: { name: string; description: string; parameters: PropertySchema; effect: string }[] };
+export type RobotEvent = { seq: number; time: number; instance_id: string; task_id?: string; version?: number; source?: string; type?: string; text?: string; message?: string; status?: string; ok?: boolean };
+export type RobotTask = { task_id: string; instance_id: string; version: number; status: string; goal: string; model: string; effort?: string; message?: string };
+export type RobotSnapshot = { task: RobotTask | null; events: RobotEvent[]; cursor: number };
+export function robotEventUrl(sid: string, cursor = 0) { return `${BASE}/api/sessions/${encodeURIComponent(sid)}/robot-events?after=${cursor}`; }
+async function domainRequest(path: string, payload?: unknown) {
+  const response = await fetch(`${BASE}${path}`, payload === undefined ? {} : {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload)});
+  if (!response.ok) throw new ApiError(await detailOf(response), response.status);
+  const data = await response.json();
+  if (data.ok === false) throw new Error(data.message || "Operation failed");
+  return data;
+}
+export const robotTaskOperation = (sid: string, operation: string, arguments_: Record<string, unknown> = {}) => domainRequest(`/api/sessions/${sid}/robot-tasks`, {operation, arguments: arguments_});
+export const setTaskModel = (sid: string, model: string, effort: string | null) => domainRequest(`/api/sessions/${sid}/task-model`, {model, effort});
+export const getWorldControl = (sid: string): Promise<WorldDescriptor> => domainRequest(`/api/sessions/${sid}/world-control`);
+export const changeWorld = (sid: string, descriptor: WorldDescriptor, command: string, arguments_: Record<string, unknown>) => domainRequest(`/api/sessions/${sid}/world-control`, {instance_id: descriptor.instance_id, revision: descriptor.revision, command, arguments: arguments_});

@@ -12,6 +12,7 @@ from pathlib import Path
 
 _locks: dict[str, threading.RLock] = {}
 _guard = threading.Lock()
+_transactions = threading.local()
 
 
 class SessionMemory:
@@ -26,17 +27,28 @@ class SessionMemory:
 
     @contextmanager
     def transaction(self):
-        # The host is the sole session writer; an advisory lock also protects
-        # sequence allocation when another host inspects/migrates this journal.
-        with self._lock, open(self.directory / ".lock", "a+b") as lock:
-            import fcntl
-            fcntl.flock(lock, fcntl.LOCK_EX)
-            try:
+        # Reentrant across memory views in one thread; flock also excludes other hosts.
+        with self._lock:
+            active = getattr(_transactions, "paths", set())
+            key = str(self.path.resolve())
+            if key in active:
                 yield
-            finally:
-                fcntl.flock(lock, fcntl.LOCK_UN)
+                return
+            with open(self.directory / ".lock", "a+b") as lock:
+                import fcntl
+                fcntl.flock(lock, fcntl.LOCK_EX)
+                _transactions.paths = active | {key}
+                try:
+                    yield
+                finally:
+                    _transactions.paths = active
+                    fcntl.flock(lock, fcntl.LOCK_UN)
 
     def events(self) -> list[dict]:
+        with self.transaction():
+            return self._read_events()
+
+    def _read_events(self) -> list[dict]:
         if not self.path.exists():
             return []
         lines = self.path.read_bytes().splitlines(keepends=True)

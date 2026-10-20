@@ -8,7 +8,7 @@ from nerv_runtime_sdk.contracts import RuntimeManifest
 
 class BuiltinProvider:
     def describe(self):
-        return RuntimeManifest(id="builtin", version="0.6.0", features=["sim", "named_sensors"])
+        return RuntimeManifest(id="builtin", version="0.6.2", features=["sim", "named_sensors"])
 
     def create(self, profile, binding):
         if binding.mode != "sim":
@@ -20,7 +20,7 @@ class BuiltinRuntime:
     guarded_dispatch = True
     def __init__(self, profile, binding):
         self.profile, self.binding = profile, binding
-        self.name, self.family, self.version = profile.id, profile.family, "0.6.0"
+        self.name, self.family, self.version = profile.id, profile.family, "0.6.2"
         self._impl = None
 
     @property
@@ -38,7 +38,7 @@ class BuiltinRuntime:
                 self.profile.configuration, bus, SkillRunner(self.stop))
         return {"ok": True, "prepared": True}
 
-    def tools(self):
+    def actions(self):
         return self._impl.tools() if self._impl else []
 
     def observe(self):
@@ -58,7 +58,11 @@ class BuiltinRuntime:
             self._impl.runner._control.guard = nullcontext
 
     def status(self):
-        return self._impl.status() if self._impl else {"prepared": False}
+        return {**self._impl.status(), "prepared": True} if self._impl else {"prepared": False}
+
+    def execution_status(self):
+        return {"running": bool(self._impl and self._impl.runner.running),
+                "execution": self._impl.runner.running if self._impl else ""}
 
     def sensor_names(self):
         return self._impl.sensor_names() if self._impl else []

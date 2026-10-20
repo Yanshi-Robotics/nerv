@@ -10,6 +10,7 @@ import subprocess
 import sys
 import time
 import json
+import uuid
 from pathlib import Path
 from dataclasses import dataclass, field
 
@@ -159,7 +160,7 @@ class Launcher:
             raise ValueError(f"body `{body.name}` is connected to an earlier world bus; "
                              "stop that body node explicitly before reconnecting")
 
-    def ensure_world(self, world: WorldSpec, body: BodySpec) -> NodeHandle | None:
+    def ensure_world(self, world: WorldSpec, body: BodySpec, configuration=None) -> NodeHandle | None:
         if world.kind != KIND_SIM:
             return None                     # reality needs no process
         key = f"world:{world.name}/{body.name}"
@@ -179,13 +180,19 @@ class Launcher:
         self.nodes[key] = placeholder
         bus_port = self._free_port()
         del self.nodes[key]
+        from ..world.configuration import resolve_configuration
+        values = resolve_configuration(world.configuration, configuration or {})
+        directory = Path(paths.REPO_ROOT) / ".cache" / "instances" / uuid.uuid4().hex
+        directory.mkdir(parents=True)
+        request = directory / "configuration.json"
+        request.write_text(json.dumps({"values": values}))
         py = self._python(world.python)
         url = f"http://{config.NODE_BIND_HOST}:{http_port}"
         bus = f"tcp://{config.NODE_BIND_HOST}:{bus_port}"
         return self._spawn(key, "world", py,
                            ["-m", "nerv.world", "--world", world.name, "--body", body.name,
                             "--http-port", str(http_port), "--bus-port", str(bus_port),
-                            "--host", config.NODE_BIND_HOST], url, bus_url=bus)
+                            "--host", config.NODE_BIND_HOST, "--instance-config", str(request)], url, bus_url=bus)
 
     def ensure_body(self, body: BodySpec, world: WorldSpec, world_handle: NodeHandle | None) -> NodeHandle:
         self.check_body_binding(body, world, world_handle)

@@ -10,6 +10,7 @@ repository, then where each fact lives.
 | Interfaces | `src/nerv/nerve/` | No. Types and message shapes only. |
 | Platform | `src/nerv/platform/` | No. Registry, sessions, gate, launcher, router, HTTP, CLI. |
 | Brain plugin | `src/nerv/brain/` | No. Provider composition and generic prompts. |
+| Agent / task host links | `src/nerv/platform/role_turn.py`, `robot_tasks.py` | No. Conversation and task decisions have separate contexts and cancellation. |
 | Agent harness | `src/nerv/harness/` | No. Loop, context, compaction and session memory interfaces. |
 | Runtime SDK | `packages/nerv-runtime-sdk/` | No. Protocol, discovery, server and dispatch lifecycle. |
 | Real adapter | `packages/nerv-runtime-lerobot/` | Yes. Native LeRobot device and ACT implementation. |
@@ -50,7 +51,7 @@ If not, it belongs in a family, a node or a registry entry — never in the plat
 - A session starts disarmed. Arming is an operator action (HTTP or CLI), never a tool.
 - Nothing hardcoded that should be computed, configured or discovered; placeholders are declared.
 - Whole sets are appended to, never replaced (registry entries, README tables, `.env.example`).
-- Text a model reads is English and lives in `brain/prompts.py`; text a person reads is localised.
+- Model instructions are English, in `brain/prompts.py` and `platform/role_prompts.py`; reader-facing interface text is localised.
 - Real hardware commands are run by a person. Unverified bus endpoints stay `verified: false`.
 
 
@@ -94,3 +95,16 @@ contracts with runtime or lifecycle changes. Install local packages before testi
 - Local documentation starts at `docs/README.md`. Architecture and protocol notes live in
   `docs/架构与接口/`; release acceptance in `docs/版本与验收/`; development and validation
   records in `docs/开发记录/` and `docs/验证记录/`; topic research has its own named directory.
+
+## Agent and task separation (0.6.2)
+
+Conversation belongs to NERV Agent; System 2 independently supervises tasks. Ordinary messages
+invalidate only old Agent decisions. Robot actions, auxiliary Agent tools, task management,
+world control and instance lifecycle have distinct domains. Function calling is transport.
+System 2 has no world-edit or instance-management capabilities. Runtime protocol 2 requires
+`actions()` and separate sensor metadata; incompatible workers fail before preparation.
+
+World configuration schemas and builders belong to worlds. Generate instance assets separately;
+reset preserves configuration, topology changes require a new instance, and real bindings reject
+world edits. Robot activity is an operator DOM overlay and never enters raw images or recordings.
+The long-term autonomy goal is named ultimate; 0.6.x remains an Agent-operated development system.

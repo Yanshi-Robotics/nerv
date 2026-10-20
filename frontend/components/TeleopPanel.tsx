@@ -6,7 +6,7 @@ import {
   estopSession,
   getPerception,
   getSessionTools,
-  interruptSession,
+  robotTaskOperation,
   releaseSession,
   resetSessionWorld,
   streamTeleop,
@@ -88,7 +88,7 @@ export default function TeleopPanel({ sessionId, armed, hasWorld, bodyTrust }: {
       { key: "skills", label: t("Body · skills"), tools: body("skill") },
       { key: "primitives", label: t("Body · primitives"), tools: body("primitive") },
       { key: "read", label: t("Body · read"), tools: body("read") },
-      { key: "tools", label: t("Tools"), tools: ts.filter((x) => x.origin === "tool") },
+      { key: "tools", label: t("Agent tools"), tools: ts.filter((x) => x.origin === "tool") },
     ].filter((g) => g.tools.length > 0);
   }, [tools, t]);
 
@@ -125,7 +125,11 @@ export default function TeleopPanel({ sessionId, armed, hasWorld, bodyTrust }: {
 
   async function stop() {
     setStopping(true);
-    await interruptSession(sessionId).catch(() => {});
+    try {
+      const result = await robotTaskOperation(sessionId, "cancel");
+      if (!result.ok) setErr(result.message || t("Stop not confirmed"));
+    } catch (e) {setErr((e as Error).message);}
+    finally {setStopping(false);}
   }
 
   // 急停：锁住当前姿态。任何时候都能按，不管有没有动作在跑。
@@ -159,7 +163,6 @@ export default function TeleopPanel({ sessionId, armed, hasWorld, bodyTrust }: {
 
   async function resetWorld() {
     if (holdBusy) return;
-    if (!confirm(t("Reset the whole scene? The robot, furniture and props return to their initial positions. The current time of day is kept."))) return;
     setHoldBusy(true);
     try {
       const r = await resetSessionWorld(sessionId);

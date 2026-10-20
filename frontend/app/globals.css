@@ -51,3 +51,15 @@ body {
 .nerv-mark-dark { display: none; }
 html[data-theme="light"] .nerv-mark-light { display: none; }
 html[data-theme="light"] .nerv-mark-dark { display: inline; }
+
+/* Preserve a usable camera frame and chat on narrow operator displays. */
+@media (max-width: 900px) {
+  .nerv-shell { display: flex; flex-direction: column; height: auto; min-height: 100dvh; }
+  .nerv-shell > aside:first-child { height: auto; max-height: 40dvh; flex-shrink: 0; }
+  .nerv-shell > section, .nerv-shell > div { min-height: 65dvh; }
+  .nerv-shell > aside:last-child { height: 65dvh; flex-shrink: 0; }
+  .nerv-shell [aria-label="Robot activity"] { max-width: 70%; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .nerv-shell *, .nerv-shell *::before, .nerv-shell *::after { transition: none !important; animation: none !important; }
+}

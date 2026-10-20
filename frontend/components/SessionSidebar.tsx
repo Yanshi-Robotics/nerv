@@ -6,6 +6,7 @@ import { useI18n } from "@/lib/i18n";
 import { StatusBadge } from "./ChatPanel";
 import LangToggle from "./LangToggle";
 import RuntimeParamsBar from "./RuntimeParamsBar";
+import WorldProperties from "./WorldProperties";
 import ThemeToggle from "./ThemeToggle";
 
 const CONVERSATION_ONLY = ""; // world 选中值空串 = 只聊天，不起身体、不起世界
@@ -46,6 +47,7 @@ export default function SessionSidebar({
   const [world, setWorld] = useState(CONVERSATION_ONLY);
   const [body, setBody] = useState("");
   const [brain, setBrain] = useState("");
+  const [worldValues, setWorldValues] = useState<Record<string, unknown>>({});
   const [sensors, setSensors] = useState<string[]>([]);
 
   const worlds = registry?.worlds ?? [];
@@ -56,7 +58,7 @@ export default function SessionSidebar({
   // 这个世界容得下哪些身体：注册表的兼容矩阵说了算——界面灰掉的，就是后端会拒绝的。
   function openForm() {
     setMode("sim");
-    setWorld(CONVERSATION_ONLY);
+    setWorld(CONVERSATION_ONLY); setWorldValues({});
     setBody("");
     setSensors([]);
     setBrain(registry?.default_brain ?? brains.find((b) => b.available)?.name ?? brains[0]?.name ?? "");
@@ -76,6 +78,7 @@ export default function SessionSidebar({
         mode,
         world: mode === "sim" ? world || null : null,
         sensors: world ? sensors : [],
+        world_configuration: mode === "sim" ? worldValues : {},
       });
       setCreating(false);
       onChanged(created.id);
@@ -149,12 +152,12 @@ export default function SessionSidebar({
       </div>
 
       {creating && (
-        <div className="space-y-3 border-b border-neutral-800 p-3 text-xs">
+        <div className="max-h-[65vh] space-y-3 overflow-y-auto border-b border-neutral-800 p-3 text-xs">
           <div className="text-[11px] text-neutral-500">{t("Choose a robot and its startup environment.")}</div>
 
           <label className="block">
             <div className="mb-1 text-neutral-400">{t("Robot")}</div>
-            <select value={body} className={selectCls} onChange={event => { setBody(event.target.value); setWorld(""); setSensors([]); }}>
+            <select value={body} className={selectCls} onChange={event => { setBody(event.target.value); setWorld(""); setWorldValues({}); setSensors([]); }}>
               <option value="">{t("Conversation only")}</option>
               {bodies.map(robot => <option key={robot.name} value={robot.name}>{robot.label || robot.name}</option>)}
             </select>
@@ -163,13 +166,13 @@ export default function SessionSidebar({
             <div className="grid grid-cols-2 gap-2" role="group" aria-label={t("Environment")}>
               {(["sim", "real"] as const).map(environment => {
                 const available = !!bodies.find(robot => robot.name === body)?.buses[environment]?.enabled;
-                return <button key={environment} disabled={!available} onClick={() => { setMode(environment); setWorld(""); setSensors([]); }} aria-pressed={mode === environment} className={`rounded-md border p-2 disabled:opacity-40 ${mode === environment ? "border-blue-500 bg-blue-950" : "border-neutral-700"}`}>
+                return <button key={environment} disabled={!available} onClick={() => { setMode(environment); setWorld(""); setWorldValues({}); setSensors([]); }} aria-pressed={mode === environment} className={`rounded-md border p-2 disabled:opacity-40 ${mode === environment ? "border-blue-500 bg-blue-950" : "border-neutral-700"}`}>
                   {t(environment === "sim" ? "Simulation" : "Real hardware")}{!available && <span className="block text-[10px]">{t("Not configured")}</span>}
                 </button>;
               })}
             </div>
             {mode === "sim" && <label className="block"><div className="mb-1 text-neutral-400">{t("World")}</div>
-              <select value={world} onChange={event => { setWorld(event.target.value); setSensors([]); }} className={selectCls}>
+              <select value={world} onChange={event => { setWorld(event.target.value); setWorldValues({}); setSensors([]); }} className={selectCls}>
                 <option value="">{t("Select a simulation world")}</option>
                 {worlds.filter(w => w.kind === "sim").map(w => <option key={w.name} value={w.name} disabled={!registry?.matrix.some(cell => cell.world === w.name && cell.body === body && cell.ok)}>{w.label || w.name}</option>)}
               </select></label>}
@@ -191,8 +194,9 @@ export default function SessionSidebar({
             </div>
           )}
 
+          {mode === "sim" && worldSpec?.configuration && <div className="space-y-2"><p className="text-neutral-300">{t("World properties")}</p><WorldProperties schema={worldSpec.configuration.schema} values={worldValues} onChange={setWorldValues}/><p className="text-[11px] text-neutral-500">{t("Changing objects requires a new instance.")}</p></div>}
           <label className="block">
-            <div className="mb-1 text-neutral-400">{t("Brain")}</div>
+            <div className="mb-1 text-neutral-400">{t("NERV Agent")}</div>
             <select value={brain} onChange={(e) => setBrain(e.target.value)} className={selectCls}>
               {brains.map((b) => (
                 <option key={b.name} value={b.name}>
