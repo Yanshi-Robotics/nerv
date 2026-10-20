@@ -20,14 +20,14 @@ The harness composes session memory, context management and a model provider. A 
 
 ## Current status
 
-The source version is **0.6.0**. The local `v0.5.0` tag preserves the audited baseline. Version 1.0.0 requires operator physical acceptance with frozen trials and fault checks.
+The source version is **0.6.1**. The local `v0.5.0` tag preserves the audited baseline. Version 1.0.0 requires operator physical acceptance with frozen trials and fault checks.
 
 | Connection | Current scope |
 |---|---|
 | SO-101 / real | LeRobot 0.6.1 adapter, top and wrist cameras, native ACT loading, managed execution and local watchdog. Physical acceptance pending. |
 | G1 / simulation | Existing MuJoCo worlds and gait controller retained; rendered/control regression passed with CPU llvmpipe. |
 | SO-101 / simulation; G1 / real | Disabled bindings retained as legacy configuration. No current execution support. |
-| Visual models | Editable DeepSeek V4.1 Flash, GPT-6.1 Sol and GPT-6 Astra registrations. API and physical checks start unverified. |
+| Visual models | Curated VLMs from OpenAI, DeepSeek, Gemini, xAI and Anthropic, with provider keys and native effort choices. API and physical checks are separate. |
 
 The ACT artifact is the original 100,000-step `snack_into_box` checkpoint. The repository contains its file hashes and input contract, not its weights. Whether the policy itself returns to Rest remains a physical test requirement.
 
@@ -45,9 +45,9 @@ npm --prefix frontend run build:static
 
 Open `http://localhost:8000`. The static frontend uses the same origin as the backend. For frontend development, use `npm --prefix frontend run dev` on the allocated port 8100.
 
-Open **Visual models**, configure a provider key, and explicitly run API validation. Validation makes billable model requests; saving a key does not. Create a session after selecting its robot and environment. A conversation can also be created without a robot. No device is prepared automatically for a real binding.
+Open **Models and API keys** in the sidebar, choose a provider, enter its key, and select a visual model and reasoning effort. Save the key, then explicitly run API validation. Validation makes billable model requests; saving a key does not. Create a session after selecting its robot and environment. A conversation can also be created without a robot. No device is prepared automatically for a real binding.
 
-Configuration values can be placed in `.env` using [.env.example](.env.example). Private model settings and keys live under `NERV_HOME` (default `~/.nerv`), outside the repository.
+Configuration values can be placed in `.env` using [.env.example](.env.example). Private model settings and keys live under `NERV_HOME` (default `~/.nerv`), outside the repository. Keys are stored in `credentials.json`; model selection, effort and validation records are in `vlm.json`. The directory uses mode 0700 and files use mode 0600. The VLM registry ignores API keys in the shell and project `.env`. Re-enter existing keys in the panel; the upgrade leaves old files untouched.
 
 ## Robot connections
 
@@ -108,9 +108,19 @@ The [world-library tools](worlds/docs/explore/README.md) cover scene tests, G1 r
 
 ## Visual models
 
-The registration panel exposes model ID, endpoint, protocol, image capability evidence, tool support, request limits and reasoning effort. Chat reads the same registry. Pure text models and Mock do not appear in the running catalogue or act as fallbacks.
+The panel groups keys by provider. It displays whether a key is saved without returning the saved value to the browser. Advanced model settings expose model ID, endpoint, image capability documentation, request limits and enablement. Chat reads the same registry. Pure text models and Mock do not appear in the running catalogue or act as fallbacks.
 
-Sol and Astra use Responses API for tools. DeepSeek has a separate Responses adapter. Effort options are model specific; an unspecified effort leaves the parameter out so the supplier applies its default. The last model and each model's effort are remembered. Changes are refused during an active turn or execution.
+OpenAI, DeepSeek and xAI use provider-specific Responses dialects. Gemini uses the stateless Interactions API; Claude uses native Messages streaming. Signed thought blocks and opaque reasoning items are replayed only within the matching provider identity. Effort options are model specific; an unspecified effort leaves the parameter out so the supplier applies its default. The last model and each model's effort are remembered. Changes are refused during an active turn or execution.
+
+| Provider | Curated visual models | Native effort choices |
+|---|---|---|
+| OpenAI | GPT-6.1 Sol, GPT-6 Astra | low, medium, high, xhigh, max |
+| DeepSeek | V4.1 Flash | none, low, high, max |
+| Gemini | 3.8 Flash; 3.5 Flash-Lite | Flash: low, medium, high; Lite also supports minimal |
+| xAI | Grok 4.7; Grok 4.3 | 4.7: low, medium, high, xhigh; 4.3: none, low, medium, high |
+| Anthropic | Claude Opus 5.5, Claude Sonnet 5.5 | low, medium, high, xhigh, max |
+
+Catalogue capabilities were checked against supplier documentation on 2026-10-20: [OpenAI](https://developers.openai.com/api/docs/models/gpt-6.1-sol), [DeepSeek](https://api-docs.deepseek.com/api/create-response/), [Gemini](https://ai.google.dev/gemini-api/docs/thinking), [xAI](https://docs.x.ai/developers/model-capabilities/text/reasoning), [Anthropic](https://platform.claude.com/docs/en/build-with-claude/effort). Account access and API behavior still require explicit validation. No validation request runs when saving a key or opening the panel.
 
 Image input, tool calls and continuation are tested independently with a non-robot probe. A changed endpoint, model configuration, effort or credential invalidates the matching readiness check. Registration and API readiness do not imply physical acceptance. The model registry records these checks separately.
 

@@ -32,6 +32,7 @@ If not, it belongs in a family, a node or a registry entry — never in the plat
 | Every tunable of the platform | `src/nerv/config.py` (env `NERV_*`, `.env`) |
 | Tunables of a node | its YAML entry and its command-line args; nodes never import `config.py` |
 | Which nodes the operator approved | `~/.nerv/trust.json` (outside the repo) |
+| VLM provider keys and model settings | `~/.nerv/credentials.json` and `vlm.json` (or an external `NERV_HOME`); provider keys in project/shell environment are ignored |
 | What happened | `memory/sessions/<id>/events.jsonl` (authoritative), `<id>.json` (snapshot), image assets and diagnostic logs |
 
 ## Commands

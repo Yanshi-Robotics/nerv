@@ -1,10 +1,11 @@
-"""VLM catalogue, capability checks and write-only credentials with explicit precedence."""
+"""VLM catalogue, capability checks and user-owned, write-only credentials."""
 from __future__ import annotations
 
 import hashlib
 import json
 import os
 import re
+import stat
 import tempfile
 import threading
 import time
@@ -16,10 +17,22 @@ from pydantic import BaseModel, Field, model_validator
 
 _lock = threading.RLock()
 CHECKS = ("image", "tools", "continuation")
+# Bump when the wire contract changes; old API receipts must then be revalidated.
+CONTRACT_REVISION = 2
+PROVIDERS = {
+    "openai": ("OpenAI", "OPENAI_API_KEY", "responses"),
+    "deepseek": ("DeepSeek", "DEEPSEEK_API_KEY", "deepseek_responses"),
+    "google": ("Gemini", "GEMINI_API_KEY", "gemini_interactions"),
+    "xai": ("Grok · xAI", "XAI_API_KEY", "xai_responses"),
+    "anthropic": ("Claude · Anthropic", "ANTHROPIC_API_KEY", "anthropic_messages"),
+}
 
 
 def private_write(path: Path, value):
+    if path.parent.is_symlink() or path.is_symlink():
+        raise PermissionError("private storage must not use symbolic links")
     path.parent.mkdir(parents=True, exist_ok=True)
+    path.parent.chmod(0o700)
     fd, filename = tempfile.mkstemp(dir=path.parent, prefix=path.name, suffix=".tmp")
     try:
         os.fchmod(fd, 0o600)
@@ -40,24 +53,24 @@ class CredentialStore:
     def _read(self):
         if not self.path.exists():
             return {}
-        if self.path.is_symlink() or self.path.stat().st_mode & 0o077:
+        if (self.path.is_symlink() or not stat.S_ISREG(self.path.stat().st_mode)
+                or self.path.stat().st_mode & 0o077):
             raise PermissionError("credential storage must be a private regular file (0600)")
         return json.loads(self.path.read_text())
 
     def resolve(self, reference: str):
-        return os.environ.get(reference) or self._read().get(reference, "")
+        # Intentionally ignore shell/.env keys. The settings UI owns this store;
+        # users re-enter existing keys rather than having them silently imported.
+        return self._read().get(reference, "")
 
     def describe(self, reference: str):
-        environment = bool(os.environ.get(reference))
-        configured = environment or bool(self._read().get(reference))
-        return {"configured": configured, "source": "environment" if environment else "store" if configured else None,
-                "writable": not environment}
+        configured = bool(self._read().get(reference))
+        return {"configured": configured, "source": "store" if configured else None,
+                "writable": True}
 
     def set(self, reference: str, value: str | None):
         if not re.fullmatch(r"[A-Z][A-Z0-9_]*", reference):
             raise ValueError("invalid credential reference")
-        if os.environ.get(reference):
-            raise ValueError("launch environment owns this credential; remove its override before editing")
         if value is not None and (not value.strip() or any(ord(c) < 33 or ord(c) > 126 for c in value)):
             raise ValueError("enter a nonempty API key without surrounding whitespace")
         with _lock:
@@ -76,7 +89,8 @@ class VisualModel(BaseModel):
     label: str
     model: str
     base_url: str
-    protocol: Literal["responses", "deepseek_responses"] = "responses"
+    protocol: Literal["responses", "deepseek_responses", "xai_responses",
+                      "gemini_interactions", "anthropic_messages"] = "responses"
     credential_ref: str = Field(pattern=r"^[A-Z][A-Z0-9_]*$")
     input_modalities: list[str]
     supports_tools: bool = True
@@ -96,6 +110,13 @@ class VisualModel(BaseModel):
     def visual(self):
         if "image" not in self.input_modalities or not self.evidence.strip():
             raise ValueError("only models with documented image input can enter the VLM registry")
+        if self.provider not in PROVIDERS:
+            raise ValueError("select a supported VLM provider")
+        _, reference, protocol = PROVIDERS[self.provider]
+        if self.credential_ref != reference or self.protocol != protocol:
+            raise ValueError("provider, protocol and credential reference must match")
+        if self.provider_default_effort and self.provider_default_effort not in self.efforts:
+            raise ValueError("provider default must be a supported native effort")
         if not (self.base_url.startswith("https://") or self.base_url.startswith("http://127.0.0.1:")
                 or self.base_url.startswith("http://localhost:")):
             raise ValueError("use HTTPS or an explicit loopback model endpoint")
@@ -113,6 +134,10 @@ class VisualModel(BaseModel):
 class ModelRegistry:
     def __init__(self, root=None):
         self.root = Path(root or os.environ.get("NERV_HOME") or Path.home() / ".nerv")
+        if root is None:
+            from .. import paths
+            if paths._IN_CHECKOUT and self.root.resolve().is_relative_to(Path(paths.REPO_ROOT).resolve()):
+                raise ValueError("NERV_HOME for model credentials must be outside the project")
         self.path = self.root / "vlm.json"
         self.credentials = CredentialStore(self.root)
 
@@ -136,7 +161,12 @@ class ModelRegistry:
         # settings must not inherit validation from a different request contract.
         effort = self._read()["efforts"].get(model.id)
         key = self.credentials.resolve(model.credential_ref)
-        return hashlib.sha256(json.dumps([model.signature(), effort, key]).encode()).hexdigest()
+        return hashlib.sha256(json.dumps([CONTRACT_REVISION, model.signature(), effort, key]).encode()).hexdigest()
+
+    def providers(self):
+        return [{"id": name, "label": label, "credential_ref": reference,
+                 "protocol": protocol, "credential": self.credentials.describe(reference)}
+                for name, (label, reference, protocol) in PROVIDERS.items()]
 
     def list(self, binding_signature=None):
         data = self._read()
@@ -150,7 +180,8 @@ class ModelRegistry:
             if (physical.get("signature") != self.request_signature(model)
                     or not binding_signature or physical.get("binding_signature") != binding_signature):
                 physical = {"status": "unverified", "record": physical}
-            result.append({**model.model_dump(), "credential": credentials, "checks": checks,
+            visible_checks = checks if checks.get("signature") == self.request_signature(model) else {}
+            result.append({**model.model_dump(), "credential": credentials, "checks": visible_checks,
                            "effort": data["efforts"].get(model.id), "physical": physical,
                            "available": bool(model.enabled and model.supports_tools and model.supports_streaming and model.supports_continuation and credentials["configured"] and valid)})
         return result
@@ -215,6 +246,12 @@ class ModelRegistry:
         effort = self._read()["efforts"].get(model_id)
         if effort is not None and effort not in model.efforts:
             raise ValueError("stored effort is no longer supported; select a valid setting")
+        if model.protocol == "anthropic_messages":
+            from ..brain.providers.anthropic_messages import AnthropicMessagesLLM
+            return AnthropicMessagesLLM(model, key, effort)
+        if model.protocol == "gemini_interactions":
+            from ..brain.providers.gemini import GeminiLLM
+            return GeminiLLM(model, key, effort)
         return ResponsesLLM(model, key, effort)
 
     def validate(self, model_id: str, provider=None):

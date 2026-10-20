@@ -20,14 +20,14 @@ Harness 组合会话记忆、上下文管理器和模型供应商接口。运行
 
 ## 当前状态
 
-当前源码版本为 **0.6.0**。本地 `v0.5.0` 标签保留审计基线。1.0.0 发布前须由操作员完成冻结条件下的实机试验和故障检查。
+当前源码版本为 **0.6.1**。本地 `v0.5.0` 标签保留审计基线。1.0.0 发布前须由操作员完成冻结条件下的实机试验和故障检查。
 
 | 接入对象 | 当前范围 |
 |---|---|
 | SO-101／现实 | LeRobot 0.6.1 适配器、俯视与腕部相机、原生 ACT 加载、持续执行和本地监督。尚待实机验收。 |
 | G1／仿真 | 保留现有 MuJoCo 世界与步态控制器，CPU llvmpipe 渲染与控制回归已通过。 |
 | SO-101／仿真；G1／现实 | 保留旧配置，当前绑定已禁用。 |
-| 视觉模型 | 预置可编辑的 DeepSeek V4.1 Flash、GPT-6.1 Sol 和 GPT-6 Astra 注册项。接口与实机状态均从未验证开始。 |
+| 视觉模型 | 预置 OpenAI、DeepSeek、Gemini、xAI 和 Anthropic 的视觉模型，按供应商管理密钥，按型号选择推理强度。接口检测与实机验收分别记录。 |
 
 ACT 技能使用原实验 100,000 步的 `snack_into_box` 检查点。仓库只保存文件哈希与输入契约，不包含模型权重。策略是否自行返回 Rest，仍须实机检验。
 
@@ -45,9 +45,9 @@ npm --prefix frontend run build:static
 
 浏览器打开 `http://localhost:8000`。静态前端与后端使用同一来源。前端开发命令为 `npm --prefix frontend run dev`，使用已分配的 8100 端口。
 
-进入“视觉模型”，配置供应商密钥，再主动运行接口检测。检测会产生模型调用费用，保存密钥不会触发调用。选择机器人及运行环境后创建会话，也可建立不连接机器人的对话。创建现实会话不会自动准备设备。
+在侧栏打开“模型与密钥”，选择供应商、填写密钥，再选择视觉模型和推理强度。保存密钥后，主动运行接口检测。检测会产生模型调用费用，保存密钥不会触发调用。选择机器人及运行环境后创建会话，也可建立不连接机器人的对话。创建现实会话不会自动准备设备。
 
-环境配置可参考 [.env.example](../../.env.example)。模型设置和密钥保存在仓库外的 `NERV_HOME` 中，默认位置为 `~/.nerv`。
+环境配置可参考 [.env.example](../../.env.example)。模型设置和密钥保存在仓库外的 `NERV_HOME` 中，默认位置为 `~/.nerv`。密钥存放在 `credentials.json`，模型选择、强度和检测记录存放在 `vlm.json`。目录权限为 0700，文件权限为 0600。视觉模型注册表不读取 shell 或项目 `.env` 中的 API 密钥。请在面板中重新填写已有密钥；升级不会修改旧文件。
 
 ## 机器人接入
 
@@ -108,9 +108,19 @@ World Explore 展示公寓与住宅资产。场景测试由操作员进行，其
 
 ## 视觉模型
 
-独立注册面板提供模型 ID、API 地址、协议、图像能力依据、工具支持、请求限制和推理强度。聊天区读取同一注册表。纯文字模型和 Mock 不进入正式运行目录，也不作为自动回退。
+面板按供应商管理密钥，只显示是否已保存，不向浏览器返回保存的值。模型高级设置提供模型 ID、API 地址、图像能力文档、请求限制和启用状态。聊天区读取同一注册表。纯文字模型和 Mock 不进入正式运行目录，也不作为自动回退。
 
-Sol 和 Astra 带工具时使用 Responses API，DeepSeek 使用独立的 Responses 适配器。界面按型号展示合法推理强度；未指定时省略参数，使用供应商默认值。系统分别记住上次模型和每个型号的强度。当前回合或机器人执行尚未结束时，修改会被拒绝。
+OpenAI、DeepSeek 和 xAI 分别使用对应的 Responses 协议参数。Gemini 使用无服务端会话存储的 Interactions API，Claude 使用原生 Messages 流式接口。带签名的思考内容和推理续接项只会传回匹配的供应商接口。界面按型号展示合法推理强度；未指定时省略参数，使用供应商默认值。系统分别记住上次模型和每个型号的强度。当前回合或机器人执行尚未结束时，修改会被拒绝。
+
+| 供应商 | 预置视觉模型 | 原生推理强度 |
+|---|---|---|
+| OpenAI | GPT-6.1 Sol、GPT-6 Astra | low、medium、high、xhigh、max |
+| DeepSeek | V4.1 Flash | none、low、high、max |
+| Gemini | 3.8 Flash、3.5 Flash-Lite | Flash：low、medium、high；Lite 另支持 minimal |
+| xAI | Grok 4.7、Grok 4.3 | 4.7：low、medium、high、xhigh；4.3：none、low、medium、high |
+| Anthropic | Claude Opus 5.5、Claude Sonnet 5.5 | low、medium、high、xhigh、max |
+
+模型能力依据于 2026-10-20 核对的供应商文档：[OpenAI](https://developers.openai.com/api/docs/models/gpt-6.1-sol)、[DeepSeek](https://api-docs.deepseek.com/api/create-response/)、[Gemini](https://ai.google.dev/gemini-api/docs/thinking)、[xAI](https://docs.x.ai/developers/model-capabilities/text/reasoning)、[Anthropic](https://platform.claude.com/docs/en/build-with-claude/effort)。账户权限和实际接口表现仍需主动检测。保存密钥或打开面板不会发起检测请求。
 
 接口检测通过不操作机器人的测试工具，分别检查图像输入、工具调用和多轮续接。地址、模型配置、强度或凭据改变后，原有检测不再适用。注册和接口检测通过均不代表实机验收。模型注册表分别记录这些检测结果。
 

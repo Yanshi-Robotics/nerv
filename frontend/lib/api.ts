@@ -530,14 +530,19 @@ export type VlmModel = {
   credential: { configured: boolean; source: string | null; writable: boolean };
   checks: Record<string, string>; effort: string | null; available: boolean;
   physical?: { status: string };
+  provider_default_effort?: string | null;
+};
+export type VlmProvider = {
+  id: string; label: string; credential_ref: string; protocol: string;
+  credential: VlmModel["credential"];
 };
 async function modelRequest(path: string, method = "GET", body?: unknown) {
   const response = await fetch(`${BASE}/api/${path}`, { method, headers: {"Content-Type":"application/json"}, ...(body === undefined ? {} : {body: JSON.stringify(body)}) });
   if (!response.ok) throw new ApiError(await detailOf(response), response.status);
   return response.json();
 }
-export const getVlm = (): Promise<{models: VlmModel[]; selection: string; task_locked: boolean}> => modelRequest("vlm");
-export const putVlm = (model: VlmModel) => modelRequest(`vlm/${encodeURIComponent(model.id)}`, "PUT", model);
+export const getVlm = (): Promise<{models: VlmModel[]; providers: VlmProvider[]; credential_path: string; selection: string; task_locked: boolean}> => modelRequest("vlm");
+export const putVlm = (model: Pick<VlmModel, "id"> & Record<string, unknown>) => modelRequest(`vlm/${encodeURIComponent(model.id)}`, "PUT", model);
 export const selectVlm = (id: string, effort: string | null) => modelRequest(`vlm/${encodeURIComponent(id)}/select`, "POST", {effort});
 export const validateVlm = (id: string) => modelRequest(`vlm/${encodeURIComponent(id)}/validate`, "POST", {});
 export const saveCredential = (reference: string, value: string | null) => modelRequest(`credentials/${encodeURIComponent(reference)}`, "PUT", {value});

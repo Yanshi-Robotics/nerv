@@ -75,5 +75,156 @@
     "provider_output_limit": 128000,
     "provider_default_effort": null,
     "limits_basis": "Official model page, checked 2026-10-19."
+  },
+  {
+    "id": "gemini-flash",
+    "provider": "google",
+    "label": "Gemini 3.8 Flash",
+    "model": "gemini-3.8-flash",
+    "base_url": "https://generativelanguage.googleapis.com",
+    "protocol": "gemini_interactions",
+    "credential_ref": "GEMINI_API_KEY",
+    "input_modalities": [
+      "text",
+      "image"
+    ],
+    "supports_tools": true,
+    "efforts": [
+      "low",
+      "medium",
+      "high"
+    ],
+    "evidence": "https://ai.google.dev/gemini-api/docs/models/gemini-3.8-flash",
+    "context_window": 1048576,
+    "provider_output_limit": 65536,
+    "provider_default_effort": "medium",
+    "limits_basis": "Official model and reasoning documentation, checked 2026-10-20. Unpublished output limits remain unknown."
+  },
+  {
+    "id": "gemini-flash-lite",
+    "provider": "google",
+    "label": "Gemini 3.5 Flash-Lite",
+    "model": "gemini-3.5-flash-lite",
+    "base_url": "https://generativelanguage.googleapis.com",
+    "protocol": "gemini_interactions",
+    "credential_ref": "GEMINI_API_KEY",
+    "input_modalities": [
+      "text",
+      "image"
+    ],
+    "supports_tools": true,
+    "efforts": [
+      "minimal",
+      "low",
+      "medium",
+      "high"
+    ],
+    "evidence": "https://ai.google.dev/gemini-api/docs/models/gemini-3.5-flash-lite",
+    "context_window": 1048576,
+    "provider_output_limit": 65536,
+    "provider_default_effort": "minimal",
+    "limits_basis": "Official model and reasoning documentation, checked 2026-10-20. Unpublished output limits remain unknown."
+  },
+  {
+    "id": "grok-47",
+    "provider": "xai",
+    "label": "Grok 4.7",
+    "model": "grok-4.7",
+    "base_url": "https://api.x.ai/v1",
+    "protocol": "xai_responses",
+    "credential_ref": "XAI_API_KEY",
+    "input_modalities": [
+      "text",
+      "image"
+    ],
+    "supports_tools": true,
+    "efforts": [
+      "low",
+      "medium",
+      "high",
+      "xhigh"
+    ],
+    "evidence": "https://docs.x.ai/developers/models/grok-4.7",
+    "context_window": 500000,
+    "provider_output_limit": null,
+    "provider_default_effort": "high",
+    "limits_basis": "Official model and reasoning documentation, checked 2026-10-20. Unpublished output limits remain unknown."
+  },
+  {
+    "id": "grok-43",
+    "provider": "xai",
+    "label": "Grok 4.3",
+    "model": "grok-4.3",
+    "base_url": "https://api.x.ai/v1",
+    "protocol": "xai_responses",
+    "credential_ref": "XAI_API_KEY",
+    "input_modalities": [
+      "text",
+      "image"
+    ],
+    "supports_tools": true,
+    "efforts": [
+      "none",
+      "low",
+      "medium",
+      "high"
+    ],
+    "evidence": "https://docs.x.ai/developers/models/grok-4.3",
+    "context_window": 1000000,
+    "provider_output_limit": null,
+    "provider_default_effort": "low",
+    "limits_basis": "Official model and reasoning documentation, checked 2026-10-20. Unpublished output limits remain unknown."
+  },
+  {
+    "id": "claude-opus",
+    "provider": "anthropic",
+    "label": "Claude Opus 5.5",
+    "model": "claude-opus-5-5",
+    "base_url": "https://api.anthropic.com",
+    "protocol": "anthropic_messages",
+    "credential_ref": "ANTHROPIC_API_KEY",
+    "input_modalities": [
+      "text",
+      "image"
+    ],
+    "supports_tools": true,
+    "efforts": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ],
+    "evidence": "https://platform.claude.com/docs/en/models/overview",
+    "context_window": 1000000,
+    "provider_output_limit": 128000,
+    "provider_default_effort": "medium",
+    "limits_basis": "Official model and reasoning documentation, checked 2026-10-20. Unpublished output limits remain unknown."
+  },
+  {
+    "id": "claude-sonnet",
+    "provider": "anthropic",
+    "label": "Claude Sonnet 5.5",
+    "model": "claude-sonnet-5-5",
+    "base_url": "https://api.anthropic.com",
+    "protocol": "anthropic_messages",
+    "credential_ref": "ANTHROPIC_API_KEY",
+    "input_modalities": [
+      "text",
+      "image"
+    ],
+    "supports_tools": true,
+    "efforts": [
+      "low",
+      "medium",
+      "high",
+      "xhigh",
+      "max"
+    ],
+    "evidence": "https://platform.claude.com/docs/en/models/overview",
+    "context_window": 1000000,
+    "provider_output_limit": 128000,
+    "provider_default_effort": "high",
+    "limits_basis": "Official model and reasoning documentation, checked 2026-10-20. Unpublished output limits remain unknown."
   }
 ]

@@ -5,6 +5,19 @@ The 0.1.x entries below are the pre-release trail.
 
 ## [Unreleased]
 
+## [0.6.1] — development snapshot, 2026-10-20
+
+- Added provider-level, write-only API key settings for OpenAI, DeepSeek, Gemini, xAI
+  and Anthropic, stored outside the checkout with private directory/file permissions.
+  Existing environment keys are ignored by the visual registry; users re-enter keys.
+- Added curated Gemini, Grok and Claude VLMs, native reasoning effort choices,
+  stateless Interactions and Messages adapters, and signed continuation replay.
+- Replaced JSON-only registration editing with model settings forms; invalidated stale
+  readiness receipts when their request contract changes. Validation remains explicit
+  and billable; offline software fixtures do not qualify models for physical acceptance.
+- Runtime SDK and LeRobot adapter remain at 0.6.0; this host update does not change
+  their protocol or the 1.0.0 physical acceptance requirements.
+
 ## [0.6.0] — development snapshot, 2026-10-19
 
 - Added durable session journals, legacy migration, scoped history queries, whole-tool-group
