@@ -12,7 +12,7 @@ def test_calculator_node_over_mcp():
     try:
         c = RemoteTool("calculator", f"http://127.0.0.1:{port}")
         caps = c.capabilities()
-        assert [t.name for t in caps.tools] == ["calc"] and caps.tools[0].kind == "read"
+        assert [t.name for t in caps.operations] == ["calc"] and caps.operations[0].kind == "read"
         r = c.invoke("calc", expression="17*23")
         assert r.ok and r.data["value"] == 391
         bad = c.invoke("calc", expression="1/0")

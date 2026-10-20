@@ -54,7 +54,7 @@ class _McpNode:
 
     def approve(self, store: trust.TrustStore | None = None) -> str:
         raw = self.raw_capabilities()
-        h = (store or trust.TrustStore()).approve(self.key, raw.tools, raw.guidance, self.name, url=self.base)
+        h = (store or trust.TrustStore()).approve(self.key, raw.operations, raw.guidance, self.name, url=self.base)
         self.refresh()
         return h
 
@@ -79,7 +79,7 @@ class _McpNode:
                     for c in rd.contents:
                         if getattr(c, "text", None):
                             meta = json.loads(c.text) or {}
-                            kinds = meta.get("tools") or {}
+                            kinds = meta.get("robot_actions" if self.what == "body" else "tools") or {}
                             family = meta.get("family", "")
                             sensors = list(meta.get("sensors") or [])
                             version = str(meta.get("version", ""))
@@ -113,13 +113,13 @@ class _McpNode:
         t0 = time.perf_counter()
         tools, guidance, cfg, family, sensors, version = run_sync(
             with_session(self.mcp_url, op, self.timeout), self.timeout + config.BRIDGE_GRACE_S)
-        self._raw = Capabilities(name=self.name, version=version, tools=tools, guidance=guidance,
+        self._raw = Capabilities(name=self.name, version=version, **{"robot_actions" if self.what == "body" else "agent_tools": tools}, guidance=guidance,
                                  config=cfg, family=family, sensors=sensors)
         self._trust = trust.TrustStore().check(self.key, tools, guidance, url=self.base)
         if self._trust.allowed:
             self._caps = self._raw
         else:
-            self._caps = Capabilities(name=self.name, version=version, tools=[], guidance="",
+            self._caps = Capabilities(name=self.name, version=version, guidance="",
                                       config=cfg, family=family, sensors=sensors)
         log.record_node(self.log_kind, self.name, "capabilities", "handshake [mcp]",
                         (time.perf_counter() - t0) * 1000,
@@ -293,6 +293,16 @@ class WorldControl:
             return r.json() if r.status_code == 200 else None
         except Exception:
             return None
+
+    def control_get(self):
+        response = self._http.get(self.base + "/control")
+        response.raise_for_status()
+        return response.json()
+
+    def control_post(self, payload):
+        response = self._http.post(self.base + "/control", json=payload)
+        response.raise_for_status()
+        return response.json()
 
     def scene_get(self, resource: str) -> dict:
         response = self._http.get(self.base + "/scene/" + resource)

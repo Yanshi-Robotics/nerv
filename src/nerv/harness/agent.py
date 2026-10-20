@@ -1,21 +1,20 @@
 """Default agent harness. All side effects are requested through the host Link."""
 from __future__ import annotations
 
-from ..brain import prompts
-from ..brain.react import ReactBrain
-from ..nerve.brain import CallTool, Say, SetRegister, Think
+from ..nerve.brain import CallTool, Say, Think
 from .context import ContextManager
 from .compaction import ModelCompactor
 
 
-class AgentHarness(ReactBrain):
+class AgentHarness:
     def __init__(self, llm, name: str, context: ContextManager, compactor=None):
-        super().__init__(llm, name)
+        self.llm, self.name = llm, name
+        self.model = getattr(llm, "model", name)
+        self.vision = bool(getattr(llm, "vision", False))
         self.context_manager = context
         self.compactor = compactor or ModelCompactor()
 
     def run_turn(self, link, user) -> None:
-        from ..brain.react import _meta_tools
         def chat(*args):
             extra = {"cancelled": lambda: not link.is_current()} if getattr(self.llm, "cancellable", False) else {}
             return self.llm.chat(*args, **extra)
@@ -25,8 +24,7 @@ class AgentHarness(ReactBrain):
                 return
             obs = link.observe()
             images = obs.images if obs and self.vision else None
-            node_tools = link.tools()
-            tools = node_tools + _meta_tools({t.name for t in node_tools})
+            tools = link.model_tools()
             memory = link.memory()
 
             def summarize(history, previous):
@@ -34,7 +32,7 @@ class AgentHarness(ReactBrain):
                 return text, self.model, usage
 
             system, history = self.context_manager.prepare(
-                self._system(link), link.raw_history(), tools, images, memory, summarize,
+                link.system_prompt(), link.raw_history(), tools, images, memory, summarize,
                 cancelled=lambda: not link.is_current())
             memory.flush()
             if not link.is_current():
@@ -45,7 +43,11 @@ class AgentHarness(ReactBrain):
             if not link.is_current():
                 link.stop_reason()
                 return
-            reply = chat(system, history, tools, images)
+            link.model_phase(True)
+            try:
+                reply = chat(system, history, tools, images)
+            finally:
+                link.model_phase(False)
             if not link.is_current():
                 link.stop_reason()
                 return
@@ -68,9 +70,6 @@ class AgentHarness(ReactBrain):
                 if not link.is_current():
                     return
                 memory.flush()
-                if call.name in prompts.META_TOOL_NAMES:
-                    link.set_register(SetRegister(call.name, dict(call.arguments) | {"call_id": call.call_id}))
-                else:
-                    link.call_tool(call)
+                link.dispatch_decision(call)
             if link.stop_reason():
                 return

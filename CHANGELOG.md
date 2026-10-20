@@ -5,6 +5,20 @@ The 0.1.x entries below are the pre-release trail.
 
 ## [Unreleased]
 
+## [0.6.2] — development snapshot, 2026-10-21
+
+- Split conversational Agent and System 2 into independent harness runs, context views,
+  cancellation signals and usage scopes. Add versioned task updates and acknowledged stops.
+- Separate five capability domains; runtime protocol 2 exposes robot actions independently
+  from auxiliary Agent tools and sensors. Incompatible workers fail before preparation.
+- Keep chat available during execution and teleoperation. Add independent task events and
+  sourced robot-activity bubbles inside the camera frame, separate from raw image inputs.
+- Add simulation-only World Control, per-instance MJCF generation, object schemas and source
+  fingerprints. Reset keeps configuration; rebuild creates a new instance and freezes old sessions.
+- Serialize journal readers with writers, preserve old histories, and mark interrupted tasks
+  unknown without replay. Retain the G1 path and all prior README media.
+- This local development snapshot does not certify paid VLM behavior, physical tasks or ultimate.
+
 - Set the supported MuJoCo simulation baseline to 3.12, matching the qualified workbench environment.
 - Enable SO-101 simulation with single-object basket placement, three-snack sorting and five-disk Hanoi worlds. Add replaceable rigid/native-flex objects, cameras, offline task measurements and asset qualification in the worlds submodule.
 - Add validated `spawn.initial_joints` world configuration, retained during initialization and whole-scene reset. Keep task truth outside body observations and the real ACT binding independent.

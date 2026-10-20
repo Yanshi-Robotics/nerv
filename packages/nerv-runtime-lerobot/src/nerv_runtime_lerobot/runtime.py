@@ -205,7 +205,7 @@ class LeRobotRuntime:
             raise RuntimeError("prepare the device before enabling control")
         self.dispatch.enable(enabled)
 
-    def tools(self):
+    def actions(self):
         empty = {"type": "object", "properties": {}, "additionalProperties": False}
         result = [{"name": name, "description": spec["description"], "parameters": empty, "kind": "skill"}
                   for name, spec in self.profile.configuration.get("skills", {}).items()]

@@ -2,25 +2,29 @@
 
 [简体中文](i18n/zh/README.md) · [Architecture](#architecture) · [Runtime SDK](#runtime-plugins) · [VLM configuration](#visual-models)
 
-NERV connects a visual language model to a robot, its sensors and its skills. The agent chooses tasks and tools; a local runtime owns the device and controls action dispatch.
+NERV connects a visual language model to a robot, its sensors and its skills. The Agent handles conversation and delegates goals to System 2; a local runtime owns the device and controls action dispatch.
 
 ## Overview
 
 One NERV instance binds one robot and one environment. One active conversation holds control. Simulation and real hardware are separate startup choices, with independent preparation, calibration and verification. Changing environment requires ending the instance; running environment transitions are not implemented.
 
-The agent can start a skill, observe while it runs, receive another instruction and cancel the execution. The operator prepares and enables the device and can apply an emergency stop. Releasing the stop returns to disarmed standby and invalidates the previous task.
+NERV Agent handles conversation while an independent System 2 controller observes, plans and supervises robot execution. Ordinary messages leave the task running; explicit updates and cancellation go through the task controller. The operator prepares and enables the device and can apply an emergency stop. Releasing the stop returns to disarmed standby and invalidates the previous task.
 
 ## Architecture
 
-The agent harness, robot runtime, world and tool services meet through NERV. The host routes observations and tool calls, checks control permissions and records session events. Robot drivers and policy inference run in a separate worker environment.
+NERV Agent manages conversation and delegates robot goals to System 2. System 1 executes bounded actions and policies; Robot Runtime owns devices and sensors. World Control owns simulation interventions. The host coordinates control ownership, lifecycle and event records. Robot drivers and policy inference run in a separate worker environment.
+
+<div align="center"><img src="assets/readme/images/layers.svg" alt="Separate Agent conversation, System 2 task supervision, System 1 execution and simulation world control" width="960"></div>
+
+The following node topology remains the transport foundation:
 
 <div align="center"><img src="assets/readme/images/structure.svg" alt="NERV connects the agent harness, independent robot runtime, world and tool services, with separate observation and operator control paths" width="860"></div>
 
-The harness composes session memory, context management and a model provider. A runtime declares its sensors and skills; the frontend reads those capabilities. Simulation and real hardware have separate environment bindings. Operator scene controls and simulator ground truth stay outside the agent's observation. The [interface types](src/nerv/nerve/) define the module boundaries.
+Agent and System 2 use separate harness instances, context, summaries, provider continuation and usage records. Their events share an append-only journal with isolated task views. A runtime declares its sensors and skills; the frontend reads those capabilities. Simulation and real hardware have separate environment bindings. Operator scene controls and simulator ground truth stay outside the agent's observation. The [interface types](src/nerv/nerve/) define the module boundaries.
 
 ## Current status
 
-The source version is **0.6.1**. The local `v0.5.0` tag preserves the audited baseline. Version 1.0.0 requires operator physical acceptance with frozen trials and fault checks.
+The source version is **0.6.2**. The local `v0.5.0` tag preserves the audited baseline. Version 1.0.0 requires operator physical acceptance with frozen trials and fault checks.
 
 | Connection | Current scope |
 |---|---|
@@ -82,6 +86,20 @@ Set `NERV_LEROBOT_PYTHON` to that interpreter, `SO101_PORT`, the calibrated `SO1
 
 A person then selects Real hardware, creates the session, presses **Prepare device**, reviews the worker tool manifest, loads the policy and enables control. Manifest review is an initial setup step; individual agent tool calls need no approval. Preparation connects the device and may enable motor torque. Model loading sends no motion. Skill completion retains the device session. The emergency stop is a software pose hold, not a power cut or a substitute for a hardware stop.
 
+## Conversation and world control
+
+The right column belongs to NERV Agent. Chat stays available during robot execution and manual control. **Stop reply** cancels only the current conversation decision. **Stop task** waits for local execution acknowledgement; **Emergency stop** locks motion until an operator releases it into disarmed standby.
+
+The middle camera frame contains robot activity from System 2, execution feedback and host events. Bubbles show public decision summaries and timestamps; they never become camera pixels or policy input. The independent event stream reconnects and deduplicates records. Historical sessions do not show live cameras.
+
+Capabilities have five application domains: `agent_tools` for computation and session history; `robot_actions` for robot actions and skills; `robot_tasks` for task management; `world_control` for simulation configuration and interventions; and `instance_control` for lifecycle. Provider function calling and MCP carry these capabilities without merging their permissions.
+
+Choose SO-101, Simulation and a workbench world in **New session**. Select the supported object slots before creation. The world catalogue supplies types, nominal dimensions and mass. Flexible materials remain uncalibrated approximations. Each instance gets its own MJCF, configuration and source hashes.
+
+**World control** above the camera frame uses the same service as Agent world commands. Reset preserves the current objects and world process, invalidates the task, and disarms control. Changing object topology uses **End and rebuild instance**. Old sessions stay readable but cannot control the replacement. Weather, furniture and style changes appear only when a world declares and implements them; the tabletop worlds currently declare object replacement and reset. Real bindings reject world modification.
+
+Viewing, creating and manually controlling a simulation requires no model request. Language-driven operations need a configured VLM and are billable. SO-101 ACT and Hanoi execution policies are not deployed to these simulations. The long-term autonomous target is named **ultimate**; this release remains an Agent-operated system.
+
 ## Demo and interface
 
 The following recording and screenshots come from earlier G1 simulation versions. They show the existing navigation and operator views; the model controls and device preparation flow have changed in 0.6.
@@ -137,7 +155,7 @@ Image input, tool calls and continuation are tested independently with a non-rob
 
 <div align="center"><img src="assets/readme/images/flow.svg" alt="Managed skill execution: observe, persist and check the tool call, receive an execution ID, supervise the local policy and report the observed outcome" width="860"></div>
 
-The diagram follows a managed skill such as ACT. Starting it returns an execution ID; the agent continues observing and checking execution state while the worker runs its local policy. Direct read tools and existing G1 skills can return their result within the tool call. Local stop and supervision checks remain active while a model request is pending.
+The diagram follows a managed skill such as ACT. Starting it returns an execution ID; System 2 continues observing and checking execution state while the worker runs its local policy. Direct read tools and existing G1 skills can return their result within the tool call. Local stop and supervision checks remain active while a model request is pending.
 
 The default `AgentHarness` receives its host Link, model provider, context manager and compactor through replaceable boundaries. It never owns a robot object or loads ACT.
 
@@ -145,7 +163,7 @@ Each session has a durable append-only event journal, image assets, task and not
 
 The context budget covers instructions, notes, summary, complete tool groups, tools, current images, provider continuation and reserved output. Token and image budgets are estimates; actual usage is recorded when the supplier returns it. Compaction uses a separate request without tools, images or the main reasoning continuation. Failed compaction retains original events and pauses if the request cannot fit.
 
-Restart marks unfinished runs as interrupted with unknown results. It restores history without replaying actions. A new instruction invalidates old model decisions while an already running skill remains locally supervised.
+Restart marks unfinished runs as interrupted with unknown results. It restores history without replaying actions. A new chat message invalidates only the previous Agent reply. An explicit task update advances its version and stops the old execution before replanning. Task model configuration and effort are frozen at task start.
 
 ## Runtime plugins
 
@@ -153,7 +171,7 @@ Restart marks unfinished runs as interrupted with unknown results. It restores h
 
 `describe()` and imports must have no device or GPU side effects. Preparation, policy loading, enabling, execution, cancellation, emergency stop, release and disconnect are separate operations. Profiles, environment bindings and policy artifacts are separate contracts. The host does not inject its source tree or model credentials into workers.
 
-The [runtime SDK](packages/nerv-runtime-sdk/src/nerv_runtime_sdk/) defines provider discovery, protocol endpoints and read-only conformance checks.
+The [runtime SDK guide](packages/nerv-runtime-sdk/README.md) and [inspection-only plugin example](examples/inspection-runtime/) describe protocol 2, which requires `actions()` and rejects incompatible workers before preparation. The SDK defines provider discovery, protocol endpoints and read-only conformance checks.
 
 ## Validation
 

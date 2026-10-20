@@ -101,5 +101,5 @@ class Registry:
         from .compat import matrix
         return {"bodies": [b.model_dump(exclude={"guidance"}) for b in self.bodies.values()],
                 "worlds": [w.model_dump(exclude={"guidance"}) for w in self.worlds.values()],
-                "tools": [t.model_dump(exclude={"guidance"}) for t in self.tools.values()],
+                "agent_tools": [t.model_dump(exclude={"guidance"}) for t in self.tools.values()],
                 "matrix": matrix(self)}

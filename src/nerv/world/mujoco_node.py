@@ -51,6 +51,7 @@ DEFAULT_PHYSICS: dict[str, Any] = {
     "dt": 0.002,                 # MuJoCo step (s); the Unitree deployment recipe uses the same
     "realtime_factor": 1.0,      # 1 = wall time; >1 = faster than life (streams look sped up)
     "steps_per_tick": 5,         # physics steps between sleeps; 5 × 2 ms = a 10 ms scheduling grain
+    "scheduler_yield_s": 0.001,  # leave time for motor/stop readers even when CPU physics falls behind
     "render_width": 640,
     "render_height": 480,
     "stream_fps": 12,            # MJPEG frame rate for /stream and /stream/<camera>
@@ -366,10 +367,11 @@ class WorldSim:
             self.realtime_ratio = ema
             t_wall += tick_sim / rtf
             lag = t_wall - now
-            if lag > 0:
-                time.sleep(lag)
-            else:
+            if lag <= 0:
                 t_wall = time.perf_counter()     # fell behind: re-sync, never try to catch up
+            # An overloaded flexible scene can otherwise repeatedly reacquire _lock
+            # without yielding, starving motor writes and local stop acknowledgements.
+            time.sleep(max(lag, float(self.phys.get("scheduler_yield_s", DEFAULT_PHYSICS["scheduler_yield_s"]))))
 
     def _apply_firmware(self) -> None:
         if not self.spawned:
@@ -861,12 +863,28 @@ def build_app(sim: WorldSim, cors_origins: list[str]):
 
     app = FastAPI(title=f"NERV world · {sim.world_name or os.path.basename(sim.arena_xml)}")
     app.add_middleware(CORSMiddleware, allow_origins=cors_origins, allow_methods=["*"], allow_headers=["*"])
+    from .control import WorldController
+    controller = WorldController(sim)
+
+    @app.get("/control")
+    def control_descriptor():
+        return controller.describe()
+
+    @app.post("/control")
+    def control_command(payload: dict):
+        from fastapi import HTTPException
+        try:
+            return controller.invoke(payload)
+        except Exception as error:
+            raise HTTPException(409, str(error)) from error
+
     fps = max(1, int(sim.phys["stream_fps"]))
     quality = int(sim.phys["jpeg_quality"])
 
     @app.get("/health")
     def health() -> dict:
         return {"ok": sim.physics_alive(), "node": "world", "world": sim.world_name, "body": sim.body_name,
+                "configuration": getattr(sim, "instance_receipt", {}),
                 "epoch": sim.epoch, "sim_time": round(float(sim.data.time), 3),
                 "realtime_factor": float(sim.phys["realtime_factor"]),
                 "realtime_ratio": round(sim.realtime_ratio, 2), "spawned": sim.spawned}
@@ -940,8 +958,9 @@ def build_app(sim: WorldSim, cors_origins: list[str]):
 
     @app.post("/reset")
     def reset() -> dict:
-        sim.reset()
-        return {"ok": True, "message": "robot, furniture and props reset; time of day preserved"}
+        import uuid
+        return controller.invoke({"instance_id": sim.epoch, "revision": controller.revision,
+                                  "request_id": uuid.uuid4().hex, "command": "reset", "arguments": {}})
 
     def _mjpeg(render: Callable[[], tuple[np.ndarray, float]]):
         async def gen():
@@ -1028,6 +1047,7 @@ def main(argv: list[str] | None = None) -> int:
                                              "| --arena scene.xml --http-port P --bus-port Q")
     ap.add_argument("--world", default="", help="world name from the registry (worlds/<name>/world.yaml)")
     ap.add_argument("--body", default="", help="body name from the registry; picks the arena via supports")
+    ap.add_argument("--instance-config", default="")
     ap.add_argument("--arena", default="", help="registry-free: path to an MJCF scene")
     ap.add_argument("--http-port", type=int, required=True)
     ap.add_argument("--bus-port", type=int, required=True)
@@ -1035,6 +1055,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--cors", default=os.environ.get("NERV_CORS_ORIGINS", "http://localhost:8100"))
     a = ap.parse_args(argv)
 
+    instance_receipt = {}
     physics: dict = {}
     layout: SceneLayout | None = None
     spawn: dict = {}
@@ -1061,6 +1082,10 @@ def main(argv: list[str] | None = None) -> int:
             print(f"world {w.name}: assets_root is empty (is its environment variable set?)", file=sys.stderr)
             return 2
         arena = os.path.join(w.assets_root, w.supports[a.body])
+        if a.instance_config:
+            from .configuration import build_instance
+            generated, instance_receipt = build_instance(w, a.instance_config)
+            arena = generated or arena
         world_name = w.name
         physics = dict(w.physics or {})
         spawn = dict(w.spawn or {})
@@ -1077,6 +1102,7 @@ def main(argv: list[str] | None = None) -> int:
 
     sim = WorldSim(arena, physics=physics, world_name=world_name, body_name=body_name, layout=layout,
                    spawn=spawn, ambient=ambient, body_defaults=body_defaults)
+    sim.instance_receipt = instance_receipt
     sim.start()
     bus = BusServer(f"tcp://{a.host}:{a.bus_port}", make_bus_handler(sim))
     bus.start()

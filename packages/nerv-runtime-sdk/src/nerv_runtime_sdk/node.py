@@ -12,6 +12,8 @@ the current joint targets and stops thinking; mutating verbs are refused until r
 """
 from __future__ import annotations
 
+from .contracts import PROTOCOL_MAJOR, PROTOCOL_MINOR
+
 import asyncio
 import contextlib
 import functools
@@ -47,7 +49,7 @@ class BodyImpl(Protocol):
     family: str
     version: str
 
-    def tools(self) -> list[dict]: ...                       # [{name, description, parameters, kind}]
+    def actions(self) -> list[dict]: ...                       # [{name, description, parameters, kind}]
 
     def observe(self) -> tuple[dict, list[tuple[str, bytes]]]: ...   # state, [(stream, png)]
 
@@ -91,7 +93,14 @@ class BodyNode:
         self.bus_kind = bus_kind
         self.stream_fps = stream_fps
         self.epoch = f"{int(time.time())}-{uuid.uuid4().hex[:6]}"
-        self._kinds = {td["name"]: td.get("kind", "primitive") for td in impl.tools()}
+        self._kinds = {td["name"]: td.get("kind", "primitive") for td in self.actions()}
+
+    def actions(self):
+        if hasattr(self.impl, "actions"):
+            return self.impl.actions()
+        if self.require_control:
+            raise ValueError("Runtime protocol 2 requires actions()")
+        return self.impl.tools()  # Explicit legacy standalone family adapter.
 
     # -- config (armed + family options) -------------------------------------------------
     def config(self) -> dict:
@@ -165,7 +174,7 @@ def build_app(node: BodyNode, cors_origins: list[str]) -> FastAPI:
     @srv.list_tools()
     async def _list_tools():
         out = []
-        for td in impl.tools():
+        for td in node.actions():
             kind = td.get("kind", "primitive")
             out.append(t.Tool(name=td["name"], description=td.get("description", ""),
                               inputSchema=td.get("parameters") or {"type": "object", "properties": {}},
@@ -212,7 +221,7 @@ def build_app(node: BodyNode, cors_origins: list[str]) -> FastAPI:
             return [ReadResourceContents(content=json.dumps(node.config()), mime_type="application/json")]
         if u == CAPABILITIES_URI:
             meta = {"family": impl.family, "version": impl.version,
-                    "tools": {td["name"]: {"kind": td.get("kind", "primitive")} for td in impl.tools()},
+                    "robot_actions": {td["name"]: {"kind": td.get("kind", "primitive")} for td in node.actions()},
                     "sensors": impl.sensor_names(), "armed": node.armed, "epoch": node.epoch}
             return [ReadResourceContents(content=json.dumps(meta), mime_type="application/json")]
         state, images = await anyio.to_thread.run_sync(impl.observe)
@@ -261,7 +270,7 @@ def build_app(node: BodyNode, cors_origins: list[str]) -> FastAPI:
         return {"ok": True, "node": "body", "body": impl.name, "family": impl.family,
                 "version": impl.version, "world": node.world, "bus": node.bus_kind,
                 "armed": node.armed, "held": bool(impl.held), "epoch": node.epoch,
-                "protocol_major": 1, "protocol_minor": 0, "runtime_manifest": getattr(node, "manifest", {}),
+                "protocol_major": PROTOCOL_MAJOR, "protocol_minor": PROTOCOL_MINOR, "runtime_manifest": getattr(node, "manifest", {}),
                 "supervision_sensors": impl.supervision_sensors() if hasattr(impl, "supervision_sensors") else []}
 
     @app.get("/status")
@@ -294,16 +303,22 @@ def build_app(node: BodyNode, cors_origins: list[str]) -> FastAPI:
                 return {"ok": False, "message": "stale control generation"}
             if node._control_owner is not None and node._control_owner != owner:
                 return {"ok": False, "message": "runtime belongs to another controller; restart the worker for a new instance"}
+            if hasattr(impl, "execution_status") and impl.execution_status().get("running"):
+                return {"ok": False, "message": "Confirm the old execution stopped before claiming control"}
             node._control_owner, node._control_generation = owner, generation
             node._control_token = token
         return {"ok": True}
 
     @app.post("/stop")
-    def stop() -> dict:
-        node.invalidate_control()
-        node.stop.request()
-        if hasattr(impl, "cancel_current"):
-            return impl.cancel_current("cancelled")
+    def stop(body: dict | None = None) -> dict:
+        with node._control_lock:
+            expected = (body or {}).get("expected_control")
+            if expected and expected != node._control_token:
+                return {"ok": False, "message": "Stop belongs to an old execution"}
+            node.invalidate_control()
+            node.stop.request()
+            if hasattr(impl, "cancel_current"):
+                return impl.cancel_current("cancelled")
         return {"ok": True, "message": "stop requested"}
 
     @app.post("/prepare")
@@ -311,7 +326,7 @@ def build_app(node: BodyNode, cors_origins: list[str]) -> FastAPI:
         if not hasattr(impl, "prepare"):
             return {"ok": True, "prepared": True}
         result = impl.prepare()
-        node._kinds = {td["name"]: td.get("kind", "primitive") for td in impl.tools()}
+        node._kinds = {td["name"]: td.get("kind", "primitive") for td in node.actions()}
         return result
 
     @app.get("/policies")

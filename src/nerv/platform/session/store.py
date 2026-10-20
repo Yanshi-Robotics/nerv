@@ -41,7 +41,7 @@ class Session:
     created_at: str
     title: str
     sensors: list = field(default_factory=list)     # ambient streams the brain also sees
-    tools: list = field(default_factory=list)       # tool nodes mounted
+    agent_tools: list = field(default_factory=list)       # tool nodes mounted
     armed: bool = False                             # hardware may move only when True
     epoch: str = ""                                 # world node epoch at bind time
     core_task: str = ""
@@ -49,13 +49,26 @@ class Session:
     messages: list = field(default_factory=list)
     mode: str = "sim"
     binding: str = ""
+    task_model: str = ""
+    task_effort: str | None = None
 
     def summary(self) -> dict:
         return {"id": self.id, "brain": self.brain, "body": self.body, "world": self.world,
                 "status": self.status, "created_at": self.created_at, "title": self.title,
-                "sensors": list(self.sensors), "tools": list(self.tools), "armed": self.armed,
+                "sensors": list(self.sensors), "agent_tools": list(self.agent_tools), "armed": self.armed,
                 "epoch": self.epoch, "core_task": self.core_task, "notes": list(self.notes),
-                "mode": self.mode, "binding": self.binding}
+                "mode": self.mode, "binding": self.binding,
+                "task_model": self.task_model, "task_effort": self.task_effort}
+
+
+def _decode_session(data):
+    # The old metadata field denoted auxiliary node IDs, never mixed model calls.
+    # Preserve the source journal / .legacy snapshot; new snapshots use agent_tools.
+    data = dict(data)
+    old = data.pop("tools", None)
+    if "agent_tools" not in data:
+        data["agent_tools"] = old or []
+    return Session(**data)
 
 
 class SessionStore:
@@ -111,7 +124,7 @@ class SessionStore:
             legacy = self._path(sid) + ".legacy"
             if os.path.isfile(legacy) and not any(event["kind"] == "migration_completed" for event in events):
                 with open(legacy, encoding="utf-8") as file:
-                    original = Session(**json.load(file))
+                    original = _decode_session(json.load(file))
                 # Resume a migration interrupted between durable events. The
                 # retained source remains authoritative until its completion.
                 self.save(original)
@@ -120,9 +133,9 @@ class SessionStore:
             metadata = next((e["data"] for e in reversed(events) if e["kind"] == "metadata"), None)
             if metadata is None:
                 raise ValueError("session journal has no metadata")
-            return Session(**metadata, messages=memory.messages())
+            return _decode_session({**metadata, "messages": memory.messages()})
         with open(self._path(sid), encoding="utf-8") as f:
-            s = Session(**json.load(f))
+            s = _decode_session(json.load(f))
         # A migration snapshot is retained and never included in the session list.
         shutil.copy2(self._path(sid), self._path(sid) + ".legacy")
         self.save(s)
@@ -157,7 +170,7 @@ class SessionStore:
                     frozen.append(s.id)
         s = Session(id=_gen_id(), brain=brain, body=body, world=world, status=op.SESSION_ACTIVE,
                     created_at=_now(), title="(new session)", sensors=list(sensors or []),
-                    tools=list(tools or []), epoch=epoch)
+                    agent_tools=list(tools or []), epoch=epoch)
         self.save(s)
         return s, frozen
 

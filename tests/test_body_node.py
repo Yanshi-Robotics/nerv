@@ -25,7 +25,7 @@ class FakeArm:
         self.held = False
         self.hold_reason = ""
 
-    def tools(self):
+    def actions(self):
         return [{"name": "read_angle", "kind": KIND_READ, "description": "read", "parameters": {"type": "object", "properties": {}}},
                 {"name": "set_angle", "kind": KIND_PRIMITIVE, "description": "set",
                  "parameters": {"type": "object", "properties": {"deg": {"type": "number", "minimum": -90, "maximum": 90}}, "required": ["deg"]}}]
@@ -83,7 +83,7 @@ def test_handshake_observe_invoke_and_conformance():
         b = RemoteBody("fake-arm", url)
         caps = b.capabilities()
         assert caps.family == "arm" and caps.sensors == ["camera:wrist"]
-        kinds = {t.name: t.kind for t in caps.tools}
+        kinds = {t.name: t.kind for t in caps.operations}
         assert kinds == {"read_angle": "read", "set_angle": "primitive"}
         assert caps.guidance == "I am a fake arm."
         obs = b.perceive()

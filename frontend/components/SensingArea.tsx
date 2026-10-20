@@ -3,6 +3,8 @@ import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react
 
 import { useI18n } from "@/lib/i18n";
 import { NodeTrust } from "./NodeTrust";
+import RobotActivity from "./RobotActivity";
+import WorldControlPanel from "./WorldControlPanel";
 import RuntimeControls from "./RuntimeControls";
 import SceneTestPanel from "./SceneTestPanel";
 import {
@@ -112,6 +114,7 @@ export default function SensingArea({
       setPerc(await getPerception(sid));
       setErr("");
     } catch (e) {
+      setPerc(null);
       setErr((e as Error).message);
     }
     setBusy(false);
@@ -145,6 +148,11 @@ export default function SensingArea({
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [worldUrl, worldOnline, (relayed ?? []).join("|")]);
+
+  useEffect(() => {
+    if (!sid || !worldSensors.length || localStorage.getItem(viewsKey(sid))) return;
+    setViews(worldSensors.map(name => CAM_VIEW_PREFIX + name));
+  }, [sid, worldSensors.join("|")]);
 
   // 可选的视图清单
   const chips = useMemo(() => {
@@ -258,6 +266,7 @@ export default function SensingArea({
     <section className="relative flex min-w-0 flex-col overflow-hidden">
       {active && <RuntimeControls session={session} onChanged={onStateChanged} />}
       {active && bodyNode?.trust && bodyNode.trust.state !== "trusted" && <div className="border-b border-neutral-800 px-3 py-2"><NodeTrust node={bodyNode} onChanged={onStateChanged} /></div>}
+      {active && session.mode === "sim" && session.world && <WorldControlPanel session={session} onChanged={onStateChanged} />}
       {/* ---- 视图选择 ---- */}
       <div className="flex flex-wrap items-center gap-1.5 border-b border-neutral-800 bg-neutral-900/60 px-3 py-2">
         <div className="flex flex-wrap items-center gap-3" role="group" aria-label={t("Views")}>
@@ -308,7 +317,8 @@ export default function SensingArea({
 
       {/* 中间区不滚动：几路视图就分几格，行列按数量算，图像按比例缩进格子里。
           这样视频流重连、观察刷新都不会把页面拉回顶部。 */}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden p-4">
+      <RobotActivity session={session} onChanged={onStateChanged}>
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden p-3">
         <div className="shrink-0 text-[11px] text-neutral-500">
           {session.body} · {session.world}
           {session.sensors.length ? ` · ${t("ambient")}: ${session.sensors.join(", ")}` : ""}
@@ -357,6 +367,7 @@ export default function SensingArea({
         )}
       </div>
 
+      </RobotActivity>
       {/* ---- 放大：盖住整块中间区 ---- */}
       {expandedTile && (
         <div className="absolute inset-0 z-20 flex flex-col bg-neutral-950 p-3" role="dialog" aria-modal="true" aria-label={expandedTile.label}>

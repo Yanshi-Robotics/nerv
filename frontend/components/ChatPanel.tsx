@@ -63,14 +63,14 @@ function groupItems(msgs: RecMsg[], brainLabel: (n: string) => string, tt: (k: s
       const turn = lastTurn();
       if (m.brain) turn.brain = m.brain;
       if (m.tool_calls && m.tool_calls.length) {
-        turn.thinking.push({ text: m.text, tool_calls: m.tool_calls.map((tc) => ({ name: tc.name, args: tc.arguments })), tool_results: [] });
+        turn.thinking.push({ text: m.text, tool_calls: m.tool_calls.map((tc) => ({ name: tc.domain ? `${tc.domain} · ${tc.capability_name}` : tc.name, args: tc.arguments })), tool_results: [] });
       } else {
         turn.reply = m.text;
       }
     } else if (m.role === "tool") {
       const turn = lastTurn();
       const last = turn.thinking[turn.thinking.length - 1];
-      if (last) last.tool_results.push(`${m.name}: ${m.content}`);
+      if (last) last.tool_results.push(`${m.domain ? `${m.domain} · ${m.capability_name}` : m.name}: ${m.content}`);
     }
   }
   return items;
@@ -327,7 +327,7 @@ export default function ChatPanel({
 
   // 遥控开关。关掉时刷新会话：操作员那几步已经记进会话，历史里要看得到。
   async function toggleTeleop() {
-    if (!session || !hasBody || !active || busy) return;
+    if (!session || !hasBody || !active) return;
     const next = !teleop;
     setTeleop(next);
     if (!next) {
@@ -338,7 +338,7 @@ export default function ChatPanel({
 
   async function send() {
     const text = input.trim();
-    if (!text || !session || !active || teleop) return;
+    if (!text || !session || !active) return;
     const generation = ++requestGeneration.current;
     setInput("");
     setBusy(true);
@@ -354,7 +354,10 @@ export default function ChatPanel({
       });
     try {
       await streamChat(session.id, text, (e: ChatEvent) => {
-        if (e.type === "perception")
+        if (e.type === "instance_created") window.dispatchEvent(new CustomEvent("nerv-instance-created", {detail: e.session_id}));
+        else if (e.type === "capability_call") appendResult(`${e.domain} · ${e.name}`);
+        else if (e.type === "capability_result") appendResult(`${e.domain} · ${e.message}`);
+        else if (e.type === "perception")
           upd((turn) => ({
             ...turn,
             inputs: [...turn.inputs, {
@@ -396,7 +399,7 @@ export default function ChatPanel({
     <aside className="flex h-screen flex-col border-l border-neutral-800 bg-neutral-900">
       <header className="border-b border-neutral-800 p-3">
         <div className="flex items-center justify-between text-xs">
-          <span className="font-medium text-neutral-200">{t("Talk to the brain")}</span>
+          <span className="font-medium text-neutral-200">{t("NERV Agent")}</span>
           <span className="flex items-center gap-2">
             {(items.length > 0 || live) && !teleop && (
               <button onClick={() => setExpand(expand === "all" ? "none" : "all")}
@@ -426,9 +429,8 @@ export default function ChatPanel({
         {!session && (
           <div className="p-4 text-center text-xs text-neutral-500">{t("Create or pick a session on the left")}</div>
         )}
-        {session && active && teleop ? (
-          <TeleopPanel sessionId={session.id} armed={session.armed} hasWorld={!!session.world} bodyTrust={bodyNode?.trust?.state ?? null} />
-        ) : (
+        {session && active && teleop && <TeleopPanel sessionId={session.id} armed={session.armed} hasWorld={!!session.world} bodyTrust={bodyNode?.trust?.state ?? null} />}
+        {(
           <>
             {items.map((it, i) => (
               <Fragment key={i}>
@@ -466,8 +468,8 @@ export default function ChatPanel({
               </button>
             )}
             {hasBody && (
-              <button onClick={toggleTeleop} disabled={!active || busy} aria-pressed={teleop}
-                title={teleop ? t("Leave remote control (the brain resumes; your steps are in the history)") : t("Remote control: drive the body yourself; the brain is paused")}
+              <button onClick={toggleTeleop} disabled={!active} aria-pressed={teleop}
+                title={teleop ? t("Close manual controls") : t("Manual controls; chat remains available")}
                 className={`ml-auto flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
                   teleop ? "border-blue-500 bg-blue-600 text-white" : "border-neutral-600 bg-neutral-800 text-neutral-300 hover:border-neutral-400"
                 }`}>
@@ -495,23 +497,23 @@ export default function ChatPanel({
             <div className="p-3">
               {teleop && (
                 <div className="mb-1.5 text-[10px] leading-snug text-neutral-500">
-                  {t("teleop mode — the brain is paused; your actions are recorded in the session so the brain sees them next turn")}
+                  {t("Manual actions and chat have separate controls.")}
                 </div>
               )}
               <div className="flex gap-2">
-                <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()} disabled={teleop}
-                  placeholder={teleop ? t("teleop mode — chat is paused") : busy ? t("Send a new instruction while the skill is running…") : t("Give the brain an instruction…")}
+                <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()}
+                  placeholder={t("Message NERV Agent…")}
                   className="flex-1 rounded-xl bg-neutral-800 px-3 py-2 text-sm outline-none placeholder:text-neutral-500 disabled:opacity-50" />
-                {busy && input.trim() && <button onClick={send} className="rounded-xl bg-blue-600 px-3 py-2 text-sm">{t("Send")}</button>}
-                {busy ? (
+                {busy && (
                   <button onClick={stop} disabled={stopping}
-                    title={t("Stop this turn (it finishes the current step; say “continue” to resume)")}
+                    title={t("Stop reply; robot tasks continue")}
                     className="flex items-center gap-1.5 rounded-xl bg-neutral-700 px-4 py-2 text-sm font-medium disabled:opacity-60">
                     <StopIcon />
-                    {stopping ? t("Stopping…") : t("Stop")}
+                    {stopping ? t("Stopping…") : t("Stop reply")}
                   </button>
-                ) : (
-                  <button onClick={send} disabled={teleop} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">{t("Send")}</button>
+                )}
+                {(
+                  <button onClick={send} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">{t("Send")}</button>
                 )}
               </div>
             </div>

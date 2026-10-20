@@ -120,7 +120,7 @@ def test_model_without_tool_calls_cannot_abandon_an_active_skill(tmp_path):
         def chat(self, *_):
             return LLMReply("done")
     calls = []
-    link = SimpleNamespace(is_current=lambda: len(calls) < 2, observe=lambda: None, tools=lambda: [], memory=lambda: SimpleNamespace(flush=lambda: None, summary=lambda: None, append=lambda *_: None), raw_history=lambda: [], registers=lambda: {}, system_context=lambda: {"body":None}, model_reply=lambda _: None, executing=lambda: True, think=lambda _: None, supervise_wait=lambda: calls.append("supervised"), stop_reason=lambda: None, say=lambda _: calls.append("abandoned"))
+    link = SimpleNamespace(is_current=lambda: len(calls) < 2, observe=lambda: None, model_tools=lambda: [], system_prompt=lambda: "Offline fixture", model_phase=lambda _: None, memory=lambda: SimpleNamespace(flush=lambda: None, summary=lambda: None, append=lambda *_: None), raw_history=lambda: [], registers=lambda: {}, system_context=lambda: {"body":None}, model_reply=lambda _: None, executing=lambda: True, think=lambda _: None, supervise_wait=lambda: calls.append("supervised"), stop_reason=lambda: None, say=lambda _: calls.append("abandoned"))
     AgentHarness(Provider(), "fixture", ContextManager(10000, 100, 100)).run_turn(link, None)
     assert calls == ["supervised", "supervised"]
 

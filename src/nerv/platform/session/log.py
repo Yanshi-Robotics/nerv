@@ -21,6 +21,7 @@ from ... import config, paths
 _DIR = os.path.join(paths.LOGS_DIR, "sessions")
 _SEQ = 0
 _session_ctx: contextvars.ContextVar[str] = contextvars.ContextVar("nerv_session", default="")
+_role_ctx: contextvars.ContextVar[dict] = contextvars.ContextVar("nerv_role", default={})
 _ring: collections.deque = collections.deque(maxlen=config.SIGNAL_LOG_MAXLEN)
 _lock = threading.Lock()
 
@@ -32,6 +33,15 @@ def session_scope(session_id: str):
         yield
     finally:
         _session_ctx.reset(tok)
+
+
+@contextmanager
+def role_scope(role: str, task_id: str | None = None):
+    token = _role_ctx.set({"actor_role": role, "task_id": task_id})
+    try:
+        yield
+    finally:
+        _role_ctx.reset(token)
 
 
 def bind_session(session_id: str) -> None:
@@ -66,6 +76,7 @@ def record(kind: str, payload: dict) -> dict:
         seq = _SEQ
     entry = {"id": seq, "t": round(time.time(), 3), "ts": time.strftime("%H:%M:%S"),
              "session": _session_ctx.get(), "kind": kind}
+    entry.update(_role_ctx.get())
     entry.update(payload)
     _ring.append(entry)
     try:

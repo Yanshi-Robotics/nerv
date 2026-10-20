@@ -69,6 +69,11 @@ class Turn:
         entries = self.memory().messages()
         return context.build(entries, token_budget=sum(len(str(m)) for m in entries) + 1)
 
+    def model_phase(self, active):
+        if self.is_current():
+            self.emit({"type": "model_phase", "active": active,
+                       "text": "Analyzing current observations" if active else "Model request finished"})
+
     def model_reply(self, reply) -> None:
         completed = getattr(reply, "finish_status", "completed") == "completed"
         self._continuation = getattr(reply, "continuation", {}) if completed else {}
@@ -99,7 +104,7 @@ class Turn:
         out: list[ToolSpec] = []
         self._routes = {}
         if self.body is not None:
-            for t in self.body.capabilities().tools:
+            for t in self.body.capabilities().operations:
                 spec = dataclasses.replace(t, description=trust.clip(t.description, config.TOOL_DESC_MAX_CHARS))
                 out.append(spec)
                 self._routes[t.name] = ("body", self.body, spec)
@@ -109,7 +114,7 @@ class Turn:
             except Exception as e:
                 _log.warning("tool node %s unreachable: %s", node.name, e)
                 continue
-            for t in caps.tools:
+            for t in caps.operations:
                 if t.name in self._routes:
                     _log.warning("tool %s from %s shadowed by the body; dropped", t.name, node.name)
                     continue
@@ -124,6 +129,20 @@ class Turn:
                 self._routes[spec.name] = ("memory", self, spec)
         return out
 
+    def system_prompt(self):
+        from ..brain.react import ReactBrain
+        return ReactBrain._system(self.brain, self)
+
+    def model_tools(self):
+        from ..brain.react import _meta_tools
+        capabilities = self.tools()
+        return capabilities if getattr(self, "domain_capabilities", False) else capabilities + _meta_tools({s.name for s in capabilities})
+
+    def dispatch_decision(self, call):
+        if call.name in prompts.META_TOOL_NAMES and not getattr(self, "domain_capabilities", False):
+            return self.set_register(SetRegister(call.name, dict(call.arguments) | {"call_id": call.call_id}))
+        return self.call_tool(call)
+
     def system_context(self) -> dict:
         self.session.armed = self.store.get(self.session.id).armed
         ctx: dict = {"body": None, "armed": self.session.armed}
@@ -131,7 +150,7 @@ class Turn:
             return ctx
         caps = self.body.capabilities()
         ctx.update({"body": self.body.name, "family": caps.family, "world": self.world_name,
-                    "has_tools": bool(caps.tools), "sensor_names": [i for i in caps.sensors] + list(self.session.sensors)})
+                    "has_tools": bool(caps.operations), "sensor_names": [i for i in caps.sensors] + list(self.session.sensors)})
         blocks = []
         if caps.guidance:
             blocks.append(("body", trust.fence(caps.guidance, config.GUIDANCE_MAX_CHARS)))
@@ -195,10 +214,15 @@ class Turn:
         return obs
 
     # -- think ------------------------------------------------------------------------------
+    def call_identity(self, name: str) -> dict:
+        """Optional application identity; legacy transport names remain unclassified."""
+        return {}
+
     def think(self, msg: Think) -> None:
         if not self.is_current():
             return
-        tcs = [{"id": c.call_id, "name": c.name, "arguments": c.arguments} for c in msg.tool_calls]
+        tcs = [{"id": c.call_id, "name": c.name, "arguments": c.arguments,
+                **self.call_identity(c.name)} for c in msg.tool_calls]
         self.store.append(self.session.id, {"role": "assistant", "text": msg.text or "",
                                             "tool_calls": tcs, "brain": self.session.brain,
                                             "continuation": self._continuation})
@@ -218,6 +242,7 @@ class Turn:
             res = ActionResult(False, prompts.UNKNOWN_TOOL_RESULT.format(name=call.name))
             return self._finish(call, res)
         origin, node, spec = route
+        native_name = getattr(self, "_native_names", {}).get(call.name, call.name)
         if origin == "memory":
             try:
                 if call.name == prompts.HISTORY_SEARCH_TOOL["name"]:
@@ -237,7 +262,7 @@ class Turn:
             if required and not self._observation.get("frame_seq"):
                 return self._finish(call, ActionResult(False, "Observe all required visual sensors before starting motion"))
         self.session.armed = self.store.get(self.session.id).armed
-        ok, reason = self.gate.check(call.name, call.arguments, kind=spec.kind, origin=origin,
+        ok, reason = self.gate.check(native_name, call.arguments, kind=spec.kind, origin=origin,
                                      armed=self.session.armed, spec=spec)
         self.emit({"type": op.EV_GATE, "name": call.name, "allowed": ok, "reason": reason})
         from .session import log
@@ -260,7 +285,7 @@ class Turn:
             if not self.is_current():
                 return
             extra = {"_control_token": self.control_token} if origin == "body" and self.control_token else {}
-            holder["res"] = node.invoke(call.name, _on_progress=_on_progress, _should_abort=_aborted,
+            holder["res"] = node.invoke(native_name, _on_progress=_on_progress, _should_abort=_aborted,
                                          **extra, **call.arguments)
 
         ctx = contextvars.copy_context()
@@ -285,7 +310,8 @@ class Turn:
         import json
         content = json.dumps({"message": res.message, "data": res.data}, default=str) if res.data else res.message
         self.store.append(self.session.id, {"role": "tool", "id": call.call_id, "name": call.name,
-                                            "content": content, "data": res.data})
+                                            "content": content, "data": res.data,
+                                            **self.call_identity(call.name)})
         if self.trace["thinking"]:
             self.trace["thinking"][-1]["tool_results"].append({"name": call.name, "ok": res.ok,
                                                                "message": res.message})
@@ -375,11 +401,12 @@ class Turn:
         return reason
 
     # -- driver -------------------------------------------------------------------------------
-    def run(self, user_text: str) -> dict:
+    def run(self, user_text: str, *, recorded=False) -> dict:
         if not self._current() or not self.store.exists(self.session.id):
             return {"reply": "", "trace": self.trace, "brain": self.session.brain,
                     "model": self.brain.model, "stop_reason": "superseded"}
-        self.store.append(self.session.id, {"role": "user", "text": user_text})
+        if not recorded:
+            self.store.append(self.session.id, {"role": "user", "text": user_text})
         self.memory().append("run_started", {"run_id": self.run_id, "model": self.brain.model})
         self.emit({"type": op.EV_START, "brain": self.session.brain, "model": self.brain.model})
         try:

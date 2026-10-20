@@ -108,8 +108,8 @@ function BodyCard({ spec, node, onChanged }: { spec: BodySpec; node: NodeInfo | 
         </Region>
         {node && (
           <Region title={t("Node")} color="#f59e0b" sub={node.url}>
-            {node.tools && node.tools.length > 0 && (
-              <div className="text-[12px] text-neutral-300">{t("tools")}: <span className="font-mono">{node.tools.join(", ")}</span></div>
+            {(node.robot_actions?.length || node.agent_tools?.length || 0) > 0 && (
+              <div className="text-[12px] text-neutral-300">{node.kind === "body" ? "robot_actions" : "agent_tools"}: <span className="font-mono">{(node.robot_actions?.length ? node.robot_actions : node.agent_tools)?.join(", ")}</span></div>
             )}
             <NodeTrust node={node} onChanged={onChanged} />
             {node.online && <StatusPeek nodeKey={node.key} />}
@@ -181,8 +181,8 @@ function ToolCard({ spec, node, onChanged }: { spec: ToolSpec; node: NodeInfo | 
       </div>
       {node ? (
         <div className="mt-3 space-y-2">
-          {node.tools && node.tools.length > 0 && (
-            <div className="text-[12px] text-neutral-300">{t("tools")}: <span className="font-mono">{node.tools.join(", ")}</span></div>
+          {(node.robot_actions?.length || node.agent_tools?.length || 0) > 0 && (
+            <div className="text-[12px] text-neutral-300">{node.kind === "body" ? "robot_actions" : "agent_tools"}: <span className="font-mono">{(node.robot_actions?.length ? node.robot_actions : node.agent_tools)?.join(", ")}</span></div>
           )}
           <NodeTrust node={node} onChanged={onChanged} />
         </div>
@@ -282,7 +282,7 @@ export default function NervDashboard({ embedded = false, onOpenLogs, onNodesCha
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
             <Stat label={t("Bodies")} value={reg.bodies.length} />
             <Stat label={t("Worlds")} value={reg.worlds.length} />
-            <Stat label={t("Tools")} value={reg.tools.length} />
+            <Stat label={t("Tools")} value={reg.agent_tools.length} />
             <Stat label={t("nodes up")} value={`${nodes.filter((n) => n.online).length} / ${nodes.length}`} />
             <Stat label={t("Sessions")} value={data.sessions.length} />
           </div>
@@ -309,8 +309,8 @@ export default function NervDashboard({ embedded = false, onOpenLogs, onNodesCha
         <section>
           <h2 className="mb-2 text-sm font-medium text-neutral-400">🧰 {t("Tools")} <span className="text-xs font-normal text-neutral-600">{t("· pure-computation advisors the brain consults (question in, answer out)")}</span></h2>
           <div className="space-y-3">
-            {reg?.tools.map((x) => <ToolCard key={x.name} spec={x} node={nodeFor(`tool:${x.name}`)} onChanged={onChanged} />)}
-            {reg && reg.tools.length === 0 && <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4 text-xs text-neutral-500">{t("(no tools in the registry)")}</div>}
+            {reg?.agent_tools.map((x) => <ToolCard key={x.name} spec={x} node={nodeFor(`tool:${x.name}`)} onChanged={onChanged} />)}
+            {reg && reg.agent_tools.length === 0 && <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4 text-xs text-neutral-500">{t("(no tools in the registry)")}</div>}
           </div>
         </section>
 
