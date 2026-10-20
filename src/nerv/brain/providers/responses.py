@@ -16,7 +16,7 @@ class ResponsesLLM:
         self.spec, self.model, self.effort = spec, spec.model, effort
         self.context_window = spec.context_window
         self.max_output_tokens = spec.max_output_tokens
-        self.identity = f"{spec.base_url}:{spec.provider}:{spec.model}:{spec.protocol}:{effort}:" + hashlib.sha256(api_key.encode()).hexdigest()
+        self.identity = f"{spec.signature()}:{effort}:" + hashlib.sha256(api_key.encode()).hexdigest()
         if client is None:
             from openai import OpenAI
             client = OpenAI(api_key=api_key, base_url=spec.base_url,
@@ -55,6 +55,8 @@ class ResponsesLLM:
                    "max_output_tokens": self.spec.max_output_tokens, "stream": True}
         if self.spec.protocol == "responses":
             request.update(store=False, include=["reasoning.encrypted_content"], parallel_tool_calls=False)
+        elif self.spec.protocol == "xai_responses":
+            request.update(store=False, include=["reasoning.encrypted_content"], parallel_tool_calls=False)
         if self.effort is not None:
             request["reasoning"] = {"effort": self.effort}
         if tools:
@@ -74,6 +76,8 @@ class ResponsesLLM:
                     raise RuntimeError("provider returned a streaming error")
         finally:
             stream.close()
+        if cancelled():
+            raise InterruptedError("model request cancelled")
         if response is None:
             raise RuntimeError("model stream ended without a terminal response")
         payload = response.model_dump(exclude_none=True)

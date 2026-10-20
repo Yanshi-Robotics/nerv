@@ -93,7 +93,9 @@ def _models_idle():
 def vlm_models():
     registry = ModelRegistry()
     binding = nerv.binding_signature()
-    return {"models": registry.list(binding), "binding_signature": binding,
+    return {"models": registry.list(binding), "providers": registry.providers(),
+            "credential_path": str(registry.credentials.path),
+            "binding_signature": binding,
             "selection": registry.selection(), "task_locked": bool(nerv._runs)}
 
 

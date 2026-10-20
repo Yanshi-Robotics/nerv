@@ -136,9 +136,13 @@ def test_delayed_control_claim_cannot_replace_new_generation():
 
 
 def test_installed_package_versions_match_source():
-    from importlib.metadata import version
+    from importlib.metadata import requires, version
     from nerv import __version__
-    assert version("nerv") == version("nerv-runtime-sdk") == version("nerv-runtime-lerobot") == __version__
+    assert version("nerv") == __version__
+    # Host UI/provider releases do not change the independently installed wire SDK.
+    dependency = f"nerv-runtime-sdk=={version('nerv-runtime-sdk')}"
+    assert dependency in requires("nerv")
+    assert dependency in requires("nerv-runtime-lerobot")
 
 
 def test_context_overflow_pauses_with_a_clear_reply_and_preserves_raw_history(tmp_path):
