@@ -50,7 +50,7 @@ npm --prefix frontend run build:static
 
 浏览器打开 `http://localhost:8000`。静态前端与后端使用同一来源。前端开发命令为 `npm --prefix frontend run dev`，使用已分配的 8100 端口。
 
-在侧栏打开“模型与密钥”，选择供应商、填写密钥，再选择视觉模型和推理强度。保存密钥后，主动运行接口检测。检测会产生模型调用费用，保存密钥不会触发调用。选择机器人及运行环境后创建会话，也可建立不连接机器人的对话。创建现实会话不会自动准备设备。
+打开“模型与密钥”，选择供应商和视觉模型，输入密钥后点击“提交并测试”。这会发送一次付费图像请求。只有回答与本地生成的测试图相符，NERV 才会保存密钥；测试失败保留原密钥。推理强度可自行选择，也可使用供应商默认值。创建会话要求已登记密钥，但不会请求供应商。也可建立不连接机器人的对话，现实会话不会自动准备设备。
 
 环境配置可参考 [.env.example](../../.env.example)。模型设置和密钥保存在仓库外的 `NERV_HOME` 中，默认位置为 `~/.nerv`。密钥存放在 `credentials.json`，模型选择、强度和检测记录存放在 `vlm.json`。目录权限为 0700，文件权限为 0600。视觉模型注册表不读取 shell 或项目 `.env` 中的 API 密钥。请在面板中重新填写已有密钥；升级不会修改旧文件。
 
@@ -96,9 +96,9 @@ python3 -m venv .venv-lerobot
 
 在**新建会话**中选择 SO-101、仿真和一个桌面场景，再配置该场景支持的物品槽位。物品类型、标称尺寸和质量来自世界目录，柔性材料参数尚未经过实物标定。每个实例独立生成 MJCF、配置与来源哈希。
 
-相机上方的**世界控制**与 Agent 的世界命令使用同一服务。重置保留所选物品和世界进程，结束任务并撤销动作授权。改变物品拓扑时使用**结束并重建实例**；旧会话保留历史，不能控制新实例。天气、家具、风格等能力只有在世界声明并实现后才会出现；当前桌面场景提供物品替换与重置。现实环境拒绝修改世界属性。
+**工具箱 → 仿真世界**与 Agent 的世界命令使用同一服务。重置保留所选物品和世界进程，结束任务并撤销动作授权。改变物品拓扑时使用**结束并重建实例**；旧会话保留历史，不能控制新实例。天气、家具、风格等能力只有在世界声明并实现后才会出现；当前桌面场景提供物品替换与重置。现实环境拒绝修改世界属性。
 
-创建、查看和手动操作仿真不需要模型请求。语言控制需要配置 VLM，并产生调用费用。当前桌面仿真没有部署 ACT 或哈诺塔执行策略。长期自主目标命名为 **ultimate**；本版仍是由 Agent 协调操作的系统。
+创建会话要求已登记模型密钥。创建、查看和手动操作仿真不会发起模型请求。语言控制需要配置 VLM，并产生调用费用。当前桌面仿真没有部署 ACT 或哈诺塔执行策略。长期自主目标命名为 **ultimate**；本版仍是由 Agent 协调操作的系统。
 
 ## 演示与界面
 
@@ -115,7 +115,9 @@ python3 -m venv .venv-lerobot
 <details>
 <summary>更多界面与仿真场景</summary>
 
-遥控界面提供机器人声明的工具和急停入口；控制面板显示注册项、节点状态与会话。
+底部可收起的**工具箱**集中提供设备接入、准备、运动授权、机器人动作、世界控制、相机与 System 2 设置，以及场景测试。工具箱关闭后，顶部操作栏仍显示**停止任务**和**急停**。中央保留相机与真实机器人动态，聊天区仍可使用。控制面板显示注册项、节点状态与会话。
+
+**允许接入**针对操作员已查看的能力与说明。能力变化后须重新确认；节点离线时无法允许接入。接入许可不会自动准备设备、授权运动或启动任务。
 
 <div align="center"><img src="../../assets/readme/images/web-teleop.png" alt="早期遥控界面：急停与按工具生成的控制卡片" width="960"></div>
 
@@ -135,7 +137,7 @@ World Explore 展示公寓与住宅资产。场景测试由操作员进行，其
 
 ## 视觉模型
 
-面板按供应商管理密钥，只显示是否已保存，不向浏览器返回保存的值。模型高级设置提供模型 ID、API 地址、图像能力文档、请求限制和启用状态。聊天区读取同一注册表。纯文字模型和 Mock 不进入正式运行目录，也不作为自动回退。
+面板按供应商管理密钥，只显示是否已保存，不向浏览器返回保存的值。模型高级设置提供模型 ID、API 地址、图像能力文档、请求限制。聊天区读取同一注册表。纯文字模型和 Mock 不进入正式运行目录，也不作为自动回退。
 
 OpenAI、DeepSeek 和 xAI 分别使用对应的 Responses 协议参数。Gemini 使用无服务端会话存储的 Interactions API，Claude 使用原生 Messages 流式接口。带签名的思考内容和推理续接项只会传回匹配的供应商接口。界面按型号展示合法推理强度；未指定时省略参数，使用供应商默认值。系统分别记住上次模型和每个型号的强度。当前回合或机器人执行尚未结束时，修改会被拒绝。
 
@@ -147,9 +149,11 @@ OpenAI、DeepSeek 和 xAI 分别使用对应的 Responses 协议参数。Gemini 
 | xAI | Grok 4.7、Grok 4.3 | 4.7：low、medium、high、xhigh；4.3：none、low、medium、high |
 | Anthropic | Claude Opus 5.5、Claude Sonnet 5.5 | low、medium、high、xhigh、max |
 
-模型能力依据于 2026-10-20 核对的供应商文档：[OpenAI](https://developers.openai.com/api/docs/models/gpt-6.1-sol)、[DeepSeek](https://api-docs.deepseek.com/api/create-response/)、[Gemini](https://ai.google.dev/gemini-api/docs/thinking)、[xAI](https://docs.x.ai/developers/model-capabilities/text/reasoning)、[Anthropic](https://platform.claude.com/docs/en/build-with-claude/effort)。账户权限和实际接口表现仍需主动检测。保存密钥或打开面板不会发起检测请求。
+模型能力依据于 2026-10-20 核对的供应商文档：[OpenAI](https://developers.openai.com/api/docs/models/gpt-6.1-sol)、[DeepSeek](https://api-docs.deepseek.com/api/create-response/)、[Gemini](https://ai.google.dev/gemini-api/docs/thinking)、[xAI](https://docs.x.ai/developers/model-capabilities/text/reasoning)、[Anthropic](https://platform.claude.com/docs/en/build-with-claude/effort)。只有操作员提交密钥登记表单时才发送一次识图请求。打开设置、切换选项和创建会话均不会请求供应商。
 
-接口检测通过不操作机器人的测试工具，分别检查图像输入、工具调用和多轮续接。地址、模型配置、强度或凭据改变后，原有检测不再适用。注册和接口检测通过均不代表实机验收。模型注册表分别记录这些检测结果。
+可选接口诊断检查图像输入、工具调用和多轮续接。诊断结果不限制创建会话或使用模型；这两项只要求已登记非空密钥。已有密钥无需重新登记。密钥后来失效时仍可创建会话，调用时显示明确错误。失败回执保留用户输入，并提供重试和模型设置入口；重试不会重放旧机器人动作。
+
+地址、型号、强度或凭据变化后，原有诊断和实机记录不再适用。一次密钥登记通过，不代表其他型号、通用视觉能力或机器人能力已通过验收。Agent 回复失败不会取消独立任务；System 2 故障仍按本地停止与监督规则处理。
 
 ## Agent harness
 

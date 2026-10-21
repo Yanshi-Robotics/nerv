@@ -1,6 +1,7 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 
+import OperatorToolbox from "@/components/OperatorToolbox";
 import VlmPanel from "@/components/VlmPanel";
 import ChatPanel from "@/components/ChatPanel";
 import NervDashboard from "@/components/NervDashboard";
@@ -123,7 +124,7 @@ export default function Home() {
         </div>
       )}
       {panel === "session" && (
-        <>
+        <OperatorToolbox key={`${current?.id}:${current?.epoch}`} session={current} bodyNode={bodyNode} nodes={nodes} onChanged={() => {refreshSessions(); refreshNodes();}}>
           {current ? (
             <SensingArea key={`${current.id}:${current.status}`} session={current} bodyNode={bodyNode} worldNode={worldNode} onStateChanged={() => { refreshSessions(); refreshNodes(); }} />
           ) : (
@@ -131,8 +132,8 @@ export default function Home() {
               {t("Pick a session on the left, or create one.")}
             </div>
           )}
-          <ChatPanel session={current} brains={registry?.brains ?? []} bodyNode={bodyNode} onSessionsChanged={() => { refreshSessions(); refreshNodes(); }} />
-        </>
+          <ChatPanel session={current} brains={registry?.brains ?? []} bodyNode={bodyNode} onModels={() => setPanel("models")} onSessionsChanged={() => { refreshSessions(); refreshNodes(); }} />
+        </OperatorToolbox>
       )}
     </main>
   );

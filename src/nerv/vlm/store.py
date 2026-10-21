@@ -175,7 +175,6 @@ class ModelRegistry:
             model = VisualModel(**raw)
             credentials = self.credentials.describe(model.credential_ref)
             checks = data["checks"].get(model.id, {})
-            valid = checks.get("signature") == self.request_signature(model) and all(checks.get(k) == "passed" for k in CHECKS)
             physical = data["physical"].get(model.id, {})
             if (physical.get("signature") != self.request_signature(model)
                     or not binding_signature or physical.get("binding_signature") != binding_signature):
@@ -183,7 +182,7 @@ class ModelRegistry:
             visible_checks = checks if checks.get("signature") == self.request_signature(model) else {}
             result.append({**model.model_dump(), "credential": credentials, "checks": visible_checks,
                            "effort": data["efforts"].get(model.id), "physical": physical,
-                           "available": bool(model.enabled and model.supports_tools and model.supports_streaming and model.supports_continuation and credentials["configured"] and valid)})
+                           "available": credentials["configured"]})
         return result
 
     def record_acceptance(self, model_id, signature, status, evidence, binding_signature):
@@ -193,7 +192,7 @@ class ModelRegistry:
             model = self.model(model_id)
             if signature != self.request_signature(model):
                 raise ValueError("physical evidence does not match the current request signature")
-            if status == "passed" and not any(m["id"] == model_id and m["available"] for m in self.list()):
+            if status == "passed" and not any(m["id"] == model_id and all(m["checks"].get(k) == "passed" for k in CHECKS) for m in self.list()):
                 raise ValueError("matching API checks must pass before recording physical acceptance")
             data = self._read()
             data["physical"][model_id] = {"status": status, "signature": signature, "evidence": evidence,
@@ -237,12 +236,19 @@ class ModelRegistry:
                     data["checks"].pop(model["id"], None)
             private_write(self.path, data)
 
-    def provider(self, model_id: str, *, effort=..., frozen_spec=None):
+    def require_key(self, model_id):
+        from .errors import ModelError
+        model = self.model(model_id)
+        if not self.credentials.resolve(model.credential_ref):
+            raise ModelError("key_missing")
+
+    def provider(self, model_id: str, *, effort=..., frozen_spec=None, candidate_key=None):
         from ..brain.providers.responses import ResponsesLLM
         model = VisualModel.model_validate(frozen_spec) if frozen_spec else self.model(model_id)
-        key = self.credentials.resolve(model.credential_ref)
+        key = candidate_key if candidate_key is not None else self.credentials.resolve(model.credential_ref)
         if not key:
-            raise ValueError("configure this provider's API key first")
+            from .errors import ModelError
+            raise ModelError("key_missing")
         effort = self._read()["efforts"].get(model_id) if effort is ... else effort
         if effort is not None and effort not in model.efforts:
             raise ValueError("stored effort is no longer supported; select a valid setting")
@@ -254,9 +260,48 @@ class ModelRegistry:
             return GeminiLLM(model, key, effort)
         return ResponsesLLM(model, key, effort)
 
+    def configure(self, model_id, candidate_key, *, cancelled=lambda: False, provider_factory=None):
+        """Test in memory; compare-and-save prevents stale requests replacing credentials."""
+        import base64
+        from . import probe
+        from .errors import ModelError, model_error
+        if not candidate_key or any(ord(c) < 33 or ord(c) > 126 for c in candidate_key):
+            raise ModelError("key_missing")
+        with _lock:
+            model = self.model(model_id)
+            signature = self.request_signature(model)
+            revision = self.credentials.path.stat().st_mtime_ns if self.credentials.path.exists() else None
+        picture, expected = probe.challenge()
+        result = {"ok": False, "saved": False, "image": base64.b64encode(picture).decode(), "answer": ""}
+        try:
+            if cancelled():
+                raise ModelError("configuration_cancelled")
+            client = (provider_factory or self.provider)(model_id, candidate_key=candidate_key)
+            reply = client.chat("Identify the visible shapes. Do not call tools.",
+                                [{"role": "user", "text": probe.PROMPT}], [],
+                                [{"name": "configuration-test", "png": picture}], cancelled=cancelled)
+            # A provider may echo user data. Never reflect the candidate credential.
+            result["answer"] = (reply.text or "").replace(candidate_key, "[redacted]")[:4096]
+            if not probe.matches(reply, expected):
+                raise ModelError("vision_mismatch")
+            with _lock:
+                if cancelled():
+                    raise ModelError("configuration_cancelled")
+                current_revision = self.credentials.path.stat().st_mtime_ns if self.credentials.path.exists() else None
+                if self.request_signature(self.model(model_id)) != signature or current_revision != revision:
+                    raise ModelError("configuration_changed")
+                try:
+                    self.credentials.set(model.credential_ref, candidate_key)
+                except OSError:
+                    raise ModelError("storage_failed") from None
+            result.update(ok=True, saved=True)
+        except Exception as error:
+            result["error"] = (ModelError("configuration_cancelled") if cancelled() else model_error(error)).public()
+        return result
+
     def validate(self, model_id: str, provider=None):
-        # Called only by the explicit operator validation endpoint. Discovery and
-        # key saving never trigger paid requests or touch robot tools.
+        # Called only by the explicit operator validation endpoint. Discovery
+        # never triggers paid requests or touches robot tools.
         import io
         import secrets
         from PIL import Image, ImageDraw

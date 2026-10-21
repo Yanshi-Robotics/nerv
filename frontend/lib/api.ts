@@ -107,6 +107,7 @@ export type NodeInfo = {
 // ⛔ 这是未经信任过滤的原文：给人看的必须和被批准的是同一份，否则这次审批毫无意义。
 export type ManifestTool = { name: string; kind: string; description: string; parameters: unknown };
 export type NodeManifest = {
+  hash: string;
   key: string;
   url: string;
   manifest: { url: string; guidance: string; tools: ManifestTool[] };
@@ -136,8 +137,8 @@ export async function getNodeManifest(key: string): Promise<NodeManifest> {
   return (await r.json()) as NodeManifest;
 }
 
-export async function approveNode(key: string): Promise<{ ok: boolean; hash: string }> {
-  const r = await fetch(`${nodePath(key)}/approve`, { method: "POST" });
+export async function approveNode(key: string, expectedHash: string): Promise<{ ok: boolean; hash: string }> {
+  const r = await fetch(`${nodePath(key)}/approve`, { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({expected_hash: expectedHash}) });
   if (!r.ok) throw new ApiError(await detailOf(r), r.status);
   return await r.json();
 }
@@ -191,6 +192,7 @@ export type ToolCall = { id: string; name: string; domain?: string; capability_n
 
 // 会话记录里的一条（后端落盘格式）
 export type RecMsg =
+  | { role: "error"; code: string; message: string; brain?: string }
   | { role: "user"; text: string; ts?: string }
   | { role: "perception"; image_ref: string | null; images?: { name: string; ref: string }[]; state: Record<string, unknown>; ts?: string }
   | { role: "assistant"; text: string; tool_calls?: ToolCall[]; brain?: string; ts?: string }
@@ -224,6 +226,7 @@ async function detailOf(r: Response): Promise<string> {
     const j = await r.json();
     // 后端把 str(KeyError) 直接当 detail，外面会多一层引号——剥掉，别把引号显示给人。
     if (typeof j?.detail === "string") return j.detail.replace(/^"([\s\S]*)"$/, "$1");
+    if (typeof j?.detail?.message === "string") return j.detail.message;
     return JSON.stringify(j);
   } catch {
     return `${r.status} ${r.statusText}`;
@@ -308,6 +311,7 @@ export async function armSession(id: string, armed: boolean): Promise<{ ok: bool
 // 流式聊天的事件（SSE），一轮按这个顺序产生：start · perception · thinking · tool_call · gate ·
 // progress · tool_result · reply · done。stop_reason 只在这一轮被闸门收尾时才有。
 export type ChatEvent =
+  | {type: "model_error"; code: string; message: string}
   | {type: "instance_created"; session_id: string}
   | {type: "capability_call"; domain: string; name: string; args: Record<string, unknown>}
   | {type: "capability_result"; domain: string; name: string; ok: boolean; message: string}
@@ -551,6 +555,12 @@ async function modelRequest(path: string, method = "GET", body?: unknown) {
   return response.json();
 }
 export const getVlm = (): Promise<{models: VlmModel[]; providers: VlmProvider[]; credential_path: string; selection: string; task_locked: boolean}> => modelRequest("vlm");
+export type ConfigurationResult = {ok: boolean; saved: boolean; image: string; answer: string; error?: {code: string; message: string}};
+export async function configureVlm(id: string, value: string, signal: AbortSignal): Promise<ConfigurationResult> {
+  const response = await fetch(`${BASE}/api/vlm/${encodeURIComponent(id)}/configure`, {method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({value}), signal});
+  if (!response.ok) throw new ApiError(await detailOf(response), response.status);
+  return response.json();
+}
 export const putVlm = (model: Pick<VlmModel, "id"> & Record<string, unknown>) => modelRequest(`vlm/${encodeURIComponent(model.id)}`, "PUT", model);
 export const selectVlm = (id: string, effort: string | null) => modelRequest(`vlm/${encodeURIComponent(id)}/select`, "POST", {effort});
 export const validateVlm = (id: string) => modelRequest(`vlm/${encodeURIComponent(id)}/validate`, "POST", {});

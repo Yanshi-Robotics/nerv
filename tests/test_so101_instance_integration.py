@@ -7,6 +7,8 @@ from nerv.platform.session import SessionStore
 
 def test_tabletop_instances_reset_rebuild_and_reject_stale_control(tmp_path):
     hub = Nerv(store=SessionStore(str(tmp_path / "sessions")))
+    from types import SimpleNamespace
+    hub._brains["mock"] = SimpleNamespace(model="offline-fixture")
     cases = [("so101-pick-place", {"snack": "snack_rigid"}),
              ("so101-pick-place", {"snack": "soft_snack"}),
              ("so101-pick-place", {"snack": "cloth"}),

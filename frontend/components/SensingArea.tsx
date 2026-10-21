@@ -2,11 +2,12 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { useI18n } from "@/lib/i18n";
-import { NodeTrust } from "./NodeTrust";
+
+import { ToolboxSlot } from "./OperatorToolbox";
 import RobotActivity from "./RobotActivity";
-import WorldControlPanel from "./WorldControlPanel";
-import RuntimeControls from "./RuntimeControls";
-import SceneTestPanel from "./SceneTestPanel";
+
+
+
 import {
   getPerception,
   DEFAULT_CHASE_VIEW,
@@ -67,7 +68,6 @@ export default function SensingArea({
   const [views, setViews] = useState<ViewId[]>(DEFAULT_VIEWS);
   const [worldSensors, setWorldSensors] = useState<string[]>([]);
   const [expanded, setExpanded] = useState<ViewId | null>(null); // 放大到整块中间区的那一格
-  const [sceneTest, setSceneTest] = useState(false);
 
   const sid = session?.id ?? "";
   const hasBody = !!session?.body;
@@ -120,7 +120,7 @@ export default function SensingArea({
     setBusy(false);
   }, [sid, hasBody, active]);
 
-  const wantObservation = !sceneTest && views.includes(VIEW_OBSERVATION);
+  const wantObservation = views.includes(VIEW_OBSERVATION);
   useEffect(() => {
     setPerc(null);
     setErr("");
@@ -219,7 +219,6 @@ export default function SensingArea({
             <div className="relative flex h-full w-full items-center justify-center">
               <Stream nonce={nonce} url={worldOnline && worldNode ? `${worldNode.url}/stream` : null} alt={t("World chase (operator only)")}
                 missing={worldNode ? t("world node offline") : t("world node not launched")} muted />
-              {worldOnline && worldNode && <ChaseControls view={chase} onChange={setChase} />}
             </div>
           ),
         });
@@ -264,9 +263,8 @@ export default function SensingArea({
 
   return (
     <section className="relative flex min-w-0 flex-col overflow-hidden">
-      {active && <RuntimeControls session={session} onChanged={onStateChanged} />}
-      {active && bodyNode?.trust && bodyNode.trust.state !== "trusted" && <div className="border-b border-neutral-800 px-3 py-2"><NodeTrust node={bodyNode} onChanged={onStateChanged} /></div>}
-      {active && session.mode === "sim" && session.world && <WorldControlPanel session={session} onChanged={onStateChanged} />}
+      <ToolboxSlot name="observation">
+        {worldOnline && worldNode && <ChaseControls view={chase} onChange={setChase} />}
       {/* ---- 视图选择 ---- */}
       <div className="flex flex-wrap items-center gap-1.5 border-b border-neutral-800 bg-neutral-900/60 px-3 py-2">
         <div className="flex flex-wrap items-center gap-3" role="group" aria-label={t("Views")}>
@@ -279,7 +277,7 @@ export default function SensingArea({
               {items.map((c) => {
                 const on = views.includes(c.id);
                 return (
-                  <button key={c.id} disabled={sceneTest} onClick={() => toggleView(c.id)} aria-pressed={on} title={c.title}
+                  <button key={c.id} onClick={() => toggleView(c.id)} aria-pressed={on} title={c.title}
                     className={`nerv-control rounded-full border px-2.5 py-0.5 text-[11px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--control-focus)] ${
                       on ? "nerv-selected" : "border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-neutral-200"
                     }`}>
@@ -292,10 +290,6 @@ export default function SensingArea({
         })}
         </div>
         <span className="ml-auto flex items-center gap-1.5">
-          {worldOnline && <button onClick={() => { setExpanded(null); setSceneTest(true); }} disabled={sceneTest}
-            className="nerv-control rounded-md border nerv-selected px-2 py-1 text-[11px] text-blue-400">
-            {t("Scene test")}
-          </button>}
           {wantObservation && (
             <>
               <label className="flex items-center gap-1 text-[11px] text-neutral-400">
@@ -315,6 +309,7 @@ export default function SensingArea({
         </span>
       </div>
 
+      </ToolboxSlot>
       {/* 中间区不滚动：几路视图就分几格，行列按数量算，图像按比例缩进格子里。
           这样视频流重连、观察刷新都不会把页面拉回顶部。 */}
       <RobotActivity session={session} onChanged={onStateChanged}>
@@ -330,19 +325,9 @@ export default function SensingArea({
           </div>
         )}
 
-        {sceneTest ? (
-          <div className="grid min-h-0 flex-1 grid-rows-[minmax(100px,0.35fr)_minmax(280px,1fr)] gap-3">
-            <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900 p-2">
-              <p className="mb-1 text-[11px] text-neutral-400">{t("Body live")}</p>
-              <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-neutral-950">
-                <Stream nonce={nonce} url={bodyOnline && bodyNode ? `${bodyNode.url}/stream` : null} alt={t("Body live")} missing={t("body node offline")} />
-              </div>
-            </div>
-            <SceneTestPanel sessionId={sid} onClose={() => setSceneTest(false)} onStateChanged={onStateChanged ?? (() => {})} />
-          </div>
-        ) : tiles.length === 0 ? (
+        {tiles.length === 0 ? (
           <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-neutral-800 text-xs text-neutral-500">
-            {active ? t("No view selected — pick one above.") : t("Open the conversation to view saved observations.")}
+            {active ? t("No view selected. Choose a camera in the toolbox.") : t("Open the conversation to view saved observations.")}
           </div>
         ) : (
           <div className="grid min-h-0 flex-1 gap-3"
@@ -355,7 +340,7 @@ export default function SensingArea({
           </div>
         )}
 
-        {wantObservation && perc && (
+        <ToolboxSlot name="observation">        {wantObservation && perc && (
           <details className="shrink-0 rounded-lg bg-neutral-900/60 text-xs">
             <summary className="cursor-pointer px-3 py-1.5 text-neutral-400">
               {t("state the brain is told")} · {stateKeys.length} {t("keys")}
@@ -364,7 +349,7 @@ export default function SensingArea({
               {JSON.stringify(perc.state ?? {}, null, 2)}
             </pre>
           </details>
-        )}
+        )}</ToolboxSlot>
       </div>
 
       </RobotActivity>
@@ -436,7 +421,7 @@ function ChaseControls({ view, onChange }: { view: ChaseView; onChange: (v: Chas
   const btn = "flex h-7 w-7 items-center justify-center rounded-md bg-neutral-900/80 text-[13px] text-neutral-300 backdrop-blur hover:bg-neutral-700 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--control-focus)] ";
   const set = (patch: Partial<ChaseView>) => onChange({ ...view, ...patch });
   return (
-    <div className="absolute bottom-1.5 right-1.5 flex items-center gap-1 rounded-lg border border-neutral-800 bg-neutral-950/60 p-1" role="group" aria-label={t("Adjust the chase camera")}>
+    <div className="flex flex-wrap items-center gap-1 rounded-lg border border-neutral-800 bg-neutral-950/60 p-1" role="group" aria-label={t("Adjust the chase camera")}>
       <button className={`nerv-control ${btn}`} onClick={() => set({ zoom: view.zoom / CHASE_ZOOM_STEP })} title={t("Zoom in")} aria-label={t("Zoom in")}>＋</button>
       <button className={`nerv-control ${btn}`} onClick={() => set({ zoom: view.zoom * CHASE_ZOOM_STEP })} title={t("Zoom out")} aria-label={t("Zoom out")}>－</button>
       <span className="mx-0.5 h-4 w-px bg-neutral-700" />

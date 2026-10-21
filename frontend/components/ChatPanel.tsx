@@ -5,7 +5,6 @@ import remarkGfm from "remark-gfm";
 
 import { useI18n } from "@/lib/i18n";
 import {
-  armSession,
   getSession,
   imgUrl,
   interruptSession,
@@ -18,15 +17,15 @@ import {
   type RecMsg,
   type SessionSummary,
 } from "@/lib/api";
-import TeleopPanel from "./TeleopPanel";
-import StopSimulation from "./StopSimulation";
+import { useToolbox } from "./OperatorToolbox";
+
 
 // 思考区的最大高度：长回合可能几十步，不限高的话思考会把最终回复顶出屏幕。
 const THINKING_MAX_H = "max-h-72";
 
 type ThinkStep = { text: string; tool_calls: { name: string; args: Record<string, unknown> }[]; tool_results: string[] };
 type Input = { images: { name: string; src: string }[]; state: Record<string, unknown> };
-type Turn = { user?: string; inputs: Input[]; thinking: ThinkStep[]; reply: string; brain?: string };
+type Turn = { user?: string; inputs: Input[]; thinking: ThinkStep[]; reply: string; error?: string; brain?: string };
 type Item = { kind: "turn"; turn: Turn } | { kind: "divider"; text: string };
 
 // 会话记录（逐条）→ 回合 + 大脑切换分隔线。
@@ -67,6 +66,8 @@ function groupItems(msgs: RecMsg[], brainLabel: (n: string) => string, tt: (k: s
       } else {
         turn.reply = m.text;
       }
+    } else if (m.role === "error") {
+      lastTurn().error = m.message;
     } else if (m.role === "tool") {
       const turn = lastTurn();
       const last = turn.thinking[turn.thinking.length - 1];
@@ -87,9 +88,9 @@ const GATE_PREFIX = "⛔ ";
 // 后端把操作员遥控的那几步记成这个 brain 名（hub.teleop_stream）。
 const TELEOP_BRAIN = "operator";
 
-function TurnView({ turn, open, live = false }: { turn: Turn; open: boolean; live?: boolean }) {
+function TurnView({ turn, open, live = false, onRetry, onModels }: { turn: Turn; open: boolean; live?: boolean; onRetry?: (text: string) => void; onModels?: () => void }) {
   const { t } = useI18n();
-  const hasBody = turn.inputs.length > 0 || turn.thinking.length > 0 || turn.reply;
+  const hasBody = turn.inputs.length > 0 || turn.thinking.length > 0 || turn.reply || turn.error;
   const thinkRef = useRef<HTMLDivElement>(null);
   useEffect(() => {
     if (live && thinkRef.current) thinkRef.current.scrollTop = thinkRef.current.scrollHeight;
@@ -151,6 +152,7 @@ function TurnView({ turn, open, live = false }: { turn: Turn; open: boolean; liv
               </div>
             </details>
           )}
+          {turn.error && <div role="alert" className="rounded-xl border border-red-800 p-3 text-sm text-[var(--control-danger-text)]"><p>{t(turn.error)}</p><div className="mt-2 flex gap-3"><button className="nerv-control underline" onClick={() => onRetry?.(turn.user || "")}>{t("Retry")}</button><button className="nerv-control underline" onClick={onModels}>{t("Open model settings")}</button></div></div>}
           {turn.reply && (
             <div className={REPLY_CLASS}>
               {/* ⭐ 回复过一次 t()：命中词条 = 这句是框架自己吐的（撞步数/时间上限、被叫停、大脑没配好），
@@ -243,11 +245,13 @@ export default function ChatPanel({
   brains,
   bodyNode,
   onSessionsChanged,
+  onModels,
 }: {
   session: SessionSummary | null;
   brains: Brain[];
   bodyNode: NodeInfo | null;
   onSessionsChanged: () => void;
+  onModels: () => void;
 }) {
   const { t } = useI18n();
   const [items, setItems] = useState<Item[]>([]);
@@ -255,9 +259,10 @@ export default function ChatPanel({
   const [input, setInput] = useState("");
   const [busy, setBusy] = useState(false);
   const [stopping, setStopping] = useState(false);
-  const [armBusy, setArmBusy] = useState(false);
+  const toolbox = useToolbox();
+  const [failed, setFailed] = useState<Turn | null>(null);
   const [armErr, setArmErr] = useState("");
-  const [teleop, setTeleop] = useState(false);
+
   const [expand, setExpand] = useState<"auto" | "all" | "none">(() => {
     if (typeof window === "undefined") return "auto";
     const v = new URLSearchParams(window.location.search).get("expand");
@@ -288,14 +293,14 @@ export default function ChatPanel({
     requestGeneration.current += 1;
     setBusy(false); setLive(null);
     reload();
-    setTeleop(false); // 换会话就退出遥控
+    setFailed(null);
   // History labels may refresh while a request is running; only changing the
   // selected session/model invalidates this panel's local stream.
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [session?.id, session?.brain]);
   useEffect(() => {
-    if (!teleop) bottomRef.current?.scrollIntoView();
-  }, [items, live, busy, teleop]);
+    bottomRef.current?.scrollIntoView();
+  }, [items, live, busy]);
 
   const active = session?.status === "active";
   const hasBody = !!session?.body;
@@ -307,40 +312,12 @@ export default function ChatPanel({
     catch (error) { setArmErr((error as Error).message); }
   }
 
-  async function toggleArm() {
-    if (!session || armBusy || !hasBody || !active) return;
-    if (!session.armed) {
-      // 身体节点报的总线不是 zmq（仿真）= 后面是真机：上膛前问一句。
-      const bus = bodyNode?.meta?.bus;
-      if (session.mode === "real" && !confirm(t("This body node reports a real bus ({bus}) — arming lets the hardware move. Arm it?", { bus: String(bus ?? "unknown") }))) return;
-    }
-    setArmBusy(true);
-    setArmErr("");
-    try {
-      await armSession(session.id, !session.armed);
-      onSessionsChanged();
-    } catch (e) {
-      setArmErr((e as Error).message);
-    }
-    setArmBusy(false);
-  }
-
-  // 遥控开关。关掉时刷新会话：操作员那几步已经记进会话，历史里要看得到。
-  async function toggleTeleop() {
-    if (!session || !hasBody || !active) return;
-    const next = !teleop;
-    setTeleop(next);
-    if (!next) {
-      await reload();
-      onSessionsChanged();
-    }
-  }
-
   async function send() {
     const text = input.trim();
     if (!text || !session || !active) return;
     const generation = ++requestGeneration.current;
     setInput("");
+    setFailed(null);
     setBusy(true);
     const base: Turn = { user: text, inputs: [], thinking: [], reply: "" };
     setLive(base);
@@ -374,10 +351,11 @@ export default function ChatPanel({
           if (!e.allowed) appendResult(`${GATE_PREFIX}${t("gate refused {name}", { name: e.name })}: ${t(e.reason)}`);
         } else if (e.type === "progress") appendResult(`⏳ ${e.message}`);
         else if (e.type === "tool_result") appendResult(`${e.name}: ${e.message}`);
+        else if (e.type === "model_error") upd(turn => ({...turn, error: e.message}));
         else if (e.type === "reply") upd((turn) => ({ ...turn, reply: e.text }));
       });
     } catch (e) {
-      upd((turn) => ({ ...turn, reply: `${t("(cannot reach the backend)")} ${(e as Error).message ?? ""}` }));
+      if (requestGeneration.current === generation) setFailed({...base, error: e instanceof TypeError ? "Cannot connect to the model service. Try again." : (e as Error).message});
     } finally {
       if (requestGeneration.current !== generation) return;
       await reload();
@@ -396,12 +374,12 @@ export default function ChatPanel({
   }
 
   return (
-    <aside className="flex h-screen flex-col border-l border-neutral-800 bg-neutral-900">
+    <aside className="flex min-h-0 flex-col border-l border-neutral-800 bg-neutral-900">
       <header className="border-b border-neutral-800 p-3">
         <div className="flex items-center justify-between text-xs">
           <span className="font-medium text-neutral-200">{t("NERV Agent")}</span>
           <span className="flex items-center gap-2">
-            {(items.length > 0 || live) && !teleop && (
+            {(items.length > 0 || live) && (
               <button onClick={() => setExpand(expand === "all" ? "none" : "all")}
                 title={t("Expand / collapse the reasoning of every turn")}
                 className="nerv-control rounded border border-neutral-700 px-1.5 py-0.5 text-[10px] text-neutral-400 hover:border-neutral-500">
@@ -419,25 +397,21 @@ export default function ChatPanel({
         )}
       </header>
 
-      {session && active && bodyNode && (
-        <div className="px-3 pb-2"><StopSimulation node={bodyNode} sessionId={session.id} onChanged={onSessionsChanged} /></div>
-      )}
-
       <Notebook session={session} />
 
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
         {!session && (
           <div className="p-4 text-center text-xs text-neutral-500">{t("Create or pick a session on the left")}</div>
         )}
-        {session && active && teleop && <TeleopPanel sessionId={session.id} armed={session.armed} hasWorld={!!session.world} bodyTrust={bodyNode?.trust?.state ?? null} />}
         {(
           <>
             {items.map((it, i) => (
               <Fragment key={i}>
-                {it.kind === "divider" ? <Divider text={it.text} /> : <TurnView turn={it.turn} open={openFor(false)} />}
+                {it.kind === "divider" ? <Divider text={it.text} /> : <TurnView turn={it.turn} open={openFor(false)} onRetry={setInput} onModels={onModels} />}
               </Fragment>
             ))}
-            {live && <TurnView turn={live} open={openFor(true)} live />}
+            {live && <TurnView turn={live} open={openFor(true)} live onRetry={setInput} onModels={onModels} />}
+            {failed && <TurnView turn={failed} open={false} onRetry={setInput} onModels={onModels} />}
             {busy && !live?.reply && (
               <div className="text-xs text-neutral-500">
                 {stopping ? t("Wrapping up — it will stop once this step finishes…") : t("The brain is thinking…")}
@@ -454,28 +428,7 @@ export default function ChatPanel({
           <div className="flex items-center gap-2 px-3 pt-2">
             <BrainPicker brains={brains} current={session.brain} disabled={!active || busy} onPick={switchBrain} />
             {!!curBrain?.efforts?.length && <select aria-label={t("Reasoning effort")} className="max-w-24 rounded border border-neutral-600 bg-neutral-800 text-[10px]" disabled={!active || busy} value={curBrain.effort ?? ""} onChange={event => selectVlm(session.brain, event.target.value || null).then(onSessionsChanged).catch(e => setArmErr(e.message))}><option value="">{t("Provider default")}</option>{curBrain.efforts.map(effort => <option key={effort} value={effort}>{effort}</option>)}</select>}
-            {hasBody && (
-              <button onClick={toggleArm} disabled={armBusy || !active} role="switch" aria-checked={session.armed}
-                title={session.armed
-                  ? t("Armed: the body may move. Click to disarm.")
-                  : t("Disarmed: every world-changing action is refused at the gate. Click to arm — only you can.")}
-                className={`nerv-control rounded-full border px-2.5 py-0.5 text-[10px] font-semibold tracking-wide transition-colors disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--control-focus)] ${
-                  session.armed
-                    ? "border-red-500 nerv-danger bg-red-600 text-white hover:bg-red-500"
-                    : "border-neutral-600 bg-neutral-800 text-neutral-400 hover:border-neutral-400"
-                }`}>
-                {session.armed ? `● ${t("ARMED")}` : `○ ${t("DISARMED")}`}
-              </button>
-            )}
-            {hasBody && (
-              <button onClick={toggleTeleop} disabled={!active} aria-pressed={teleop}
-                title={teleop ? t("Close manual controls") : t("Manual controls; chat remains available")}
-                className={`nerv-control ml-auto flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-medium transition-colors disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--control-focus)] ${
-                  teleop ? "nerv-selected" : "border-neutral-600 bg-neutral-800 text-neutral-300 hover:border-neutral-400"
-                }`}>
-                🎮 {t("Teleop")}
-              </button>
-            )}
+            {hasBody && <button onClick={toolbox.open} className="nerv-control ml-auto rounded-full border px-3 py-1 text-xs">{t("Toolbox")}</button>}
           </div>
           {armErr && <div className="px-3 pt-1 text-[11px] text-[var(--control-danger-text)]">{armErr}</div>}
 
@@ -495,11 +448,6 @@ export default function ChatPanel({
             </div>
           ) : (
             <div className="p-3">
-              {teleop && (
-                <div className="mb-1.5 text-[10px] leading-snug text-neutral-500">
-                  {t("Manual actions and chat have separate controls.")}
-                </div>
-              )}
               <div className="flex gap-2">
                 <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()}
                   placeholder={t("Message NERV Agent…")}

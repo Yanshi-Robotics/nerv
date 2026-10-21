@@ -238,6 +238,11 @@ class Nerv:
     def new_session(self, brain: str, body: str | None, world: str | None,
                     sensors: list[str] | None = None, tools: list[str] | None = None,
                     mode: str = "sim", world_configuration: dict | None = None) -> dict:
+        # Explicit injected test brains are not part of the production catalogue.
+        from ..harness.agent import AgentHarness
+        from ..vlm.store import ModelRegistry
+        if brain not in self._brains or isinstance(self._brains[brain], AgentHarness):
+            ModelRegistry().require_key(brain)
         if world and not body:
             raise ValueError("a simulated world requires a robot profile")
         if world:
@@ -549,7 +554,8 @@ class Nerv:
             if ev.get("type") == op.EV_REPLY:
                 reply = ev.get("text", "")
                 stop = ev.get("stop_reason")
-        return {"reply": reply, "events": events, "stop_reason": stop}
+        error = next(({"code": ev["code"], "message": ev["message"]} for ev in events if ev.get("type") == "model_error"), None)
+        return {"reply": reply, "events": events, "stop_reason": stop, "error": error}
 
     def tool_sheet(self, sid: str) -> list[dict]:
         """The tools the brain would see in this session, with origin and kind — for the remote control."""

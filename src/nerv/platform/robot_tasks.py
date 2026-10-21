@@ -60,12 +60,12 @@ class RobotTasks:
                     or state.get("status") not in {"starting", "running", "updating"}):
                 return
             kind = event.get("type", "")
-            source = "system2" if kind in ("thinking", "reply", "perception", "start", "model_phase") else "system1"
+            source = "system2" if kind in ("thinking", "reply", "perception", "start", "model_phase", "model_error") else "system1"
             # No image payloads or provider reasoning are sent to activity bubbles.
             payload = {"task_id": task_id, "version": version,
                        "instance_id": state["instance_id"], "source": source,
                        "execution_id": event.get("execution_id"), "type": kind, "text": event.get("text") or event.get("message", ""),
-                       "name": event.get("name", ""), "ok": event.get("ok"),
+                       "name": event.get("name", ""), "ok": False if kind == "model_error" else event.get("ok"),
                        "observation": event.get("state", {}).get("frame_seq")}
             self.hub.store.memory(sid).append("robot_activity", payload)
 
@@ -147,8 +147,8 @@ class RobotTasks:
                     stopped = self.hub.stop_robot(sid, expected_control=token.control_token)
                     with self._lock:
                         if not token.is_set() and self._tokens.get(sid) is token:
-                            self._save(sid, status="finished" if stopped.get("ok") else "failed",
-                                       outcome="model_report" if stopped.get("ok") else "unknown",
+                            self._save(sid, status="finished" if stopped.get("ok") and not outcome.get("error") else "failed",
+                                       outcome="model_report" if stopped.get("ok") and not outcome.get("error") else "unknown",
                                        message=outcome.get("reply", "") or "Task controller ended",
                                        stop_result=stopped)
             except Exception as error:

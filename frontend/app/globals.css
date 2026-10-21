@@ -149,12 +149,26 @@ html[data-theme="light"] .nerv-mark-light { display: none; }
 html[data-theme="light"] .nerv-mark-dark { display: inline; }
 
 /* Preserve a usable camera frame and chat on narrow operator displays. */
+.nerv-workspace-panes > aside { height: auto; min-width: 0; }
+.nerv-toolbox[hidden] { display: none; }
+.nerv-activity-bubble { animation: nerv-activity-in 160ms ease-out; }
+@keyframes nerv-activity-in {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
 @media (max-width: 900px) {
   .nerv-shell { display: flex; flex-direction: column; height: auto; min-height: 100dvh; }
   .nerv-shell > aside:first-child { height: auto; max-height: 40dvh; flex-shrink: 0; }
   .nerv-shell > section, .nerv-shell > div { min-height: 65dvh; }
   .nerv-shell > aside:last-child { height: 65dvh; flex-shrink: 0; }
   .nerv-shell [aria-label="Robot activity"] { max-width: 70%; }
+  .nerv-workspace { min-height: 100dvh; overflow: visible; }
+  .nerv-workspace-panes { display: flex; flex-direction: column; }
+  .nerv-workspace-panes > section, .nerv-workspace-panes > div { min-height: 55dvh; }
+  .nerv-workspace-panes > aside { min-height: 60dvh; }
+  .nerv-operator-bar { position: sticky; top: 0; }
+  .nerv-toolbox { position: fixed; inset: auto 0 0; z-index: 40; box-shadow: 0 -8px 30px #0003; }
+  .nerv-toolbox > div:last-child { max-height: 45dvh; }
 }
 @media (prefers-reduced-motion: reduce) {
   .nerv-shell *, .nerv-shell *::before, .nerv-shell *::after { transition: none !important; animation: none !important; }

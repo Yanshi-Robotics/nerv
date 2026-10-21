@@ -108,3 +108,14 @@ World configuration schemas and builders belong to worlds. Generate instance ass
 reset preserves configuration, topology changes require a new instance, and real bindings reject
 world edits. Robot activity is an operator DOM overlay and never enters raw images or recordings.
 The long-term autonomy goal is named ultimate; 0.6.x remains an Agent-operated development system.
+
+## Operator toolbox and credential registration
+
+Manual controls live in Operator Toolbox. Keep stop task and emergency stop in the fixed
+operator toolbar; camera frames contain only views and genuine activity overlays. Access
+permission is bound to the reviewed capability manifest and never authorizes motion.
+
+New or replacement keys use one explicit image test before atomic saving. Existing registered
+keys remain valid configuration. Session creation checks only nonempty registered credentials,
+before any node or session side effect. Optional image/tool/continuation diagnostics never gate
+model use. Development tests use explicit offline responses; paid tests are operator-triggered.

@@ -77,7 +77,7 @@ def test_stale_receipt_is_not_displayed_as_a_current_pass(tmp_path):
     assert next(m for m in registry.list() if m["id"] == model.id)["available"]
     registry.select(model.id, "high")
     current = next(m for m in registry.list() if m["id"] == model.id)
-    assert not current["available"] and current["checks"] == {}
+    assert current["available"] and current["checks"] == {}
     # Preserve historical evidence on disk without displaying it as current.
     assert registry._read()["checks"][model.id] == receipt
 
@@ -239,12 +239,14 @@ def test_settings_endpoint_does_not_leak_keys_or_trigger_model_requests(tmp_path
     monkeypatch.setattr(ModelRegistry, "provider", lambda *_: pytest.fail("unexpected paid request"))
     with TestClient(server.app) as client:
         result = client.put("/api/credentials/OPENAI_API_KEY", json={"value": "fixture-secret"})
-        assert result.status_code == 200 and result.json()["writable"]
+        assert result.status_code == 400
+        # Existing credentials remain usable without a new probe on discovery.
+        ModelRegistry().credentials.set("OPENAI_API_KEY", "fixture-secret")
         listing = client.get("/api/vlm")
         assert listing.status_code == 200
         assert "fixture-secret" not in listing.text and "legacy-must-not-be-used" not in listing.text
         assert len(listing.json()["providers"]) == 5
-        assert not any(m["available"] for m in listing.json()["models"])
+        assert any(m["available"] for m in listing.json()["models"])
         assert client.post("/api/vlm/openai-sol/select", json={"effort": "high"}).status_code == 200
         assert client.delete("/api/credentials/OPENAI_API_KEY").status_code == 405
         assert client.put("/api/credentials/OPENAI_API_KEY", json={"value": None}).status_code == 200

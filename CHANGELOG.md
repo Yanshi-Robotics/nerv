@@ -5,6 +5,14 @@ The 0.1.x entries below are the pre-release trail.
 
 ## [Unreleased]
 
+- Consolidate manual device, robot, world, camera and task controls in Operator Toolbox.
+  Keep stop task and emergency stop in the top toolbar and cameras free of configuration forms.
+- Test candidate provider keys with one generated image before saving; keep existing keys on
+  failed, cancelled or superseded tests. Session creation checks registered keys before side effects.
+- Separate optional API diagnostics from model eligibility and surface sanitized, localized
+  model failures without cancelling independent robot tasks. Bind access permission to the
+  capability manifest reviewed by the operator.
+
 ## [0.6.2] — development snapshot, 2026-10-21
 
 - Split conversational Agent and System 2 into independent harness runs, context views,

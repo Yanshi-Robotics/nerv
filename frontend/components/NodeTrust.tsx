@@ -33,7 +33,7 @@ export function TrustBadge({ trust }: { trust?: Trust }) {
   const { t } = useI18n();
   const state: TrustState = trust?.state ?? "offline";
   const label =
-    state === "trusted" ? t("trusted") : state === "unknown" ? t("not approved") : state === "changed" ? t("changed since approval") : t("unreachable");
+    state === "trusted" ? t("trusted") : state === "unknown" ? t("Awaiting access permission") : state === "changed" ? t("Capabilities changed — review again") : t("Cannot read capabilities");
   return (
     <span className={`rounded border px-1.5 py-0.5 text-[10px] ${TRUST_STYLE[state]}`} title={trust?.reason ? t(trust.reason) : undefined}>
       {label}
@@ -49,7 +49,7 @@ export function NodeTrust({ node, onChanged }: { node: NodeInfo; onChanged?: () 
   const [note, setNote] = useState("");
   const [err, setErr] = useState("");
 
-  const state: TrustState = node.trust?.state ?? "offline";
+  const state: TrustState = node.online ? node.trust?.state ?? "unknown" : "offline";
   const needsApproval = state === "unknown" || state === "changed";
 
   async function open() {
@@ -67,8 +67,8 @@ export function NodeTrust({ node, onChanged }: { node: NodeInfo; onChanged?: () 
     setBusy(true);
     setErr("");
     try {
-      const r = await approveNode(node.key);
-      setNote(t("Approved (hash {hash}…)", { hash: r.hash.slice(0, 12) }));
+      const r = await approveNode(node.key, manifest!.hash);
+      setNote(t("Access allowed (hash {hash}…)", { hash: r.hash.slice(0, 12) }));
       setManifest(null);
       onChanged?.();
     } catch (e) {
@@ -100,12 +100,12 @@ export function NodeTrust({ node, onChanged }: { node: NodeInfo; onChanged?: () 
       <div className="flex flex-wrap items-center gap-2">
         <span className="font-mono text-xs text-neutral-200">{node.key}</span>
         <span className={`text-[10px] ${node.online ? "text-green-400" : "text-red-400"}`}>● {node.online ? t("online") : t("offline")}</span>
-        <TrustBadge trust={node.trust} />
+        <TrustBadge trust={node.online ? node.trust : undefined} />
         <span className="ml-auto flex items-center gap-1">
           {manifest === null ? (
             <button onClick={open} disabled={busy || !node.online}
               className="nerv-control rounded border border-neutral-700 px-2 py-0.5 text-[11px] text-neutral-300 hover:bg-neutral-800">
-              {busy ? t("Loading…") : t("See what it declares")}
+              {busy ? t("Loading…") : t("View capabilities and guidance")}
             </button>
           ) : (
             <button onClick={() => setManifest(null)} disabled={busy}
@@ -122,14 +122,14 @@ export function NodeTrust({ node, onChanged }: { node: NodeInfo; onChanged?: () 
       </div>
       <div className="mt-1 text-[11px] text-neutral-500">{node.url}</div>
 
-      {needsApproval && (
+      {needsApproval && node.online && (
         <p className="mt-1.5 text-xs leading-relaxed text-neutral-300">
           {state === "changed"
-            ? t("Its manifest has changed since you approved it. What changed is below; approve again once you are satisfied.")
-            : t("Until you approve it, its tools and guidance do not reach the brain — so it is launched, but nothing can drive it.")}
+            ? t("Capabilities changed. Review the differences before allowing access again.")
+            : t("Allowing access exposes this plugin’s capabilities to NERV. Device preparation and motion authorization are separate.")}
         </p>
       )}
-      {node.trust?.reason && state !== "trusted" && (
+      {node.online && node.trust?.reason && state !== "trusted" && (
         <div className="mt-1 text-[11px] text-neutral-500">{t(node.trust.reason)}</div>
       )}
 
@@ -192,11 +192,11 @@ export function NodeTrust({ node, onChanged }: { node: NodeInfo; onChanged?: () 
             </div>
           )}
 
-          {needsApproval && (
+          {needsApproval && node.online && (
             <div className="flex items-center gap-2">
-              <button onClick={approve} disabled={busy}
+              <button onClick={approve} disabled={busy || !node.online || !manifest?.hash}
                 className="nerv-control rounded nerv-warning bg-amber-700 px-3 py-1 text-xs text-white hover:bg-amber-600">
-                {busy ? t("Working…") : state === "changed" ? t("I have read it — approve again") : t("I have read it — approve")}
+                {busy ? t("Working…") : state === "changed" ? t("Allow updated capabilities") : t("Allow access")}
               </button>
               <span className="text-[11px] text-neutral-500">{t("Only approve nodes you trust")}</span>
             </div>
