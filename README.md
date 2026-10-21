@@ -112,6 +112,8 @@ The instruction is “Walk to the living room.” The recording shows one unedit
 
 The session view places sensors beside the conversation. Robot observations and operator-only views are separate. Runtime sensor names determine which camera streams appear.
 
+NERV Agent receives fresh robot camera snapshots on every decision, including ordinary chat. Camera visibility in the interface does not control model input. Simulation cameras can be read before preparing motion; real cameras require operator preparation. For the SO-101 workbench, top and wrist appear side by side, followed by the overview with an Operator view badge. The overview is excluded from Agent input; System 2 remains responsible for task supervision.
+
 <details>
 <summary>More interface and simulation views</summary>
 

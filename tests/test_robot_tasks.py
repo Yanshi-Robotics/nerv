@@ -163,6 +163,12 @@ def test_offline_dual_role_chat_queries_task_without_interrupting(tmp_path, monk
     hub.store.save(session)
     entered, finish = threading.Event(), threading.Event()
     requests = []
+    # Explicit offline image fixtures, never a paid provider or physical camera.
+    import io
+    from PIL import Image
+    buffer = io.BytesIO()
+    Image.new("RGB", (8, 8), "blue").save(buffer, format="PNG")
+    frames = [{"name": name, "png": buffer.getvalue()} for name in ["camera:top", "camera:wrist"]]
     class Provider:
         model, vision = "explicit-offline-fixture", True
         def chat(self, system, history, functions, images):
@@ -171,7 +177,7 @@ def test_offline_dual_role_chat_queries_task_without_interrupting(tmp_path, monk
                 entered.set()
                 assert finish.wait(3)
                 return LLMReply("Offline task fixture ended")
-            if history[-1]["role"] != "tool":
+            if not any(message["role"] == "tool" for message in history):
                 name = next(f.name for f in functions if "[robot_tasks] status:" in f.description)
                 return LLMReply("Reading task status", [ToolCall("status", name, {})])
             return LLMReply("The independent task is running")
@@ -180,7 +186,8 @@ def test_offline_dual_role_chat_queries_task_without_interrupting(tmp_path, monk
     monkeypatch.setattr(hub, "new_role_model", factory)
     hub._brains["offline"] = factory()
     robot = SimpleNamespace(name="fixture-robot", capabilities=lambda: Capabilities("fixture", "2"),
-                            health=lambda: {"epoch": "fixture"}, post=lambda *_: {"ok": True, "running": False})
+                            health=lambda: {"epoch": "fixture"}, post=Mock(return_value={"ok": True, "running": False}),
+                            perceive=lambda: Observation({"cameras": [f["name"] for f in frames]}, frames))
     monkeypatch.setattr(hub, "body_client", lambda _: robot)
     monkeypatch.setattr(hub, "claim_robot", Mock(return_value="owned"))
     monkeypatch.setattr(hub, "stop_robot", Mock(return_value={"ok": True}))
@@ -195,7 +202,10 @@ def test_offline_dual_role_chat_queries_task_without_interrupting(tmp_path, monk
         assert not hub.tasks._tokens[session.id].is_set()
         hub.stop_robot.assert_not_called()
         assert len([r for r in requests if "System 2 task controller" in r[0]]) == 1
-        assert all(r[2] is None for r in requests if "NERV Agent" in r[0])
+        assert all([f["name"] for f in r[2]] == ["camera:top", "camera:wrist"]
+                   for r in requests if "NERV Agent" in r[0])
+        # The task's model is still waiting: Agent replies cannot renew its watchdog.
+        assert not any(call.args[0] in {"/supervision", "/stop"} for call in robot.post.call_args_list)
         assert not any("Explicit offline task" in m.get("text", "") for m in hub.store.get(session.id).messages)
         messages = hub.store.get(session.id).messages
         calls = [c for m in messages for c in m.get("tool_calls", [])]

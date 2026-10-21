@@ -14,6 +14,7 @@ import {
   getWorldSensors,
   setWorldChaseView,
   type ChaseView,
+  type SensorDecl,
   POLL_PERCEIVE_MS,
   worldCameraStreamUrl,
   type NodeInfo,
@@ -25,7 +26,7 @@ import {
 //   observation   大脑看到的：GET /api/perceive 的结果，每一路一格、带名字。这就是下一回合送进模型的东西。
 //   body          身体节点的连续视频（MJPEG /stream）——给人看的，大脑一回合只拿一张快照。
 //   world         世界节点的追拍相机（/stream）——上帝视角，**大脑从来看不到**，标题必须写明。
-//   cam:<name>    世界节点 /sensors 列出的每一路相机（/stream/<去前缀名>），同样只给人看。
+//   cam:<name>    Named simulation cameras; robot profile mappings determine sensor ownership.
 // 默认勾 observation + body。
 type ViewId = string;
 const VIEW_OBSERVATION: ViewId = "observation";
@@ -52,11 +53,13 @@ export default function SensingArea({
   session,
   bodyNode,
   worldNode,
+  robotSensors = [],
   onStateChanged,
 }: {
   session: SessionSummary | null;
   bodyNode: NodeInfo | null;
   worldNode: NodeInfo | null;
+  robotSensors?: SensorDecl[];
   onStateChanged?: () => void;
 }) {
   const { t } = useI18n();
@@ -154,6 +157,10 @@ export default function SensingArea({
     setViews(worldSensors.map(name => CAM_VIEW_PREFIX + name));
   }, [sid, worldSensors.join("|")]);
 
+  // Camera ownership and order come from the robot profile, never camera-name guesses.
+  const robotCameras = useMemo(() => robotSensors.map(sensor =>
+    sensor.camera ? `camera:${sensor.camera.replace(/^camera:/, "")}` : sensor.name), [robotSensors]);
+
   // 可选的视图清单
   const chips = useMemo(() => {
     const out: { id: ViewId; label: string; title?: string; group: "robot" | "third" }[] = [
@@ -162,15 +169,15 @@ export default function SensingArea({
     ];
     if (session?.world) {
       out.push({ id: VIEW_WORLD, label: `🛰 ${t("World chase (operator only)")}`, title: t("the brain never sees this"), group: "third" });
-      for (const s of worldSensors) out.push({ id: CAM_VIEW_PREFIX + s, label: `📷 ${s}`, title: t("world camera — the brain never sees this"), group: "third" });
+      for (const s of worldSensors) out.push({ id: CAM_VIEW_PREFIX + s, label: `📷 ${s}`, group: robotCameras.includes(s) ? "robot" : "third" });
     }
     return out;
-  }, [session?.world, worldSensors, t]);
+  }, [session?.world, worldSensors, robotCameras, t]);
 
   // 选中的视图 → 一格格瓦片
   const tiles = useMemo(() => {
     if (!session || !hasBody || !active) return [];
-    const out: { id: ViewId; label: string; sub?: string; muted?: boolean; body: ReactNode }[] = [];
+    const out: { id: ViewId; label: string; sub?: string; operatorOnly?: boolean; muted?: boolean; body: ReactNode }[] = [];
     if (session.mode === "real" && bodyNode) {
       for (const name of bodyNode.sensors ?? []) out.push({id: `runtime:${name}`, label: name, sub: t("Live sensor"), body: <Stream nonce={nonce} url={bodyOnline ? `${bodyNode.url}/streams/${encodeURIComponent(name)}` : null} alt={name} missing={t("No fresh camera frame")} />});
     }
@@ -213,7 +220,7 @@ export default function SensingArea({
         out.push({
           id: v,
           label: `🛰 ${t("World chase (operator only)")} · ${worldNode?.key ?? `world:${session.world}/${session.body}`}`,
-          sub: t("the brain never sees this"),
+          operatorOnly: true,
           muted: true,
           body: (
             <div className="relative flex h-full w-full items-center justify-center">
@@ -228,17 +235,20 @@ export default function SensingArea({
         out.push({
           id: v,
           label: `📷 ${name}`,
-          sub: t("world camera — the brain never sees this"),
-          muted: true,
+          operatorOnly: !robotCameras.includes(name),
           body: (
             <Stream nonce={nonce} url={worldOnline && worldNode ? worldCameraStreamUrl(worldNode.url, name) : null} alt={name}
-              missing={worldNode ? t("world node offline") : t("world node not launched")} muted />
+              missing={worldNode ? t("world node offline") : t("world node not launched")} />
           ),
         });
       }
     }
-    return out;
-  }, [session, hasBody, active, views, perc, err, bodyNode, worldNode, bodyOnline, worldOnline, worldSensors, nonce, t, chase]);
+    return out.sort((a, b) => {
+      const rank = (tile: typeof a) => tile.operatorOnly ? Number.MAX_SAFE_INTEGER
+        : tile.id.startsWith(CAM_VIEW_PREFIX) ? robotCameras.indexOf(tile.id.slice(CAM_VIEW_PREFIX.length)) : -1;
+      return rank(a) - rank(b);
+    });
+  }, [robotCameras, session, hasBody, active, views, perc, err, bodyNode, worldNode, bodyOnline, worldOnline, worldSensors, nonce, t, chase]);
 
   // Esc 关掉放大的那一格
   useEffect(() => {
@@ -333,7 +343,7 @@ export default function SensingArea({
           <div className="grid min-h-0 flex-1 gap-3"
             style={{ gridTemplateColumns: `repeat(${gridColumns(tiles.length)}, minmax(0, 1fr))`, gridAutoRows: "minmax(0, 1fr)" }}>
             {tiles.map((tile) => (
-              <Tile key={tile.id} label={tile.label} sub={tile.sub} muted={tile.muted} onExpand={() => setExpanded(tile.id)} fill>
+              <Tile key={tile.id} label={tile.label} operatorOnly={tile.operatorOnly} sub={tile.sub} muted={tile.muted} onExpand={() => setExpanded(tile.id)} fill>
                 {tile.body}
               </Tile>
             ))}
@@ -356,7 +366,7 @@ export default function SensingArea({
       {/* ---- 放大：盖住整块中间区 ---- */}
       {expandedTile && (
         <div className="absolute inset-0 z-20 flex flex-col bg-neutral-950 p-3" role="dialog" aria-modal="true" aria-label={expandedTile.label}>
-          <Tile label={expandedTile.label} sub={expandedTile.sub} muted={expandedTile.muted} expanded onExpand={() => setExpanded(null)} fill>
+          <Tile label={expandedTile.label} operatorOnly={expandedTile.operatorOnly} sub={expandedTile.sub} muted={expandedTile.muted} expanded onExpand={() => setExpanded(null)} fill>
             {expandedTile.body}
           </Tile>
         </div>
@@ -366,15 +376,18 @@ export default function SensingArea({
 }
 
 // 一格：标题 + 放大键 + 内容
-function Tile({ label, sub, muted = false, expanded = false, fill = false, onExpand, children }: {
-  label: string; sub?: string; muted?: boolean; expanded?: boolean; fill?: boolean; onExpand: () => void; children: ReactNode;
+function Tile({ label, sub, operatorOnly = false, muted = false, expanded = false, fill = false, onExpand, children }: {
+  label: string; sub?: string; operatorOnly?: boolean; muted?: boolean; expanded?: boolean; fill?: boolean; onExpand: () => void; children: ReactNode;
 }) {
   const { t } = useI18n();
   return (
     <div className={`flex min-w-0 flex-col gap-1 rounded-2xl border bg-neutral-900 p-2 ${muted ? "border-neutral-800/60" : "border-neutral-800"} ${fill ? "h-full" : ""}`}>
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
-          <div className={`truncate text-[11px] ${muted ? "text-neutral-500" : "text-neutral-300"}`} title={label}>{label}</div>
+          <div className="flex items-center gap-2">
+            <span className={`truncate text-[11px] ${muted ? "text-neutral-500" : "text-neutral-300"}`} title={label}>{label}</span>
+            {operatorOnly && <span className="shrink-0 rounded-full border border-[var(--control-focus)] bg-[var(--control-selected-bg)] px-2 text-[10px] text-[var(--control-selected-fg)]">{t("Operator view")}</span>}
+          </div>
           {sub && <div className="truncate text-[10px] text-neutral-600">{sub}</div>}
         </div>
         <button onClick={onExpand} title={expanded ? t("Close (Esc)") : t("Expand")} aria-label={expanded ? t("Close (Esc)") : t("Expand")}

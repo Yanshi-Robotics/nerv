@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 from contextlib import nullcontext
+import threading
 
 from nerv_runtime_sdk.contracts import RuntimeManifest
 
@@ -22,6 +23,8 @@ class BuiltinRuntime:
         self.profile, self.binding = profile, binding
         self.name, self.family, self.version = profile.id, profile.family, "0.6.2"
         self._impl = None
+        self._sensor_bus = None
+        self._sensor_lock = threading.Lock()
 
     @property
     def held(self):
@@ -43,10 +46,36 @@ class BuiltinRuntime:
 
     def observe(self):
         if self._impl is None:
-            return {"prepared": False}, []
+            return self._observe_unprepared()
         import time
         state, images = self._impl.observe()
         return {**state, "observed_at": time.time()}, images
+
+    def _observe_unprepared(self):
+        """Simulation cameras are readable without constructing motion controllers."""
+        import io
+        import time
+        from PIL import Image
+        from ..body.bus_zmq import ZmqBus
+        with self._sensor_lock:
+            if self._sensor_bus is None:
+                self._sensor_bus = ZmqBus(self.binding.configuration["bus_url"])
+        state, images = {"prepared": False, "observed_at": time.time()}, []
+        for sensor in self.profile.configuration.get("sensors", []):
+            name = sensor["name"] if isinstance(sensor, dict) else str(sensor)
+            camera = (sensor.get("camera") or name) if isinstance(sensor, dict) else name
+            try:
+                data, mime = self._sensor_bus.sensor(camera)
+                if mime != "image/png":
+                    if not mime.startswith("image/"):
+                        raise ValueError("camera did not return an image")
+                    buf = io.BytesIO()
+                    Image.open(io.BytesIO(data)).convert("RGB").save(buf, format="PNG")
+                    data = buf.getvalue()
+                images.append((name, data))
+            except Exception as error:
+                state.setdefault("sensor_errors", {})[name] = f"{type(error).__name__}: {error}"
+        return state, images
 
     def invoke(self, name, _control_guard=nullcontext, **kwargs):
         if self._impl is None:
@@ -65,7 +94,9 @@ class BuiltinRuntime:
                 "execution": self._impl.runner.running if self._impl else ""}
 
     def sensor_names(self):
-        return self._impl.sensor_names() if self._impl else []
+        return (self._impl.sensor_names() if self._impl else [
+            s["name"] if isinstance(s, dict) else str(s)
+            for s in self.profile.configuration.get("sensors", [])])
 
     def stream_jpeg(self):
         return self._impl.stream_jpeg() if self._impl else None
@@ -95,5 +126,7 @@ class BuiltinRuntime:
         return self._impl.release() if self._impl else {"ok": False}
 
     def close(self):
+        if self._sensor_bus:
+            self._sensor_bus.close()
         if self._impl:
             self._impl.close()
