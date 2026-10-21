@@ -185,6 +185,8 @@ class RenderService:
             try:
                 if self._renderer is None and self._init_error is None:
                     try:
+                        from .rendering import configure_software_egl
+                        configure_software_egl()
                         self._renderer = mujoco.Renderer(self._model, self._h, self._w)
                     except Exception as e:
                         self._init_error = e
