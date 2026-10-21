@@ -115,7 +115,7 @@ The session view places sensors beside the conversation. Robot observations and 
 <details>
 <summary>More interface and simulation views</summary>
 
-The collapsible bottom **Toolbox** contains device access, preparation, motion authorization, robot actions, world controls, camera and System 2 settings, and scene tests. **Stop task** and **Emergency stop** remain in the top toolbar when the toolbox is closed. The center contains camera views and genuine robot activity; chat remains usable alongside it. The dashboard shows registry entries, node state and sessions.
+The right-sidebar **Toolbox** contains device access, preparation, motion authorization, robot actions, world controls, camera and System 2 settings, and scene tests. **Stop task** and **Emergency stop** remain in the top toolbar when the toolbox is closed. The right sidebar switches between **Agent chat** and **Toolbox**. Switching preserves chat drafts and ongoing replies and does not stop robot tasks. The center contains camera views and genuine robot activity. The dashboard shows registry entries, node state and sessions.
 
 **Allow access** approves the capabilities and guidance that the operator reviewed. Changed capabilities require a new review; offline nodes cannot be approved. This permission does not prepare devices, authorize motion or start tasks.
 

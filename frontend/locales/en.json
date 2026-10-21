@@ -611,6 +611,8 @@
     "Manage access and manual controls in the session toolbox.": "Manage access and manual controls in the session toolbox.",
     "Allow access under Device and access in the toolbox before using robot actions.": "Allow access under Device and access in the toolbox before using robot actions.",
     "Task event stream connected": "Task event stream connected",
-    "Task event stream disconnected": "Task event stream disconnected"
+    "Task event stream disconnected": "Task event stream disconnected",
+    "Agent chat": "Agent chat",
+    "Interaction mode": "Interaction mode"
   }
 }

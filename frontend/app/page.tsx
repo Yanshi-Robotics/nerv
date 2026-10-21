@@ -124,7 +124,8 @@ export default function Home() {
         </div>
       )}
       {panel === "session" && (
-        <OperatorToolbox key={`${current?.id}:${current?.epoch}`} session={current} bodyNode={bodyNode} nodes={nodes} onChanged={() => {refreshSessions(); refreshNodes();}}>
+        <OperatorToolbox key={`${current?.id}:${current?.epoch}`} session={current} bodyNode={bodyNode} nodes={nodes} onChanged={() => {refreshSessions(); refreshNodes();}}
+          chat={<ChatPanel session={current} brains={registry?.brains ?? []} bodyNode={bodyNode} onModels={() => setPanel("models")} onSessionsChanged={() => { refreshSessions(); refreshNodes(); }} />}>
           {current ? (
             <SensingArea key={`${current.id}:${current.status}`} session={current} bodyNode={bodyNode} worldNode={worldNode} onStateChanged={() => { refreshSessions(); refreshNodes(); }} />
           ) : (
@@ -132,7 +133,6 @@ export default function Home() {
               {t("Pick a session on the left, or create one.")}
             </div>
           )}
-          <ChatPanel session={current} brains={registry?.brains ?? []} bodyNode={bodyNode} onModels={() => setPanel("models")} onSessionsChanged={() => { refreshSessions(); refreshNodes(); }} />
         </OperatorToolbox>
       )}
     </main>

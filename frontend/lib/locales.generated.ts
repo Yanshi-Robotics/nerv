@@ -632,7 +632,9 @@ export const LOCALES: Record<string, Locale> = {
       "Manage access and manual controls in the session toolbox.": "Manage access and manual controls in the session toolbox.",
       "Allow access under Device and access in the toolbox before using robot actions.": "Allow access under Device and access in the toolbox before using robot actions.",
       "Task event stream connected": "Task event stream connected",
-      "Task event stream disconnected": "Task event stream disconnected"
+      "Task event stream disconnected": "Task event stream disconnected",
+      "Agent chat": "Agent chat",
+      "Interaction mode": "Interaction mode"
     }
   },
   "zh": {
@@ -1248,7 +1250,9 @@ export const LOCALES: Record<string, Locale> = {
       "Manage access and manual controls in the session toolbox.": "请在会话工具箱中管理接入许可和手动操作。",
       "Allow access under Device and access in the toolbox before using robot actions.": "使用机器人动作前，请先在工具箱的“设备与接入”中允许接入。",
       "Task event stream connected": "任务事件流已连接",
-      "Task event stream disconnected": "任务事件流已断开"
+      "Task event stream disconnected": "任务事件流已断开",
+      "Agent chat": "Agent 对话",
+      "Interaction mode": "交互方式"
     }
   }
 };
