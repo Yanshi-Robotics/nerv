@@ -202,6 +202,13 @@ class Turn:
             if required and not set(required) <= received:
                 self.body.post("/stop")
                 raise RuntimeError("required visual supervision frames are unavailable")
+        return self.record_observation(obs)
+
+    def record_observation(self, obs):
+        """Persist and publish sensor input without acquiring execution control."""
+        with self._guard:
+            if not self.is_current():
+                return None
             self.store.append_perception(self.session.id, obs.state, obs.images)
             self._observation = dict(obs.state)
         first = obs.image_png

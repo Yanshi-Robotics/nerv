@@ -127,7 +127,7 @@ export default function Home() {
         <OperatorToolbox key={`${current?.id}:${current?.epoch}`} session={current} bodyNode={bodyNode} nodes={nodes} onChanged={() => {refreshSessions(); refreshNodes();}}
           chat={<ChatPanel session={current} brains={registry?.brains ?? []} bodyNode={bodyNode} onModels={() => setPanel("models")} onSessionsChanged={() => { refreshSessions(); refreshNodes(); }} />}>
           {current ? (
-            <SensingArea key={`${current.id}:${current.status}`} session={current} bodyNode={bodyNode} worldNode={worldNode} onStateChanged={() => { refreshSessions(); refreshNodes(); }} />
+            <SensingArea key={`${current.id}:${current.status}`} session={current} bodyNode={bodyNode} worldNode={worldNode} robotSensors={registry?.bodies.find(body => body.name === current.body)?.sensors} onStateChanged={() => { refreshSessions(); refreshNodes(); }} />
           ) : (
             <div className="flex min-w-0 items-center justify-center overflow-hidden bg-neutral-950 p-8 text-center text-sm text-neutral-600">
               {t("Pick a session on the left, or create one.")}

@@ -622,6 +622,7 @@
     "Supported models": "Supported models",
     "No enabled visual models for this provider.": "No enabled visual models for this provider.",
     "A saved key is shared by these models. Availability also depends on your provider account.": "A saved key is shared by these models. Availability also depends on your provider account.",
-    "World node unavailable. End this instance and create a new one.": "World node unavailable. End this instance and create a new one."
+    "World node unavailable. End this instance and create a new one.": "World node unavailable. End this instance and create a new one.",
+    "Operator view": "Operator view"
   }
 }

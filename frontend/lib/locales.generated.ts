@@ -643,7 +643,8 @@ export const LOCALES: Record<string, Locale> = {
       "Supported models": "Supported models",
       "No enabled visual models for this provider.": "No enabled visual models for this provider.",
       "A saved key is shared by these models. Availability also depends on your provider account.": "A saved key is shared by these models. Availability also depends on your provider account.",
-      "World node unavailable. End this instance and create a new one.": "World node unavailable. End this instance and create a new one."
+      "World node unavailable. End this instance and create a new one.": "World node unavailable. End this instance and create a new one.",
+      "Operator view": "Operator view"
     }
   },
   "zh": {
@@ -1270,7 +1271,8 @@ export const LOCALES: Record<string, Locale> = {
       "Supported models": "支持的模型",
       "No enabled visual models for this provider.": "该供应商暂无已启用的视觉模型。",
       "A saved key is shared by these models. Availability also depends on your provider account.": "这些模型共用已保存的密钥，实际使用权限取决于供应商账户。",
-      "World node unavailable. End this instance and create a new one.": "世界节点不可用。请结束当前实例后重新创建。"
+      "World node unavailable. End this instance and create a new one.": "世界节点不可用。请结束当前实例后重新创建。",
+      "Operator view": "上帝视角"
     }
   }
 };

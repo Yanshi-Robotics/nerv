@@ -66,7 +66,11 @@ class RoleTurn(Turn):
         if self.role == "system2":
             return super().observe()
         self.step += 1
-        return None
+        if self.robot is None or not self.is_current():
+            return None
+        # Read only the robot sensor interface. Chat is not an execution supervisor
+        # and must never acknowledge supervision or stop an independent task.
+        return self.record_observation(self.robot.perceive())
 
     def executing(self):
         return self.role == "system2" and super().executing()
