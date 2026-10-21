@@ -12,10 +12,28 @@ button:not(:disabled) {
    所以浅色主题不必改任何组件——只在 [data-theme="light"] 作用域里把整条
    neutral ramp【镜像翻转】（950↔50、900↔100、800↔200…、500 不变）即可：
    深色下的"最暗背景"在浅色下变"最亮背景"，"最亮文字"变"最暗文字"，边框、灰字
-   一并对调。强调色（blue/amber/green）不动，深浅两色上都能用。
+   一并对调。交互控件使用下方独立的语义色，不依赖 neutral 翻转。
    ============================================================ */
 html {
   color-scheme: dark;
+  --control-primary-bg: #A6B7B9;
+  --control-primary-fg: #18282E;
+  --control-primary-shade: white;
+  --control-selected-bg: #34464D;
+  --control-selected-fg: #E3ECEC;
+  --control-focus: #8B9FA5;
+  --control-text: #E3ECEC;
+  --control-border: #718289;
+  --control-hover: #29363B;
+  --control-disabled-bg: #292E31;
+  --control-disabled-fg: #9BA5A9;
+  --control-disabled-border: #505B60;
+  --control-danger-bg: #A6333F;
+  --control-danger-fg: #FFFFFF;
+  --control-danger-text: #F2ADB4;
+  --control-warning-bg: #4A3B28;
+  --control-warning-fg: #EBD6AD;
+  --control-warning-border: #B79B6B;
   /* 强调色文字「按主题分开」token：amber 不随上面的 neutral 一起翻转，
      浅色底下浅 amber（amber-100/200/300）会糊，所以给需要可读的 amber 文字
      单独定 per-theme 值。默认（深色）= 亮琥珀（≈ amber-200/300），深底可读。 */
@@ -25,6 +43,22 @@ html {
 
 html[data-theme="light"] {
   color-scheme: light;
+  --control-primary-bg: #596D75;
+  --control-primary-fg: #FFFFFF;
+  --control-primary-shade: black;
+  --control-selected-bg: #DCE5E5;
+  --control-selected-fg: #2F454D;
+  --control-focus: #71868E;
+  --control-text: #2F454D;
+  --control-border: #8A969B;
+  --control-hover: #E8EDED;
+  --control-disabled-bg: #E8EBEB;
+  --control-disabled-fg: #606B70;
+  --control-disabled-border: #B7C0C2;
+  --control-danger-text: #A12D3A;
+  --control-warning-bg: #F0E7D9;
+  --control-warning-fg: #69502B;
+  --control-warning-border: #9D7F4E;
   /* neutral 镜像翻转（值取自 Tailwind v4 默认 neutral 色阶） */
   --color-neutral-950: oklch(0.985 0 0); /* ← 原 50  最亮（浅色主背景） */
   --color-neutral-900: oklch(0.97 0 0);  /* ← 原 100 面板/侧栏 */
@@ -41,6 +75,68 @@ html[data-theme="light"] {
   --text-accent-amber: oklch(0.52 0.15 55);
   --text-accent-amber-dim: oklch(0.56 0.13 58);
 }
+
+/* Explicit opt-in controls: semantic variants override utility colors as a set.
+   Scene materials, images, status badges and non-interactive surfaces are untouched. */
+.nerv-control {
+  color: var(--button-fg, var(--control-text));
+  background-color: var(--button-bg, transparent);
+  border-color: var(--button-border, var(--control-border));
+}
+.nerv-control:not(:disabled):hover {
+  background-color: var(--button-hover, var(--control-hover));
+  color: var(--button-fg, var(--control-text));
+  border-color: var(--button-border, var(--control-focus));
+}
+.nerv-control:not(:disabled):active {
+  background-color: var(--button-active, var(--control-selected-bg));
+}
+.nerv-control.nerv-primary {
+  --button-bg: var(--control-primary-bg);
+  --button-fg: var(--control-primary-fg);
+  --button-border: var(--control-primary-bg);
+  --button-hover: color-mix(in srgb, var(--control-primary-bg) 94%, var(--control-primary-shade));
+  --button-active: color-mix(in srgb, var(--control-primary-bg) 88%, var(--control-primary-shade));
+}
+.nerv-control:is(.nerv-selected, [aria-pressed="true"], [aria-current="true"]) {
+  --button-bg: var(--control-selected-bg);
+  --button-fg: var(--control-selected-fg);
+  --button-border: var(--control-focus);
+  --button-hover: color-mix(in srgb, var(--control-selected-bg) 94%, var(--control-selected-fg));
+  --button-active: color-mix(in srgb, var(--control-selected-bg) 88%, var(--control-selected-fg));
+}
+.nerv-control.nerv-warning {
+  --button-bg: var(--control-warning-bg);
+  --button-fg: var(--control-warning-fg);
+  --button-border: var(--control-warning-border);
+  --button-hover: color-mix(in srgb, var(--control-warning-bg) 94%, var(--control-warning-fg));
+  --button-active: color-mix(in srgb, var(--control-warning-bg) 88%, var(--control-warning-fg));
+}
+.nerv-control.nerv-danger {
+  --button-bg: var(--control-danger-bg);
+  --button-fg: var(--control-danger-fg);
+  --button-border: var(--control-danger-bg);
+  --button-hover: color-mix(in srgb, var(--control-danger-bg) 92%, black);
+  --button-active: color-mix(in srgb, var(--control-danger-bg) 84%, black);
+}
+.nerv-control.nerv-danger-quiet { --button-fg: var(--control-danger-text); }
+.nerv-control.nerv-overlay-control { --button-bg: var(--control-selected-bg); }
+.nerv-control:is(.nerv-selected, [aria-pressed="true"], [aria-current="true"]) :where([class*="text-neutral-"]) { color: inherit; }
+:is(.nerv-control, input, select, textarea, summary, a):focus-visible {
+  outline: 2px solid var(--control-focus);
+  outline-offset: 3px;
+  box-shadow: none;
+}
+.nerv-control.nerv-danger:focus-visible { outline-color: var(--control-danger-text); }
+.nerv-control:disabled, input:disabled, select:disabled, textarea:disabled {
+  color: var(--control-disabled-fg);
+  background-color: var(--control-disabled-bg);
+  border-color: var(--control-disabled-border);
+  opacity: 1;
+  cursor: not-allowed;
+}
+.nerv-control:disabled :where(span, div, svg) { color: inherit; }
+input:is([type="checkbox"], [type="range"]) { accent-color: var(--control-focus); }
 
 /* 切换主题时柔和过渡，不突兀（只过渡颜色，不波及布局动画） */
 body {

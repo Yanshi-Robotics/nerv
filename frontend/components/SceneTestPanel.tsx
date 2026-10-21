@@ -267,23 +267,23 @@ export default function SceneTestPanel({ sessionId, onClose, onStateChanged }: {
   const inspectedMovables = Object.entries(state?.joints ?? {}).filter(([name, value]) =>
     value.position && (selectedNames.includes(name) || value.held || value.body === focused?.body));
   const statusLabel = (key: string) => t(RESULT_LABELS[key] ?? key);
-  const btn = "rounded-md border border-neutral-700 bg-neutral-800 px-2 py-1.5 text-[11px] text-neutral-200 hover:bg-neutral-700 disabled:opacity-40";
+  const btn = "rounded-md border border-neutral-700 bg-neutral-800 px-2 py-1.5 text-[11px] text-neutral-200 hover:bg-neutral-700 ";
 
   return (
     <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-xl border border-neutral-700 bg-neutral-900" aria-label={t("Scene test")}>
       <header className="flex shrink-0 flex-wrap items-center gap-2 border-b border-neutral-800 px-3 py-2">
         <span className="text-xs font-medium">{t("Scene test")}</span>
         <span className="text-[10px] text-neutral-500">{t("Operator only")}</span>
-        <button className={`${btn} ml-auto`} onClick={leave} disabled={busy}>{t("Exit scene test")}</button>
+        <button className={`nerv-control ${btn} ml-auto`} onClick={leave} disabled={busy}>{t("Exit scene test")}</button>
       </header>
       {!lease ? (
         <div className="flex min-h-0 flex-1 flex-col items-center justify-center gap-3 p-5 text-center">
           <p className="max-w-md text-xs leading-relaxed text-neutral-400">{t("Scene testing stops the current task and disarms the robot after it settles. Inspect facilities and use the controls supported by this world.")}</p>
-          <button className={`${btn} border-blue-600 bg-blue-600 text-white`} disabled={busy || !state?.available} onClick={enter}>
+          <button className={`nerv-control ${btn} nerv-primary`} disabled={busy || !state?.available} onClick={enter}>
             {busy ? t("Waiting for the robot to settle…") : t("Start scene test")}
           </button>
           {state && !state.available && <p className="text-xs text-neutral-500">{t("This world does not offer scene tests.")}</p>}
-          {error && <p role="alert" className="max-w-md text-xs text-red-400">{t(error)}</p>}
+          {error && <p role="alert" className="max-w-md text-xs text-[var(--control-danger-text)]">{t(error)}</p>}
         </div>
       ) : (
         <>
@@ -309,12 +309,12 @@ export default function SceneTestPanel({ sessionId, onClose, onStateChanged }: {
                 { label: "Tilt down", text: "▼", patch: (v: SceneView) => ({ elevation: v.elevation - VIEW_TILT_DEG }) },
                 { label: "Zoom in", text: "+", patch: (v: SceneView) => ({ distance: v.distance / VIEW_ZOOM_FACTOR }) },
                 { label: "Zoom out", text: "−", patch: (v: SceneView) => ({ distance: v.distance * VIEW_ZOOM_FACTOR }) },
-              ].map((c) => <button key={c.label} className={btn} title={t(c.label)} aria-label={t(c.label)} onClick={() => view(c.patch)}>{c.text}</button>)}
+              ].map((c) => <button key={c.label} className={`nerv-control ${btn}`} title={t(c.label)} aria-label={t(c.label)} onClick={() => view(c.patch)}>{c.text}</button>)}
               <span className="mx-0.5 border-l border-neutral-600" />
-              <button className={btn} title={t("Pan left")} aria-label={t("Pan left")} onClick={() => pan(-1, 0)}>←</button>
-              <button className={btn} title={t("Pan right")} aria-label={t("Pan right")} onClick={() => pan(1, 0)}>→</button>
-              <button className={btn} title={t("Pan up")} aria-label={t("Pan up")} onClick={() => pan(0, 1)}>↑</button>
-              <button className={btn} title={t("Pan down")} aria-label={t("Pan down")} onClick={() => pan(0, -1)}>↓</button>
+              <button className={`nerv-control ${btn}`} title={t("Pan left")} aria-label={t("Pan left")} onClick={() => pan(-1, 0)}>←</button>
+              <button className={`nerv-control ${btn}`} title={t("Pan right")} aria-label={t("Pan right")} onClick={() => pan(1, 0)}>→</button>
+              <button className={`nerv-control ${btn}`} title={t("Pan up")} aria-label={t("Pan up")} onClick={() => pan(0, 1)}>↑</button>
+              <button className={`nerv-control ${btn}`} title={t("Pan down")} aria-label={t("Pan down")} onClick={() => pan(0, -1)}>↓</button>
             </div>
           </div>
           <div className="max-h-[42%] shrink-0 space-y-2 overflow-auto p-3 text-[11px]">
@@ -325,33 +325,33 @@ export default function SceneTestPanel({ sessionId, onClose, onStateChanged }: {
                 {joints.map((f) => <option key={f.joint} value={f.joint}>{localized(f.label, lang)}</option>)}
               </select>
               <input type="range" min="0" max="1" step="0.01" value={target} aria-label={t("Target opening")} onChange={(e) => setTarget(Number(e.target.value))} className="min-w-20 flex-1" />
-              <button className={btn} onClick={() => void command("joint", { joint: selectedJoint, fraction: target, xy: lastXY.current })}>{t("Apply opening")}</button>
+              <button className={`nerv-control ${btn}`} onClick={() => void command("joint", { joint: selectedJoint, fraction: target, xy: lastXY.current })}>{t("Apply opening")}</button>
               <span className="tabular-nums text-neutral-400">{t("Measured")}: {Math.round((selectedState?.fraction ?? 0) * 100)}% · {statusLabel(selectedState?.result ?? "idle")}</span>
             </div>}
             {(isMovable || state?.held != null) && <div className="flex flex-wrap items-center gap-2">
-              {state?.held == null ? <button className={btn} onClick={grab}>{t("Grab object")}</button> : <>
+              {state?.held == null ? <button className={`nerv-control ${btn}`} onClick={grab}>{t("Grab object")}</button> : <>
                 <label className="flex items-center gap-2">{t("Depth")}
                   <input type="range" min={DRAG_MIN_M} max={DRAG_REACH_M} step={DRAG_DEPTH_STEP_M / 4} value={depth} aria-label={t("Drag depth")}
                     onChange={(e) => { const d = Number(e.target.value); setDepth(d); latestDrag.current = { xy: lastXY.current, distance: d }; }} />
                   <span className="tabular-nums">{depth.toFixed(2)} m</span>
                 </label>
-                <button className={btn} onClick={() => { latestDrag.current = null; void command("release"); }}>{t("Release object")}</button>
+                <button className={`nerv-control ${btn}`} onClick={() => { latestDrag.current = null; void command("release"); }}>{t("Release object")}</button>
               </>}
             </div>}
             {inspectedMovables.map(([name, value]) => <p key={name} className="tabular-nums text-neutral-400">{value.position?.map((v) => v.toFixed(2)).join(", ")} m · {statusLabel(value.result ?? "idle")}</p>)}
             <div className="flex flex-wrap items-center gap-2">
               <span role="status" className="min-w-0 flex-1 text-neutral-500">{statusLabel(state?.reason ?? "idle")}</span>
-              <button className={btn} onClick={() => { latestDrag.current = null; dragging.current = false; void command("cancel"); }}>{t("Cancel interaction")}</button>
-              <button className={btn} onClick={() => setResetPending(true)} disabled={busy}>{t("Reset whole scene")}</button>
+              <button className={`nerv-control ${btn}`} onClick={() => { latestDrag.current = null; dragging.current = false; void command("cancel"); }}>{t("Cancel interaction")}</button>
+              <button className={`nerv-control ${btn}`} onClick={() => setResetPending(true)} disabled={busy}>{t("Reset whole scene")}</button>
             </div>
             {resetPending && <div role="alertdialog" aria-modal="false" aria-label={t("Reset whole scene")} className="space-y-2 rounded-lg border border-amber-700 bg-neutral-950 p-3">
               <p>{t("Reset the whole scene? The robot, furniture and props return to their initial positions. The current time of day is kept.")}</p>
               <div className="flex gap-2">
-                <button className={btn} onClick={() => void reset()} disabled={busy}>{t("Reset whole scene")}</button>
-                <button className={btn} onClick={() => setResetPending(false)}>{t("Cancel")}</button>
+                <button className={`nerv-control ${btn}`} onClick={() => void reset()} disabled={busy}>{t("Reset whole scene")}</button>
+                <button className={`nerv-control ${btn}`} onClick={() => setResetPending(false)}>{t("Cancel")}</button>
               </div>
             </div>}
-            {error && <p role="alert" className="text-red-400">{t(error)}</p>}
+            {error && <p role="alert" className="text-[var(--control-danger-text)]">{t(error)}</p>}
             {state?.task.supported && <div className="rounded-lg border border-neutral-700 p-2" aria-label={t("Task progress")}>
               <p className="font-medium">{localized(state.task.label, lang)}</p>
               {state.task.target && <p className="mt-1 text-blue-400">{localized(state.task.target.label, lang)}</p>}

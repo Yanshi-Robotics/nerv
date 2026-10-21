@@ -64,10 +64,10 @@ function StatusPeek({ nodeKey }: { nodeKey: string }) {
   return (
     <div>
       <button onClick={() => getNodeStatus(nodeKey).then((s) => { setSt(s); setErr(""); }).catch((e) => setErr((e as Error).message))}
-        className="rounded border border-neutral-700 px-2 py-0.5 text-[11px] text-neutral-300 hover:bg-neutral-800">
+        className="nerv-control rounded border border-neutral-700 px-2 py-0.5 text-[11px] text-neutral-300 hover:bg-neutral-800">
         {st ? t("Refresh status") : t("Peek at /status (god view, the brain cannot see this)")}
       </button>
-      {err && <span className="ml-2 text-[11px] text-red-400">{err}</span>}
+      {err && <span className="ml-2 text-[11px] text-[var(--control-danger-text)]">{err}</span>}
       {st && <Json value={st} />}
     </div>
   );
@@ -272,7 +272,7 @@ export default function NervDashboard({ embedded = false, onOpenLogs, onNodesCha
           {t("One instance binds one robot and one environment. The registry provides its tools and sensors; the active conversation owns control.")}{" "}
           {t("This page shows what the registry declares, which nodes are up, where each stands with you (trust), and every signal that crosses NERV. For one session's full chain, see")}{" "}
           {embedded && onOpenLogs ? (
-            <button onClick={onOpenLogs} className="text-blue-400 hover:underline">Session Logs</button>
+            <button onClick={onOpenLogs} className="nerv-control text-blue-400 hover:underline">Session Logs</button>
           ) : (
             <a href="/session-logs" className="text-blue-400 hover:underline">Session Logs</a>
           )}.

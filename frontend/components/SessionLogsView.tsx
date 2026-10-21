@@ -114,7 +114,7 @@ export default function SessionLogsView({ embedded = false, sessionId = "" }: { 
             {selected === ALL ? `${entries.length} ${t("entries")}` : (cur ? `${where(cur)} · ${cur.brain} · ` : "") + `${entries.length} ${t("entries")}`}
           </span>
           <button onClick={copyAll} disabled={entries.length === 0} title={t("Copy every listed log entry (all fields) to the clipboard")}
-            className="ml-auto rounded-md border border-neutral-700 bg-neutral-800 px-2 py-1 text-[11px] text-neutral-200 hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-40">
+            className="nerv-control ml-auto rounded-md border border-neutral-700 bg-neutral-800 px-2 py-1 text-[11px] text-neutral-200 hover:bg-neutral-700 disabled:cursor-not-allowed">
             {copied ? t("Copied ✓") : t("Copy all logs")}
           </button>
           {!embedded && <LangToggle />}
