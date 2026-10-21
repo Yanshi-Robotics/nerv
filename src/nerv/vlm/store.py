@@ -68,6 +68,17 @@ class CredentialStore:
         return {"configured": configured, "source": "store" if configured else None,
                 "writable": True}
 
+    def check_writable(self):
+        """Probe local persistence before a billable request, without writing a key."""
+        root = self.path.parent
+        if root.is_symlink() or self.path.is_symlink():
+            raise PermissionError("private storage must not use symbolic links")
+        root.mkdir(parents=True, exist_ok=True)
+        root.chmod(0o700)
+        # Exercise creation and atomic replacement on the same filesystem.
+        with tempfile.TemporaryDirectory(prefix=".credential-check-", dir=root) as directory:
+            private_write(Path(directory) / "probe.json", {})
+
     def set(self, reference: str, value: str | None):
         if not re.fullmatch(r"[A-Z][A-Z0-9_]*", reference):
             raise ValueError("invalid credential reference")
@@ -262,7 +273,6 @@ class ModelRegistry:
 
     def configure(self, model_id, candidate_key, *, cancelled=lambda: False, provider_factory=None):
         """Test in memory; compare-and-save prevents stale requests replacing credentials."""
-        import base64
         from . import probe
         from .errors import ModelError, model_error
         if not candidate_key or any(ord(c) < 33 or ord(c) > 126 for c in candidate_key):
@@ -272,16 +282,20 @@ class ModelRegistry:
             signature = self.request_signature(model)
             revision = self.credentials.path.stat().st_mtime_ns if self.credentials.path.exists() else None
         picture, expected = probe.challenge()
-        result = {"ok": False, "saved": False, "image": base64.b64encode(picture).decode(), "answer": ""}
+        result = {"ok": False, "saved": False}
         try:
             if cancelled():
                 raise ModelError("configuration_cancelled")
-            client = (provider_factory or self.provider)(model_id, candidate_key=candidate_key)
+            try:
+                self.credentials.check_writable()
+            except OSError:
+                raise ModelError("storage_failed") from None
+            if cancelled():
+                raise ModelError("configuration_cancelled")
+            client = (provider_factory or self.provider)(model_id, candidate_key=candidate_key, effort=None)
             reply = client.chat("Identify the visible shapes. Do not call tools.",
                                 [{"role": "user", "text": probe.PROMPT}], [],
                                 [{"name": "configuration-test", "png": picture}], cancelled=cancelled)
-            # A provider may echo user data. Never reflect the candidate credential.
-            result["answer"] = (reply.text or "").replace(candidate_key, "[redacted]")[:4096]
             if not probe.matches(reply, expected):
                 raise ModelError("vision_mismatch")
             with _lock:

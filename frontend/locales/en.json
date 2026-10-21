@@ -613,6 +613,14 @@
     "Task event stream connected": "Task event stream connected",
     "Task event stream disconnected": "Task event stream disconnected",
     "Agent chat": "Agent chat",
-    "Interaction mode": "Interaction mode"
+    "Interaction mode": "Interaction mode",
+    "Save one key per provider. Choose a model and reasoning effort in the session.": "Save one key per provider. Choose a model and reasoning effort in the session.",
+    "Saving…": "Saving…",
+    "Saved successfully": "Saved successfully",
+    "Save failed": "Save failed",
+    "Key removed": "Key removed",
+    "Supported models": "Supported models",
+    "No enabled visual models for this provider.": "No enabled visual models for this provider.",
+    "A saved key is shared by these models. Availability also depends on your provider account.": "A saved key is shared by these models. Availability also depends on your provider account."
   }
 }
