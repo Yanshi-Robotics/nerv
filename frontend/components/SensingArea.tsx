@@ -224,7 +224,7 @@ export default function SensingArea({
         });
       } else if (v.startsWith(CAM_VIEW_PREFIX)) {
         const name = v.slice(CAM_VIEW_PREFIX.length);
-        if (!worldSensors.includes(name)) continue; // 这个世界（已经）没有这路相机
+        if (worldOnline && !worldSensors.includes(name)) continue; // Preserve offline camera tiles and their error state.
         out.push({
           id: v,
           label: `📷 ${name}`,
@@ -327,7 +327,7 @@ export default function SensingArea({
 
         {tiles.length === 0 ? (
           <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-neutral-800 text-xs text-neutral-500">
-            {active ? t("No view selected. Choose a camera in the toolbox.") : t("Open the conversation to view saved observations.")}
+            {active ? session.world && !worldOnline ? t("World node unavailable. End this instance and create a new one.") : t("No view selected. Choose a camera in the toolbox.") : t("Open the conversation to view saved observations.")}
           </div>
         ) : (
           <div className="grid min-h-0 flex-1 gap-3"

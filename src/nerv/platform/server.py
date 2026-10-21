@@ -448,6 +448,8 @@ def interrupt_session(sid: str) -> dict:
 def world_control_descriptor(sid: str):
     try:
         return nerv.world_controls.capabilities(sid)
+    except httpx.HTTPError as error:
+        raise HTTPException(503, "World node unavailable. End this instance and create a new one.") from error
     except (ValueError, KeyError) as error:
         raise HTTPException(409, str(error)) from error
 

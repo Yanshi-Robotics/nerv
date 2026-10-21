@@ -41,7 +41,7 @@ export default function WorldControlPanel({session, onChanged}: {session: Sessio
         {!!Object.keys(descriptor.configuration.properties ?? {}).length && <><WorldProperties schema={descriptor.configuration} values={values} onChange={setValues}/><button onClick={() => apply("rebuild", values)} className="nerv-control rounded nerv-primary px-3 py-1.5 text-white">{t("End and rebuild instance")}</button></>}
         {descriptor.commands.filter(c => c.name !== "rebuild").map(command => <div key={command.name} className="space-y-2"><WorldProperties schema={command.parameters} values={commandValues[command.name] ?? {}} onChange={v => setCommandValues({...commandValues, [command.name]: v})}/><button onClick={() => apply(command.name, commandValues[command.name] ?? {})} className="nerv-control rounded border border-neutral-600 px-3 py-1.5">{t(command.name === "reset" ? "Reset world" : command.name === "time" ? "Apply lighting phase" : command.name)}</button></div>)}
       </fieldset>}
-      {busy && <p role="status">{t("Applying world change…")}</p>}{error && <p role="alert" className="text-[var(--control-danger-text)]">{error}</p>}
+      {busy && <p role="status">{t("Applying world change…")}</p>}{error && <p role="alert" className="text-[var(--control-danger-text)]">{t(error)}</p>}
     </div>
   </details>;
 }
