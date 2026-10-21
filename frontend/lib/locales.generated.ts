@@ -634,7 +634,15 @@ export const LOCALES: Record<string, Locale> = {
       "Task event stream connected": "Task event stream connected",
       "Task event stream disconnected": "Task event stream disconnected",
       "Agent chat": "Agent chat",
-      "Interaction mode": "Interaction mode"
+      "Interaction mode": "Interaction mode",
+      "Save one key per provider. Choose a model and reasoning effort in the session.": "Save one key per provider. Choose a model and reasoning effort in the session.",
+      "Saving…": "Saving…",
+      "Saved successfully": "Saved successfully",
+      "Save failed": "Save failed",
+      "Key removed": "Key removed",
+      "Supported models": "Supported models",
+      "No enabled visual models for this provider.": "No enabled visual models for this provider.",
+      "A saved key is shared by these models. Availability also depends on your provider account.": "A saved key is shared by these models. Availability also depends on your provider account."
     }
   },
   "zh": {
@@ -1252,7 +1260,15 @@ export const LOCALES: Record<string, Locale> = {
       "Task event stream connected": "任务事件流已连接",
       "Task event stream disconnected": "任务事件流已断开",
       "Agent chat": "Agent 对话",
-      "Interaction mode": "交互方式"
+      "Interaction mode": "交互方式",
+      "Save one key per provider. Choose a model and reasoning effort in the session.": "每家供应商保存一份密钥。模型和推理强度在会话中选择。",
+      "Saving…": "正在保存…",
+      "Saved successfully": "保存成功",
+      "Save failed": "保存失败",
+      "Key removed": "密钥已移除",
+      "Supported models": "支持的模型",
+      "No enabled visual models for this provider.": "该供应商暂无已启用的视觉模型。",
+      "A saved key is shared by these models. Availability also depends on your provider account.": "这些模型共用已保存的密钥，实际使用权限取决于供应商账户。"
     }
   }
 };

@@ -555,7 +555,7 @@ async function modelRequest(path: string, method = "GET", body?: unknown) {
   return response.json();
 }
 export const getVlm = (): Promise<{models: VlmModel[]; providers: VlmProvider[]; credential_path: string; selection: string; task_locked: boolean}> => modelRequest("vlm");
-export type ConfigurationResult = {ok: boolean; saved: boolean; image: string; answer: string; error?: {code: string; message: string}};
+export type ConfigurationResult = {ok: boolean; saved: boolean; error?: {code: string; message: string}};
 export async function configureVlm(id: string, value: string, signal: AbortSignal): Promise<ConfigurationResult> {
   const response = await fetch(`${BASE}/api/vlm/${encodeURIComponent(id)}/configure`, {method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({value}), signal});
   if (!response.ok) throw new ApiError(await detailOf(response), response.status);

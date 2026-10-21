@@ -19,7 +19,8 @@ def registry(tmp_path, monkeypatch):
 
 
 def provider(registry, answer=ANSWER, callback=lambda: None):
-    def factory(model_id, *, candidate_key):
+    def factory(model_id, *, candidate_key, effort):
+        assert effort is None
         assert candidate_key == "candidate-fixture"
         def chat(system, history, tools, images, *, cancelled):
             assert not tools and len(images) == 1
@@ -34,7 +35,8 @@ def provider(registry, answer=ANSWER, callback=lambda: None):
 def test_candidate_only_saved_after_correct_visual_answer(registry):
     result = registry.configure("openai-sol", "candidate-fixture", provider_factory=provider(
         registry, callback=lambda: pytest.raises(ModelError, registry.require_key, "openai-sol")))
-    assert result["saved"] and result["image"]
+    assert result["saved"]
+    assert "image" not in result and "answer" not in result
     assert registry.credentials.resolve("OPENAI_API_KEY") == "candidate-fixture"
     assert registry.credentials.path.stat().st_mode & 0o077 == 0
     entries = {m["id"]: m for m in registry.list()}
@@ -159,3 +161,25 @@ def test_missing_runtime_is_not_reported_as_preparable(monkeypatch):
     monkeypatch.setattr(server.nerv, "body_client", lambda _: None)
     response = TestClient(server.app).get("/api/sessions/offline-fixture/runtime")
     assert response.status_code == 503 and response.json()["detail"] == "body node offline"
+
+
+def test_read_only_storage_prevents_billable_request(registry, monkeypatch):
+    monkeypatch.setattr(registry.credentials, "check_writable", lambda: (_ for _ in ()).throw(PermissionError()))
+    result = registry.configure("openai-sol", "candidate-fixture",
+                                provider_factory=lambda *a, **kw: pytest.fail("paid request before storage check"))
+    assert result["error"]["code"] == "storage_failed"
+    assert not result["saved"] and not registry.credentials.path.exists()
+
+
+def test_storage_probe_leaves_no_key_or_temporary_files(registry):
+    registry.credentials.check_writable()
+    assert not registry.credentials.path.exists()
+    assert list(registry.root.iterdir()) == []
+    assert registry.root.stat().st_mode & 0o077 == 0
+
+
+def test_registration_uses_provider_default_effort(registry):
+    registry.select("openai-sol", "high")
+    result = registry.configure("openai-sol", "candidate-fixture", provider_factory=provider(registry))
+    assert result["saved"]
+    assert registry._read()["efforts"]["openai-sol"] == "high"

@@ -50,7 +50,7 @@ npm --prefix frontend run build:static
 
 Open `http://localhost:8000`. The static frontend uses the same origin as the backend. For frontend development, use `npm --prefix frontend run dev` on the allocated port 8100.
 
-Open **Models and API keys**, select a provider and visual model, enter its key, then choose **Submit and test**. This sends one billable image request. NERV saves the key only after the answer matches the locally generated image; failed tests preserve the previous key. Choose a reasoning effort or use the provider default. Session creation requires a registered key but makes no provider request. A conversation can also be created without a robot. A real binding never prepares the device automatically.
+Open **Models and API keys**, select a provider, enter its key, then choose **Save key**. NERV checks local storage before sending one billable image request through an enabled model from that provider. It saves the key only after the answer matches the generated image and shows the save result; failed tests preserve the previous key. Choose the model and reasoning effort in the session. Session creation requires a registered key but makes no provider request. A conversation can also be created without a robot. A real binding never prepares the device automatically.
 
 Configuration values can be placed in `.env` using [.env.example](.env.example). Private model settings and keys live under `NERV_HOME` (default `~/.nerv`), outside the repository. Keys are stored in `credentials.json`; model selection, effort and validation records are in `vlm.json`. The directory uses mode 0700 and files use mode 0600. The VLM registry ignores API keys in the shell and project `.env`. Re-enter existing keys in the panel; the upgrade leaves old files untouched.
 
@@ -137,7 +137,7 @@ The [world-library tools](worlds/docs/explore/README.md) cover scene tests, G1 r
 
 ## Visual models
 
-The panel groups keys by provider. It displays whether a key is saved without returning the saved value to the browser. Advanced model settings expose model ID, endpoint, image capability documentation, request limits. Chat reads the same registry. Pure text models and Mock do not appear in the running catalogue or act as fallbacks.
+The panel groups keys by provider. It displays whether a key is saved without returning the saved value to the browser. The panel lists supported models without a model or effort selector. One saved key serves the provider’s registered models, subject to account access. Chat reads the same registry. Pure text models and Mock do not appear in the running catalogue or act as fallbacks.
 
 OpenAI, DeepSeek and xAI use provider-specific Responses dialects. Gemini uses the stateless Interactions API; Claude uses native Messages streaming. Signed thought blocks and opaque reasoning items are replayed only within the matching provider identity. Effort options are model specific; an unspecified effort leaves the parameter out so the supplier applies its default. The last model and each model's effort are remembered. Changes are refused during an active turn or execution.
 
@@ -151,7 +151,7 @@ OpenAI, DeepSeek and xAI use provider-specific Responses dialects. Gemini uses t
 
 Catalogue capabilities were checked against supplier documentation on 2026-10-20: [OpenAI](https://developers.openai.com/api/docs/models/gpt-6.1-sol), [DeepSeek](https://api-docs.deepseek.com/api/create-response/), [Gemini](https://ai.google.dev/gemini-api/docs/thinking), [xAI](https://docs.x.ai/developers/model-capabilities/text/reasoning), [Anthropic](https://platform.claude.com/docs/en/build-with-claude/effort). Key registration sends one image request only when the operator submits the form. Opening settings, changing selections and creating sessions do not call the provider.
 
-Optional API diagnostics check image input, tool calls and continuation. Their results do not gate session creation or model use; those require only a nonempty registered key. Existing keys do not need to be registered again. A subsequently expired key permits session creation and produces a clear conversation error when used. Failed replies preserve the input and offer retry and model settings; retries do not replay old robot actions.
+The optional API diagnostics endpoint checks image input, tool calls and continuation. Their results do not gate session creation or model use; those require only a nonempty registered key. Existing keys do not need to be registered again. A subsequently expired key permits session creation and produces a clear conversation error when used. Failed replies preserve the input and offer retry and model settings; retries do not replay old robot actions.
 
 Changing endpoint, model, effort or credentials invalidates matching diagnostic and physical records. One successful key registration does not certify other models, general visual performance or robot performance. Agent errors do not cancel independent robot tasks; System 2 failures retain local stopping and supervision rules.
 
