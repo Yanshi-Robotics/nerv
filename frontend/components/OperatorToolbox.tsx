@@ -20,9 +20,9 @@ export function ToolboxSlot({name, children}: {name: Slot; children: ReactNode})
 }
 
 const GROUPS = ["Device and access", "Robot controls", "Simulation world", "Observation and task settings", "Scene test"] as const;
-export default function OperatorToolbox({session, bodyNode, nodes, onChanged, children}: {
+export default function OperatorToolbox({session, bodyNode, nodes, onChanged, children, chat}: {
   session: SessionSummary | null; bodyNode: NodeInfo | null; nodes: NodeInfo[];
-  onChanged: () => void; children: ReactNode;
+  onChanged: () => void; children: ReactNode; chat: ReactNode;
 }) {
   const {t} = useI18n();
   const [open, setOpen] = useState(false);
@@ -65,30 +65,39 @@ export default function OperatorToolbox({session, bodyNode, nodes, onChanged, ch
         <button className="nerv-control rounded border px-3 py-1.5" aria-expanded={open} aria-controls="operator-toolbox" onClick={() => setOpen(!open)}>{t("Toolbox")}</button>
         {error && <p role="alert" className="w-full text-[var(--control-danger-text)]">{t(error)}</p>}
       </header>
-      <div className="nerv-workspace-panes grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_440px]">{children}</div>
-      <section id="operator-toolbox" aria-label={t("Toolbox")} hidden={!open} className="nerv-toolbox shrink-0 border-t border-neutral-700 bg-neutral-900">
-        <div className="flex items-start gap-2 border-b border-neutral-800 p-2">
-          <nav className="flex flex-1 flex-wrap gap-2" aria-label={t("Manual controls")}>
-            {GROUPS.filter(name => !["Simulation world", "Scene test"].includes(name) || sim).map(name => <button key={name} aria-pressed={group === name} onClick={() => setGroup(name)} className="nerv-control rounded border px-3 py-1 text-xs">{t(name)}</button>)}
+      <div className="nerv-workspace-panes grid min-h-0 flex-1 grid-cols-[minmax(0,1fr)_440px]">
+        {children}
+        <aside className="nerv-right-panel flex min-h-0 min-w-0 flex-col overflow-hidden border-l border-neutral-800">
+          <nav aria-label={t("Interaction mode")} className="flex shrink-0 gap-2 border-b border-neutral-800 bg-neutral-900 p-2">
+            <button className="nerv-control flex-1 rounded border px-3 py-2 text-sm" aria-pressed={!open} aria-controls="agent-conversation" onClick={() => setOpen(false)}>{t("Agent chat")}</button>
+            <button className="nerv-control flex-1 rounded border px-3 py-2 text-sm" aria-pressed={open} aria-controls="operator-toolbox" onClick={() => setOpen(true)}>{t("Toolbox")}</button>
           </nav>
-          <button className="nerv-control rounded border px-3 py-1 text-xs" onClick={() => setOpen(false)}>{t("Close toolbox")}</button>
-        </div>
-        <div className="max-h-[32dvh] overflow-auto p-3">
-          {open && group === "Device and access" && <div className="space-y-3">
-            <p className="text-xs text-neutral-400">{t("Access permission exposes plugin capabilities. It does not prepare devices or permit motion.")}</p>
-            {nodes.filter(node => node.key === bodyNode?.key || (node.kind === "tool" && session?.agent_tools?.includes(node.key.replace(/^tool:/, "")))).map(node => <NodeTrust key={node.key} node={node} onChanged={onChanged} />)}
-            {robot && <RuntimeControls session={session!} online={!!bodyNode?.online} onChanged={onChanged} />}
-          </div>}
-          {open && group === "Robot controls" && robot && <div className="space-y-3">
-            <button role="switch" aria-checked={session!.armed} disabled={pending.arm} onClick={arm} className={`nerv-control rounded border px-3 py-2 text-xs ${session!.armed ? "nerv-danger" : ""}`}>{t(session!.armed ? "Disarm robot" : "Authorize robot motion")}</button>
-            <TeleopPanel sessionId={session!.id} armed={session!.armed} hasWorld={false} bodyTrust={bodyNode?.online ? bodyNode.trust?.state ?? null : "offline"} />
-          </div>}
-          {open && group === "Simulation world" && sim && <><WorldControlPanel session={session!} onChanged={onChanged} />{bodyNode && <StopSimulation node={bodyNode} sessionId={session!.id} onChanged={onChanged} />}</>}
-          <div hidden={group !== "Observation and task settings"} className="space-y-3"><div ref={setTask} /><div ref={setObservation} /></div>
-          {open && group === "Scene test" && sim && <SceneTestPanel sessionId={session!.id} onClose={() => setOpen(false)} onStateChanged={onChanged} />}
-          {!robot && group !== "Observation and task settings" && <p className="text-xs text-neutral-400">{t("No active robot instance")}</p>}
-        </div>
-      </section>
+          {/* Keep the conversation mounted so view changes preserve drafts and streams. */}
+          <div id="agent-conversation" hidden={open} className="nerv-conversation min-h-0 flex-1 overflow-hidden">{chat}</div>
+          <section id="operator-toolbox" aria-label={t("Toolbox")} hidden={!open} className="nerv-toolbox flex min-h-0 flex-1 flex-col bg-neutral-900">
+            <div className="flex shrink-0 items-start gap-2 border-b border-neutral-800 p-2">
+              <nav className="flex flex-1 flex-wrap gap-2" aria-label={t("Manual controls")}>
+                {GROUPS.filter(name => !["Simulation world", "Scene test"].includes(name) || sim).map(name => <button key={name} aria-pressed={group === name} onClick={() => setGroup(name)} className="nerv-control rounded border px-3 py-1 text-xs">{t(name)}</button>)}
+              </nav>
+            </div>
+            <div className="min-h-0 flex-1 overflow-auto p-3">
+              {open && group === "Device and access" && <div className="space-y-3">
+                <p className="text-xs text-neutral-400">{t("Access permission exposes plugin capabilities. It does not prepare devices or permit motion.")}</p>
+                {nodes.filter(node => node.key === bodyNode?.key || (node.kind === "tool" && session?.agent_tools?.includes(node.key.replace(/^tool:/, "")))).map(node => <NodeTrust key={node.key} node={node} onChanged={onChanged} />)}
+                {robot && <RuntimeControls session={session!} online={!!bodyNode?.online} onChanged={onChanged} />}
+              </div>}
+              {open && group === "Robot controls" && robot && <div className="space-y-3">
+                <button role="switch" aria-checked={session!.armed} disabled={pending.arm} onClick={arm} className={`nerv-control rounded border px-3 py-2 text-xs ${session!.armed ? "nerv-danger" : ""}`}>{t(session!.armed ? "Disarm robot" : "Authorize robot motion")}</button>
+                <TeleopPanel sessionId={session!.id} armed={session!.armed} hasWorld={false} bodyTrust={bodyNode?.online ? bodyNode.trust?.state ?? null : "offline"} />
+              </div>}
+              {open && group === "Simulation world" && sim && <><WorldControlPanel session={session!} onChanged={onChanged} />{bodyNode && <StopSimulation node={bodyNode} sessionId={session!.id} onChanged={onChanged} />}</>}
+              <div hidden={group !== "Observation and task settings"} className="space-y-3"><div ref={setTask} /><div ref={setObservation} /></div>
+              {open && group === "Scene test" && sim && <SceneTestPanel sessionId={session!.id} onClose={() => setOpen(false)} onStateChanged={onChanged} />}
+              {!robot && group !== "Observation and task settings" && <p className="text-xs text-neutral-400">{t("No active robot instance")}</p>}
+            </div>
+          </section>
+        </aside>
+      </div>
     </div>
   </Context.Provider>;
 }
