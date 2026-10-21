@@ -280,8 +280,8 @@ export default function SensingArea({
                 const on = views.includes(c.id);
                 return (
                   <button key={c.id} disabled={sceneTest} onClick={() => toggleView(c.id)} aria-pressed={on} title={c.title}
-                    className={`rounded-full border px-2.5 py-0.5 text-[11px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-                      on ? "border-blue-600 bg-blue-600 text-white" : "border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-neutral-200"
+                    className={`nerv-control rounded-full border px-2.5 py-0.5 text-[11px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--control-focus)] ${
+                      on ? "nerv-selected" : "border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-neutral-200"
                     }`}>
                     {c.label}
                   </button>
@@ -293,7 +293,7 @@ export default function SensingArea({
         </div>
         <span className="ml-auto flex items-center gap-1.5">
           {worldOnline && <button onClick={() => { setExpanded(null); setSceneTest(true); }} disabled={sceneTest}
-            className="rounded-md border border-blue-700 bg-blue-600/15 px-2 py-1 text-[11px] text-blue-400 disabled:opacity-50">
+            className="nerv-control rounded-md border nerv-selected px-2 py-1 text-[11px] text-blue-400">
             {t("Scene test")}
           </button>}
           {wantObservation && (
@@ -303,13 +303,13 @@ export default function SensingArea({
                 {t("auto-refresh")}
               </label>
               <button onClick={load} disabled={busy || !active}
-                className="rounded-md border border-neutral-700 bg-neutral-800 px-2 py-1 text-[11px] text-neutral-300 hover:bg-neutral-700 disabled:opacity-50">
+                className="nerv-control rounded-md border border-neutral-700 bg-neutral-800 px-2 py-1 text-[11px] text-neutral-300 hover:bg-neutral-700">
                 {busy ? t("Perceiving…") : t("Perceive now")}
               </button>
             </>
           )}
           <button onClick={() => setNonce((n) => n + 1)} title={t("reconnect the video streams")}
-            className="rounded border border-neutral-800 px-1.5 py-1 text-[10px] text-neutral-500 hover:text-neutral-300">
+            className="nerv-control rounded border border-neutral-800 px-1.5 py-1 text-[10px] text-neutral-500 hover:text-neutral-300">
             {t("reconnect")}
           </button>
         </span>
@@ -393,7 +393,7 @@ function Tile({ label, sub, muted = false, expanded = false, fill = false, onExp
           {sub && <div className="truncate text-[10px] text-neutral-600">{sub}</div>}
         </div>
         <button onClick={onExpand} title={expanded ? t("Close (Esc)") : t("Expand")} aria-label={expanded ? t("Close (Esc)") : t("Expand")}
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          className="nerv-control flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--control-focus)]"
           autoFocus={expanded}>
           {expanded ? <CloseIcon /> : <ExpandIcon />}
         </button>
@@ -433,19 +433,19 @@ const CHASE_YAW_WRAP = 360;
 function ChaseControls({ view, onChange }: { view: ChaseView; onChange: (v: ChaseView) => void }) {
   const { t } = useI18n();
   const isDefault = view.zoom === DEFAULT_CHASE_VIEW.zoom && view.yaw === DEFAULT_CHASE_VIEW.yaw && view.pitch === DEFAULT_CHASE_VIEW.pitch;
-  const btn = "flex h-7 w-7 items-center justify-center rounded-md bg-neutral-900/80 text-[13px] text-neutral-300 backdrop-blur hover:bg-neutral-700 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-40";
+  const btn = "flex h-7 w-7 items-center justify-center rounded-md bg-neutral-900/80 text-[13px] text-neutral-300 backdrop-blur hover:bg-neutral-700 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--control-focus)] ";
   const set = (patch: Partial<ChaseView>) => onChange({ ...view, ...patch });
   return (
     <div className="absolute bottom-1.5 right-1.5 flex items-center gap-1 rounded-lg border border-neutral-800 bg-neutral-950/60 p-1" role="group" aria-label={t("Adjust the chase camera")}>
-      <button className={btn} onClick={() => set({ zoom: view.zoom / CHASE_ZOOM_STEP })} title={t("Zoom in")} aria-label={t("Zoom in")}>＋</button>
-      <button className={btn} onClick={() => set({ zoom: view.zoom * CHASE_ZOOM_STEP })} title={t("Zoom out")} aria-label={t("Zoom out")}>－</button>
+      <button className={`nerv-control ${btn}`} onClick={() => set({ zoom: view.zoom / CHASE_ZOOM_STEP })} title={t("Zoom in")} aria-label={t("Zoom in")}>＋</button>
+      <button className={`nerv-control ${btn}`} onClick={() => set({ zoom: view.zoom * CHASE_ZOOM_STEP })} title={t("Zoom out")} aria-label={t("Zoom out")}>－</button>
       <span className="mx-0.5 h-4 w-px bg-neutral-700" />
-      <button className={btn} onClick={() => set({ yaw: (view.yaw - CHASE_YAW_STEP + CHASE_YAW_WRAP) % CHASE_YAW_WRAP })} title={t("Orbit left")} aria-label={t("Orbit left")}>◀</button>
-      <button className={btn} onClick={() => set({ yaw: (view.yaw + CHASE_YAW_STEP) % CHASE_YAW_WRAP })} title={t("Orbit right")} aria-label={t("Orbit right")}>▶</button>
-      <button className={btn} onClick={() => set({ pitch: view.pitch + CHASE_PITCH_STEP })} title={t("Tilt up")} aria-label={t("Tilt up")}>▲</button>
-      <button className={btn} onClick={() => set({ pitch: view.pitch - CHASE_PITCH_STEP })} title={t("Tilt down")} aria-label={t("Tilt down")}>▼</button>
+      <button className={`nerv-control ${btn}`} onClick={() => set({ yaw: (view.yaw - CHASE_YAW_STEP + CHASE_YAW_WRAP) % CHASE_YAW_WRAP })} title={t("Orbit left")} aria-label={t("Orbit left")}>◀</button>
+      <button className={`nerv-control ${btn}`} onClick={() => set({ yaw: (view.yaw + CHASE_YAW_STEP) % CHASE_YAW_WRAP })} title={t("Orbit right")} aria-label={t("Orbit right")}>▶</button>
+      <button className={`nerv-control ${btn}`} onClick={() => set({ pitch: view.pitch + CHASE_PITCH_STEP })} title={t("Tilt up")} aria-label={t("Tilt up")}>▲</button>
+      <button className={`nerv-control ${btn}`} onClick={() => set({ pitch: view.pitch - CHASE_PITCH_STEP })} title={t("Tilt down")} aria-label={t("Tilt down")}>▼</button>
       <span className="mx-0.5 h-4 w-px bg-neutral-700" />
-      <button className={btn} onClick={() => onChange(DEFAULT_CHASE_VIEW)} disabled={isDefault} title={t("Default view")} aria-label={t("Default view")}>⟲</button>
+      <button className={`nerv-control ${btn}`} onClick={() => onChange(DEFAULT_CHASE_VIEW)} disabled={isDefault} title={t("Default view")} aria-label={t("Default view")}>⟲</button>
     </div>
   );
 }

@@ -205,7 +205,7 @@ function Notebook({ session }: { session: SessionSummary | null }) {
   return (
     <div className="border-b border-neutral-800 bg-neutral-900/40 px-3 py-1.5 text-[11px]">
       <button onClick={() => setOpen((v) => !v)}
-        className="flex w-full items-center gap-1.5 text-left text-neutral-500 hover:text-neutral-300"
+        className="nerv-control flex w-full items-center gap-1.5 text-left text-neutral-500 hover:text-neutral-300"
         title={t("The brain writes these itself; they survive a long conversation. Read-only here — click to expand/collapse.")}>
         <span className={`transition-transform ${open ? "rotate-90" : ""}`}>›</span>
         {task ? (
@@ -404,7 +404,7 @@ export default function ChatPanel({
             {(items.length > 0 || live) && !teleop && (
               <button onClick={() => setExpand(expand === "all" ? "none" : "all")}
                 title={t("Expand / collapse the reasoning of every turn")}
-                className="rounded border border-neutral-700 px-1.5 py-0.5 text-[10px] text-neutral-400 hover:border-neutral-500">
+                className="nerv-control rounded border border-neutral-700 px-1.5 py-0.5 text-[10px] text-neutral-400 hover:border-neutral-500">
                 {expand === "all" ? t("Collapse reasoning") : t("Expand reasoning")}
               </button>
             )}
@@ -459,9 +459,9 @@ export default function ChatPanel({
                 title={session.armed
                   ? t("Armed: the body may move. Click to disarm.")
                   : t("Disarmed: every world-changing action is refused at the gate. Click to arm — only you can.")}
-                className={`rounded-full border px-2.5 py-0.5 text-[10px] font-semibold tracking-wide transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
+                className={`nerv-control rounded-full border px-2.5 py-0.5 text-[10px] font-semibold tracking-wide transition-colors disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--control-focus)] ${
                   session.armed
-                    ? "border-red-500 bg-red-600 text-white hover:bg-red-500"
+                    ? "border-red-500 nerv-danger bg-red-600 text-white hover:bg-red-500"
                     : "border-neutral-600 bg-neutral-800 text-neutral-400 hover:border-neutral-400"
                 }`}>
                 {session.armed ? `● ${t("ARMED")}` : `○ ${t("DISARMED")}`}
@@ -470,14 +470,14 @@ export default function ChatPanel({
             {hasBody && (
               <button onClick={toggleTeleop} disabled={!active} aria-pressed={teleop}
                 title={teleop ? t("Close manual controls") : t("Manual controls; chat remains available")}
-                className={`ml-auto flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-medium transition-colors disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-                  teleop ? "border-blue-500 bg-blue-600 text-white" : "border-neutral-600 bg-neutral-800 text-neutral-300 hover:border-neutral-400"
+                className={`nerv-control ml-auto flex items-center gap-1 rounded-full border px-2.5 py-0.5 text-[10px] font-medium transition-colors disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--control-focus)] ${
+                  teleop ? "nerv-selected" : "border-neutral-600 bg-neutral-800 text-neutral-300 hover:border-neutral-400"
                 }`}>
                 🎮 {t("Teleop")}
               </button>
             )}
           </div>
-          {armErr && <div className="px-3 pt-1 text-[11px] text-red-400">{armErr}</div>}
+          {armErr && <div className="px-3 pt-1 text-[11px] text-[var(--control-danger-text)]">{armErr}</div>}
 
           {!active ? (
             <div className="p-4 text-center text-xs text-neutral-500">
@@ -503,17 +503,17 @@ export default function ChatPanel({
               <div className="flex gap-2">
                 <input value={input} onChange={(e) => setInput(e.target.value)} onKeyDown={(e) => e.key === "Enter" && send()}
                   placeholder={t("Message NERV Agent…")}
-                  className="flex-1 rounded-xl bg-neutral-800 px-3 py-2 text-sm outline-none placeholder:text-neutral-500 disabled:opacity-50" />
+                  className="flex-1 rounded-xl bg-neutral-800 px-3 py-2 text-sm outline-none placeholder:text-neutral-500" />
                 {busy && (
                   <button onClick={stop} disabled={stopping}
                     title={t("Stop reply; robot tasks continue")}
-                    className="flex items-center gap-1.5 rounded-xl bg-neutral-700 px-4 py-2 text-sm font-medium disabled:opacity-60">
+                    className="nerv-control flex items-center gap-1.5 rounded-xl bg-neutral-700 px-4 py-2 text-sm font-medium">
                     <StopIcon />
                     {stopping ? t("Stopping…") : t("Stop reply")}
                   </button>
                 )}
                 {(
-                  <button onClick={send} className="rounded-xl bg-blue-600 px-4 py-2 text-sm font-medium text-white disabled:opacity-50">{t("Send")}</button>
+                  <button onClick={send} className="nerv-control rounded-xl nerv-primary px-4 py-2 text-sm font-medium text-white">{t("Send")}</button>
                 )}
               </div>
             </div>
@@ -549,7 +549,7 @@ function BrainPicker({ brains, current, disabled, onPick }: { brains: Brain[]; c
     <div ref={ref} className="relative min-w-0">
       <button onClick={() => setOpen((v) => !v)} disabled={disabled} aria-haspopup="listbox" aria-expanded={open}
         title={cur ? `${t(cur.vendor)} · ${cur.model}` : t("Model")}
-        className="flex max-w-44 items-center gap-1 rounded-full border border-neutral-600 bg-neutral-800 px-2.5 py-0.5 text-[10px] text-neutral-300 hover:border-neutral-400 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+        className="nerv-control flex max-w-44 items-center gap-1 rounded-full border border-neutral-600 bg-neutral-800 px-2.5 py-0.5 text-[10px] text-neutral-300 hover:border-neutral-400 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--control-focus)]">
         🧠 <span className="truncate">{cur ? t(cur.label) : current}</span>
         <span aria-hidden="true" className="text-neutral-500">▾</span>
       </button>
@@ -560,8 +560,8 @@ function BrainPicker({ brains, current, disabled, onPick }: { brains: Brain[]; c
             <li key={b.name} role="option" aria-selected={b.name === current}>
               <button disabled={!b.available} onClick={() => { setOpen(false); if (b.name !== current) onPick(b.name); }}
                 title={b.available ? `${t(b.vendor)} · ${b.model}` : t("not configured")}
-                className={`flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-[11px] hover:bg-neutral-800 disabled:cursor-not-allowed disabled:opacity-40 ${
-                  b.name === current ? "text-blue-300" : "text-neutral-200"
+                className={`nerv-control flex w-full items-center gap-2 rounded-md px-2 py-1 text-left text-[11px] hover:bg-neutral-800 disabled:cursor-not-allowed ${
+                  b.name === current ? "nerv-selected" : "text-neutral-200"
                 }`}>
                 <span className="w-3 shrink-0">{b.name === current ? "✓" : ""}</span>
                 <span className="min-w-0 flex-1 truncate">{t(b.label)}</span>

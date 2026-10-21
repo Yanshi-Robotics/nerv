@@ -21,7 +21,7 @@ export default function LangToggle() {
       onClick={() => setLang(next)}
       title={`${t("Interface language")}: ${curLabel} → ${nextLabel}`}
       aria-label={t("Interface language")}
-      className="flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-700 text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+      className="nerv-control flex h-9 w-9 items-center justify-center rounded-lg border border-neutral-700 text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--control-focus)]"
     >
       <GlobeIcon />
       <span className="sr-only">{curLabel}</span>

@@ -104,18 +104,18 @@ export function NodeTrust({ node, onChanged }: { node: NodeInfo; onChanged?: () 
         <span className="ml-auto flex items-center gap-1">
           {manifest === null ? (
             <button onClick={open} disabled={busy || !node.online}
-              className="rounded border border-neutral-700 px-2 py-0.5 text-[11px] text-neutral-300 hover:bg-neutral-800 disabled:opacity-50">
+              className="nerv-control rounded border border-neutral-700 px-2 py-0.5 text-[11px] text-neutral-300 hover:bg-neutral-800">
               {busy ? t("Loading…") : t("See what it declares")}
             </button>
           ) : (
             <button onClick={() => setManifest(null)} disabled={busy}
-              className="rounded border border-neutral-700 px-2 py-0.5 text-[11px] text-neutral-400 hover:bg-neutral-800">
+              className="nerv-control rounded border border-neutral-700 px-2 py-0.5 text-[11px] text-neutral-400 hover:bg-neutral-800">
               {t("Collapse")}
             </button>
           )}
           <button onClick={refresh} disabled={busy || !node.online}
             title={t("If the node changed its tools or restarted, make NERV ask again (the capability list is cached at handshake)")}
-            className="rounded border border-neutral-700 px-2 py-0.5 text-[11px] text-neutral-300 hover:bg-neutral-800 disabled:opacity-50">
+            className="nerv-control rounded border border-neutral-700 px-2 py-0.5 text-[11px] text-neutral-300 hover:bg-neutral-800">
             {t("Re-handshake")}
           </button>
         </span>
@@ -195,7 +195,7 @@ export function NodeTrust({ node, onChanged }: { node: NodeInfo; onChanged?: () 
           {needsApproval && (
             <div className="flex items-center gap-2">
               <button onClick={approve} disabled={busy}
-                className="rounded bg-amber-700 px-3 py-1 text-xs text-white hover:bg-amber-600 disabled:opacity-50">
+                className="nerv-control rounded nerv-warning bg-amber-700 px-3 py-1 text-xs text-white hover:bg-amber-600">
                 {busy ? t("Working…") : state === "changed" ? t("I have read it — approve again") : t("I have read it — approve")}
               </button>
               <span className="text-[11px] text-neutral-500">{t("Only approve nodes you trust")}</span>
@@ -205,7 +205,7 @@ export function NodeTrust({ node, onChanged }: { node: NodeInfo; onChanged?: () 
       )}
 
       {note && <div className="mt-2 text-xs text-green-400">{note}</div>}
-      {err && <div className="mt-2 text-xs text-red-400">{err}</div>}
+      {err && <div className="mt-2 text-xs text-[var(--control-danger-text)]">{err}</div>}
     </div>
   );
 }

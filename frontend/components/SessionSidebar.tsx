@@ -95,35 +95,35 @@ export default function SessionSidebar({
     onChanged();
   }
 
-  const selectCls = "w-full rounded-md border border-neutral-700 bg-neutral-800 px-2 py-1 text-xs text-neutral-200 disabled:opacity-50";
+  const selectCls = "w-full rounded-md border border-neutral-700 bg-neutral-800 px-2 py-1 text-xs text-neutral-200";
   const iconBtn =
-    "flex h-9 w-9 items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500";
+    "flex h-9 w-9 items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--control-focus)]";
   const navRow =
-    "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500";
+    "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--control-focus)]";
 
   // ---------------- 收起态：一条竖的图标带 ----------------
   if (collapsed) {
     return (
       <aside className="flex h-screen flex-col items-center overflow-hidden border-r border-neutral-800 bg-neutral-900 py-2">
         <BrandMark className="relative -top-px mb-1 mt-1 h-7" />
-        <button onClick={onToggleCollapsed} title={t("Expand sidebar")} aria-label={t("Expand sidebar")} aria-expanded={false} className={iconBtn}>
+        <button onClick={onToggleCollapsed} title={t("Expand sidebar")} aria-label={t("Expand sidebar")} aria-expanded={false} className={`nerv-control ${iconBtn}`}>
           <PanelIcon />
         </button>
         <div className="mt-2 flex flex-col items-center gap-1">
-          <button onClick={openForm} title={t("New session")} aria-label={t("New session")} className={`${iconBtn} text-blue-400 hover:text-blue-300`}>
+          <button onClick={openForm} title={t("New session")} aria-label={t("New session")} className={`nerv-control ${iconBtn}`}>
             <PlusIcon />
           </button>
           <button onClick={() => onPanel("dashboard")} title={t("NERV dashboard")} aria-label={t("NERV dashboard")} aria-pressed={panel === "dashboard"}
-            className={`${iconBtn} ${panel === "dashboard" ? "bg-neutral-800 text-neutral-100" : ""}`}>
+            className={`nerv-control ${iconBtn} ${panel === "dashboard" ? "bg-neutral-800 text-neutral-100" : ""}`}>
             <DashboardIcon />
           </button>
           <button onClick={() => onPanel("explore")} title="Nerv World Explore" aria-label="Nerv World Explore" aria-pressed={panel === "explore"}
-            className={`${iconBtn} ${panel === "explore" ? "bg-neutral-800 text-neutral-100" : ""}`}>
+            className={`nerv-control ${iconBtn} ${panel === "explore" ? "bg-neutral-800 text-neutral-100" : ""}`}>
             <ExploreIcon />
           </button>
-          <button onClick={() => onPanel("models")} className={iconBtn} title={t("Visual models")}>VLM</button>
+          <button onClick={() => onPanel("models")} className={`nerv-control ${iconBtn}`} title={t("Visual models")}>VLM</button>
           <button onClick={() => onPanel("logs")} title="Session Logs" aria-label="Session Logs" aria-pressed={panel === "logs"}
-            className={`${iconBtn} ${panel === "logs" ? "bg-neutral-800 text-neutral-100" : ""}`}>
+            className={`nerv-control ${iconBtn} ${panel === "logs" ? "bg-neutral-800 text-neutral-100" : ""}`}>
             <LogsIcon />
           </button>
         </div>
@@ -141,12 +141,12 @@ export default function SessionSidebar({
       <div className="flex items-center justify-between border-b border-neutral-800 py-2 pl-3 pr-1.5">
         <span className="flex items-center gap-2 text-sm font-semibold tracking-wide text-neutral-200"><BrandMark className="relative -top-[3px] h-7" /> NERV</span>
         <button onClick={onToggleCollapsed} title={t("Collapse sidebar")} aria-label={t("Collapse sidebar")} aria-expanded={true}
-          className="flex h-7 w-7 items-center justify-center rounded-md text-neutral-500 transition-colors hover:bg-neutral-800 hover:text-neutral-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+          className="nerv-control flex h-7 w-7 items-center justify-center rounded-md text-neutral-500 transition-colors hover:bg-neutral-800 hover:text-neutral-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--control-focus)]">
           <PanelIcon />
         </button>
       </div>
       <div className="border-b border-neutral-800 p-3">
-        <button onClick={openForm} className="w-full rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-500">
+        <button onClick={openForm} className="nerv-control w-full rounded-lg nerv-primary px-3 py-2 text-sm font-medium text-white">
           + {t("New session")}
         </button>
       </div>
@@ -166,7 +166,7 @@ export default function SessionSidebar({
             <div className="grid grid-cols-2 gap-2" role="group" aria-label={t("Environment")}>
               {(["sim", "real"] as const).map(environment => {
                 const available = !!bodies.find(robot => robot.name === body)?.buses[environment]?.enabled;
-                return <button key={environment} disabled={!available} onClick={() => { setMode(environment); setWorld(""); setWorldValues({}); setSensors([]); }} aria-pressed={mode === environment} className={`rounded-md border p-2 disabled:opacity-40 ${mode === environment ? "border-blue-500 bg-blue-950" : "border-neutral-700"}`}>
+                return <button key={environment} disabled={!available} onClick={() => { setMode(environment); setWorld(""); setWorldValues({}); setSensors([]); }} aria-pressed={mode === environment} className={`nerv-control rounded-md border p-2 ${mode === environment ? "nerv-selected" : "border-neutral-700"}`}>
                   {t(environment === "sim" ? "Simulation" : "Real hardware")}{!available && <span className="block text-[10px]">{t("Not configured")}</span>}
                 </button>;
               })}
@@ -213,10 +213,10 @@ export default function SessionSidebar({
           )}
 
           <div className="flex gap-2 pt-1">
-            <button onClick={doCreate} disabled={busy || (!!world && !body)} className="rounded-lg bg-blue-600 px-3 py-1.5 text-white disabled:opacity-50">
+            <button onClick={doCreate} disabled={busy || (!!world && !body)} className="nerv-control rounded-lg nerv-primary px-3 py-1.5 text-white">
               {busy ? (world ? t("Launching nodes…") : t("Creating…")) : t("Create session")}
             </button>
-            <button onClick={() => setCreating(false)} disabled={busy} className="rounded-lg bg-neutral-700 px-3 py-1.5">
+            <button onClick={() => setCreating(false)} disabled={busy} className="nerv-control rounded-lg bg-neutral-700 px-3 py-1.5">
               {t("Cancel")}
             </button>
           </div>
@@ -230,7 +230,7 @@ export default function SessionSidebar({
         {sessions.map((s) => (
           <div key={s.id} className={`group mb-1 flex items-start rounded-lg ${s.id === currentId ? "bg-neutral-800" : "hover:bg-neutral-800/50"}`}>
             <button onClick={() => onSelect(s.id)} aria-current={s.id === currentId ? "true" : undefined}
-              className="min-w-0 flex-1 rounded-lg p-2 text-left text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+              className="nerv-control min-w-0 flex-1 rounded-lg p-2 text-left text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--control-focus)]">
               <div className="flex items-center justify-between gap-1">
                 <span className="truncate font-medium">{s.title}</span>
                 {s.status !== "active" && <StatusBadge status={s.status} />}
@@ -241,7 +241,7 @@ export default function SessionSidebar({
               </div>
             </button>
             <button onClick={() => doDelete(s.id)} title={t("Delete session")} aria-label={t("Delete session")}
-              className="mr-1 mt-1 shrink-0 rounded px-1.5 py-1 text-[11px] text-neutral-600 opacity-0 hover:bg-neutral-700 hover:text-red-400 focus:opacity-100 group-hover:opacity-100">
+              className="nerv-control nerv-danger-quiet mr-1 mt-1 shrink-0 rounded px-1.5 py-1 text-[11px] text-neutral-600 opacity-0 hover:bg-neutral-700 hover:text-red-400 focus:opacity-100 group-hover:opacity-100">
               ✕
             </button>
           </div>
@@ -250,14 +250,14 @@ export default function SessionSidebar({
 
       <div className="shrink-0 border-t border-neutral-800">
         <nav className="flex flex-col px-2 pt-2" aria-label={t("Pages")}>
-          <button onClick={() => onPanel("dashboard")} className={`${navRow} ${panel === "dashboard" ? "bg-neutral-800 text-neutral-100" : ""}`} title={t("NERV dashboard")} aria-pressed={panel === "dashboard"}>
+          <button onClick={() => onPanel("dashboard")} className={`nerv-control ${navRow} ${panel === "dashboard" ? "bg-neutral-800 text-neutral-100" : ""}`} title={t("NERV dashboard")} aria-pressed={panel === "dashboard"}>
             <DashboardIcon /> <span>{t("Dashboard")}</span>
           </button>
-          <button onClick={() => onPanel("models")} className={navRow}>{t("Visual models")}</button>
-          <button onClick={() => onPanel("explore")} className={`${navRow} ${panel === "explore" ? "bg-neutral-800 text-neutral-100" : ""}`} title="Nerv World Explore" aria-pressed={panel === "explore"}>
+          <button onClick={() => onPanel("models")} className={`nerv-control ${navRow}`}>{t("Visual models")}</button>
+          <button onClick={() => onPanel("explore")} className={`nerv-control ${navRow} ${panel === "explore" ? "bg-neutral-800 text-neutral-100" : ""}`} title="Nerv World Explore" aria-pressed={panel === "explore"}>
             <ExploreIcon /> <span>Nerv World Explore</span>
           </button>
-          <button onClick={() => onPanel("logs")} className={`${navRow} ${panel === "logs" ? "bg-neutral-800 text-neutral-100" : ""}`} title="Session Logs" aria-pressed={panel === "logs"}>
+          <button onClick={() => onPanel("logs")} className={`nerv-control ${navRow} ${panel === "logs" ? "bg-neutral-800 text-neutral-100" : ""}`} title="Session Logs" aria-pressed={panel === "logs"}>
             <LogsIcon /> <span>{t("Logs")}</span>
           </button>
         </nav>

@@ -37,11 +37,11 @@ export default function WorldControlPanel({session, onChanged}: {session: Sessio
   return <details className="border-b border-neutral-800 bg-neutral-900 px-3 py-2 text-xs"><summary className="cursor-pointer text-neutral-300">{t("World control")} · {t("Simulation only")}</summary>
     <div className="max-h-64 space-y-3 overflow-auto pt-3">
       <p className="text-neutral-400">{t("World changes stop conflicting tasks. Object changes create a new instance in standby.")}</p>
-      {descriptor && <fieldset disabled={busy} className="space-y-3 disabled:opacity-60">
-        {!!Object.keys(descriptor.configuration.properties ?? {}).length && <><WorldProperties schema={descriptor.configuration} values={values} onChange={setValues}/><button onClick={() => apply("rebuild", values)} className="rounded bg-blue-600 px-3 py-1.5 text-white">{t("End and rebuild instance")}</button></>}
-        {descriptor.commands.filter(c => c.name !== "rebuild").map(command => <div key={command.name} className="space-y-2"><WorldProperties schema={command.parameters} values={commandValues[command.name] ?? {}} onChange={v => setCommandValues({...commandValues, [command.name]: v})}/><button onClick={() => apply(command.name, commandValues[command.name] ?? {})} className="rounded border border-neutral-600 px-3 py-1.5">{t(command.name === "reset" ? "Reset world" : command.name === "time" ? "Apply lighting phase" : command.name)}</button></div>)}
+      {descriptor && <fieldset disabled={busy} className="space-y-3">
+        {!!Object.keys(descriptor.configuration.properties ?? {}).length && <><WorldProperties schema={descriptor.configuration} values={values} onChange={setValues}/><button onClick={() => apply("rebuild", values)} className="nerv-control rounded nerv-primary px-3 py-1.5 text-white">{t("End and rebuild instance")}</button></>}
+        {descriptor.commands.filter(c => c.name !== "rebuild").map(command => <div key={command.name} className="space-y-2"><WorldProperties schema={command.parameters} values={commandValues[command.name] ?? {}} onChange={v => setCommandValues({...commandValues, [command.name]: v})}/><button onClick={() => apply(command.name, commandValues[command.name] ?? {})} className="nerv-control rounded border border-neutral-600 px-3 py-1.5">{t(command.name === "reset" ? "Reset world" : command.name === "time" ? "Apply lighting phase" : command.name)}</button></div>)}
       </fieldset>}
-      {busy && <p role="status">{t("Applying world change…")}</p>}{error && <p role="alert" className="text-red-300">{error}</p>}
+      {busy && <p role="status">{t("Applying world change…")}</p>}{error && <p role="alert" className="text-[var(--control-danger-text)]">{error}</p>}
     </div>
   </details>;
 }
