@@ -3,7 +3,6 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useI18n } from "@/lib/i18n";
 import {
-  estopSession,
   getPerception,
   getSessionTools,
   robotTaskOperation,
@@ -132,21 +131,6 @@ export default function TeleopPanel({ sessionId, armed, hasWorld, bodyTrust }: {
     finally {setStopping(false);}
   }
 
-  // 急停：锁住当前姿态。任何时候都能按，不管有没有动作在跑。
-  async function estop() {
-    if (holdBusy) return;
-    setHoldBusy(true);
-    try {
-      const r = await estopSession(sessionId);
-      setHeld(r.held);
-      setHoldMsg(t(r.message));
-    } catch (e) {
-      setHoldMsg(`${t("(cannot reach the backend)")} ${(e as Error).message ?? ""}`);
-    } finally {
-      setHoldBusy(false);
-    }
-  }
-
   async function release() {
     if (holdBusy) return;
     setHoldBusy(true);
@@ -206,14 +190,9 @@ export default function TeleopPanel({ sessionId, armed, hasWorld, bodyTrust }: {
       {/* 急停一排：大红键锁姿态；锁着时给「放开」；有仿真世界时给「复位」。都是控制面，大脑没有这些工具。 */}
       <div className={`flex items-center gap-2 rounded-lg border p-2 ${held ? "border-red-600 bg-red-950/50" : "border-neutral-800 bg-neutral-900"}`}
            role="group" aria-label={t("Emergency stop")}>
-        <button onClick={estop} disabled={holdBusy || held === true}
-          title={t("Hold the pose now: the body stops thinking and keeps every joint where it is. Not a power cut — the servos stay on.")}
-          className="nerv-control rounded-lg nerv-danger bg-red-600 px-4 py-2 text-sm font-bold tracking-wide text-white shadow hover:bg-red-500 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400">
-          ⛔ {t("E-STOP")}
-        </button>
         <div className="min-w-0 flex-1 text-[11px]">
           {held === true && <div className="font-semibold text-red-300">{t("HOLDING — the body keeps its pose and refuses every move")}</div>}
-          {held === false && <div className="text-neutral-500">{t("not holding — E-STOP locks the pose at any moment (arming is the switch at the bottom)")}</div>}
+          {held === false && <div className="text-neutral-500">{t("Emergency stop remains available in the top toolbar.")}</div>}
           {holdMsg && <div className="truncate text-neutral-400" title={holdMsg}>{holdMsg}</div>}
         </div>
         {held === true && (
@@ -237,7 +216,7 @@ export default function TeleopPanel({ sessionId, armed, hasWorld, bodyTrust }: {
         <div className="rounded-md border border-amber-700/60 bg-amber-950/40 p-2 text-[11px] text-amber-300">
           {bodyTrust === "offline"
             ? t("The body node is unreachable, so none of its verbs are here.")
-            : t("The body node is not approved, so its verbs are hidden here (the brain does not see them either). Review and approve it on the Dashboard, then reopen the remote control.")}
+            : t("Allow access under Device and access in the toolbox before using robot actions.")}
         </div>
       )}
       {tools === null && !err && <div className="text-neutral-500">{t("Loading the tool sheet…")}</div>}

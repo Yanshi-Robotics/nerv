@@ -96,7 +96,7 @@ def _default_brain() -> str:
 
 
 def _models_idle():
-    if nerv._runs or any(c.post("/executions/status").get("running") for c in nerv._bodies.values()):
+    if nerv._runs or any((c.post("/executions/status") or {}).get("running") for c in nerv._bodies.values()):
         raise HTTPException(409, "Finish the active task before changing model configuration")
 
 
@@ -127,6 +127,8 @@ class CredentialIn(BaseModel):
 @app.put("/api/credentials/{reference}")
 def credential_save(reference: str, payload: CredentialIn):
     _models_idle()
+    if payload.value is not None:
+        raise HTTPException(400, "Use the model configuration test to register a key")
     registry = ModelRegistry()
     try:
         registry.credentials.set(reference, payload.value)
@@ -135,6 +137,35 @@ def credential_save(reference: str, payload: CredentialIn):
         return {"ok": True, **registry.credentials.describe(reference)}
     except (ValueError, PermissionError) as error:
         raise HTTPException(400, str(error))
+
+
+@app.post("/api/vlm/{model_id}/configure")
+async def vlm_configure(model_id: str, payload: CredentialIn, request: Request):
+    import asyncio
+    import threading
+    from ..vlm.errors import ModelError
+    _models_idle()
+    cancelled = threading.Event()
+    async def watch_disconnect():
+        while not cancelled.is_set():
+            if await request.is_disconnected():
+                cancelled.set()
+                return
+            await asyncio.sleep(0.1)
+    watcher = asyncio.create_task(watch_disconnect())
+    try:
+        result = await asyncio.to_thread(ModelRegistry().configure, model_id, payload.value,
+                                         cancelled=cancelled.is_set)
+        if result["saved"]:
+            nerv._brains.clear()
+        return result
+    except ModelError as error:
+        raise HTTPException(400, error.public()) from None
+    except (ValueError, KeyError):
+        raise HTTPException(400, "Select a registered visual model") from None
+    finally:
+        cancelled.set()
+        watcher.cancel()
 
 
 class SelectionIn(BaseModel):
@@ -193,6 +224,8 @@ def runtime_operation(sid: str, operation: str, payload: dict):
     if operation not in ("prepare", "policies/load"):
         raise HTTPException(404, "unknown runtime operation")
     client = nerv.body_client(session.body)
+    if client is None:
+        raise HTTPException(503, "body node offline")
     result = client.post("/" + operation, payload)
     client.refresh()
     return result
@@ -202,7 +235,10 @@ def runtime_operation(sid: str, operation: str, payload: dict):
 def runtime_status(sid: str):
     session = nerv.store.get(sid)
     client = nerv.body_client(session.body) if session.body else None
-    return client.status() if client else {"prepared": False}
+    status = client.status() if client else None
+    if not status:
+        raise HTTPException(503, "body node offline")
+    return status
 
 
 # ---- registry / brains ---------------------------------------------------------------------
@@ -296,15 +332,23 @@ def node_manifest(key: str) -> dict:
     d = c.trust_decision()
     return {"key": key, "domain": "robot_actions" if key.startswith("body:") else "agent_tools", "url": c.base, "manifest": trust.manifest(c.base, raw.operations, raw.guidance),
             "trust": {"state": d.state, "reason": d.reason, "changes": d.changes},
+            "hash": trust.manifest_hash(trust.manifest(c.base, raw.operations, raw.guidance)),
             "family": raw.family, "sensors": raw.sensors}
 
 
+class AccessApprovalIn(BaseModel):
+    expected_hash: str
+
+
 @app.post("/api/nodes/{key:path}/approve")
-def node_approve(key: str) -> dict:
+def node_approve(key: str, payload: AccessApprovalIn) -> dict:
     c = nerv.node_client(key)
     if c is None:
         raise HTTPException(404, "no such node")
-    h = c.approve()
+    try:
+        h = c.approve(expected_hash=payload.expected_hash)
+    except ValueError as error:
+        raise HTTPException(409, str(error)) from None
     return {"ok": True, "hash": h}
 
 
@@ -367,7 +411,8 @@ def new_session(inp: NewSessionIn) -> dict:
             raise ValueError("select a registered visual model")
         return nerv.new_session(inp.brain or _default_brain(), inp.body, inp.world, inp.sensors, inp.agent_tools, inp.mode, inp.world_configuration)
     except (ValueError, KeyError, RuntimeError, TimeoutError, FileNotFoundError) as e:
-        raise HTTPException(400, e.args[0] if e.args else str(e))
+        from ..vlm.errors import ModelError
+        raise HTTPException(400, e.public() if isinstance(e, ModelError) else e.args[0] if e.args else str(e))
 
 
 @app.get("/api/sessions")
@@ -605,8 +650,13 @@ def _chat_ready(sid):
     if not nerv.store.exists(sid):
         raise HTTPException(404, "no such session")
     selected = nerv.store.get(sid).brain
-    if not any(model["name"] == selected and model["available"] for model in list_brains()):
-        raise HTTPException(400, messages.BRAIN_NOT_CONFIGURED_REPLY)
+    from ..vlm.errors import ModelError
+    try:
+        ModelRegistry().require_key(selected)
+    except ModelError as error:
+        raise HTTPException(400, error.public()) from None
+    except KeyError:
+        raise HTTPException(400, messages.BRAIN_NOT_CONFIGURED_REPLY) from None
 
 
 # ---- chat ------------------------------------------------------------------------------------
@@ -614,7 +664,7 @@ def _chat_ready(sid):
 def chat(inp: ChatIn) -> dict:
     _chat_ready(inp.session)
     out = nerv.handle(inp.session, inp.text)
-    return {"reply": out["reply"], "stop_reason": out["stop_reason"]}
+    return {"reply": out["reply"], "stop_reason": out["stop_reason"], "error": out.get("error")}
 
 
 @app.post("/api/chat/stream")

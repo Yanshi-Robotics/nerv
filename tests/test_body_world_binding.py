@@ -12,6 +12,7 @@ from nerv.platform.session import SessionStore
 @pytest.fixture
 def hub(tmp_path, monkeypatch):
     value = Nerv(store=SessionStore(str(tmp_path / "sessions")))
+    value._brains["mock"] = SimpleNamespace(model="offline-fixture")
     # These tests never start processes or connect to a resident service.
     monkeypatch.setattr(value.launcher, "_spawn", Mock(side_effect=AssertionError("unexpected launch")))
     return value

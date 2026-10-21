@@ -71,6 +71,5 @@ def make_llm(name: str | None = None) -> LLM:
     # application accepts only the visual registry and never falls back here.
     if name == "mock":
         return MockLLM()
-    if not any(m["id"] == name and m["available"] for m in registry.list()):
-        raise KeyError("Select an enabled VLM and validate image, tools and continuation first")
+    registry.require_key(name)
     return registry.provider(name)

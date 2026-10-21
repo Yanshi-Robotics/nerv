@@ -50,7 +50,7 @@ npm --prefix frontend run build:static
 
 Open `http://localhost:8000`. The static frontend uses the same origin as the backend. For frontend development, use `npm --prefix frontend run dev` on the allocated port 8100.
 
-Open **Models and API keys** in the sidebar, choose a provider, enter its key, and select a visual model and reasoning effort. Save the key, then explicitly run API validation. Validation makes billable model requests; saving a key does not. Create a session after selecting its robot and environment. A conversation can also be created without a robot. No device is prepared automatically for a real binding.
+Open **Models and API keys**, select a provider and visual model, enter its key, then choose **Submit and test**. This sends one billable image request. NERV saves the key only after the answer matches the locally generated image; failed tests preserve the previous key. Choose a reasoning effort or use the provider default. Session creation requires a registered key but makes no provider request. A conversation can also be created without a robot. A real binding never prepares the device automatically.
 
 Configuration values can be placed in `.env` using [.env.example](.env.example). Private model settings and keys live under `NERV_HOME` (default `~/.nerv`), outside the repository. Keys are stored in `credentials.json`; model selection, effort and validation records are in `vlm.json`. The directory uses mode 0700 and files use mode 0600. The VLM registry ignores API keys in the shell and project `.env`. Re-enter existing keys in the panel; the upgrade leaves old files untouched.
 
@@ -96,7 +96,7 @@ Capabilities have five application domains: `agent_tools` for computation and se
 
 Choose SO-101, Simulation and a workbench world in **New session**. Select the supported object slots before creation. The world catalogue supplies types, nominal dimensions and mass. Flexible materials remain uncalibrated approximations. Each instance gets its own MJCF, configuration and source hashes.
 
-**World control** above the camera frame uses the same service as Agent world commands. Reset preserves the current objects and world process, invalidates the task, and disarms control. Changing object topology uses **End and rebuild instance**. Old sessions stay readable but cannot control the replacement. Weather, furniture and style changes appear only when a world declares and implements them; the tabletop worlds currently declare object replacement and reset. Real bindings reject world modification.
+**Toolbox → Simulation world** uses the same service as Agent world commands. Reset preserves the current objects and world process, invalidates the task, and disarms control. Changing object topology uses **End and rebuild instance**. Old sessions stay readable but cannot control the replacement. Weather, furniture and style changes appear only when a world declares and implements them; the tabletop worlds currently declare object replacement and reset. Real bindings reject world modification.
 
 Viewing, creating and manually controlling a simulation requires no model request. Language-driven operations need a configured VLM and are billable. SO-101 ACT and Hanoi execution policies are not deployed to these simulations. The long-term autonomous target is named **ultimate**; this release remains an Agent-operated system.
 
@@ -115,7 +115,9 @@ The session view places sensors beside the conversation. Robot observations and 
 <details>
 <summary>More interface and simulation views</summary>
 
-Teleoperation exposes the declared robot tools and emergency stop. The dashboard shows registry entries, node state and sessions.
+The collapsible bottom **Toolbox** contains device access, preparation, motion authorization, robot actions, world controls, camera and System 2 settings, and scene tests. **Stop task** and **Emergency stop** remain in the top toolbar when the toolbox is closed. The center contains camera views and genuine robot activity; chat remains usable alongside it. The dashboard shows registry entries, node state and sessions.
+
+**Allow access** approves the capabilities and guidance that the operator reviewed. Changed capabilities require a new review; offline nodes cannot be approved. This permission does not prepare devices, authorize motion or start tasks.
 
 <div align="center"><img src="assets/readme/images/web-teleop.png" alt="Earlier teleoperation interface with emergency stop and tool cards" width="960"></div>
 
@@ -135,7 +137,7 @@ The [world-library tools](worlds/docs/explore/README.md) cover scene tests, G1 r
 
 ## Visual models
 
-The panel groups keys by provider. It displays whether a key is saved without returning the saved value to the browser. Advanced model settings expose model ID, endpoint, image capability documentation, request limits and enablement. Chat reads the same registry. Pure text models and Mock do not appear in the running catalogue or act as fallbacks.
+The panel groups keys by provider. It displays whether a key is saved without returning the saved value to the browser. Advanced model settings expose model ID, endpoint, image capability documentation, request limits. Chat reads the same registry. Pure text models and Mock do not appear in the running catalogue or act as fallbacks.
 
 OpenAI, DeepSeek and xAI use provider-specific Responses dialects. Gemini uses the stateless Interactions API; Claude uses native Messages streaming. Signed thought blocks and opaque reasoning items are replayed only within the matching provider identity. Effort options are model specific; an unspecified effort leaves the parameter out so the supplier applies its default. The last model and each model's effort are remembered. Changes are refused during an active turn or execution.
 
@@ -147,9 +149,11 @@ OpenAI, DeepSeek and xAI use provider-specific Responses dialects. Gemini uses t
 | xAI | Grok 4.7; Grok 4.3 | 4.7: low, medium, high, xhigh; 4.3: none, low, medium, high |
 | Anthropic | Claude Opus 5.5, Claude Sonnet 5.5 | low, medium, high, xhigh, max |
 
-Catalogue capabilities were checked against supplier documentation on 2026-10-20: [OpenAI](https://developers.openai.com/api/docs/models/gpt-6.1-sol), [DeepSeek](https://api-docs.deepseek.com/api/create-response/), [Gemini](https://ai.google.dev/gemini-api/docs/thinking), [xAI](https://docs.x.ai/developers/model-capabilities/text/reasoning), [Anthropic](https://platform.claude.com/docs/en/build-with-claude/effort). Account access and API behavior still require explicit validation. No validation request runs when saving a key or opening the panel.
+Catalogue capabilities were checked against supplier documentation on 2026-10-20: [OpenAI](https://developers.openai.com/api/docs/models/gpt-6.1-sol), [DeepSeek](https://api-docs.deepseek.com/api/create-response/), [Gemini](https://ai.google.dev/gemini-api/docs/thinking), [xAI](https://docs.x.ai/developers/model-capabilities/text/reasoning), [Anthropic](https://platform.claude.com/docs/en/build-with-claude/effort). Key registration sends one image request only when the operator submits the form. Opening settings, changing selections and creating sessions do not call the provider.
 
-Image input, tool calls and continuation are tested independently with a non-robot probe. A changed endpoint, model configuration, effort or credential invalidates the matching readiness check. Registration and API readiness do not imply physical acceptance. The model registry records these checks separately.
+Optional API diagnostics check image input, tool calls and continuation. Their results do not gate session creation or model use; those require only a nonempty registered key. Existing keys do not need to be registered again. A subsequently expired key permits session creation and produces a clear conversation error when used. Failed replies preserve the input and offer retry and model settings; retries do not replay old robot actions.
+
+Changing endpoint, model, effort or credentials invalidates matching diagnostic and physical records. One successful key registration does not certify other models, general visual performance or robot performance. Agent errors do not cancel independent robot tasks; System 2 failures retain local stopping and supervision rules.
 
 ## Agent harness
 

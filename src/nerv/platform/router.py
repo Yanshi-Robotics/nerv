@@ -416,9 +416,17 @@ class Turn:
             with self._guard:
                 if self.body and self._current():
                     self.body.post("/stop")
-            message = (messages.CONTEXT_BUDGET_REPLY if isinstance(e, ContextOverflow)
-                       else messages.BRAIN_CALL_FAILED_REPLY.format(error=type(e).__name__))
-            self.say(Say(message))
+            if isinstance(e, ContextOverflow):
+                self.say(Say(messages.CONTEXT_BUDGET_REPLY))
+            elif self.is_current():
+                from ..vlm.errors import model_error
+                error = model_error(e).public()
+                self._stop = "model_error"
+                self.store.append(self.session.id, {"role": "error", **error, "brain": self.session.brain})
+                self.trace["reply"] = error["message"]
+                self.trace["error"] = error
+                self.emit({"type": "model_error", **error})
+                self.done = True
         if not self.done:
             self.say(Say(""))
         self.emit({"type": op.EV_DONE})
@@ -426,7 +434,7 @@ class Turn:
             self.memory().append("run_ended", {"run_id": self.run_id, "stop": self._stop,
                                            "current": self._current()})
         return {"reply": self.trace["reply"], "trace": self.trace, "brain": self.session.brain,
-                "model": self.brain.model, "stop_reason": self._stop}
+                "model": self.brain.model, "stop_reason": self._stop, "error": self.trace.get("error")}
 
 
 def _current_commit(method):

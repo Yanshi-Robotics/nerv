@@ -68,7 +68,7 @@ export default function SessionSidebar({
   }
 
   async function doCreate() {
-    if (busy) return;
+    if (busy || !brains.find(b => b.name === brain)?.available) return;
     setBusy(true);
     setError("");
     try {
@@ -212,8 +212,9 @@ export default function SessionSidebar({
             </div>
           )}
 
+          {!brains.find(b => b.name === brain)?.available && <p className="text-xs"><button className="nerv-control underline" onClick={() => onPanel("models")}>{t("Configure an API key in model settings first.")}</button></p>}
           <div className="flex gap-2 pt-1">
-            <button onClick={doCreate} disabled={busy || (!!world && !body)} className="nerv-control rounded-lg nerv-primary px-3 py-1.5 text-white">
+            <button onClick={doCreate} disabled={busy || !brains.find(b => b.name === brain)?.available || (!!world && !body)} className="nerv-control rounded-lg nerv-primary px-3 py-1.5 text-white">
               {busy ? (world ? t("Launching nodes…") : t("Creating…")) : t("Create session")}
             </button>
             <button onClick={() => setCreating(false)} disabled={busy} className="nerv-control rounded-lg bg-neutral-700 px-3 py-1.5">

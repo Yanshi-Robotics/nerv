@@ -25,7 +25,8 @@ def test_visual_only_registry_private_credentials_and_effort_isolation(tmp_path,
     assert models["openai-sol"]["effort"] == "xhigh"
     with pytest.raises(ValueError, match="does not support"):
         registry.select("deepseek-flash", "medium")
-    assert not any(model["available"] for model in models.values())
+    assert models["openai-sol"]["available"]
+    assert not models["deepseek-flash"]["available"]
 
 
 def test_validation_is_explicit_and_tied_to_effort_and_credentials(tmp_path, monkeypatch):
@@ -43,7 +44,8 @@ def test_validation_is_explicit_and_tied_to_effort_and_credentials(tmp_path, mon
     assert all(result[key] == "passed" for key in ("image", "tools", "continuation"))
     assert next(model for model in registry.list() if model["id"] == "openai-sol")["available"]
     registry.select("openai-sol", "high")
-    assert not next(model for model in registry.list() if model["id"] == "openai-sol")["available"]
+    current = next(model for model in registry.list() if model["id"] == "openai-sol")
+    assert current["available"] and current["checks"] == {}
     assert len(calls) == 2
 
 

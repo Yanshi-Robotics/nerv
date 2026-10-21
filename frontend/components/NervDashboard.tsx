@@ -3,8 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { useI18n } from "@/lib/i18n";
 import LangToggle from "./LangToggle";
-import StopSimulation from "./StopSimulation";
-import { NodeTrust, TrustBadge } from "./NodeTrust";
+import { TrustBadge } from "./NodeTrust";
 import { StatusBadge } from "./ChatPanel";
 import {
   getNerv, getNodeStatus, nervEventsUrl, POLL_NODES_MS, SIGNAL_LOG_SHOWN,
@@ -111,9 +110,8 @@ function BodyCard({ spec, node, onChanged }: { spec: BodySpec; node: NodeInfo | 
             {(node.robot_actions?.length || node.agent_tools?.length || 0) > 0 && (
               <div className="text-[12px] text-neutral-300">{node.kind === "body" ? "robot_actions" : "agent_tools"}: <span className="font-mono">{(node.robot_actions?.length ? node.robot_actions : node.agent_tools)?.join(", ")}</span></div>
             )}
-            <NodeTrust node={node} onChanged={onChanged} />
+            <p className="text-xs text-neutral-500">{t("Manage access and manual controls in the session toolbox.")}</p>
             {node.online && <StatusPeek nodeKey={node.key} />}
-            <StopSimulation node={node} onChanged={onChanged} />
           </Region>
         )}
       </div>
@@ -184,7 +182,7 @@ function ToolCard({ spec, node, onChanged }: { spec: ToolSpec; node: NodeInfo | 
           {(node.robot_actions?.length || node.agent_tools?.length || 0) > 0 && (
             <div className="text-[12px] text-neutral-300">{node.kind === "body" ? "robot_actions" : "agent_tools"}: <span className="font-mono">{(node.robot_actions?.length ? node.robot_actions : node.agent_tools)?.join(", ")}</span></div>
           )}
-          <NodeTrust node={node} onChanged={onChanged} />
+          <p className="text-xs text-neutral-500">{t("Manage access and manual controls in the session toolbox.")}</p>
         </div>
       ) : (
         <div className="mt-2 text-xs text-neutral-500">{t("(launches with the next session that mounts it)")}</div>

@@ -52,8 +52,12 @@ class _McpNode:
         self.capabilities()
         return self._raw
 
-    def approve(self, store: trust.TrustStore | None = None) -> str:
+    def approve(self, store: trust.TrustStore | None = None, expected_hash: str | None = None) -> str:
+        if expected_hash is not None:
+            self.refresh()
         raw = self.raw_capabilities()
+        if expected_hash is not None and trust.manifest_hash(trust.manifest(self.base, raw.operations, raw.guidance)) != expected_hash:
+            raise ValueError("Capabilities changed — review again")
         h = (store or trust.TrustStore()).approve(self.key, raw.operations, raw.guidance, self.name, url=self.base)
         self.refresh()
         return h

@@ -207,3 +207,44 @@ def test_offline_dual_role_chat_queries_task_without_interrupting(tmp_path, monk
         finish.set()
         for thread in hub.tasks._threads.values():
             thread.join(3)
+
+
+def test_agent_provider_failure_does_not_stop_independent_task(task_host, monkeypatch):
+    hub, session, brain = task_host
+    hub.tasks.start(session.id, "offline fixture task")
+    assert brain.entered.wait(1)
+    class FailingAgent(AgentHarness):
+        model = name = "offline-error-fixture"
+        vision = False
+        def run_turn(self, link, user):
+            error = RuntimeError("secret must not escape")
+            error.status_code = 401
+            raise error
+    agent = FailingAgent(SimpleNamespace(model="offline-error-fixture"), "fixture", ContextManager(20000, 100, 100))
+    hub._brains[session.brain] = agent
+    monkeypatch.setattr(hub, "new_role_model", lambda *_: agent)
+    monkeypatch.setattr(hub, "_epoch_ok", lambda _: True)
+    result = hub.handle(session.id, "progress?")
+    assert result["error"]["code"] == "key_invalid"
+    assert "secret" not in str(result)
+    assert hub.store.get(session.id).messages[-1]["role"] == "error"
+    assert hub.tasks.snapshot(session.id)["task"]["status"] == "running"
+    hub.stop_robot.assert_not_called()
+
+
+def test_system2_provider_failure_is_failed_not_finished(task_host, monkeypatch):
+    hub, session, _ = task_host
+    class FailingController:
+        model = name = "offline-error-fixture"
+        vision = False
+        def run_turn(self, link, user):
+            raise TimeoutError("secret must not escape")
+    monkeypatch.setattr(hub, "new_role_model", lambda *_: FailingController())
+    hub.tasks.start(session.id, "offline fixture task")
+    hub.tasks._threads[session.id].join(2)
+    state = hub.tasks.snapshot(session.id)
+    assert state["task"]["status"] == "failed" and state["task"]["outcome"] == "unknown"
+    errors = [event for event in state["events"] if event["type"] == "model_error"]
+    assert errors and errors[0]["source"] == "system2" and errors[0]["ok"] is False
+    assert "secret" not in str(state)
+    hub.stop_robot.assert_called()

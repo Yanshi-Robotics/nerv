@@ -27,3 +27,17 @@ def test_url_keyed_v1_store_is_dropped_not_misread(tmp_path, monkeypatch):
     store = trust.TrustStore(str(p))
     assert store.list_approved() == {}
     assert store.check("body:x", _tools(), "hi").state == trust.UNKNOWN
+
+
+def test_access_permission_matches_the_viewed_manifest(tmp_path, monkeypatch):
+    from types import SimpleNamespace
+    from nerv.platform.client import RemoteBody
+    monkeypatch.delenv(trust.TRUST_ALL_ENV, raising=False)
+    client = RemoteBody("fixture", "http://unused")
+    store = trust.TrustStore(str(tmp_path / "trust.json"))
+    reviewed = trust.manifest_hash(trust.manifest("http://unused", _tools(), "hi"))
+    monkeypatch.setattr(client, "raw_capabilities", lambda: SimpleNamespace(operations=_tools("changed"), guidance="hi"))
+    import pytest
+    with pytest.raises(ValueError, match="changed"):
+        client.approve(store, expected_hash=reviewed)
+    assert not store.list_approved()
