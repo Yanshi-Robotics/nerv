@@ -2,7 +2,7 @@
 
 [English](../../guides/architecture.md) · [NERV](README.md)
 
-NERV 0.7.0 将对话、任务监督与本地执行分开。System 1 表示 Runtime 内的执行层，不是额外一个 Python 环境。
+NERV 0.7.1 将对话、任务监督与本地执行分开。System 1 表示 Runtime 内的执行层，不是额外一个 Python 环境。
 
 标准 SO-101 worker 持有唯一的 LeRobot 设备实例。ACT 推理和有限关节控制都向同一个调度器提交候选目标；主进程不导入 LeRobot，也不加载策略张量。
 

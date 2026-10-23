@@ -19,7 +19,7 @@ if ($Bundle) {
 $env:UV_PYTHON_INSTALL_DIR = "$nervRoot/python"
 $env:UV_CACHE_DIR = "$nervRoot/.cache/uv"
 $env:UV_CREDENTIALS_DIR = "$nervRoot/.cache/uv-credentials"
-& "$nervRoot/bin/uv.exe" run --no-project --python 3.12 "$nervRoot/bootstrap/install.py" --manifest "$manifest"
+& "$nervRoot/bin/uv.exe" run --managed-python --no-project --python 3.12 "$nervRoot/bootstrap/install.py" --manifest "$manifest"
 if ($LASTEXITCODE -ne 0) { throw 'NERV installation failed' }
 @'
 @echo off
@@ -27,7 +27,7 @@ if not defined NERV_HOME set "NERV_HOME=%USERPROFILE%\.nerv"
 set "UV_PYTHON_INSTALL_DIR=%NERV_HOME%\python"
 set "UV_CACHE_DIR=%NERV_HOME%\.cache\uv"
 set "UV_CREDENTIALS_DIR=%NERV_HOME%\.cache\uv-credentials"
-"%NERV_HOME%\bin\uv.exe" run --offline --no-project --python 3.12 "%NERV_HOME%\bootstrap\launch.py" %*
+"%NERV_HOME%\bin\uv.exe" run --offline --managed-python --no-project --python 3.12 "%NERV_HOME%\bootstrap\launch.py" %*
 '@ | Set-Content -Encoding ascii "$nervRoot/bin/nerv.cmd"
 $userPath = [Environment]::GetEnvironmentVariable('Path', 'User')
 if (($userPath -split ';') -notcontains "$nervRoot\bin") { [Environment]::SetEnvironmentVariable('Path', "$nervRoot\bin;$userPath", 'User') }

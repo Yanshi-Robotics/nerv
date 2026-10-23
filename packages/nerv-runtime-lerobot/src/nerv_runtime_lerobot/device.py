@@ -9,7 +9,7 @@ from importlib.metadata import version
 
 from filelock import FileLock, Timeout
 
-from .standard import LEROBOT_VERSION, WIDTH, HEIGHT, validate_action, validate_cameras
+from .standard import LEROBOT_VERSION, WIDTH, HEIGHT, validate_action, validate_cameras, validate_calibration
 
 
 class DeviceSession:
@@ -28,18 +28,20 @@ class DeviceSession:
             return self.preparation
         if version("lerobot") != LEROBOT_VERSION:
             raise RuntimeError(f"adapter requires LeRobot {LEROBOT_VERSION}")
-        from .discovery import resolve_port
+        from .discovery import resolve_port, resolve_cameras
         settings = {**self.settings, "port": resolve_port(self.settings)}
         if not all(settings.get(k) for k in ("port", "id", "calibration_dir", "camera_config_file")):
             raise ValueError("configure port, robot ID, calibration directory and camera file")
         if not settings.get("use_degrees"):
             raise ValueError("standard SO-101 requires use_degrees=true")
         cameras = json.loads(Path(settings["camera_config_file"]).read_text(encoding="utf-8"))
+        cameras = resolve_cameras(cameras, settings.get("camera_identities", {}))
         validate_cameras(cameras)
         from lerobot.robots.so_follower.config_so_follower import SOFollowerRobotConfig
         from lerobot.robots import make_robot_from_config
         from lerobot.cameras.opencv import OpenCVCameraConfig
         calibration_dir = Path(settings["calibration_dir"]).expanduser().resolve(strict=True)
+        validate_calibration(json.loads((calibration_dir / f"{settings['id']}.json").read_text(encoding="utf-8")))
         camera_configs = {name: OpenCVCameraConfig(**{k: v for k, v in c.items() if k != "type"})
                           for name, c in cameras.items()}
         relative = settings.get("max_relative_target") or None

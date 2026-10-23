@@ -47,7 +47,8 @@ def test_configure_import_inspect_never_connects_and_preserves_source(tmp_path, 
     assert result["manifest"]["position_units"] == UNITS
     assert len(result["manifest"]["sha256"]) == 6
     assert manage("inspect", {"id": "pick"}, home)["ok"]
-    monkeypatch.setattr("nerv_runtime_sdk.policies.backend", lambda _: lambda *args: SimpleNamespace(close=lambda: None))
+    monkeypatch.setattr("nerv_runtime_sdk.policies.backend", lambda _: lambda *args: SimpleNamespace(
+        close=lambda: None, reset=lambda: None, action=lambda raw: dict.fromkeys(CHANNELS, 0.0)))
     assert manage("check", {"id": "pick", "device": "cpu"}, home)["loaded"]
     assert manage("policies", {}, home)["policies"][0]["check"]["state"] == "loaded"
     assert before == {p.name: p.read_bytes() for p in model.iterdir()}

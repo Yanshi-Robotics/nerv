@@ -3,10 +3,11 @@ import {useEffect, useState} from "react";
 import {createSession, runtimeOperation, runtimeInstallations, setupDevice, setupCamera, POLL_NODES_MS, type Registry} from "@/lib/api";
 import {useI18n} from "@/lib/i18n";
 import ModulesPanel from "./ModulesPanel";
+import DirectoryPicker from "./DirectoryPicker";
 
-type Camera = {type: string; index_or_path: number | string; width: number; height: number; fps: number; rotation: number};
+type Camera = {type: string; index_or_path: number | string; width: number; height: number; fps: number; rotation: number; backend?: number};
 type Profile = {port: string; id: string; calibration_dir: string; policy_device: string; cameras: Record<string, Camera>};
-type Discovery = {ports: {port: string; label: string; serial?: string}[]; cameras: {device: string; label: string; stable: boolean}[]; calibrations: {id: string; directory: string}[]; saved?: Profile};
+type Discovery = {ports: {port: string; label: string; serial?: string}[]; cameras: {device: number | string; label: string; stable: boolean; backend?: number}[]; calibrations: {id: string; directory: string}[]; saved?: Profile; repair_step?: number | null; warnings?: string[]};
 const steps = ["Install runtime", "Choose the arm", "Existing calibration", "Set up cameras", "Import a policy", "Connect the arm"];
 const cameraDefault = (device: number): Camera => ({type: "opencv", index_or_path: device, width: 640, height: 480, fps: 30, rotation: 0});
 const field = "w-full rounded-lg border border-neutral-600 bg-neutral-900 p-2 text-sm";
@@ -25,7 +26,7 @@ export default function RuntimeSetup({registry, onChanged, onCreated}: {registry
   const [confirmed, setConfirmed] = useState(false);
   const [acceptance, setAcceptance] = useState(false);
   const [policy, setPolicy] = useState({path: "", id: "", conditions: "", standard_declared: false});
-  const [policies, setPolicies] = useState<{id: string; conditions: string; check?: {state: string; device?: string}}[]>([]);
+  const [policies, setPolicies] = useState<{id: string; conditions: string; check?: {state: string; device?: string; inference?: boolean}}[]>([]);
   const product = registry?.bodies.find(b => b.name === "arm-lerobot-so101");
   useEffect(() => {
     const read = () => runtimeInstallations().then(v => setInstalled(v.some(x => x.provider === "lerobot0.6.1"))).catch(e => setError(e.message));
@@ -34,7 +35,7 @@ export default function RuntimeSetup({registry, onChanged, onCreated}: {registry
   }, []);
   useEffect(() => {
     if (!installed) return;
-    setupDevice("discover").then((value: Discovery) => {setData(value); if (value.saved) {setProfile(value.saved); setConfirmed(true); setStep(value.ports.some(p => p.port === value.saved?.port) ? 5 : 1);}}).catch(e => setError(e.message));
+    setupDevice("discover").then((value: Discovery) => {setData(value); if (value.saved) {setProfile(value.saved); setConfirmed(!value.repair_step); setStep(value.repair_step ?? 5);}}).catch(e => setError(e.message));
     setupDevice("policies").then(v => setPolicies(v.policies)).catch(e => setError(e.message));
   }, [installed]);
   useEffect(() => {
@@ -47,6 +48,7 @@ export default function RuntimeSetup({registry, onChanged, onCreated}: {registry
     try {await action();} catch(e) {setError((e as Error).message);} finally {setBusy(false);}
   }
   async function next() {
+    if (step === 2) await setupDevice("validate_calibration", {id: profile.id, calibration_dir: profile.calibration_dir});
     if (step === 3) {
       if (!confirmed) throw new Error(t("Confirm the two camera views before saving"));
       setPreview(false); await setupCamera("close");
@@ -56,6 +58,9 @@ export default function RuntimeSetup({registry, onChanged, onCreated}: {registry
   }
   async function connect() {
     setPreview(false); await setupCamera("close");
+    if (!confirmed) throw new Error(t("Confirm the two camera views before saving"));
+    await setupDevice("validate_calibration", {id: profile.id, calibration_dir: profile.calibration_dir});
+    await setupDevice("configure_standard", profile);
     if (!product?.buses.real?.verified) await setupDevice("acceptance", {accepted: acceptance, robot: "arm-lerobot-so101"});
     const session = await createSession({brain: "operator", body: "arm-lerobot-so101", mode: "real", sensors: []});
     await runtimeOperation(session.id, "prepare"); onCreated?.(session.id); onChanged();
@@ -75,23 +80,25 @@ export default function RuntimeSetup({registry, onChanged, onCreated}: {registry
       {data.calibrations.map(c => <button className="nerv-control rounded border p-3" key={c.id} onClick={() => setProfile({...profile, id: c.id, calibration_dir: c.directory})}>{c.id}</button>)}
       <label className="block text-sm">{t("Robot ID")}<input className={field} value={profile.id} onChange={e => setProfile({...profile, id: e.target.value})} /></label>
       <label className="block text-sm">{t("Calibration directory")}<input className={field} value={profile.calibration_dir} onChange={e => setProfile({...profile, calibration_dir: e.target.value})} /></label>
+      <DirectoryPicker value={profile.calibration_dir} disabled={busy} onChange={path => perform(async () => {setProfile({...profile, calibration_dir: path}); const found = await setupDevice("calibrations", {directory: path}); setData({...data, calibrations: found.calibrations}); if (found.calibrations.length === 1) setProfile({...profile, calibration_dir: path, id: found.calibrations[0].id});})} />
       <p className="text-xs text-neutral-400">{t("Choose the folder containing your robot ID JSON file. Calibration stays in LeRobot.")}</p>
       <label className="block text-sm">{t("Inference device")}<select className={field} value={profile.policy_device} onChange={e => setProfile({...profile, policy_device: e.target.value})}>{["cpu", "cuda", "mps"].map(device => <option key={device}>{device}</option>)}</select></label>
     </div>}
-    {step === 3 && <div className="space-y-4"><div className="grid gap-4 sm:grid-cols-2">{["top", "wrist"].map(name => <div key={name} className="space-y-2">
+    {step === 3 && <div className="space-y-4"><button disabled={busy || preview} className="nerv-control rounded border px-3 py-2" onClick={() => perform(async () => setData(await setupDevice("discover")))}>{t("Scan connected devices")}</button>{data.warnings?.map(w => <p role="status" key={w} className="text-sm text-amber-300">{t(w)}</p>)}<div className="grid gap-4 sm:grid-cols-2">{["top", "wrist"].map(name => <div key={name} className="space-y-2">
       <h3>{t(name === "top" ? "Top camera" : "Wrist camera")}</h3>
       <div className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-xl bg-neutral-950">{frames[name] ? <img src={frames[name]} alt={t(name === "top" ? "Top camera" : "Wrist camera")} /> : <p className="text-xs text-neutral-500">{t("Preview appears here")}</p>}</div>
-      <input aria-label={t("Camera device")} className={field} list="camera-devices" disabled={preview} value={profile.cameras[name].index_or_path} onChange={e => {setConfirmed(false); setProfile({...profile, cameras: {...profile.cameras, [name]: {...profile.cameras[name], index_or_path: /^\d+$/.test(e.target.value) ? Number(e.target.value) : e.target.value}}});}} />
+      <input aria-label={t("Camera device")} className={field} list="camera-devices" disabled={preview} value={profile.cameras[name].index_or_path} onChange={e => {setConfirmed(false); setProfile({...profile, cameras: {...profile.cameras, [name]: {...profile.cameras[name], index_or_path: /^\d+$/.test(e.target.value) ? Number(e.target.value) : e.target.value, backend: data.cameras.find(c => String(c.device) === e.target.value)?.backend}}});}} />
       <select aria-label={t("Camera rotation")} className={field} disabled={preview} value={profile.cameras[name].rotation || 0} onChange={e => {setConfirmed(false); setProfile({...profile, cameras: {...profile.cameras, [name]: {...profile.cameras[name], rotation: Number(e.target.value)}}});}}>{[0, 90, 180, 270].map(n => <option key={n} value={n}>{n}°</option>)}</select>
     </div>)}</div><datalist id="camera-devices">{data.cameras.map(c => <option key={c.device} value={c.device}>{c.label}</option>)}</datalist>
-      <button className="nerv-control rounded border px-3 py-2" disabled={busy} onClick={() => perform(async () => {if (preview) {await setupCamera("close"); setPreview(false);} else {await setupCamera("open", {cameras: profile.cameras}); setPreview(true);}})}>{t(preview ? "Close preview" : "Open camera preview")}</button>
-      <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} />{t("The top and wrist views and their directions are correct")}</label>
+      <button className="nerv-control rounded border px-3 py-2" disabled={busy} onClick={() => perform(async () => {if (preview) {await setupCamera("close"); setPreview(false);} else {setFrames({}); setConfirmed(false); await setupCamera("open", {cameras: profile.cameras}); setPreview(true);}})}>{t(preview ? "Close preview" : "Open camera preview")}</button>
+      <label className="flex items-start gap-2 text-sm"><input type="checkbox" disabled={!preview || !frames.top || !frames.wrist} checked={confirmed} onChange={e => setConfirmed(e.target.checked)} />{t("The top and wrist views and their directions are correct")}</label>
     </div>}
     {step === 4 && <div className="space-y-3"><p className="text-sm text-neutral-400">{t("Import an ACT checkpoint, or skip this step for visual direct control.")}</p>
-      {policies.map(p => <div className="rounded border border-neutral-700 p-3 text-sm" key={p.id}>{p.id} · {p.conditions}<span className="block text-xs text-neutral-400">{t(p.check?.state === "loaded" ? "Load check passed" : p.check?.state === "changed" ? "Files changed; check again" : p.check?.state === "failed" ? "Load check failed" : "Not checked")}{p.check?.device ? ` · ${p.check.device}` : ""}</span><button className="nerv-control ml-3 underline" disabled={busy} onClick={() => perform(async () => {try {await setupDevice("check", {id: p.id, device: profile.policy_device});} finally {setPolicies((await setupDevice("policies")).policies);} setMessage(t("Policy loaded. Check real observations without motion after connecting."));})}>{t("Check")}</button></div>)}
+      {policies.map(p => <div className="rounded border border-neutral-700 p-3 text-sm" key={p.id}>{p.id} · {p.conditions}<span className="block text-xs text-neutral-400">{t(p.check?.state === "loaded" ? (p.check.inference ? "Native inference check passed" : "Load check passed") : p.check?.state === "changed" ? "Files changed; check again" : p.check?.state === "failed" ? "Load check failed" : "Not checked")}{p.check?.device ? ` · ${p.check.device}` : ""}</span><button className="nerv-control ml-3 underline" disabled={busy} onClick={() => perform(async () => {try {await setupDevice("check", {id: p.id, device: profile.policy_device});} finally {setPolicies((await setupDevice("policies")).policies);} setMessage(t("Native inference passed with synthetic inputs. Check real observations without motion after connecting."));})}>{t("Check")}</button></div>)}
       {([['path', 'Checkpoint directory'], ['id', 'Policy ID'], ['conditions', 'Demonstrated task and scene']] as const).map(([key, label]) => <label className="block text-sm" key={key}>{t(label)}<input className={field} value={policy[key]} onChange={e => setPolicy({...policy, [key]: e.target.value})} /></label>)}
+      <DirectoryPicker value={policy.path} disabled={busy} onChange={path => setPolicy({...policy, path})} />
       <label className="flex gap-2 text-sm"><input type="checkbox" checked={policy.standard_declared} onChange={e => setPolicy({...policy, standard_declared: e.target.checked})} />{t("I trained with the standard SO-101 course convention")}</label>
-      <button className="nerv-control rounded border px-3 py-2" disabled={busy || !policy.standard_declared || !policy.path || !policy.id} onClick={() => perform(async () => {await setupDevice("import", policy); setPolicies((await setupDevice("policies")).policies); try {await setupDevice("check", {id: policy.id, device: profile.policy_device});} finally {setPolicies((await setupDevice("policies")).policies);} setMessage(t("Policy loaded. Check real observations without motion after connecting.")); onChanged();})}>{t("Import and check policy")}</button>
+      <button className="nerv-control rounded border px-3 py-2" disabled={busy || !policy.standard_declared || !policy.path || !policy.id} onClick={() => perform(async () => {await setupDevice("import", policy); setPolicies((await setupDevice("policies")).policies); try {await setupDevice("check", {id: policy.id, device: profile.policy_device});} finally {setPolicies((await setupDevice("policies")).policies);} setMessage(t("Native inference passed with synthetic inputs. Check real observations without motion after connecting.")); onChanged();})}>{t("Import and check policy")}</button>
     </div>}
     {step === 5 && <div className="space-y-4"><p className="text-sm">{profile.id} · {profile.port}</p><p className="text-sm text-amber-300">{t("Connecting may enable motor torque. Support the arm and clear the work area. Motion remains disabled.")}</p>
       {!product?.buses.real?.verified && <label className="flex gap-2 text-sm"><input type="checkbox" checked={acceptance} onChange={e => setAcceptance(e.target.checked)} />{t("I will supervise this unverified hardware integration. This does not certify it.")}</label>}

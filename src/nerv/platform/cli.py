@@ -167,6 +167,8 @@ def cmd_serve(a) -> int:
     from pathlib import Path
     Path(paths.NERV_HOME).mkdir(parents=True, exist_ok=True)
     with FileLock(str(Path(paths.NERV_HOME) / "host-running.lock"), timeout=0):
+        if (Path(paths.NERV_HOME) / "update-pending.json").exists():
+            raise ValueError("An update was interrupted. Run nerv rollback before starting NERV.")
         server.run()
     return 0
 
@@ -246,7 +248,8 @@ def main(argv: list[str] | None = None) -> int:
     from .. import installation
     p = sub.add_parser("update", help="check or install the next official release after exiting NERV")
     p.add_argument("--check", action="store_true")
-    p.set_defaults(fn=lambda a: print(json.dumps(installation.update(a.check), indent=2)) or 0)
+    p.add_argument("--manifest", help="use an extracted release bundle manifest")
+    p.set_defaults(fn=lambda a: print(json.dumps(installation.update(a.check, manifest=a.manifest), indent=2)) or 0)
     p = sub.add_parser("rollback", help="restore the previous working installation")
     p.set_defaults(fn=lambda a: print(json.dumps(installation.rollback(), indent=2)) or 0)
     p = sub.add_parser("runtime", help="install an official isolated module")

@@ -28,9 +28,16 @@ class ACTRunner:
     def __init__(self, manifest: dict, device: str):
         root = artifact_files(manifest)
         import torch
+        from lerobot.policies.act.configuration_act import ACTConfig
         from lerobot.policies.act.modeling_act import ACTPolicy
         from lerobot.policies.factory import make_pre_post_processors
-        self.policy = ACTPolicy.from_pretrained(str(root), local_files_only=True)
+        config = ACTConfig.from_pretrained(str(root), local_files_only=True)
+        # A complete checkpoint contains its backbone. Training initialization
+        # weights must not trigger a separate torchvision download during import.
+        config.pretrained_backbone_weights = None
+        config.device = device
+        self.policy = ACTPolicy.from_pretrained(
+            str(root), config=config, local_files_only=True, strict=True)
         self.policy.to(device).eval()
         self.pre, self.post = make_pre_post_processors(
             self.policy.config, pretrained_path=str(root),

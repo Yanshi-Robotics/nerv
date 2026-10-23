@@ -7,7 +7,7 @@ import re
 import sys
 import time
 
-from .standard import PRODUCT, CHANNELS, CAMERAS, UNITS, validate_cameras, validate_manifest
+from .standard import PRODUCT, CHANNELS, CAMERAS, UNITS, validate_cameras, validate_manifest, validate_calibration
 
 
 FIELDS = {
@@ -112,6 +112,20 @@ def _manage(operation, payload, home):
     if operation == "discover":
         from .discovery import discover
         return discover(home)
+    if operation == "calibrations":
+        directory = Path(payload["directory"]).expanduser().resolve(strict=True)
+        return {"calibrations": [{"id": p.stem, "directory": str(directory)}
+                                 for p in sorted(directory.glob("*.json")) if p.is_file()]}
+    if operation == "validate_calibration":
+        calibration = Path(payload["calibration_dir"]).expanduser().resolve(strict=True)
+        robot_id = _id(payload["id"])
+        target = calibration / f"{robot_id}.json"
+        if not target.is_file():
+            candidates = [p.stem for p in calibration.glob("*.json")]
+            raise ValueError("No calibration for this robot ID. Available IDs: " + ", ".join(candidates))
+        value = json.loads(target.read_text(encoding="utf-8"))
+        validate_calibration(value)
+        return {"ok": True, "id": robot_id, "connected": False}
     if operation == "configure_standard":
         from .discovery import discover
         root = Path(home)
@@ -132,10 +146,15 @@ def _manage(operation, payload, home):
         import yaml
         profile_path = root / "bodies/arm-lerobot-so101/body.yaml"
         profile = yaml.safe_load(profile_path.read_text(encoding="utf-8"))
-        identity = next((p for p in discover(home)["ports"] if p["port"] == payload["port"]), {})
+        found = discover(home)
+        identity = next((p for p in found["ports"] if p["port"] == payload["port"]), {})
+        camera_identities = {name: next((c.get("identity") for c in found["cameras"]
+            if str(c["device"]) == str(cfg["index_or_path"]) and c.get("backend") == cfg.get("backend")), None)
+            for name, cfg in cameras.items()}
+        profile["buses"]["real"]["settings"]["camera_identities"] = camera_identities
         profile["buses"]["real"]["settings"]["device_identity"] = identity
         _write(profile_path, profile)
-        _write(root / "devices/standard.json", {**request, "cameras": cameras, "identity": identity})
+        _write(root / "devices/standard.json", {**request, "cameras": cameras, "identity": identity, "camera_identities": camera_identities})
         return result
     if operation == "policies":
         records = []
@@ -208,10 +227,24 @@ def _manage(operation, payload, home):
             return {"ok": True, "manifest": manifest}
         from nerv_runtime_sdk.policies import backend
         runner = backend(manifest["format"])(manifest, payload["device"])
+        import numpy as np
+        import math
+        from .standard import WIDTH, HEIGHT
+        # A synthetic tensor probe checks the complete native processor chain.
+        # It is explicitly not a camera observation or evidence of task success.
+        raw = {key: 0.0 for key in CHANNELS}
+        raw.update({key: np.zeros((HEIGHT, WIDTH, 3), dtype=np.uint8) for key in CAMERAS})
+        runner.reset()
+        action = runner.action(raw)
+        if (not isinstance(action, dict) or set(action) != set(CHANNELS)
+                or any(type(v) not in (int, float) or not math.isfinite(v) for v in action.values())):
+            raise ValueError("ACT must produce six finite standard position targets")
         _write(record.with_name("check.json"), {"state": "loaded", "device": payload["device"],
-               "checked_at": time.time(), "files": artifact_stamp(manifest), "inference": False})
-        return {"ok": True, "loaded": True, "inference": False, "device_write": False,
-                "message": "Load check passed. Use the connected, disarmed observation check for inference."}
+               "checked_at": time.time(), "files": artifact_stamp(manifest), "inference": True,
+               "observation_source": "synthetic_contract_probe", "hardware_verified": False})
+        return {"ok": True, "loaded": True, "inference": True, "device_write": False,
+                "observation_source": "synthetic_contract_probe", "hardware_verified": False,
+                "message": "Native inference check passed with synthetic inputs. Check real observations while disarmed."}
     except Exception as exc:
         if operation == "check":
             _write(record.with_name("check.json"), {"state": "failed", "device": payload["device"],

@@ -206,6 +206,15 @@ def _setup_installation(provider):
     return value
 
 
+@app.post("/api/operator/directories")
+def operator_directories(payload: dict):
+    from .local_files import directories
+    try:
+        return directories(payload.get("path"), int(payload.get("offset", 0)))
+    except (OSError, ValueError) as error:
+        raise HTTPException(400, str(error))
+
+
 @app.post("/api/setup/{provider}/{operation}")
 def adapter_setup(provider: str, operation: str, payload: dict):
     installation = _setup_installation(provider)
@@ -217,7 +226,7 @@ def adapter_setup(provider: str, operation: str, payload: dict):
             raise HTTPException(400, "Select a device registered by this provider")
         nerv.launcher.supervised_acceptance = {(body.name, "real")}
         return {"ok": True, "verified": False}
-    if operation not in ("discover", "configure_standard", "policies", "import", "inspect", "check"):
+    if operation not in ("discover", "calibrations", "validate_calibration", "configure_standard", "policies", "import", "inspect", "check"):
         raise HTTPException(404, "Unknown setup operation")
     from .runtime_management import manage
     with nerv._node_lock:

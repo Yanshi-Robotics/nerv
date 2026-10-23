@@ -743,6 +743,17 @@
     "Files changed; check again": "Files changed; check again",
     "Load check failed": "Load check failed",
     "Not checked": "Not checked",
-    "Testing sends one billable request with a built-in image, never a camera frame. Opening settings does not call the provider.": "Testing sends one billable request with a built-in image, never a camera frame. Opening settings does not call the provider."
+    "Testing sends one billable request with a built-in image, never a camera frame. Opening settings does not call the provider.": "Testing sends one billable request with a built-in image, never a camera frame. Opening settings does not call the provider.",
+    "Browse folders": "Browse folders",
+    "Choose a folder": "Choose a folder",
+    "Folders are on the computer running NERV. Model files stay in place.": "Folders are on the computer running NERV. Model files stay in place.",
+    "Folder path": "Folder path",
+    "Open": "Open",
+    "Parent folder": "Parent folder",
+    "More folders": "More folders",
+    "Use this folder": "Use this folder",
+    "Camera enumeration failed. Check camera permissions or enter the device index manually.": "Camera enumeration failed. Check camera permissions or enter the device index manually.",
+    "Native inference check passed": "Native inference check passed",
+    "Native inference passed with synthetic inputs. Check real observations without motion after connecting.": "Native inference passed with synthetic inputs. Check real observations without motion after connecting."
   }
 }

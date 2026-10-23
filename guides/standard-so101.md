@@ -2,7 +2,7 @@
 
 [中文](../i18n/zh/standard-so101.md)
 
-NERV 0.7.0 is a development candidate. Its real-device adapter targets one standard SO-101 follower running LeRobot 0.6.1, with `top` and `wrist` OpenCV cameras at 640 × 480 and 30 FPS. Five arm joints use degrees; the native gripper uses 0–100. Real acceptance is pending. Model loading and software tests do not establish grasp reliability.
+NERV 0.7.1 is a development candidate. Its real-device adapter targets one standard SO-101 follower running LeRobot 0.6.1, with `top` and `wrist` OpenCV cameras at 640 × 480 and 30 FPS. Five arm joints use degrees; the native gripper uses 0–100. Real acceptance is pending. Model loading and software tests do not establish grasp reliability.
 
 Train and calibrate with LeRobot before using NERV. Keep the original checkpoint, calibration and course camera configuration. The leader arm is not needed for inference. Do not run LeRobot teleoperation and NERV against the same serial port or cameras simultaneously.
 
@@ -12,7 +12,7 @@ Install the [candidate bundle](github-install.md), start `nerv`, and select **Co
 
 1. Install **SO-101 / LeRobot** in its independent environment.
 2. Scan serial candidates and select the follower. Scanning does not open the motor bus.
-3. Select an existing calibration or enter its directory and robot ID. Choose CPU, CUDA or MPS only when supported by the installed backend.
+3. Select an existing calibration or browse to its directory and enter the robot ID. Choose CPU, CUDA or MPS only when supported by the installed backend.
 4. Preview the two camera devices, assign top/wrist and rotation, and confirm their physical roles. Linux offers persistent device paths; other systems currently require camera indices.
 5. Import and check ACT, or continue without a policy for visual direct control.
 6. Review the supervised-acceptance notice and connect. Connection can enable torque; motion remains disarmed.
@@ -25,11 +25,11 @@ Profiles live under `~/.nerv`. Saved USB serial identities are resolved again on
 
 ## Import your ACT checkpoint
 
-Under **import**, enter a new policy ID, the local `pretrained_model` directory and the demonstrated task/scene conditions. Confirm the standard course convention only if the training data used that convention. This confirmation establishes declared units and ordering when the model does not encode them; it is recorded as a user declaration, not independent evidence.
+Under **import**, browse to the local `pretrained_model` folder, enter a new policy ID and describe the demonstrated task/scene conditions. Confirm the standard course convention only if the training data used that convention. This confirmation establishes declared units and ordering when the model does not encode them; it is recorded as a user declaration, not independent evidence.
 
 The importer requires `config.json`, `model.safetensors`, the preprocessor/postprocessor JSON files, and every tensor-state file those processors reference. It checks six standard position channels and the `top`/`wrist` image contract, then fingerprints the files. No arbitrary joint mapping or automatic unit conversion is offered. A changed checkpoint requires another check; import a new policy ID for a new version.
 
-**inspect** verifies the stored files and contract. **check** loads the policy and native processors in the device environment without connecting hardware; it does not perform inference. For a real observation forward pass, use the disarmed check described below.
+**inspect** verifies the stored files and contract. **check** loads the policy and native processors and performs a CPU/CUDA/MPS inference probe on explicitly synthetic inputs without connecting hardware. It verifies six finite outputs, not visual correctness or grasp success. It does not download backbone initialization weights. For a real observation forward pass, use the disarmed check described below.
 
 The equivalent CLI uses the same provider service:
 
@@ -71,7 +71,7 @@ Detailed action receipts are local under `NERV_HOME/runtime-events`. Session ima
 
 Linux is the primary physical-acceptance target. Windows native, WSL2 and macOS remain experimental until community hardware testing. WSL serial passthrough and camera passthrough are separate checks; consult [Microsoft's USB guide](https://learn.microsoft.com/en-us/windows/wsl/connect-usb). Apple Silicon and Intel macOS need separate dependency and hardware reports.
 
-Automatic camera candidates currently use Linux device paths. On Windows and macOS, enter the camera index and confirm its picture in the preview; automatic camera enumeration on those platforms remains pending. Directory selection currently uses a path field. Serial discovery does not establish that two otherwise identical devices are the same physical unit.
+Camera candidates use Linux device paths, Windows DirectShow or macOS AVFoundation metadata. Unique device identities are saved where available. Missing or ambiguous identities return setup to the affected step; identical model names never establish a camera role. Use the two previews to confirm top/wrist and direction. Folder browsers select calibration and policy directories on the host computer without uploading their contents. Native OS permission and hardware behavior still need platform-specific acceptance.
 
 The host uses the Runtime SDK and never imports LeRobot. The adapter owns one native device and dispatch authority. Model runners are discovered through `nerv.policy_backends`; a backend receives a validated artifact and device string, implements `reset()`, `action(observation)` and `close()`, and returns standard native position targets without opening hardware. ACT keeps its own chunk queue. A future backend may hide its own sequence or remote-inference mechanics behind this interface, but it must not bypass freshness or dispatch validation.
 
