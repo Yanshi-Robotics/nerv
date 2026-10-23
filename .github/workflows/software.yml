@@ -1,0 +1,27 @@
+name: Software contracts
+on: [push, pull_request]
+jobs:
+  contracts:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm --prefix frontend ci
+      - run: npm --prefix frontend run build
+        env:
+          NERV_STATIC_EXPORT: '1'
+          NEXT_PUBLIC_API: ''
+      - run: python -m pip install -e ./packages/nerv-runtime-sdk -e ".[platform,dev]"
+      - run: python -m pip install --no-deps -e ./packages/nerv-runtime-lerobot
+      - run: python -m pytest tests/test_standard_product.py tests/test_lerobot_adapter.py tests/test_runtime_sdk.py tests/test_runtime_management.py -q
+      - run: npm --prefix frontend run check:locales
+      - run: python scripts/build_release.py

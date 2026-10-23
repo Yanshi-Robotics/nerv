@@ -8,12 +8,14 @@ from pathlib import Path
 
 
 def artifact_files(manifest: dict):
-    value = os.environ.get(manifest["root_env"], "")
+    value = manifest.get("path") or os.environ.get(manifest.get("root_env", ""), "")
     if not value:
-        raise ValueError(f"set {manifest['root_env']} to the frozen checkpoint directory")
+        raise ValueError("select a local checkpoint directory")
     root = Path(value).expanduser().resolve(strict=True)
     for name, digest in manifest["sha256"].items():
-        file = root / name
+        file = (root / name).resolve()
+        if not file.is_relative_to(root):
+            raise ValueError("policy file escapes the checkpoint directory")
         if not file.is_file():
             raise ValueError(f"policy artifact file missing: {name}")
         with file.open("rb") as stream:
@@ -35,7 +37,7 @@ class ACTRunner:
             preprocessor_overrides={"device_processor": {"device": device}})
         self.device = torch.device(device)
         self.manifest = manifest
-        config = json.loads((root / "config.json").read_text())
+        config = json.loads((root / "config.json").read_text(encoding="utf-8"))
         if config["type"] != "act" or config["input_features"] != manifest["input_features"]:
             raise ValueError("checkpoint does not match registered ACT input contract")
 
@@ -58,3 +60,7 @@ class ACTRunner:
         if len(values) != len(self.manifest["action_names"]):
             raise ValueError("policy returned a different action shape")
         return dict(zip(self.manifest["action_names"], values))
+
+    def close(self):
+        self.reset()
+        self.policy = self.pre = self.post = None

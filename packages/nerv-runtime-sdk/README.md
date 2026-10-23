@@ -41,3 +41,13 @@ capability metadata. Its capability resource contains `robot_actions`, not a mix
 
 A protocol check is not a physical acceptance test. Existing protocol 1 workers must be
 upgraded; the host does not silently downgrade to the mixed capability contract.
+
+## Optional provider management and policy backends
+
+Protocol 2 providers may implement `manage(operation, payload, home)` for offline setup, import, inspection and model loading. The host invokes this through the selected interpreter's worker CLI with JSON on stdin. It does not import the vendor SDK. Management must not connect hardware. Providers describe their forms with JSON Schema; product-specific fields stay in the provider.
+
+Policy runner contract version 1 uses the `nerv.policy_backends` entry-point group. The entry name identifies an artifact format. Its factory takes `(manifest, device)` and returns `reset()`, `action(observation)` and `close()`. The runtime remains the sole actuator owner; returning an action does not grant dispatch authority. Sequence queues and model preprocessing stay inside the backend.
+
+Optional operator endpoints are `/policies/check` (disarmed observation inference), `/device/close`, `/device/torque-off`, and `/operator/supervise`. Torque release must not appear as an Agent tool. A tool field may use `x-observation-field` to let the manual UI fill an observation receipt; Agent calls still provide the explicit receipt they observed. Runtime freshness and instance checks remain authoritative.
+
+Standard product setup and limitations are documented in the [student guide](../../guides/standard-so101.md). No physical support is implied by protocol conformance.

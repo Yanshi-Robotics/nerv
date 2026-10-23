@@ -100,6 +100,34 @@ def _models_idle():
         raise HTTPException(409, "Finish the active task before changing model configuration")
 
 
+class RuntimeManagementIn(BaseModel):
+    python: str
+    provider: str
+    operation: str
+    payload: dict = {}
+
+
+@app.post("/api/runtime/manage")
+def manage_runtime(body: RuntimeManagementIn, request: Request):
+    from urllib.parse import urlsplit
+    origin = request.headers.get("origin")
+    if origin and urlsplit(origin).netloc != request.headers.get("host") and origin not in config.CORS_ORIGINS:
+        raise HTTPException(403, "runtime management requires an allowed local origin")
+    from .runtime_management import manage
+    from .registry import Registry
+    with nerv._node_lock:
+        if body.operation in ("configure", "import") and nerv._bound_runtime:
+            raise HTTPException(409, "Close the current robot instance before changing its configuration")
+        try:
+            result = manage(body.python, body.provider, body.operation, body.payload)
+            if body.operation in ("configure", "import"):
+                nerv.registry = Registry()
+                nerv.launcher.registry = nerv.registry
+            return result
+        except (ValueError, OSError) as error:
+            raise HTTPException(400, str(error))
+
+
 @app.get("/api/vlm")
 def vlm_models():
     registry = ModelRegistry()
@@ -221,11 +249,15 @@ def runtime_operation(sid: str, operation: str, payload: dict):
         raise HTTPException(409, "this session does not control the robot")
     if sid in nerv._runs:
         raise HTTPException(409, "finish the active task before preparing or loading")
-    if operation not in ("prepare", "policies/load"):
+    if operation == "operator/supervise" and session.brain != "operator":
+        raise HTTPException(403, "Agent tasks use their own supervision")
+    if operation not in ("prepare", "policies/load", "policies/check", "device/close", "device/torque-off", "operator/supervise"):
         raise HTTPException(404, "unknown runtime operation")
     client = nerv.body_client(session.body)
     if client is None:
         raise HTTPException(503, "body node offline")
+    if operation in ("device/close", "device/torque-off"):
+        nerv.arm(sid, False)
     result = client.post("/" + operation, payload)
     client.refresh()
     return result
@@ -736,7 +768,7 @@ def session_logs(session: str = "", limit: int = 300) -> dict:
 
 
 # ---- static web app (frontend/out) -------------------------------------------------------
-_WEB = os.path.join(paths.REPO_ROOT, "frontend", "out")
+_WEB = paths.WEB_ROOT
 if os.path.isdir(_WEB):
     app.mount("/", StaticFiles(directory=_WEB, html=True), name="web")
 else:

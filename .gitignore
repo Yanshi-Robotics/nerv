@@ -4,6 +4,7 @@
 __pycache__/
 *.pyc
 *.egg-info/
+build/
 .cache/
 logs/
 memory/

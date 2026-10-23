@@ -46,17 +46,7 @@ def cmd_doctor(a) -> int:
     print(f"data root      {paths.DATA_ROOT}")
     print(f".env           {paths.ENV_FILE} {'(present)' if os.path.isfile(paths.ENV_FILE) else '(missing)'}")
     print(f"node ports     {config.NODE_PORTS}")
-    for sub, probe in (("worlds", "scenes/manifest.py"), ("policies", "README.md")):
-        ok = os.path.isfile(os.path.join(paths.REPO_ROOT, sub, probe))
-        print(f"submodule {sub:<10} {'ok' if ok else '⚠ empty — run: git submodule update --init --recursive'}")
-    try:
-        import mujoco  # noqa: F401
-        print("mujoco            ok (this venv can run world and simulated body nodes)")
-    except Exception:
-        print("mujoco            ⚠ missing — pip install -e '.[all]'")
-    lp = config.LEROBOT_PYTHON
-    print(f"NERV_LEROBOT_PYTHON {lp or '(unset — only needed for the real arm)'}"
-          f"{'' if not lp or os.path.exists(lp) else '  ⚠ not found'}")
+    print("Runtime dependencies are checked in their selected interpreter with nerv-runtime check.")
     for b in list_brains():
         print(f"brain {b['name']:<12} {'ready' if b['available'] else 'not configured'}")
     reg = Registry()
@@ -66,7 +56,7 @@ def cmd_doctor(a) -> int:
             print(f"arena {w.name}×{body}: {p} {'ok' if os.path.isfile(p) else '⚠ missing'}")
     for b in reg.bodies.values():
         for sk, d in b.skills.items():
-            print(f"policy {b.name}.{sk}: {d.policy} {'ok' if os.path.isfile(os.path.join(d.policy, 'policy.onnx')) else '⚠ missing'}")
+            print(f"policy {b.name}.{sk}: {d.manifest or d.policy} {'present' if os.path.exists(d.manifest or d.policy) else 'missing'}")
     return 0
 
 
@@ -214,6 +204,24 @@ def cmd_session(a) -> int:
     return 2
 
 
+def cmd_policy(a):
+    from .runtime_management import manage
+    payload = {"id": a.id} if a.action in ("inspect", "check") else {}
+    if a.action == "import":
+        payload = {"id": a.id, "path": a.path, "conditions": a.conditions,
+                   "standard_declared": a.standard_declared}
+    if a.action == "check":
+        payload["device"] = a.device
+    if a.action == "configure":
+        payload = {key: getattr(a, key) for key in ("port", "id", "calibration_dir", "camera_config_file", "policy_device")}
+    try:
+        print(json.dumps(manage(a.python, a.provider, a.action, payload), indent=2))
+        return 0
+    except (ValueError, OSError) as error:
+        print(str(error), file=sys.stderr)
+        return 1
+
+
 def main(argv: list[str] | None = None) -> int:
     load_dotenv(paths.ENV_FILE)
     ap = argparse.ArgumentParser(prog="nerv", description="NERV — a nervous system for robots")
@@ -227,6 +235,17 @@ def main(argv: list[str] | None = None) -> int:
         p.add_argument("--world", default=None)
         p.add_argument("--sensors", nargs="*", default=[], help="ambient streams to include")
         p.add_argument("--arm", action="store_true", help="arm the session at start (sim only!)")
+
+    p = sub.add_parser("policy", help="manage a provider's local device and policy configuration")
+    p.add_argument("action", choices=["describe", "configure", "import", "inspect", "check"])
+    p.add_argument("--python", required=True)
+    p.add_argument("--provider", required=True)
+    for field in ("id", "path", "conditions", "port", "calibration-dir", "camera-config-file"):
+        p.add_argument("--" + field, default="")
+    p.add_argument("--device", default="cpu")
+    p.add_argument("--policy-device", default="cpu")
+    p.add_argument("--standard-declared", action="store_true")
+    p.set_defaults(fn=cmd_policy)
 
     p = sub.add_parser("chat", help="a conversation in the terminal")
 

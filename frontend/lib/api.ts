@@ -26,7 +26,7 @@ export type Brain = {
 
 // ---- registry (bodies / worlds / tools declared on disk) ---------------------------------
 export type SensorDecl = { name: string; description: string; camera: string; width: number; height: number };
-export type BusEndpoint = { enabled: boolean; kind: string; python: string; settings: Record<string, unknown>; verified: boolean };
+export type BusEndpoint = { provider?: string; enabled: boolean; kind: string; python: string; settings: Record<string, unknown>; verified: boolean };
 export type BodySpec = {
   name: string;
   family: string;
@@ -387,6 +387,7 @@ export type ToolSheetEntry = {
 
 // 工具参数的 JSON Schema（只列表单生成用得到的那几个字段）
 export type JsonSchema = {
+  "x-observation-field"?: string;
   type?: string;
   description?: string;
   properties?: Record<string, JsonSchema>;
@@ -587,3 +588,9 @@ export const robotTaskOperation = (sid: string, operation: string, arguments_: R
 export const setTaskModel = (sid: string, model: string, effort: string | null) => domainRequest(`/api/sessions/${sid}/task-model`, {model, effort});
 export const getWorldControl = (sid: string): Promise<WorldDescriptor> => domainRequest(`/api/sessions/${sid}/world-control`);
 export const changeWorld = (sid: string, descriptor: WorldDescriptor, command: string, arguments_: Record<string, unknown>) => domainRequest(`/api/sessions/${sid}/world-control`, {instance_id: descriptor.instance_id, revision: descriptor.revision, command, arguments: arguments_});
+
+export async function manageRuntime(python: string, provider: string, operation: string, payload: Record<string, unknown>) {
+  const response = await fetch(`${BASE}/api/runtime/manage`, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({python, provider, operation, payload})});
+  if (!response.ok) throw new ApiError(await detailOf(response), response.status);
+  return response.json();
+}

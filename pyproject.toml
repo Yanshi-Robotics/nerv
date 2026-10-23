@@ -12,7 +12,7 @@ license = "MIT"
 authors = [{ name = "Jeff Liu" }]
 keywords = ["robotics", "llm", "mcp", "mujoco", "lerobot", "embodied-ai"]
 dependencies = [
-  "nerv-runtime-sdk==0.6.2",
+  "nerv-runtime-sdk==0.6.3",
   "pydantic>=2.6",
   "pydantic-settings>=2.6",
   "python-dotenv>=1.0",
@@ -24,6 +24,8 @@ dependencies = [
   "uvicorn>=0.32",
   "pillow>=10",
   "anyio>=4",
+  "filelock>=3.16",
+  "keyring>=25; sys_platform == 'win32'",
 ]
 
 [project.optional-dependencies]

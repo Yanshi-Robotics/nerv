@@ -35,14 +35,22 @@ buses:
       robot_type: so101_follower
       port: "${SO101_PORT}"
       id: "${SO101_ID}"
+      calibration_dir: "${SO101_CALIBRATION_DIR}"
       cameras: "${SO101_CAMERAS}"                 # e.g. "wrist=0,top=2" (key=device index)
       camera_config_file: "${SO101_CAMERA_CONFIG}"
       control_rate_hz: 30
+      decision_max_age_s: 20
+      decision_max_drift: 2
+      min_duration_s: 0.3
+      max_duration_s: 10
+      max_step_deg: 30
+      settle_tol: 2
       max_runtime_s: 45
       supervision_timeout_s: 20
       cancel_timeout_s: 5
       watchdog_poll_s: 0.05
       max_frame_age_s: 0.5
+      max_action_age_s: 0.5
       policy_device: cuda
       jpeg_quality: 80
       disable_torque_on_disconnect: false

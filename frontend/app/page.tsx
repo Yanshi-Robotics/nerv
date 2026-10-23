@@ -2,6 +2,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import OperatorToolbox from "@/components/OperatorToolbox";
+import RuntimeSetup from "@/components/RuntimeSetup";
 import VlmPanel from "@/components/VlmPanel";
 import ChatPanel from "@/components/ChatPanel";
 import NervDashboard from "@/components/NervDashboard";
@@ -107,6 +108,7 @@ export default function Home() {
         }}
       />
 
+      {panel === "setup" && <RuntimeSetup registry={registry} onChanged={() => getRegistry().then(setRegistry)} />}
       {panel === "models" && <div className="col-span-2 min-h-0 overflow-hidden"><VlmPanel onChanged={() => getRegistry().then(setRegistry)} /></div>}
       {panel === "dashboard" && (
         <div className="col-span-2 min-h-0 min-w-0 overflow-hidden">

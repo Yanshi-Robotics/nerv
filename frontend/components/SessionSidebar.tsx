@@ -16,7 +16,7 @@ const CONVERSATION_ONLY = ""; // world 选中值空串 = 只聊天，不起身�
 //   收起 ≈ 56px：展开键 + 一列带提示的图标键（新建、仪表盘、日志、主题）；列表和上限藏起来
 // 折叠状态由 app/page.tsx 持有（栅格列宽要跟着变），存 localStorage 的 `nerv-sidebar`。
 // 右侧显示的面板；Dashboard 和 Logs 不是跳页，是换掉右边两栏，侧栏不动。
-export type Panel = "session" | "dashboard" | "logs" | "explore" | "models";
+export type Panel = "session" | "dashboard" | "logs" | "explore" | "models" | "setup";
 
 export default function SessionSidebar({
   sessions,
@@ -61,7 +61,7 @@ export default function SessionSidebar({
     setWorld(CONVERSATION_ONLY); setWorldValues({});
     setBody("");
     setSensors([]);
-    setBrain(registry?.default_brain ?? brains.find((b) => b.available)?.name ?? brains[0]?.name ?? "");
+    setBrain(brains.find(b => b.name === registry?.default_brain && b.available)?.name ?? brains.find(b => b.available)?.name ?? "");
     setError("");
     setCreating(true);
     if (collapsed) onToggleCollapsed(); // 表单住在展开态里：收起时按「+」先展开
@@ -238,7 +238,7 @@ export default function SessionSidebar({
               </div>
               <div className="mt-0.5 flex items-center gap-1 text-[10px] text-neutral-500">
                 {s.armed && <span className="text-red-400" title={t("armed")}>●</span>}
-                <span className="truncate">{s.world ? `${s.world} / ${s.body}` : t("Conversation only")} · {s.brain}</span>
+                <span className="truncate">{s.world ? `${s.world} / ${s.body}` : s.body || t("Conversation only")} · {s.brain}</span>
               </div>
             </button>
             <button onClick={() => doDelete(s.id)} title={t("Delete session")} aria-label={t("Delete session")}
@@ -254,6 +254,7 @@ export default function SessionSidebar({
           <button onClick={() => onPanel("dashboard")} className={`nerv-control ${navRow} ${panel === "dashboard" ? "bg-neutral-800 text-neutral-100" : ""}`} title={t("NERV dashboard")} aria-pressed={panel === "dashboard"}>
             <DashboardIcon /> <span>{t("Dashboard")}</span>
           </button>
+          <button onClick={() => onPanel("setup")} className={`nerv-control ${navRow}`}>{t("Device and policy setup")}</button>
           <button onClick={() => onPanel("models")} className={`nerv-control ${navRow}`}>{t("Visual models")}</button>
           <button onClick={() => onPanel("explore")} className={`nerv-control ${navRow} ${panel === "explore" ? "bg-neutral-800 text-neutral-100" : ""}`} title="Nerv World Explore" aria-pressed={panel === "explore"}>
             <ExploreIcon /> <span>Nerv World Explore</span>

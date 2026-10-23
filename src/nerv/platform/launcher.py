@@ -5,6 +5,7 @@ logs/nodes/<name>.log; the interpreter comes from the registry entry (env-expand
 from __future__ import annotations
 
 import os
+import re
 import socket
 import subprocess
 import sys
@@ -78,19 +79,21 @@ class Launcher:
 
     def _spawn(self, key: str, kind: str, python: str, args: list[str], url: str,
                extra_env: dict | None = None, bus_url: str = "") -> NodeHandle:
-        log_path = os.path.join(self.log_dir, key.replace("/", "_") + ".log")
-        safe = ("PATH", "HOME", "USER", "LOGNAME", "LANG", "LD_LIBRARY_PATH",
+        log_path = os.path.join(self.log_dir, re.sub(r'[^A-Za-z0-9_.-]', "_", key) + ".log")
+        safe = ("PATH", "HOME", "USER", "LOGNAME", "LANG", "SYSTEMROOT", "SystemRoot", "WINDIR", "TEMP", "TMP", "USERPROFILE", "APPDATA", "LOCALAPPDATA", "NERV_HOME", "LD_LIBRARY_PATH",
                 "CUDA_VISIBLE_DEVICES", "MUJOCO_GL", "DISPLAY", "XAUTHORITY",
                 "LIBGL_ALWAYS_SOFTWARE", "__EGL_VENDOR_LIBRARY_FILENAMES", "MUJOCO_EGL_DEVICE_ID", "EGL_PLATFORM")
         env = {k: v for k, v in os.environ.items() if k in safe or k.startswith("LC_")}
         env.update(extra_env or {})
         env.setdefault("PYTHONUNBUFFERED", "1")
+        env["PYTHONUTF8"] = "1"
+        env["NERV_HOME"] = paths.NERV_HOME
         # nodes must accept requests from the page nerv serve itself hosts, not only the dev origin
         serve_origins = [f"http://127.0.0.1:{config.SERVE_PORT}", f"http://localhost:{config.SERVE_PORT}"]
         env["NERV_CORS_ORIGINS"] = ",".join(dict.fromkeys(config.CORS_ORIGINS + serve_origins))
         logf = open(log_path, "ab")
         proc = subprocess.Popen([python, *args], stdout=logf, stderr=subprocess.STDOUT, env=env,
-                                cwd=paths.REPO_ROOT)
+                                cwd=paths.DATA_ROOT)
         h = NodeHandle(kind=kind, name=key, url=url, bus_url=bus_url, python=python, proc=proc,
                        log_path=log_path)
         self.nodes[key] = h
@@ -182,7 +185,7 @@ class Launcher:
         del self.nodes[key]
         from ..world.configuration import resolve_configuration
         values = resolve_configuration(world.configuration, configuration or {})
-        directory = Path(paths.REPO_ROOT) / ".cache" / "instances" / uuid.uuid4().hex
+        directory = Path(paths.CACHE_DIR) / "instances" / uuid.uuid4().hex
         directory.mkdir(parents=True)
         request = directory / "configuration.json"
         request.write_text(json.dumps({"values": values}))
@@ -244,7 +247,7 @@ class Launcher:
         declared_env = {}
         for skill in body.skills.values():
             if skill.manifest:
-                artifact = json.loads(Path(skill.manifest).read_text())
+                artifact = json.loads(Path(skill.manifest).read_text(encoding="utf-8"))
                 ref = artifact.get("root_env")
                 if ref and ref in os.environ:
                     declared_env[ref] = os.environ[ref]

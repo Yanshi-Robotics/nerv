@@ -339,6 +339,33 @@ def build_app(node: BodyNode, cors_origins: list[str]) -> FastAPI:
             return {"ok": False, "message": "runtime does not expose policy loading"}
         return impl.load_policy(str(body.get("id", "")))
 
+    @app.post("/policies/check")
+    def check_policy():
+        if node.armed or not hasattr(impl, "dry_run"):
+            return {"ok": False, "message": "Disarm a compatible device before checking"}
+        return impl.dry_run()
+
+    @app.post("/device/close")
+    def close_device():
+        node.invalidate_control()
+        node.armed = False
+        impl.close()
+        return {"ok": True, "prepared": False}
+
+    @app.post("/device/torque-off")
+    def torque_off():
+        node.invalidate_control()
+        node.armed = False
+        if not hasattr(impl, "torque_off"):
+            return {"ok": False, "message": "Runtime does not offer torque release"}
+        return impl.torque_off()
+
+    @app.post("/operator/supervise")
+    def operator_supervise(body: dict):
+        if not hasattr(impl, "supervise"):
+            return {"ok": False, "message": "Runtime has no supervision channel"}
+        return impl.supervise(body.get("frame_seq"))
+
     @app.post("/executions/status")
     def executions() -> dict:
         return impl.execution_status() if hasattr(impl, "execution_status") else {"running": False}

@@ -1,0 +1,159 @@
+"""Offline student setup and artifact import, executed in the adapter environment."""
+import hashlib
+import json
+import os
+from pathlib import Path
+import re
+import sys
+
+from .standard import PRODUCT, CHANNELS, CAMERAS, UNITS, validate_cameras, validate_manifest
+
+
+FIELDS = {
+    "configure": {"port": "Serial port", "id": "Robot ID", "calibration_dir": "Calibration directory",
+                  "camera_config_file": "Camera configuration file", "policy_device": "Inference device"},
+    "import": {"path": "Checkpoint directory", "id": "Policy ID", "conditions": "Demonstrated task and scene",
+               "standard_declared": "I trained with the standard SO-101 course convention"},
+    "inspect": {"id": "Policy ID"},
+    "check": {"id": "Policy ID", "device": "Inference device"},
+}
+
+
+def describe():
+    descriptor = {"product": PRODUCT, "label": "Standard SO-101 / LeRobot", "operations": {
+        op: {"type": "object", "properties": {k: {"type": "boolean" if k == "standard_declared" else "string", "title": title}
+                                                for k, title in fields.items()},
+             "required": list(fields), "additionalProperties": False} for op, fields in FIELDS.items()}}
+    for operation, key in (("configure", "policy_device"), ("check", "device")):
+        descriptor["operations"][operation]["properties"][key].update(enum=["cpu", "cuda", "mps"], default="cpu")
+    return descriptor
+
+
+def _id(value):
+    if not re.fullmatch(r"[A-Za-z0-9_-]+", value or ""):
+        raise ValueError("ID must contain letters, digits, underscores or hyphens")
+    return value
+
+
+def _write(path, value):
+    import tempfile
+    path.parent.mkdir(parents=True, exist_ok=True)
+    fd, temporary = tempfile.mkstemp(dir=path.parent, suffix=".tmp")
+    try:
+        with os.fdopen(fd, "w", encoding="utf-8") as stream:
+            json.dump(value, stream, indent=2, allow_nan=False)
+        os.replace(temporary, path)
+    finally:
+        if os.path.exists(temporary):
+            os.unlink(temporary)
+
+
+def inspect_checkpoint(path, declared):
+    root = Path(path).expanduser().resolve(strict=True)
+    config = json.loads((root / "config.json").read_text(encoding="utf-8"))
+    if config.get("type") != "act":
+        raise ValueError("first release accepts native LeRobot ACT checkpoints")
+    if config.get("output_features", {}).get("action", {}).get("shape") != [len(CHANNELS)]:
+        raise ValueError("expected six standard position actions")
+    if not declared:
+        raise ValueError("confirm the standard course convention; shapes alone cannot establish units or order")
+    manifest = {"id": "inspection", "product": PRODUCT, "format": "lerobot-act", "sdk_version": "0.6.1",
+                "path": str(root), "state_names": list(CHANNELS), "action_names": list(CHANNELS),
+                "image_names": list(CAMERAS), "position_units": UNITS,
+                "input_features": config["input_features"], "inputs": config["input_features"],
+                "outputs": config["output_features"], "semantics_source": "user_standard_declaration"}
+    validate_manifest(manifest)
+    files = {"config.json", "model.safetensors", "policy_preprocessor.json", "policy_postprocessor.json"}
+    # Processor configs refer to their tensor state. Preserve and fingerprint each
+    # reference; do not require unrelated training logs or invent normalization.
+    def references(value):
+        if isinstance(value, dict):
+            for v in value.values():
+                references(v)
+        elif isinstance(value, list):
+            for v in value:
+                references(v)
+        elif isinstance(value, str) and value.endswith(".safetensors"):
+            files.add(value)
+    for filename in ("policy_preprocessor.json", "policy_postprocessor.json"):
+        references(json.loads((root / filename).read_text(encoding="utf-8")))
+    hashes = {}
+    for name in sorted(files):
+        target = (root / name).resolve(strict=True)
+        if not target.is_relative_to(root):
+            raise ValueError("processor references a file outside the checkpoint")
+        with target.open("rb") as stream:
+            hashes[name] = hashlib.file_digest(stream, "sha256").hexdigest()
+    manifest["sha256"] = hashes
+    return manifest
+
+
+def manage(operation, payload, home):
+    from filelock import FileLock
+    root = Path(home).expanduser().resolve()
+    root.mkdir(parents=True, exist_ok=True)
+    with FileLock(root / "runtime-management.lock"):
+        return _manage(operation, payload, home)
+
+
+def _manage(operation, payload, home):
+    import jsonschema
+    if operation == "describe":
+        return describe()
+    if operation not in FIELDS:
+        raise ValueError("unknown management operation")
+    jsonschema.validate(payload, describe()["operations"][operation])
+    root = Path(home).expanduser().resolve()
+    body_file = root / "bodies" / "arm-lerobot-so101" / "body.yaml"
+    if operation == "configure":
+        import yaml
+        from importlib.resources import files
+        camera_path = Path(payload["camera_config_file"]).expanduser().resolve(strict=True)
+        validate_cameras(json.loads(camera_path.read_text(encoding="utf-8")))
+        calibration = Path(payload["calibration_dir"]).expanduser().resolve(strict=True)
+        robot_id = _id(payload["id"])
+        if not (calibration / f"{robot_id}.json").is_file():
+            raise ValueError("selected calibration directory has no file for this robot ID")
+        if not payload["port"].strip() or payload["policy_device"] not in ("cpu", "cuda", "mps"):
+            raise ValueError("provide a port and select cpu, cuda or mps")
+        template = json.loads(files("nerv_runtime_lerobot").joinpath("product.json").read_text())
+        if body_file.exists():
+            template["skills"] = yaml.safe_load(body_file.read_text(encoding="utf-8")).get("skills", {})
+        binding = template["buses"]["real"]
+        binding["python"] = sys.executable
+        binding["settings"].update({**payload, "id": robot_id, "camera_config_file": str(camera_path),
+                                   "calibration_dir": str(calibration)})
+        # YAML accepts JSON; an atomic JSON write avoids a second serializer.
+        _write(body_file, template)
+        return {"ok": True, "product": PRODUCT, "connected": False, "profile": str(body_file)}
+    policy_id = _id(payload["id"])
+    record = root / "artifacts" / policy_id / "artifact.json"
+    if operation == "import":
+        if not body_file.exists():
+            raise ValueError("configure the standard device before importing a policy")
+        manifest = inspect_checkpoint(payload["path"], payload["standard_declared"])
+        manifest.update(id=policy_id, conditions=payload["conditions"])
+        import yaml
+        profile = yaml.safe_load(body_file.read_text(encoding="utf-8"))
+        if policy_id in profile.get("skills", {}) or record.exists():
+            raise ValueError("policy ID already exists; import a new version with a new ID")
+        if policy_id in {"read_state", "move_joints", "nudge_joints", "set_gripper", "wait_execution", "cancel_execution", "execution_status"}:
+            raise ValueError("policy ID is reserved by device controls")
+        _write(record, manifest)
+        profile.setdefault("skills", {})[policy_id] = {"artifact": policy_id, "manifest": str(record),
+            "description": f"Run the imported policy. Demonstrated conditions: {payload['conditions']}"}
+        _write(body_file, profile)
+        return {"ok": True, "manifest": manifest, "connected": False}
+    manifest = json.loads(record.read_text(encoding="utf-8"))
+    validate_manifest(manifest)
+    from .policy import artifact_files
+    artifact_files(manifest)
+    if operation == "inspect":
+        return {"ok": True, "manifest": manifest}
+    from nerv_runtime_sdk.policies import backend
+    runner = backend(manifest["format"])(manifest, payload["device"])
+    try:
+        return {"ok": True, "loaded": True, "inference": False, "device_write": False,
+                "message": "Load check passed. Use the connected, disarmed observation check for inference."}
+    finally:
+        runner.close()

@@ -18,6 +18,7 @@ def runtime_fixture():
     runtime = LeRobotRuntime(RobotProfile(id=spec.name, family=spec.family, configuration=spec.model_dump()), EnvironmentBinding(id="fixture", profile_id=spec.name, mode="real", provider="lerobot0.6.1", configuration=settings))
     writes = []
     runtime._robot = SimpleNamespace(send_action=lambda action: writes.append(action))
+    runtime._send_recorded = lambda action, **kwargs: runtime._robot.send_action(action)
     runtime._positions = lambda: {"joint.pos":1.0}
     runtime._capture = lambda: ({"joint.pos":1.0}, {})
     runtime.dispatch.enable(True)
