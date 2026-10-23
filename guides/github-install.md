@@ -25,7 +25,7 @@ To choose another port, use `nerv serve --port 8100`. Ctrl+C ends this server.
 An equivalent one-command entry, without global npm installation, is:
 
 ```bash
-npx --yes "https://github.com/Yanshi-Robotics/nerv/archive/COMMIT.tar.gz"
+npx --yes --package="https://github.com/Yanshi-Robotics/nerv/archive/COMMIT.tar.gz" nerv
 ```
 
 Use the GitHub archive URL. npm's Git-clone installation also initializes submodules,
@@ -51,7 +51,7 @@ provider and Python path are filled in automatically. Supply the actual serial p
 robot ID, calibration and camera configuration, then import a trained policy using the
 [standard SO-101 guide](standard-so101.md).
 
-An npx user can pass `runtime install lerobot0.6.1` after the archive URL. Subsequent
+An npx user can pass `runtime install lerobot0.6.1` after `nerv`. Subsequent
 host launches discover the same runtime under the same user data directory.
 
 ## User data and updates
