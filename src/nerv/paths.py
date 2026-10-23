@@ -1,7 +1,7 @@
 """Where things live on disk — the single place that knows.
 
-Runs from a source checkout (``pyproject.toml`` next to the package) or from an installed
-wheel; in the first case data lands in the repository, in the second under ``~/.nerv``.
+Runs from a source checkout or an installed wheel. User data always lives under
+``NERV_HOME`` (default ``~/.nerv``); code and bundled assets stay in the installation.
 Nothing here imports the rest of ``nerv``.
 """
 from __future__ import annotations
@@ -16,7 +16,7 @@ NERV_HOME = os.environ.get("NERV_HOME") or os.path.join(os.path.expanduser("~"),
 TRUST_FILE = os.path.join(NERV_HOME, "trust.json")
 
 _IN_CHECKOUT = os.path.isfile(os.path.join(REPO_ROOT, "pyproject.toml"))
-DATA_ROOT = REPO_ROOT if _IN_CHECKOUT else NERV_HOME
+DATA_ROOT = NERV_HOME
 
 CACHE_DIR = os.path.join(DATA_ROOT, ".cache")
 LOGS_DIR = os.path.join(DATA_ROOT, "logs")

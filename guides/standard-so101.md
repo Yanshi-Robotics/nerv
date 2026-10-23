@@ -8,6 +8,10 @@ Train and calibrate with LeRobot before using NERV. Keep the original checkpoint
 
 ## Install the candidate
 
+The [GitHub launcher](github-install.md) supports installation followed by `nerv`, or
+direct `npx` launch. It manages the two Python environments and discovers installed
+runtimes automatically. The wheel installation below remains an alternative without Node.js.
+
 Use Python 3.12 for the tested dependency baseline. Obtain all three wheels from the same candidate build. A maintainer builds these with `python scripts/build_release.py`; this creates files under `temp/release/wheels` and publishes nothing. Copy that wheel directory to the student machine as `wheels`.
 
 Linux and macOS:

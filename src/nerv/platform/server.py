@@ -100,6 +100,12 @@ def _models_idle():
         raise HTTPException(409, "Finish the active task before changing model configuration")
 
 
+@app.get("/api/runtime/installations")
+def runtime_installations():
+    from .runtime_management import installations
+    return installations()
+
+
 class RuntimeManagementIn(BaseModel):
     python: str
     provider: str

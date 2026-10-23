@@ -37,6 +37,8 @@ def _isolated_data(tmp_path, monkeypatch):
     monkeypatch.setenv("NERV_SESSION_ROOT", str(tmp_path / "sessions"))
     from nerv import paths
     from nerv.platform.session import log
+    monkeypatch.setattr(paths, "NERV_HOME", str(tmp_path / "home"))
+    monkeypatch.setattr(paths, "DATA_ROOT", str(tmp_path))
     monkeypatch.setattr(paths, "CACHE_DIR", str(tmp_path / "cache"))
     monkeypatch.setattr(paths, "LOGS_DIR", str(tmp_path / "logs"))
     monkeypatch.setattr(log, "_DIR", str(tmp_path / "logs" / "sessions"))

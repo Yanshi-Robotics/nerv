@@ -9,6 +9,21 @@ from .. import paths
 MANAGEMENT_TIMEOUT_S = 180  # Bounded model load; no hardware work is allowed here.
 
 
+def installations():
+    """Read launcher-installed environments without importing or starting a provider."""
+    result = []
+    for record in sorted((Path(paths.NERV_HOME) / "runtimes").glob("*.json")):
+        try:
+            value = json.loads(record.read_text(encoding="utf-8"))
+            if (isinstance(value, dict)
+                    and all(isinstance(value.get(key), str) for key in ("provider", "python", "label"))
+                    and Path(value["python"]).is_file()):
+                result.append({key: value[key] for key in ("provider", "python", "label")})
+        except (ValueError, OSError, KeyError, TypeError):
+            continue
+    return result
+
+
 def manage(python: str, provider: str, operation: str, payload: dict):
     executable = Path(python).expanduser().absolute()
     # Preserve a venv executable symlink: resolving it selects the system Python.

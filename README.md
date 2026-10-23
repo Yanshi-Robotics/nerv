@@ -38,6 +38,14 @@ The ACT artifact is the original 100,000-step `snack_into_box` checkpoint. The r
 
 ## Quick start
 
+For GitHub installation and the `nerv` / `npx` launcher, use the
+[installation guide](guides/github-install.md). Normal launches store user data in
+`~/.nerv`; an explicit `NERV_HOME` is only needed to choose another location. The
+launcher manages host and device Python environments separately. Published archive
+commands require a source commit that actually contains this launcher.
+
+The following source-development workflow remains available:
+
 Use Python 3.11 or later and Node.js with npm. From this checkout:
 
 ```bash
@@ -52,7 +60,7 @@ Open `http://localhost:8000`. The static frontend uses the same origin as the ba
 
 Open **Models and API keys**, select a provider, enter its key, then choose **Save key**. NERV checks local storage before sending one billable image request through an enabled model from that provider. It saves the key only after the answer matches the generated image and shows the save result; failed tests preserve the previous key. Choose the model and reasoning effort in the session. Session creation requires a registered key but makes no provider request. A conversation can also be created without a robot. A real binding never prepares the device automatically.
 
-Configuration values can be placed in `.env` using [.env.example](.env.example). Private model settings and keys live under `NERV_HOME` (default `~/.nerv`), outside the repository. Keys are stored in `credentials.json`; model selection, effort and validation records are in `vlm.json`. The directory uses mode 0700 and files use mode 0600. The VLM registry ignores API keys in the shell and project `.env`. Re-enter existing keys in the panel; the upgrade leaves old files untouched.
+Configuration values can be placed in `~/.nerv/.env` using [.env.example](.env.example). Private model settings and keys live under `NERV_HOME` (default `~/.nerv`), outside the repository. Keys are stored in `credentials.json`; model selection, effort and validation records are in `vlm.json`. The directory uses mode 0700 and files use mode 0600. The VLM registry ignores API keys in the shell and project `.env`. Re-enter existing keys in the panel; the upgrade leaves old files untouched.
 
 ## Robot connections
 

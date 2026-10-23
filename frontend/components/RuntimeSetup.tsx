@@ -1,6 +1,6 @@
 "use client";
-import { useState } from "react";
-import { manageRuntime, type Registry } from "@/lib/api";
+import { useEffect, useState } from "react";
+import { manageRuntime, runtimeInstallations, type Registry } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 
 type Field = {type: string; title: string; enum?: string[]; default?: string | boolean};
@@ -16,6 +16,16 @@ export default function RuntimeSetup({registry, onChanged}: {registry: Registry 
   const [busy, setBusy] = useState(false);
   const [result, setResult] = useState("");
   const [error, setError] = useState("");
+  useEffect(() => {
+    let active = true;
+    runtimeInstallations().then(items => {
+      if (active && items.length === 1) {
+        setPython(current => current || items[0].python);
+        setProvider(current => current || items[0].provider);
+      }
+    }).catch(() => {});
+    return () => { active = false; };
+  }, []);
   async function run(operation: string) {
     setBusy(true); setError(""); setResult("");
     try {

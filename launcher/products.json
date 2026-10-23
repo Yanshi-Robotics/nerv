@@ -1,0 +1,8 @@
+{
+  "python": "3.12",
+  "host": {"package": ".", "extras": "platform"},
+  "sdk": "packages/nerv-runtime-sdk",
+  "runtimes": {
+    "lerobot0.6.1": {"label": "Standard SO-101 / LeRobot", "package": "packages/nerv-runtime-lerobot"}
+  }
+}

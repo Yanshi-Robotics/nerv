@@ -5,6 +5,11 @@ The 0.1.x entries below are the pre-release trail.
 
 ## [Unreleased]
 
+- Add a GitHub-archive npm/npx launcher with uv-managed, fingerprinted host and device
+  environments. Discover installed runtime interpreters in the setup interface.
+- Use `~/.nerv` for user data in both source and installed launches. Preserve old
+  checkout-local histories without automatic migration or overwriting user data.
+
 ## [0.6.3] — standard SO-101 development candidate, 2026-10-23
 
 - Fix the first real-device product contract to standard SO-101 with LeRobot 0.6.1,
