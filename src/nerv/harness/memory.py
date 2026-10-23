@@ -123,7 +123,9 @@ class SessionMemory:
     def flush(self) -> None:
         # Every append is durable already. Exposed for the host's dispatch barrier.
         if self.path.exists():
-            with open(self.path, "rb") as stream:
+            # Windows FlushFileBuffers requires a writable handle. r+b keeps
+            # the existing journal intact while supporting the same barrier.
+            with open(self.path, "r+b") as stream:
                 os.fsync(stream.fileno())
 
     def recover_runs(self) -> None:

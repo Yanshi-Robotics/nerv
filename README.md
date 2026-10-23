@@ -4,7 +4,7 @@
 
 NERV connects conversation, task decisions and local robot execution. Choose a control scheme, give it a task, and see what the robot actually did. Use a trained ACT policy, let a visual model select and supervise allowed skills, or use visual decisions with bounded joint and gripper tools.
 
-**0.7.1 is a development release for testing.** Install it from GitHub Releases or use `nerv update` from an existing release installation. SO-101 physical acceptance and student onboarding trials are pending. NERV uses externally trained policies and existing calibration; it does not train or calibrate robots.
+**0.7.2 is a development release for testing.** Install it from GitHub Releases or use `nerv update` from an existing release installation. SO-101 physical acceptance and student onboarding trials are pending. NERV uses externally trained policies and existing calibration; it does not train or calibrate robots.
 
 ## Quick install & start
 
