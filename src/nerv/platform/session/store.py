@@ -49,6 +49,8 @@ class Session:
     messages: list = field(default_factory=list)
     mode: str = "sim"
     binding: str = ""
+    control_scheme: str = ""
+    control_scheme_revision: int = 0
     task_model: str = ""
     task_effort: str | None = None
 
@@ -58,7 +60,8 @@ class Session:
                 "sensors": list(self.sensors), "agent_tools": list(self.agent_tools), "armed": self.armed,
                 "epoch": self.epoch, "core_task": self.core_task, "notes": list(self.notes),
                 "mode": self.mode, "binding": self.binding,
-                "task_model": self.task_model, "task_effort": self.task_effort}
+                "task_model": self.task_model, "task_effort": self.task_effort,
+                "control_scheme": self.control_scheme, "control_scheme_revision": self.control_scheme_revision}
 
 
 def _decode_session(data):

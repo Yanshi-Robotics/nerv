@@ -58,7 +58,7 @@ class RoleTurn(Turn):
         if self.step >= self.max_steps or time.monotonic() >= self.deadline:
             self._stop = "steps" if self.step >= self.max_steps else "time"
             if self.role == "system2" and self.robot:
-                self.robot.post("/stop")
+                self.robot.post("/stop", {"expected_control": self.control_token})
             return self._stop
         return None
 
@@ -96,6 +96,9 @@ class RoleTurn(Turn):
         self._routes = {}
         if self.robot:
             for spec in self.robot.capabilities().operations:
+                if spec.kind != "read" and (self.role == "agent" or
+                        spec.name not in getattr(self.token, "allowed_actions", ())):
+                    continue
                 self._add("robot_actions", spec.name, spec.description, spec.parameters, spec.kind,
                           ("body", self.robot, spec))
         for node in self.tool_nodes:
@@ -169,23 +172,21 @@ class RoleTurn(Turn):
                         for e in data if e["kind"] == "message"]
                 result = {"ok": True, "data": {"events": data}, "message": "Scoped history"}
             else:
-                if cap.domain == "robot_actions" and self.role == "agent" and cap.kind != "read":
-                    if cap.kind == "skill":
-                        result = self.hub.tasks.start(self.session.id,
-                            f"Execute the specified skill {cap.name} with arguments {call.arguments}. "
-                            "Supervise using fresh observations; do not claim success without evidence.", current=self.is_current)
-                        return self._finish(call, ActionResult(result.get("ok", False), result.get("message", ""), result))
-                    self.hub.tasks.cancel(self.session.id, reason="direct action takeover", strict=True)
-                    self.control_token = self.hub.claim_robot(self.session.id)
-                    if not self.is_current():
-                        raise ValueError("action cancelled before dispatch")
-                    # This explicit request observes only when needed for robot execution.
-                    self.body = self.robot
-                    try:
-                        super().observe()
-                        return super().call_tool(call)
-                    finally:
-                        self.body = None
+                if cap.domain == "robot_actions" and cap.kind != "read":
+                    if self.role != "system2" or cap.name not in getattr(self.token, "allowed_actions", ()):
+                        raise ValueError("Action is outside the selected control scheme")
+                    if cap.kind in ("primitive", "skill"):
+                        if getattr(self.token, "action_budget", 0) <= 0:
+                            raise ValueError("Selected scheme action budget exhausted")
+                        if cap.kind == "skill" and getattr(self.token, "last_skill", None) not in (None, cap.name):
+                            # No physically verified skill transitions ship yet.
+                            self.robot.post("/stop", {"expected_control": self.control_token})
+                            self.emit({"type": "progress", "message": "Skill transition is unverified; operator intervention required"})
+                            self._stop = "unverified_skill_transition"
+                            raise ValueError("Skill transition is unverified; start a new operator-reviewed task")
+                        self.token.action_budget -= 1
+                        if cap.kind == "skill":
+                            self.token.last_skill = cap.name
                 return super().call_tool(call)
             return self._finish(call, ActionResult(bool(result.get("ok", True)), result.get("message", ""),
                                                    result.get("data", result)))

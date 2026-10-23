@@ -4,7 +4,7 @@ from __future__ import annotations
 from typing import Literal, Protocol
 from pydantic import BaseModel, Field
 
-PROTOCOL_MAJOR = 2
+PROTOCOL_MAJOR = 3
 PROTOCOL_MINOR = 0
 ENTRY_POINT_GROUP = "nerv.runtime_providers"
 OBSERVATION_URI = "nerv://observation"

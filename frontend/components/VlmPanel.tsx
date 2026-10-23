@@ -88,7 +88,7 @@ export default function VlmPanel({ onChanged }: { onChanged: () => void }) {
               <button className={`nerv-control ${button}`} disabled={disabled || !provider.credential.configured} onClick={remove}>{t("Remove key")}</button>
             </div>
             {result && <p role={result === "failed" ? "alert" : "status"} className={`mt-3 text-sm ${result === "failed" ? "text-[var(--control-danger-text)]" : "text-green-400"}`}>{t(result === "saved" ? "Saved successfully" : result === "removed" ? "Key removed" : "Save failed")}</p>}
-            <p className="mt-3 text-xs text-neutral-400">{t("Submitting sends one billable image request. Opening settings and creating sessions do not call the provider.")}</p>
+            <p className="mt-3 text-xs text-neutral-400">{t("Testing sends one billable request with a built-in image, never a camera frame. Opening settings does not call the provider.")}</p>
             <p className="mt-3 break-all text-xs text-neutral-500">{t("Stored on the backend host")}: {keyPath}</p>
             <div className="mt-5 border-t border-neutral-800 pt-4">
               <h2 className="text-sm font-medium">{t("Supported models")}</h2>

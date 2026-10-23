@@ -15,6 +15,7 @@ from functools import wraps
 from typing import Callable, Iterator
 from types import SimpleNamespace
 
+from .. import config
 from ..brain import plugin as brain_plugin
 from ..nerve import operator as op
 from . import interrupt, messages
@@ -59,6 +60,9 @@ class Nerv:
         self._control_owner = uuid.uuid4().hex
         self._control_generation = 0
         for session in self.store.all():
+            if session.body:
+                self.store.set_armed(session.id, False)
+                self.store.set_status(session.id, op.SESSION_RECONNECT)
             memory = self.store.memory(session.id)
             before = len(memory.events())
             memory.recover_runs()
@@ -68,6 +72,8 @@ class Nerv:
                     self.store.set_status(session.id, op.SESSION_RECONNECT)
                 self.store.append(session.id, {"role": "assistant", "brain": "operator",
                     "text": "Host restarted: unfinished execution outcome is unknown. No actions were replayed; reconnect and observe before any new task."})
+        from .control_schemes import SchemeStore
+        self.schemes = SchemeStore()
         from .robot_tasks import RobotTasks
         self.tasks = RobotTasks(self)
         from .world_controls import WorldControls
@@ -95,7 +101,7 @@ class Nerv:
                                            getattr(llm, "max_output_tokens", config.MAX_TOKENS),
                                            config.IMAGE_TOKEN_ALLOWANCE))
 
-    def claim_robot(self, sid):
+    def claim_robot(self, sid, *, allowed_actions=None, max_runtime_s=None, action_budget=None):
         session = self.store.get(sid)
         if error := self._control_error(session):
             raise ValueError(error["message"])
@@ -106,7 +112,10 @@ class Nerv:
             if client is None:
                 raise ValueError("Robot is unavailable")
             result = client.post("/control/claim", {"token": token, "owner": self._control_owner,
-                                                   "generation": self._control_generation})
+                                                   "generation": self._control_generation,
+                                                   "allowed_actions": allowed_actions or [],
+                                                   "max_runtime_s": max_runtime_s or config.TURN_TIME_BUDGET_S,
+                                                   "action_budget": action_budget or 1})
             if not result.get("ok"):
                 raise ValueError("Runtime refused control")
             return token
@@ -240,6 +249,10 @@ class Nerv:
     def new_session(self, brain: str, body: str | None, world: str | None,
                     sensors: list[str] | None = None, tools: list[str] | None = None,
                     mode: str = "sim", world_configuration: dict | None = None) -> dict:
+        if body:
+            from .module_jobs import catalog
+            if any(job["state"] in ("queued", "running") for job in catalog()["jobs"]):
+                raise ValueError("Wait for component installation before creating a robot instance")
         # Explicit injected test brains are not part of the production catalogue.
         from ..harness.agent import AgentHarness
         from ..vlm.store import ModelRegistry
@@ -294,7 +307,7 @@ class Nerv:
         if body:
             self._bound_runtime = binding
         previous = [s for s in self.store.all() if s.body and s.status == op.SESSION_ACTIVE]
-        enabled = any(s.body == body and s.armed for s in previous)
+        enabled = False  # Every new session requires a fresh operator motion authorization.
         for old in previous:
             self.stop(old.id)
         for t in tool_names:
@@ -499,7 +512,10 @@ class Nerv:
             self._control_generation += 1
             if body := self.body_client(session.body) if session.body and robot else None:
                 claimed = body.post("/control/claim", {"token": token.control_token, "owner": self._control_owner,
-                                                      "generation": self._control_generation})
+                                                      "generation": self._control_generation,
+                                                   "allowed_actions": self.schemes.get(session.control_scheme, session.control_scheme_revision).actions if session.control_scheme else [],
+                                                      "max_runtime_s": config.TURN_TIME_BUDGET_S,
+                                                      "action_budget": config.MAX_STEPS})
                 if not claimed.get("ok"):
                     token.set()
                     raise RuntimeError("runtime refused the control generation")
@@ -611,7 +627,7 @@ class Nerv:
                 yield {"type": op.EV_TOOL_RESULT, "name": name, "ok": False, "message": stopped.get("message", "")}
                 yield {"type": op.EV_DONE}
                 return
-            token.control_token = self.claim_robot(sid)
+            token.control_token = self.claim_robot(sid, allowed_actions=[route[2].name])
             turn.control_token = token.control_token
         call_id = f"teleop-{int(time.time() * 1000)}"
 

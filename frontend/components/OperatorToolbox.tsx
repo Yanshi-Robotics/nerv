@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { armSession, estopSession, robotTaskOperation, getPerception, runtimeOperation, POLL_NODES_MS, type NodeInfo, type SessionSummary } from "@/lib/api";
+import { armSession, estopSession, robotTaskOperation, getRobotTask, getPerception, runtimeOperation, POLL_NODES_MS, type NodeInfo, type SessionSummary } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import RuntimeControls from "./RuntimeControls";
 import { NodeTrust } from "./NodeTrust";
@@ -37,12 +37,14 @@ export default function OperatorToolbox({session, bodyNode, nodes, onChanged, ch
   const sim = robot && session?.mode === "sim" && !!session.world;
   // Operator supervision belongs to the active workspace, not a toolbox tab.
   useEffect(() => {
-    if (!robot || !bodyNode?.online || session?.brain !== "operator" || !session.armed) return;
+    if (!robot || !bodyNode?.online || !session.armed) return;
     let gone = false, pending = false;
     const heartbeat = async () => {
       if (pending || document.visibilityState !== "visible") return;
       pending = true;
       try {
+        const task = (await getRobotTask(session.id)).task;
+        if (task && ["starting", "running", "updating", "stopping"].includes(task.status) && task.scheme?.template !== "fixed_policy") return;
         const observation = await getPerception(session.id);
         if (!gone && document.visibilityState === "visible") await runtimeOperation(session.id, "operator/supervise", {frame_seq: observation.state.frame_seq});
       } catch { /* Runtime watchdog revokes control on observation or browser loss. */ }

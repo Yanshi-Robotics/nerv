@@ -25,6 +25,7 @@ class BusEndpoint(BaseModel):
 
 
 class SkillDecl(BaseModel):
+    modes: list[str] = Field(default_factory=lambda: ["sim", "real"])
     policy: str = ""                  # policy release directory (env-expanded)
     description: str = ""
     artifact: str = ""

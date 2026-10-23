@@ -46,6 +46,11 @@ def test_scripted_brain_walks_one_metre(tmp_path, monkeypatch):
     try:
         s = hub.new_session("scripted", "humanoid-unitree-g1", "apt")
         sid = s["id"]
+        from nerv.platform.control_schemes import SchemeStore
+        hub.schemes = SchemeStore(tmp_path / "schemes")
+        plan = hub.schemes.save(dict(name="Scripted regression", robot=s["body"], mode="sim",
+            template="policy_group", decision_model="scripted", actions=["move_forward"]))
+        hub.tasks.select_scheme(sid, plan.id)
         # disarmed: the gate refuses the skill and the brain is told why
         out = hub.handle(sid, "walk")
         r = brain.results[0]

@@ -123,3 +123,13 @@ New or replacement keys use one explicit image test before atomic saving. Existi
 keys remain valid configuration. Session creation checks only nonempty registered credentials,
 before any node or session side effect. Optional image/tool/continuation diagnostics never gate
 model use. Development tests use explicit offline responses; paid tests are operator-triggered.
+
+## Three-layer candidate (0.7)
+
+The current candidate uses interaction, optional decision, and execution layers. Versioned
+control schemes select fixed policies, policy groups, or visual direct control. Fixed tasks
+and operator-only setup do not require credentials. Runtime protocol 3 replaces protocol 2:
+all mutating task calls require an expiring allowlist, action budget and control generation.
+Host restart disarms all robot sessions. Installers and optional modules use independent
+environments under the user home; no release or hardware support is implied by local tests.
+The 0.6 sections above describe prior development stages.

@@ -1,4 +1,4 @@
-"""Independent, journaled System 2 jobs; the browser is never their supervisor."""
+"""Journaled tasks using the operator-selected execution scheme."""
 from __future__ import annotations
 
 import threading
@@ -106,12 +106,16 @@ class RobotTasks:
                 if sid in self._stopping:
                     raise ValueError("Robot is still stopping")
                 generation = self._generation.get(sid, 0)
-            model = session.task_model or session.brain
-            brain = self.hub.new_role_model(model, session.task_effort)
+            from .control_schemes import resolve
+            if not session.control_scheme:
+                raise ValueError("Select a control scheme before starting a task")
+            scheme = resolve(self.hub, session, self.hub.schemes.get(session.control_scheme, session.control_scheme_revision))
+            model = scheme["decision_model"]
+            brain = self.hub.new_role_model(model, scheme["effort"]) if model else None
             spec = getattr(getattr(brain, "llm", None), "spec", None)
             state = self._save(sid, model_config=spec.model_dump() if spec else None, task_id="task_" + uuid.uuid4().hex, instance_id=session.epoch,
                                goal=goal, constraints=constraints, version=1, status="starting",
-                               model=model, effort=session.task_effort, outcome=None, message="Task accepted")
+                               model=model, effort=scheme["effort"], scheme=scheme, outcome=None, message="Task accepted")
             self._launch(sid, state, brain, generation, current)
             state = dict(self._jobs[sid])
             return {"ok": state["status"] not in {"cancelled", "failed"}, "message": state["message"], "data": state}
@@ -123,28 +127,36 @@ class RobotTasks:
                 self._save(sid, status="cancelled", outcome="cancelled", message="Launch cancelled")
                 return
             try:
-                token.control_token = self.hub.claim_robot(sid)
+                scheme = state["scheme"]
+                token.allowed_actions = frozenset(scheme["actions"])
+                token.action_budget = scheme["action_budget"]
+                token.last_skill = None
+                token.control_token = self.hub.claim_robot(sid, allowed_actions=scheme["actions"],
+                    max_runtime_s=scheme["max_runtime_s"], action_budget=scheme["action_budget"])
             except Exception as error:
                 self._save(sid, status="failed", outcome="not_started", message=str(error))
                 return
             self._tokens[sid] = token
+        if brain is None:
+            return self._launch_fixed(sid, state, token)
         store = TaskStore(self.hub.store, sid, state["task_id"], state["model"], state["goal"])
         turn = RoleTurn(self.hub, store.get(sid), brain,
                         lambda event: self.event(sid, state["task_id"], state["version"], event),
                         token, role="system2", store=store)
+        turn.deadline = time.monotonic() + state["scheme"]["max_runtime_s"]
 
         def work():
             try:
                 with self._lock:
                     if token.is_set() or self._tokens.get(sid) is not token:
                         return
-                    self._save(sid, status="running", message="System 2 is observing and planning")
+                    self._save(sid, status="running", message="Decision layer is observing and planning")
                 from .session import log
                 with log.session_scope(sid), log.role_scope("system2", state["task_id"]):
                     outcome = turn.run(state["goal"] + "\nConstraints: " + state["constraints"])
                 if not token.is_set():
                     # Finishing narration is not an independent task-success judgement.
-                    stopped = self.hub.stop_robot(sid, expected_control=token.control_token)
+                    stopped = self._stop_execution(sid, token)
                     with self._lock:
                         if not token.is_set() and self._tokens.get(sid) is token:
                             self._save(sid, status="finished" if stopped.get("ok") and not outcome.get("error") else "failed",
@@ -153,7 +165,7 @@ class RobotTasks:
                                        stop_result=stopped)
             except Exception as error:
                 if not token.is_set():
-                    self.hub.stop_robot(sid, expected_control=token.control_token)
+                    self._stop_execution(sid, token)
                     with self._lock:
                         if not token.is_set() and self._tokens.get(sid) is token:
                             self._save(sid, status="failed", outcome="unknown", message=str(error))
@@ -161,6 +173,83 @@ class RobotTasks:
         with self._lock:
             self._threads[sid] = thread
         thread.start()
+
+    def _stop_execution(self, sid, token):
+        try:
+            result = self.hub.stop_robot(sid, expected_control=token.control_token)
+        except Exception as error:
+            result = {"ok": False, "message": str(error)}
+        with self._lock:
+            if not result.get("ok") and self._tokens.get(sid) is token:
+                # A terminal journal entry is not confirmation that hardware stopped.
+                # Only a confirmed operator stop or a new instance clears this block.
+                self._stopping.add(sid)
+        return result
+
+    def _launch_fixed(self, sid, state, token):
+        from .router import Turn
+        from ..nerve.brain import CallTool
+        session = self.hub.store.get(sid)
+        robot = self.hub.body_client(session.body)
+        # No provider, role model or synthetic model identity is created.
+        store = TaskStore(self.hub.store, sid, state["task_id"], "operator", state["goal"])
+        turn = Turn(store, store.get(sid), None, robot, None, [], self.hub.gate,
+                    lambda event: self.event(sid, state["task_id"], state["version"], event),
+                    time_budget_s=state["scheme"]["max_runtime_s"],
+                    current=lambda: not token.is_set(), control_token=token.control_token)
+
+        def work():
+            try:
+                with self._lock:
+                    if token.is_set() or self._tokens.get(sid) is not token:
+                        return
+                    self._save(sid, status="running", message="Fixed policy is running; operator supervision required")
+                from . import interrupt
+                interrupt.clear(sid)
+                turn.tools()
+                native = state["scheme"]["actions"][0]
+                wire = next(name for name, route in turn._routes.items() if route[0] == "body" and route[2].name == native)
+                turn.observe()
+                result = turn.call_tool(CallTool(uuid.uuid4().hex, wire, {}))
+                if not result.ok:
+                    raise RuntimeError(result.message)
+                execution = robot.post("/executions/status")
+                self._save(sid, execution_id=execution.get("execution_id"))
+                from .. import config
+                while execution.get("running") and turn.is_current():
+                    token.wait(config.BRIDGE_WATCHDOG_POLL_S)
+                    execution = robot.post("/executions/status")
+                if not token.is_set():
+                    stopped = self._stop_execution(sid, token)
+                    with self._lock:
+                        if not token.is_set() and self._tokens.get(sid) is token:
+                            self._save(sid, status="finished" if stopped.get("ok") and execution.get("state") != "failed" else "failed",
+                                       outcome="unknown", execution=execution, stop_result=stopped,
+                                       end_reason="time_limit" if time.monotonic() >= turn.deadline else execution.get("state", "execution_ended"),
+                                       message="Policy execution ended; task success has not been verified")
+            except Exception as error:
+                if not token.is_set():
+                    stopped = self._stop_execution(sid, token)
+                    with self._lock:
+                        if not token.is_set() and self._tokens.get(sid) is token:
+                            self._save(sid, status="failed", outcome="unknown", message=str(error), stop_result=stopped)
+        thread = threading.Thread(target=work, name=state["task_id"], daemon=True)
+        self._threads[sid] = thread
+        thread.start()
+
+    def select_scheme(self, sid, scheme_id, revision=None):
+        with self._operations:
+            if self._jobs.get(sid, {}).get("status") in ACTIVE or sid in self._stopping:
+                raise ValueError("Stop the task and confirm termination before switching schemes")
+            session = self.hub.store.get(sid)
+            if session.status != "active":
+                raise ValueError("Select an active session")
+            scheme = self.hub.schemes.get(scheme_id, revision)
+            if scheme.robot != session.body or scheme.mode != session.mode:
+                raise ValueError("Scheme belongs to a different robot or environment")
+            session.control_scheme, session.control_scheme_revision = scheme.id, scheme.revision
+            self.hub.store.save(session)
+            return session.summary()
 
     def cancel(self, sid, reason="Task cancelled", strict=False):
         # Stop does not acquire the operation lock: it must preempt slow starts/model loads.
@@ -199,6 +288,8 @@ class RobotTasks:
                 raise ValueError("Task version changed or the task is no longer active")
             if goal is not None and not goal.strip():
                 raise ValueError("A task goal is required")
+            if state["scheme"]["template"] == "fixed_policy":
+                raise ValueError("A fixed policy cannot be retargeted; stop it before starting again")
             self.cancel(sid, reason="Stopping for task update", strict=True)
             with self._lock:
                 generation = self._generation[sid]

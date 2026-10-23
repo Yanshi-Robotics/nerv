@@ -2,6 +2,8 @@
 from __future__ import annotations
 
 import os
+import json
+from pathlib import Path
 
 import yaml
 
@@ -55,7 +57,12 @@ def _resolve_paths(data: dict) -> dict:
 
 def _roots() -> list[str]:
     extra = [p for p in os.environ.get("NERV_REGISTRY_PATHS", "").split(os.pathsep) if p.strip()]
-    return [paths.REGISTRY_ROOT, paths.NERV_HOME] + extra
+    modules = []
+    for record in sorted((Path(paths.NERV_HOME) / "runtimes").glob("*.json")):
+        value = json.loads(record.read_text(encoding="utf-8"))
+        if value.get("registry_root"):
+            modules.append(value["registry_root"])
+    return [paths.REGISTRY_ROOT, *modules, paths.NERV_HOME] + extra
 
 
 class Registry:
@@ -79,6 +86,10 @@ class Registry:
             data.setdefault("name", entry)
             data["dir"] = os.path.join(d, entry)
             data.setdefault("guidance", _guidance(data["dir"]))
+            if model is BodySpec and data["name"] in out:
+                previous = out[data["name"]].model_dump()
+                data["buses"] = {**previous["buses"], **data.get("buses", {})}
+                data["skills"] = {**previous["skills"], **data.get("skills", {})}
             spec = model(**data)
             out[spec.name] = spec       # append-only: later roots may add, never silently drop
 

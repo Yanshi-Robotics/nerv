@@ -5,6 +5,21 @@ The 0.1.x entries below are the pre-release trail.
 
 ## [Unreleased]
 
+### 0.7.0 candidate — three-layer control and student distribution
+
+- Introduce immutable control schemes for fixed ACT, visual policy groups and visual
+  direct control. Freeze task configuration and keep chat models independent.
+- Enforce bounded action grants in Runtime protocol 3, with action budgets, expiry,
+  generation checks and confirmed-stop requirements. Fixed tasks need no model key.
+- Add guided SO-101 discovery, calibration selection, camera preview/handoff, saved
+  device profiles, policy import and explicit supervised acceptance.
+- Add scheme structure views, optional component installation, durable install jobs,
+  cancellation/retry, hashed dependency bundles and managed update/rollback commands.
+- Ship Shell/PowerShell candidate installers and three SO-101 simulation presets.
+  Pin MuJoCo 3.12.0 to the validated scene format. Preserve the npm compatibility entry.
+- Document software, hardware and student acceptance separately. No release publication
+  or physical-support claim is implied by this candidate.
+
 - Add a GitHub-archive npm/npx launcher with uv-managed, fingerprinted host and device
   environments. Discover installed runtime interpreters in the setup interface.
 - Use `~/.nerv` for user data in both source and installed launches. Preserve old

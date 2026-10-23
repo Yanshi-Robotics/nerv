@@ -199,6 +199,8 @@ class LeRobotRuntime:
                 return self.cancel_current("agent_cancelled")
         if name not in self._artifacts:
             raise ValueError("unknown skill")
+        from .policy import artifact_files
+        artifact_files(self._artifacts[name])
         with self._lifecycle:
             expected_token = self.dispatch.token()
             if self.execution.status()["running"]:

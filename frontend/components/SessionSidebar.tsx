@@ -16,7 +16,7 @@ const CONVERSATION_ONLY = ""; // world 选中值空串 = 只聊天，不起身�
 //   收起 ≈ 56px：展开键 + 一列带提示的图标键（新建、仪表盘、日志、主题）；列表和上限藏起来
 // 折叠状态由 app/page.tsx 持有（栅格列宽要跟着变），存 localStorage 的 `nerv-sidebar`。
 // 右侧显示的面板；Dashboard 和 Logs 不是跳页，是换掉右边两栏，侧栏不动。
-export type Panel = "session" | "dashboard" | "logs" | "explore" | "models" | "setup";
+export type Panel = "session" | "dashboard" | "logs" | "explore" | "models" | "setup" | "schemes" | "modules";
 
 export default function SessionSidebar({
   sessions,
@@ -61,7 +61,7 @@ export default function SessionSidebar({
     setWorld(CONVERSATION_ONLY); setWorldValues({});
     setBody("");
     setSensors([]);
-    setBrain(brains.find(b => b.name === registry?.default_brain && b.available)?.name ?? brains.find(b => b.available)?.name ?? "");
+    setBrain(brains.find(b => b.name === registry?.default_brain && b.available)?.name ?? brains.find(b => b.available)?.name ?? "operator");
     setError("");
     setCreating(true);
     if (collapsed) onToggleCollapsed(); // 表单住在展开态里：收起时按「+」先展开
@@ -198,6 +198,7 @@ export default function SessionSidebar({
           <label className="block">
             <div className="mb-1 text-neutral-400">{t("NERV Agent")}</div>
             <select value={brain} onChange={(e) => setBrain(e.target.value)} className={selectCls}>
+              <option value="operator">{t("Set up without an API key")}</option>
               {brains.map((b) => (
                 <option key={b.name} value={b.name}>
                   {t(b.label)}{b.available ? "" : ` (${t("not configured")})`}
@@ -212,9 +213,9 @@ export default function SessionSidebar({
             </div>
           )}
 
-          {!brains.find(b => b.name === brain)?.available && <p className="text-xs"><button className="nerv-control underline" onClick={() => onPanel("models")}>{t("Configure an API key in model settings first.")}</button></p>}
+          {brain !== "operator" && !brains.find(b => b.name === brain)?.available && <p className="text-xs"><button className="nerv-control underline" onClick={() => onPanel("models")}>{t("Configure an API key in model settings first.")}</button></p>}
           <div className="flex gap-2 pt-1">
-            <button onClick={doCreate} disabled={busy || !brains.find(b => b.name === brain)?.available || (!!world && !body)} className="nerv-control rounded-lg nerv-primary px-3 py-1.5 text-white">
+            <button onClick={doCreate} disabled={busy || (brain !== "operator" && !brains.find(b => b.name === brain)?.available) || (!!world && !body)} className="nerv-control rounded-lg nerv-primary px-3 py-1.5 text-white">
               {busy ? (world ? t("Launching nodes…") : t("Creating…")) : t("Create session")}
             </button>
             <button onClick={() => setCreating(false)} disabled={busy} className="nerv-control rounded-lg bg-neutral-700 px-3 py-1.5">
@@ -254,6 +255,8 @@ export default function SessionSidebar({
           <button onClick={() => onPanel("dashboard")} className={`nerv-control ${navRow} ${panel === "dashboard" ? "bg-neutral-800 text-neutral-100" : ""}`} title={t("NERV dashboard")} aria-pressed={panel === "dashboard"}>
             <DashboardIcon /> <span>{t("Dashboard")}</span>
           </button>
+          <button onClick={() => onPanel("schemes")} className={`nerv-control ${navRow}`}>{t("Control schemes")}</button>
+          <button onClick={() => onPanel("modules")} className={`nerv-control ${navRow}`}>{t("Simulation and components")}</button>
           <button onClick={() => onPanel("setup")} className={`nerv-control ${navRow}`}>{t("Device and policy setup")}</button>
           <button onClick={() => onPanel("models")} className={`nerv-control ${navRow}`}>{t("Visual models")}</button>
           <button onClick={() => onPanel("explore")} className={`nerv-control ${navRow} ${panel === "explore" ? "bg-neutral-800 text-neutral-100" : ""}`} title="Nerv World Explore" aria-pressed={panel === "explore"}>

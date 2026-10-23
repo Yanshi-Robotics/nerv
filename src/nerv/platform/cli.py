@@ -163,7 +163,11 @@ def cmd_serve(a) -> int:
     server = BrowserServer(uvicorn.Config(
         "nerv.platform.server:app", host=a.host or config.SERVE_HOST,
         port=a.port or config.SERVE_PORT, log_level="info"), open_browser=not a.no_browser)
-    server.run()
+    from filelock import FileLock
+    from pathlib import Path
+    Path(paths.NERV_HOME).mkdir(parents=True, exist_ok=True)
+    with FileLock(str(Path(paths.NERV_HOME) / "host-running.lock"), timeout=0):
+        server.run()
     return 0
 
 
@@ -238,6 +242,17 @@ def main(argv: list[str] | None = None) -> int:
         p.add_argument("--world", default=None)
         p.add_argument("--sensors", nargs="*", default=[], help="ambient streams to include")
         p.add_argument("--arm", action="store_true", help="arm the session at start (sim only!)")
+
+    from .. import installation
+    p = sub.add_parser("update", help="check or install the next official release after exiting NERV")
+    p.add_argument("--check", action="store_true")
+    p.set_defaults(fn=lambda a: print(json.dumps(installation.update(a.check), indent=2)) or 0)
+    p = sub.add_parser("rollback", help="restore the previous working installation")
+    p.set_defaults(fn=lambda a: print(json.dumps(installation.rollback(), indent=2)) or 0)
+    p = sub.add_parser("runtime", help="install an official isolated module")
+    p.add_argument("action", choices=["install", "list"])
+    p.add_argument("provider", nargs="?")
+    p.set_defaults(fn=lambda a: print(json.dumps(installation.install(a.provider) if a.action == "install" else __import__("nerv.platform.module_jobs", fromlist=["catalog"]).catalog(), indent=2)) or 0)
 
     p = sub.add_parser("policy", help="manage a provider's local device and policy configuration")
     p.add_argument("action", choices=["describe", "configure", "import", "inspect", "check"])

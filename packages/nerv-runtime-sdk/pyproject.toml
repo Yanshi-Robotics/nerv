@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nerv-runtime-sdk"
-version = "0.6.3"
+version = "0.7.0"
 description = "Hardware-independent runtime protocol and worker for NERV adapters"
 requires-python = ">=3.11"
 license = "MIT"

@@ -8,6 +8,7 @@ sensors:
   - {name: "camera:wrist", camera: "wrist", description: "camera on the wrist (sim: MJCF camera 'wrist'; real: LeRobot camera key 'wrist')"}
 skills:
   snack_into_box:
+    modes: [real]
     artifact: snack_into_box
     manifest: artifacts/snack_into_box/artifact.json
     description: "Run the registered ACT continuously in its demonstrated scene. It can reattempt within one invocation. Observe top and wrist until the entire original snack bag is inside the original box, released, and the empty arm has returned to Rest. Initial object placement, camera geometry and calibration must match training. Do not restart this skill to manufacture retries; stop if conditions are unsuitable or success cannot be confirmed."

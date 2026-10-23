@@ -25,7 +25,8 @@ def runtime_fixture():
     return runtime, writes
 
 
-def test_cancel_during_native_inference_has_no_late_action():
+def test_cancel_during_native_inference_has_no_late_action(monkeypatch):
+    monkeypatch.setattr("nerv_runtime_lerobot.policy.artifact_files", lambda _: None)  # Explicit runner fixture.
     runtime, writes = runtime_fixture()
     entered, release = threading.Event(), threading.Event()
     class Runner:
@@ -45,7 +46,8 @@ def test_cancel_during_native_inference_has_no_late_action():
     assert writes == [{"joint.pos":1.0}]
 
 
-def test_loading_and_starting_are_exclusive_without_resetting_active_runner():
+def test_loading_and_starting_are_exclusive_without_resetting_active_runner(monkeypatch):
+    monkeypatch.setattr("nerv_runtime_lerobot.policy.artifact_files", lambda _: None)  # Explicit runner fixture.
     runtime, writes = runtime_fixture()
     entered, release = threading.Event(), threading.Event()
     class Runner:

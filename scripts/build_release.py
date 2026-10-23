@@ -13,5 +13,6 @@ npm = "npm.cmd" if os.name == "nt" else "npm"
 subprocess.run([npm, "--prefix", "frontend", "run", "build"], cwd=root,
                env={**os.environ, "NERV_STATIC_EXPORT": "1", "NEXT_PUBLIC_API": ""}, check=True)
 for package in ("packages/nerv-runtime-sdk", "packages/nerv-runtime-lerobot", "."):
-    subprocess.run([sys.executable, "-m", "pip", "wheel", "--no-deps", "--no-build-isolation",
+    subprocess.run([sys.executable, "-m", "pip", "wheel", "--no-deps",
                     "--wheel-dir", str(output / "wheels"), package], cwd=root, check=True)
+subprocess.run([sys.executable, str(root / "scripts/bundle_release.py")], cwd=root, check=True)

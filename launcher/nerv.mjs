@@ -41,6 +41,13 @@ export function main(args = process.argv.slice(2)) {
     return;
   }
   const dataHome = home(), env = uvEnvironment(dataHome);
+  // Release installations have one stable pointer, shared with Shell/PowerShell.
+  const active = join(dataHome, "active.json");
+  if (existsSync(active)) {
+    const installed = JSON.parse(readFileSync(active, "utf8"));
+    run(installed.python, ["-m", "nerv.platform.cli", ...args], {env});
+    return;
+  }
   if (args[0] === "runtime" && args[1] === "list") {
     const directory = join(dataHome, "runtimes");
     const records = existsSync(directory) ? readdirSync(directory).filter(n => n.endsWith(".json")) : [];

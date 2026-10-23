@@ -2,14 +2,38 @@
 
 [中文](../i18n/zh/architecture.md) · [NERV](../README.md)
 
-NERV 0.6.3 separates conversation, task supervision and local execution. System 1 is the execution layer inside a runtime; it is not an additional Python environment.
+NERV 0.7.0 separates conversation, task supervision and local execution. System 1 is the execution layer inside a runtime; it is not an additional Python environment.
 
 The standard SO-101 worker owns one LeRobot device instance. ACT inference and bounded direct joint control both produce candidate targets for its shared scheduler. The host does not import LeRobot or load policy tensors.
 
 ## Architecture
-NERV Agent manages conversation and delegates robot goals to System 2. System 1 executes bounded actions and policies; Robot Runtime owns devices and sensors. World Control owns simulation interventions. The host coordinates control ownership, lifecycle and event records. Robot drivers and policy inference run in a separate worker environment.
+The interaction layer handles conversation and task submissions. The optional decision layer selects and supervises allowed actions. The execution layer runs ACT or bounded local controllers; Robot Runtime owns devices and sensors. Fixed-policy tasks bypass the decision model and need no API key. World Control owns simulation interventions. The host coordinates control ownership, lifecycle and event records. Robot drivers and policy inference run in a separate worker environment.
 
-<div align="center"><img src="../assets/readme/images/layers.svg" alt="Separate Agent conversation, System 2 task supervision, System 1 execution and simulation world control" width="960"></div>
+```mermaid
+flowchart TB
+  U[User selects a control scheme] --> I
+  subgraph I[Interaction layer]
+    UI[NERV interface] <--> AG[NERV Agent / chat model]
+  end
+  I --> T[Task entry / frozen scheme revision]
+  subgraph D[Decision layer / System 2 / optional]
+    V[Selected visual model]
+  end
+  subgraph E[Execution layer / System 1]
+    P[Allowed ACT skills / one at a time]
+    J[Local joint and gripper controller]
+  end
+  T -->|Fixed policy| P
+  T -->|Policy group or visual direct control| V
+  V -->|Allowed skills| P
+  V -->|Allowed tools| J
+  P --> R[Shared control authority, validation, stop and journal]
+  J --> R
+  R --> B[Runtime / real device or simulation]
+  B --> O[Observations and execution feedback]
+  O --> V
+  O --> UI
+```
 
 The following node topology remains the transport foundation:
 
@@ -33,7 +57,7 @@ Viewing, creating and manually controlling a simulation requires no model reques
 ## Visual models
 The panel groups keys by provider. It displays whether a key is saved without returning the saved value to the browser. The panel lists supported models without a model or effort selector. One saved key serves the provider’s registered models, subject to account access. Chat reads the same registry. Pure text models and Mock do not appear in the running catalogue or act as fallbacks.
 
-OpenAI, DeepSeek and xAI use provider-specific Responses dialects. Gemini uses the stateless Interactions API; Claude uses native Messages streaming. Signed thought blocks and opaque reasoning items are replayed only within the matching provider identity. Effort options are model specific; an unspecified effort leaves the parameter out so the supplier applies its default. The last model and each model's effort are remembered. Changes are refused during an active turn or execution.
+OpenAI, DeepSeek and xAI use provider-specific Responses dialects. Gemini uses the stateless Interactions API; Claude uses native Messages streaming. Signed thought blocks and opaque reasoning items are replayed only within the matching provider identity. Effort options are model specific; an unspecified effort leaves the parameter out so the supplier applies its default. The last model and each model's effort are remembered. Chat changes are refused during an active reply. A running robot task keeps its frozen model configuration independently.
 
 | Provider | Curated visual models | Native effort choices |
 |---|---|---|
@@ -67,4 +91,11 @@ Restart marks unfinished runs as interrupted with unknown results. It restores h
 
 `describe()` and imports must have no device or GPU side effects. Preparation, policy loading, enabling, execution, cancellation, emergency stop, release and disconnect are separate operations. Profiles, environment bindings and policy artifacts are separate contracts. The host does not inject its source tree or model credentials into workers.
 
-The [runtime SDK guide](../packages/nerv-runtime-sdk/README.md) and [inspection-only plugin example](../examples/inspection-runtime/) describe protocol 2, which requires `actions()` and rejects incompatible workers before preparation. The SDK defines provider discovery, protocol endpoints and read-only conformance checks.
+The [runtime SDK guide](../packages/nerv-runtime-sdk/README.md) and [inspection-only plugin example](../examples/inspection-runtime/) describe protocol 3, which requires `actions()` and rejects incompatible workers before preparation. The SDK defines provider discovery, protocol endpoints and read-only conformance checks.
+
+
+## Selected control schemes
+
+[Control schemes and module contracts](control-schemes.md) describe immutable revisions, fixed-policy tasks, independent decision contexts and protocol 3 grants. The right panel shows only the selected path. The old all-path illustration above documents transport relationships; it does not grant access to every action.
+
+Interaction, decision and execution are the primary terms. System 2 and System 1 remain auxiliary labels in diagrams and existing journal role IDs. A fixed-policy task does not instantiate a model. A visual-direct task still uses a local controller; model output never writes motor registers.

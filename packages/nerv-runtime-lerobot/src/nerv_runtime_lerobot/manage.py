@@ -5,6 +5,7 @@ import os
 from pathlib import Path
 import re
 import sys
+import time
 
 from .standard import PRODUCT, CHANNELS, CAMERAS, UNITS, validate_cameras, validate_manifest
 
@@ -26,6 +27,7 @@ def describe():
              "required": list(fields), "additionalProperties": False} for op, fields in FIELDS.items()}}
     for operation, key in (("configure", "policy_device"), ("check", "device")):
         descriptor["operations"][operation]["properties"][key].update(enum=["cpu", "cuda", "mps"], default="cpu")
+    descriptor["camera_preview_module"] = "nerv_runtime_lerobot.setup_camera"
     return descriptor
 
 
@@ -88,6 +90,13 @@ def inspect_checkpoint(path, declared):
     return manifest
 
 
+def artifact_stamp(manifest):
+    """Cheap display invalidation; execution still verifies every file hash."""
+    root = Path(manifest["path"])
+    return {name: [p.stat().st_size, p.stat().st_mtime_ns]
+            for name in manifest["sha256"] for p in [root / name]}
+
+
 def manage(operation, payload, home):
     from filelock import FileLock
     root = Path(home).expanduser().resolve()
@@ -100,6 +109,49 @@ def _manage(operation, payload, home):
     import jsonschema
     if operation == "describe":
         return describe()
+    if operation == "discover":
+        from .discovery import discover
+        return discover(home)
+    if operation == "configure_standard":
+        from .discovery import discover
+        root = Path(home)
+        cameras = payload["cameras"]
+        validate_cameras(cameras)
+        calibration = Path(payload["calibration_dir"]).expanduser().resolve(strict=True)
+        robot_id = _id(payload["id"])
+        if not (calibration / f"{robot_id}.json").is_file():
+            raise ValueError("selected calibration directory has no file for this robot ID")
+        if not payload["port"].strip() or payload.get("policy_device", "cpu") not in ("cpu", "cuda", "mps"):
+            raise ValueError("provide a port and select cpu, cuda or mps")
+        camera_digest = hashlib.sha256(json.dumps(cameras, sort_keys=True).encode()).hexdigest()[:16]
+        camera_file = root / "devices" / f"cameras-{camera_digest}.json"
+        _write(camera_file, cameras)
+        request = {k: payload[k] for k in ("port", "id", "calibration_dir")}
+        request.update(camera_config_file=str(camera_file), policy_device=payload.get("policy_device", "cpu"))
+        result = _manage("configure", request, home)
+        import yaml
+        profile_path = root / "bodies/arm-lerobot-so101/body.yaml"
+        profile = yaml.safe_load(profile_path.read_text(encoding="utf-8"))
+        identity = next((p for p in discover(home)["ports"] if p["port"] == payload["port"]), {})
+        profile["buses"]["real"]["settings"]["device_identity"] = identity
+        _write(profile_path, profile)
+        _write(root / "devices/standard.json", {**request, "cameras": cameras, "identity": identity})
+        return result
+    if operation == "policies":
+        records = []
+        for path in sorted((Path(home) / "artifacts").glob("*/artifact.json")):
+            value = json.loads(path.read_text(encoding="utf-8"))
+            item = {k: value.get(k) for k in ("id", "conditions", "format", "product", "semantics_source")}
+            receipt = path.with_name("check.json")
+            item["check"] = json.loads(receipt.read_text(encoding="utf-8")) if receipt.exists() else {"state": "unchecked"}
+            try:
+                if item["check"].get("state") == "loaded" and item["check"].get("files") != artifact_stamp(value):
+                    item["check"] = {"state": "changed"}
+            except OSError:
+                item["check"] = {"state": "changed"}
+            item["check"].pop("files", None)
+            records.append(item)
+        return {"policies": records}
     if operation not in FIELDS:
         raise ValueError("unknown management operation")
     jsonschema.validate(payload, describe()["operations"][operation])
@@ -118,7 +170,9 @@ def _manage(operation, payload, home):
             raise ValueError("provide a port and select cpu, cuda or mps")
         template = json.loads(files("nerv_runtime_lerobot").joinpath("product.json").read_text())
         if body_file.exists():
-            template["skills"] = yaml.safe_load(body_file.read_text(encoding="utf-8")).get("skills", {})
+            existing = yaml.safe_load(body_file.read_text(encoding="utf-8"))
+            template["skills"] = existing.get("skills", {})
+            template["buses"] = {**existing.get("buses", {}), **template["buses"]}
         binding = template["buses"]["real"]
         binding["python"] = sys.executable
         binding["settings"].update({**payload, "id": robot_id, "camera_config_file": str(camera_path),
@@ -140,20 +194,29 @@ def _manage(operation, payload, home):
         if policy_id in {"read_state", "move_joints", "nudge_joints", "set_gripper", "wait_execution", "cancel_execution", "execution_status"}:
             raise ValueError("policy ID is reserved by device controls")
         _write(record, manifest)
-        profile.setdefault("skills", {})[policy_id] = {"artifact": policy_id, "manifest": str(record),
+        profile.setdefault("skills", {})[policy_id] = {"artifact": policy_id, "manifest": str(record), "modes": ["real"],
             "description": f"Run the imported policy. Demonstrated conditions: {payload['conditions']}"}
         _write(body_file, profile)
         return {"ok": True, "manifest": manifest, "connected": False}
-    manifest = json.loads(record.read_text(encoding="utf-8"))
-    validate_manifest(manifest)
-    from .policy import artifact_files
-    artifact_files(manifest)
-    if operation == "inspect":
-        return {"ok": True, "manifest": manifest}
-    from nerv_runtime_sdk.policies import backend
-    runner = backend(manifest["format"])(manifest, payload["device"])
+    runner = None
     try:
+        manifest = json.loads(record.read_text(encoding="utf-8"))
+        validate_manifest(manifest)
+        from .policy import artifact_files
+        artifact_files(manifest)
+        if operation == "inspect":
+            return {"ok": True, "manifest": manifest}
+        from nerv_runtime_sdk.policies import backend
+        runner = backend(manifest["format"])(manifest, payload["device"])
+        _write(record.with_name("check.json"), {"state": "loaded", "device": payload["device"],
+               "checked_at": time.time(), "files": artifact_stamp(manifest), "inference": False})
         return {"ok": True, "loaded": True, "inference": False, "device_write": False,
                 "message": "Load check passed. Use the connected, disarmed observation check for inference."}
+    except Exception as exc:
+        if operation == "check":
+            _write(record.with_name("check.json"), {"state": "failed", "device": payload["device"],
+                   "checked_at": time.time(), "error": str(exc), "inference": False})
+        raise
     finally:
-        runner.close()
+        if runner is not None:
+            runner.close()
