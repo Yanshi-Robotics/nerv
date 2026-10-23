@@ -1,150 +1,255 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
-
+import {
+  getRegistry,
+  getNodes,
+  listSessions,
+  userApi,
+  POLL_NODES_MS,
+  type Registry,
+  type NodeInfo,
+  type SessionSummary,
+  type RobotDisplay,
+} from "@/lib/api";
+import AppSidebar from "@/components/AppSidebar";
+import HomeScreen, { type SessionDraft } from "@/components/HomeScreen";
+import MyRobot from "@/components/MyRobot";
+import SettingsPage from "@/components/SettingsPage";
+import GlobalTaskBar from "@/components/GlobalTaskBar";
 import OperatorToolbox from "@/components/OperatorToolbox";
-import ControlSchemes from "@/components/ControlSchemes";
-import ModulesPanel from "@/components/ModulesPanel";
-import RuntimeSetup from "@/components/RuntimeSetup";
-import VlmPanel from "@/components/VlmPanel";
 import ChatPanel from "@/components/ChatPanel";
-import NervDashboard from "@/components/NervDashboard";
 import SensingArea from "@/components/SensingArea";
-import SessionLogsView from "@/components/SessionLogsView";
-import SessionSidebar, { type Panel } from "@/components/SessionSidebar";
-import WorldExplore from "@/components/world-explore/WorldExplore";
+import ControlSchemes from "@/components/ControlSchemes";
 import { useI18n } from "@/lib/i18n";
-import { getNodes, getRegistry, listSessions, POLL_NODES_MS, type NodeInfo, type Registry, type SessionSummary } from "@/lib/api";
-
-// 左侧栏折叠状态的持久化键；值 "1" = 收起
-const SIDEBAR_KEY = "nerv-sidebar";
-
 export default function Home() {
   const { t } = useI18n();
-  const [registry, setRegistry] = useState<Registry | null>(null);
-  const [nodes, setNodes] = useState<NodeInfo[]>([]);
-  const [sessions, setSessions] = useState<SessionSummary[]>([]);
-  const [currentId, setCurrentId] = useState("");
-  const [collapsed, setCollapsed] = useState(false);
-  // 右边那两栏显示什么：会话（感知区 + 对话）、Dashboard、Logs。侧栏一直在，不跳页。
-  const [panel, setPanel] = useState<Panel>("session");
-
-  // 预渲染阶段拿不到 localStorage，挂载后再对齐一次；此后每次切换都存回去。
-  useEffect(() => {
+  const [route, setRoute] = useState("home"),
+    [collapsed, setCollapsed] = useState(false),
+    [registry, setRegistry] = useState<Registry | null>(null),
+    [nodes, setNodes] = useState<NodeInfo[]>([]),
+    [sessions, setSessions] = useState<SessionSummary[]>([]),
+    [robot, setRobot] = useState<RobotDisplay | null>(null),
+    [version, setVersion] = useState(""),
+    [currentId, setCurrentId] = useState(""),
+    [error, setError] = useState("");
+  const [draft, setDraft] = useState<SessionDraft>({
+    text: "",
+    brain: "",
+    body: "",
+    mode: "sim",
+    world: "",
+    scheme: "",
+  });
+  const [initial, setInitial] = useState<
+    { id: string; text: string } | undefined
+  >();
+  const navigate = useCallback((value: string) => {
+    window.location.hash = value;
+    setRoute(value);
+    if (value.startsWith("session/")) setCurrentId(value.slice(8));
+  }, []);
+  const refresh = useCallback(async () => {
     try {
-      setCollapsed(localStorage.getItem(SIDEBAR_KEY) === "1");
-    } catch {
-      /* 隐私模式等读不了就按展开 */
+      const [r, n, s, d] = await Promise.all([
+        getRegistry(),
+        getNodes(),
+        listSessions(),
+        userApi<RobotDisplay>("robot"),
+      ]);
+      setRegistry(r);
+      setNodes(n);
+      setSessions(s);
+      setRobot(d);
+      setError("");
+    } catch (e) {
+      setError((e as Error).message);
     }
   }, []);
-  const toggleCollapsed = useCallback(() => {
-    setCollapsed((v) => {
-      const next = !v;
-      try {
-        localStorage.setItem(SIDEBAR_KEY, next ? "1" : "0");
-      } catch {
-        /* 存不了也照样切 */
-      }
-      return next;
-    });
-  }, []);
-
-  const refreshSessions = useCallback(async () => {
-    const s = await listSessions().catch(() => []);
-    setRegistry(await getRegistry().catch(() => null));
-    setSessions(s);
-    return s;
-  }, []);
-  const refreshNodes = useCallback(() => getNodes().then(setNodes).catch(() => {}), []);
-
   useEffect(() => {
-    (async () => {
-      setRegistry(await getRegistry().catch(() => null));
-      await refreshNodes();
-      const s = await refreshSessions();
-      if (s.length) setCurrentId((id) => id || s[0].id);
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
-
-  // 周期性刷新节点在线状态：节点中途挂了也能反映在感知区和侧栏上。
+    const restore = () => {
+      const value = decodeURIComponent(window.location.hash.slice(1)) || "home";
+      setRoute(value);
+      if (value.startsWith("session/")) setCurrentId(value.slice(8));
+    };
+    restore();
+    try {
+      setCollapsed(localStorage.getItem("nerv-sidebar") === "1");
+    } catch {}
+    window.addEventListener("hashchange", restore);
+    refresh();
+    userApi("status")
+      .then((v) => setVersion(v.version))
+      .catch(() => {});
+    const timer = setInterval(refresh, POLL_NODES_MS);
+    return () => {
+      window.removeEventListener("hashchange", restore);
+      clearInterval(timer);
+    };
+  }, [refresh]);
   useEffect(() => {
-    const id = setInterval(() => { refreshNodes(); refreshSessions(); }, POLL_NODES_MS);
-    return () => clearInterval(id);
-  }, [refreshNodes, refreshSessions]);
-
-  useEffect(() => {
-    const created = (event: Event) => {setCurrentId((event as CustomEvent<string>).detail); refreshSessions(); refreshNodes();};
+    const created = (event: Event) => {
+      navigate(`session/${(event as CustomEvent<string>).detail}`);
+      refresh();
+    };
     window.addEventListener("nerv-instance-created", created);
     return () => window.removeEventListener("nerv-instance-created", created);
-  }, [refreshSessions, refreshNodes]);
-
-  const current = sessions.find((x) => x.id === currentId) || null;
-  const bodyNode = current?.body ? nodes.find((n) => n.key === `body:${current.body}` && (n.meta.world || null) === current.world) ?? null : null;
-  const worldNode = current?.world && current.body ? nodes.find((n) => n.key === `world:${current.world}/${current.body}`) ?? null : null;
-
+  }, [navigate, refresh]);
+  const current = sessions.find((s) => s.id === currentId) || null;
+  const active = sessions.find((s) => s.body && s.status === "active") || null;
+  const schemeSession = current?.body ? current : active;
+  const bodyNode = (s: SessionSummary | null) =>
+    s?.body
+      ? nodes.find(
+          (n) =>
+            n.key === `body:${s.body}` && (n.meta.world || null) === s.world,
+        ) || null
+      : null;
+  const worldNode =
+    current?.world && current.body
+      ? nodes.find((n) => n.key === `world:${current.world}/${current.body}`) ||
+        null
+      : null;
   return (
-    <main
-      className={`nerv-shell grid h-screen bg-neutral-950 text-neutral-100 transition-[grid-template-columns] duration-200 ease-out ${
-        collapsed ? "grid-cols-[56px_minmax(0,1fr)_440px]" : "grid-cols-[240px_minmax(0,1fr)_440px]"
-      }`}
-    >
-      <SessionSidebar
+    <main className={`app-shell ${collapsed ? "sidebar-collapsed" : ""}`}>
+      <AppSidebar
         sessions={sessions}
-        registry={registry}
-        currentId={currentId}
+        current={currentId}
         collapsed={collapsed}
-        onToggleCollapsed={toggleCollapsed}
-        panel={panel}
-        onPanel={setPanel}
-        onSelect={(id) => {
-          setCurrentId(id);
-          setPanel("session");
-        }}
-        onChanged={async (id) => {
-          const s = await refreshSessions();
-          await refreshNodes(); // 新会话可能刚起了节点
-          if (id) {
-            setCurrentId(id);
-            setPanel("session"); // a freshly created session is what you want to look at
-          } else setCurrentId((cur) => (s.find((x) => x.id === cur) ? cur : s[0]?.id ?? ""));
-        }}
+        route={route}
+        version={version}
+        navigate={navigate}
+        toggle={() =>
+          setCollapsed((v) => {
+            localStorage.setItem("nerv-sidebar", v ? "0" : "1");
+            return !v;
+          })
+        }
+        onDelete={refresh}
       />
-
-      {panel === "schemes" && <ControlSchemes bodyNode={bodyNode} onSetup={() => setPanel("setup")} onModels={() => setPanel("models")} session={current} brains={registry?.brains ?? []} onChanged={() => {refreshSessions();}} />}
-      {panel === "modules" && <ModulesPanel onChanged={() => getRegistry().then(setRegistry)} />}
-      {panel === "setup" && <RuntimeSetup registry={registry} onChanged={() => getRegistry().then(setRegistry)} onCreated={id => {setCurrentId(id); setPanel("session"); refreshSessions(); refreshNodes();}} />}
-      {panel === "models" && <div className="col-span-2 min-h-0 overflow-hidden"><VlmPanel onChanged={() => getRegistry().then(setRegistry)} /></div>}
-      {panel === "dashboard" && (
-        <div className="col-span-2 min-h-0 min-w-0 overflow-hidden">
-          <NervDashboard embedded onOpenLogs={() => setPanel("logs")} onNodesChanged={() => { refreshNodes(); refreshSessions(); }} />
+      <div className="app-main">
+        <GlobalTaskBar sessions={sessions} nodes={nodes} navigate={navigate} />
+        {error && (
+          <p role="alert" className="error-text px-5">
+            {t("Unable to refresh local state. Check the NERV service.")}{" "}
+            {error}
+          </p>
+        )}
+        {route.startsWith("home") && (
+          <HomeScreen
+            registry={registry}
+            robot={robot}
+            sessions={sessions}
+            draft={draft}
+            setDraft={setDraft}
+            navigate={navigate}
+            focus={route === "home/new"}
+            onCreated={async (id, text) => {
+              setInitial({ id, text });
+              setDraft({ ...draft, text: "" });
+              await refresh();
+              navigate(`session/${id}`);
+            }}
+          />
+        )}
+        {route === "robots" && (
+          <MyRobot
+            robot={robot}
+            registry={registry}
+            sessions={sessions}
+            onChanged={refresh}
+            navigate={navigate}
+            openWorkspace={(id) => {
+              setCurrentId(id);
+              refresh();
+              navigate(`session/${id}`);
+            }}
+          />
+        )}
+        {route.startsWith("settings/") && (
+          <SettingsPage
+            section={route.slice(9)}
+            registry={registry}
+            session={schemeSession}
+            bodyNode={bodyNode(schemeSession)}
+            version={version}
+            navigate={navigate}
+            onChanged={refresh}
+          />
+        )}
+        <div
+          className="workspace-container"
+          style={{ display: route.startsWith("session/") ? "flex" : "none" }}
+        >
+          <OperatorToolbox
+            session={current}
+            bodyNode={bodyNode(current)}
+            nodes={nodes}
+            onChanged={refresh}
+            chat={
+              current?.brain === "operator" ? (
+                <div className="overflow-auto">
+                  <div className="p-4">
+                    <h2>{t("Device and fixed policy workspace")}</h2>
+                    <p className="muted">
+                      {t(
+                        "No chat model is used here. Choose a fixed policy to run without a key.",
+                      )}
+                    </p>
+                    <button
+                      className="nerv-control action"
+                      onClick={() => navigate("home/new")}
+                    >
+                      {t("Start an Agent session")}
+                    </button>
+                  </div>
+                  <ControlSchemes
+                    session={current}
+                    bodyNode={bodyNode(current)}
+                    brains={registry?.brains || []}
+                    onChanged={refresh}
+                    onSetup={() => navigate("settings/policies")}
+                    onModels={() => navigate("settings/models")}
+                  />
+                </div>
+              ) : (
+                <ChatPanel
+                  session={current}
+                  brains={registry?.brains || []}
+                  bodyNode={bodyNode(current)}
+                  onSetup={() => navigate("robots")}
+                  onModels={() => navigate("settings/models")}
+                  onSessionsChanged={refresh}
+                  initialMessage={initial}
+                  onInitialConsumed={() => setInitial(undefined)}
+                />
+              )
+            }
+          >
+            {current ? (
+              <SensingArea
+                key={`${current.id}:${current.status}`}
+                session={current}
+                bodyNode={bodyNode(current)}
+                worldNode={worldNode}
+                robotSensors={
+                  registry?.bodies.find((b) => b.name === current.body)?.sensors
+                }
+                onStateChanged={refresh}
+              />
+            ) : (
+              <div className="p-8">
+                {t("Select a session or return home.")}
+                <button
+                  className="nerv-control action"
+                  onClick={() => navigate("home")}
+                >
+                  {t("Home")}
+                </button>
+              </div>
+            )}
+          </OperatorToolbox>
         </div>
-      )}
-      {panel === "logs" && (
-        <div className="col-span-2 min-h-0 min-w-0 overflow-hidden">
-          <SessionLogsView embedded sessionId={current?.id ?? ""} />
-        </div>
-      )}
-      {panel === "explore" && (
-        <div className="col-span-2 min-h-0 min-w-0 overflow-hidden">
-          <WorldExplore worlds={registry?.worlds ?? []} defaultWorld={current?.world ?? null} />
-        </div>
-      )}
-      {panel === "session" && (
-        <OperatorToolbox key={`${current?.id}:${current?.epoch}`} session={current} bodyNode={bodyNode} nodes={nodes} onChanged={() => {refreshSessions(); refreshNodes();}}
-          chat={<ChatPanel onSetup={() => setPanel("setup")} session={current} brains={registry?.brains ?? []} bodyNode={bodyNode} onModels={() => setPanel("models")} onSessionsChanged={() => { refreshSessions(); refreshNodes(); }} />}>
-          {current ? (
-            <SensingArea key={`${current.id}:${current.status}`} session={current} bodyNode={bodyNode} worldNode={worldNode} robotSensors={registry?.bodies.find(body => body.name === current.body)?.sensors} onStateChanged={() => { refreshSessions(); refreshNodes(); }} />
-          ) : (
-            <section className="flex min-w-0 flex-col items-center justify-center gap-5 p-8">
-              <h1 className="text-2xl">{t("Start with your robot")}</h1>
-              <p className="max-w-md text-center text-sm text-neutral-400">{t("Choose a real arm or install a simulation. You can add an API key later.")}</p>
-              <button className="nerv-control w-full max-w-md rounded-xl border border-neutral-600 p-5 text-left" onClick={() => setPanel("setup")}><span className="block text-lg">{t("Connect a real SO-101")}</span><span className="text-sm text-neutral-400">{t("Arm, calibration and two cameras")}</span></button>
-              <button className="nerv-control w-full max-w-md rounded-xl border border-neutral-600 p-5 text-left" onClick={() => setPanel("modules")}><span className="block text-lg">{t("Use simulation")}</span><span className="text-sm text-neutral-400">{t("Install the SO-101 workbench")}</span></button>
-              <button className="nerv-control text-sm underline" onClick={() => setPanel("models")}>{t("Set up an AI model")}</button>
-            </section>
-          )}
-        </OperatorToolbox>
-      )}
+      </div>
     </main>
   );
 }

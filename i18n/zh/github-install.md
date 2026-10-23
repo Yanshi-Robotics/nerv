@@ -2,7 +2,7 @@
 
 [English](../../guides/github-install.md) · [NERV](README.md)
 
-0.7.2 是供本地测试的开发版。完整发布包包含主程序、Runtime SDK、LeRobot 适配器、依赖锁文件、SO-101 仿真资源、安装器和 release.json。实机验收和学生首次使用测试尚未完成。
+0.8.0 是供本地测试的开发版。完整发布包包含主程序、Runtime SDK、LeRobot 适配器、依赖锁文件、SO-101 仿真资源、安装器和 release.json。实机验收和学生首次使用测试尚未完成。
 
 ## 安装候选包
 
@@ -50,7 +50,7 @@ irm https://github.com/Yanshi-Robotics/nerv/releases/latest/download/install.ps1
 
 ## 安装组件
 
-在“仿真与组件”中安装或重新安装 SO-101 / LeRobot、SO-101 Simulation。界面显示安装阶段、组件包大小与可获得的下载进度。Python 依赖另外下载，LeRobot 张量依赖体积较大。浏览器刷新后保留进度，中断后可以重试；同时安装会被拒绝。
+在“设置 → 组件与仿真”中安装或维护 SO-101 / LeRobot、SO-101 Simulation。界面显示安装阶段、组件包大小与可获得的下载进度。Python 依赖另外下载，LeRobot 张量依赖体积较大。浏览器刷新后保留进度，中断后可以重试；同时安装会被拒绝。
 
 对应命令：
 

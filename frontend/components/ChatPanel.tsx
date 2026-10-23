@@ -248,6 +248,8 @@ export default function ChatPanel({
   onSessionsChanged,
   onModels,
   onSetup,
+  initialMessage,
+  onInitialConsumed,
 }: {
   session: SessionSummary | null;
   brains: Brain[];
@@ -255,6 +257,8 @@ export default function ChatPanel({
   onSessionsChanged: () => void;
   onModels: () => void;
   onSetup: () => void;
+  initialMessage?: {id:string; text:string};
+  onInitialConsumed?: () => void;
 }) {
   const { t } = useI18n();
   const [items, setItems] = useState<Item[]>([]);
@@ -309,14 +313,22 @@ export default function ChatPanel({
   const hasBody = !!session?.body;
   const curBrain = brains.find((b) => b.name === session?.brain);
 
+  useEffect(() => {
+    if (initialMessage && initialMessage.id === session?.id && active && !busy) {
+      const message = initialMessage.text;
+      onInitialConsumed?.();
+      if (message.trim()) send(message);
+    }
+  }, [initialMessage?.id, session?.id, active]);
+
   async function switchBrain(name: string) {
     if (!session) return;
     try { await setSessionBrain(session.id, name); onSessionsChanged(); }
     catch (error) { setArmErr((error as Error).message); }
   }
 
-  async function send() {
-    const text = input.trim();
+  async function send(message?: string) {
+    const text = (message ?? input).trim();
     if (!text || !session || !active) return;
     const generation = ++requestGeneration.current;
     setInput("");
@@ -401,7 +413,7 @@ export default function ChatPanel({
         {session && <>
           {/* ---- 一行三个控件：大脑 · 上膛 · 遥控 ---- */}
           <div className="flex items-center gap-2 px-3 pt-2">
-            <BrainPicker brains={brains} current={session.brain} disabled={!active || busy} onPick={switchBrain} />
+            <BrainPicker brains={brains.filter(b => b.name !== "operator")} current={session.brain} disabled={!active || busy} onPick={switchBrain} />
             {!!curBrain?.efforts?.length && <select aria-label={t("Reasoning effort")} className="max-w-24 rounded border border-neutral-600 bg-neutral-800 text-[10px]" disabled={!active || busy} value={curBrain.effort ?? ""} onChange={event => selectVlm(session.brain, event.target.value || null).then(onSessionsChanged).catch(e => setArmErr(e.message))}><option value="">{t("Provider default")}</option>{curBrain.efforts.map(effort => <option key={effort} value={effort}>{effort}</option>)}</select>}
             {hasBody && <button onClick={toolbox.open} className="nerv-control ml-auto rounded-full border px-3 py-1 text-xs">{t("Toolbox")}</button>}
           </div>
@@ -469,7 +481,7 @@ export default function ChatPanel({
                   </button>
                 )}
                 {(
-                  <button onClick={send} className="nerv-control rounded-xl nerv-primary px-4 py-2 text-sm font-medium text-white">{t("Send")}</button>
+                  <button onClick={() => send()} className="nerv-control rounded-xl nerv-primary px-4 py-2 text-sm font-medium text-white">{t("Send")}</button>
                 )}
               </div>
             </div>

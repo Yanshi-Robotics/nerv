@@ -41,6 +41,7 @@ class Turn:
         self.store, self.session, self.brain = store, session, brain
         self.body, self.world, self.tool_nodes, self.gate = body, world, tools, gate
         self.emit = emit
+        self.notes_max = config.NOTES_MAX
         self.max_steps = max_steps
         self.deadline = time.monotonic() + time_budget_s
         self.world_name = world_name
@@ -350,8 +351,8 @@ class Turn:
                 res = ActionResult(False, prompts.NOTE_EMPTY_REPLY)
             elif len(note) > config.NOTE_MAX_CHARS:
                 res = ActionResult(False, prompts.NOTE_TOO_LONG_REPLY.format(n=len(note), limit=config.NOTE_MAX_CHARS))
-            elif len(notes) >= config.NOTES_MAX:
-                res = ActionResult(False, prompts.NOTE_FULL_REPLY.format(limit=config.NOTES_MAX))
+            elif len(notes) >= self.notes_max:
+                res = ActionResult(False, prompts.NOTE_FULL_REPLY.format(limit=self.notes_max))
             else:
                 notes.append(note)
                 self.store.set_notes(sid, notes)

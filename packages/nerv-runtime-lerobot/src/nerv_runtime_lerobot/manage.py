@@ -109,6 +109,13 @@ def _manage(operation, payload, home):
     import jsonschema
     if operation == "describe":
         return describe()
+    if operation == "scheme_options":
+        from .action_catalog import primitive_actions
+        profile = json.loads(Path(__file__).with_name("product.json").read_text())
+        actions = primitive_actions(profile["buses"]["real"]["settings"])
+        actions += [{"name": p["id"], "description": p.get("conditions", ""), "kind": "skill"}
+                    for p in _manage("policies", {}, home)["policies"]]
+        return {"actions": [a for a in actions if a["kind"] in ("skill", "primitive")]}
     if operation == "discover":
         from .discovery import discover
         return discover(home)

@@ -43,7 +43,10 @@ test("CLI entry works through the symlink installed by npm", {skip: process.plat
   assert.match(result.stdout, /nerv runtime install/);
 });
 test("invalid provider fails before installing dependencies or opening hardware", () => {
-  const result = spawnSync(process.execPath, [join(root, "launcher/nerv.mjs"), "runtime", "install", "unknown"], {encoding: "utf8"});
+  const isolated = mkdtempSync(join(temporary, "invalid-provider-"));
+  const result = spawnSync(process.execPath, [join(root, "launcher/nerv.mjs"), "runtime", "install", "unknown"], {
+    encoding: "utf8", env: {...process.env, NERV_HOME: isolated},
+  });
   assert.equal(result.status, 1);
   assert.match(result.stderr, /Available: lerobot0.6.1/);
 });

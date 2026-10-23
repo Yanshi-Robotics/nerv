@@ -2,19 +2,19 @@
 
 [中文](../i18n/zh/standard-so101.md)
 
-NERV 0.7.1 is a development candidate. Its real-device adapter targets one standard SO-101 follower running LeRobot 0.6.1, with `top` and `wrist` OpenCV cameras at 640 × 480 and 30 FPS. Five arm joints use degrees; the native gripper uses 0–100. Real acceptance is pending. Model loading and software tests do not establish grasp reliability.
+NERV 0.8.0 is a development candidate. Its real-device adapter targets one standard SO-101 follower running LeRobot 0.6.1, with `top` and `wrist` OpenCV cameras at 640 × 480 and 30 FPS. Five arm joints use degrees; the native gripper uses 0–100. Real acceptance is pending. Model loading and software tests do not establish grasp reliability.
 
 Train and calibrate with LeRobot before using NERV. Keep the original checkpoint, calibration and course camera configuration. The leader arm is not needed for inference. Do not run LeRobot teleoperation and NERV against the same serial port or cameras simultaneously.
 
 ## Guided device setup
 
-Install the [candidate bundle](github-install.md), start `nerv`, and select **Connect a real SO-101**. The guided steps replace manual interpreter paths and camera JSON editing:
+Install the [candidate bundle](github-install.md), start `nerv`, and select **My robot → Register SO-101**. The guided steps replace manual interpreter paths and camera JSON editing:
 
 1. Install **SO-101 / LeRobot** in its independent environment.
 2. Scan serial candidates and select the follower. Scanning does not open the motor bus.
 3. Select an existing calibration or browse to its directory and enter the robot ID. Choose CPU, CUDA or MPS only when supported by the installed backend.
 4. Preview the two camera devices, assign top/wrist and rotation, and confirm their physical roles. Linux offers persistent device paths; other systems currently require camera indices.
-5. Import and check ACT, or continue without a policy for visual direct control.
+5. Save configuration and return to My robot. Policy import is a separate next step in Settings → Policy library.
 6. Review the supervised-acceptance notice and connect. Connection can enable torque; motion remains disarmed.
 
 No hidden environment variable is required for the normal setup flow. Acceptance acknowledges an unverified integration; it does not change its support status. The preview process releases its cameras before the native LeRobot instance takes ownership. Preview and runtime never intentionally open the same camera together.
@@ -43,11 +43,11 @@ On Windows, use the corresponding `Scripts` executables. Quote paths containing 
 
 ## Connect and run
 
-Create a real-hardware session for SO-101. Choose **Operator only** for fixed-policy operation without API credentials, or a configured visual model for Agent control. Review the runtime's capability manifest under **Device and access** before granting access.
+Open **My robot → Device and fixed policy workspace** for operation without API credentials. Create an Agent chat from Home with a configured model. Review the runtime's capability manifest under **Device and access** before granting access.
 
 **Prepare device** connects LeRobot and may enable motor torque. A person must trigger it after checking the work area. NERV uses the selected calibration and refuses a mismatch instead of recalibrating. Inspect the two live views and confirm their mount identity, orientation and scene.
 
-Load an imported policy, leave control disarmed, and select **Check policy without motion**. This runs the native ACT processors and model on current observations, returns candidate positions, and performs no actuator write. Then enable control, create a **Fixed policy** scheme in **Control schemes**, select the imported skill, and click **Run selected policy** in the chat panel. A policy group selects a decision model and its allowed ACT skills; visual direct control selects bounded primitives. The fixed-policy mode needs the visible operator page to keep receiving observations; closing or hiding the page eventually expires supervision and stops dispatch. The user must continue observing the physical scene.
+Load an imported policy, leave control disarmed, and select **Check policy without motion**. This runs the native ACT processors and model on current observations, returns candidate positions, and performs no actuator write. Then enable control, create a **Fixed policy** scheme in **Control schemes**, select the imported skill, and click **Run selected policy** in the workspace. A policy group selects a decision model and its allowed ACT skills; visual direct control selects bounded primitives. The fixed-policy mode needs the visible operator page to keep receiving observations; closing or hiding the page eventually expires supervision and stops dispatch. The user must continue observing the physical scene.
 
 For VLM direct control, use the bounded joint and gripper tools. Each decision refers to a recent observation and the current device instance. The runtime interpolates motion locally. Reobserve after execution; a command ending is not proof of a grasp. Cartesian placement, new robot structures and nonstandard units are outside this release.
 

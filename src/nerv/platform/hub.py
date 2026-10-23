@@ -248,8 +248,14 @@ class Nerv:
     @_node_lifecycle
     def new_session(self, brain: str, body: str | None, world: str | None,
                     sensors: list[str] | None = None, tools: list[str] | None = None,
-                    mode: str = "sim", world_configuration: dict | None = None) -> dict:
+                    mode: str = "sim", world_configuration: dict | None = None, *, operator_workspace=False) -> dict:
+        if brain == "operator" and not operator_workspace:
+            raise ValueError("Select a configured chat model; use the operator workspace for device operations")
         if body:
+            from .robot_tasks import ACTIVE
+            for previous in self.store.all():
+                if previous.body == body and (self.tasks.snapshot(previous.id).get("task") or {}).get("status") in ACTIVE:
+                    raise ValueError("Return to the running task before creating another robot session")
             from .module_jobs import catalog
             if any(job["state"] in ("queued", "running") for job in catalog()["jobs"]):
                 raise ValueError("Wait for component installation before creating a robot instance")
@@ -498,7 +504,14 @@ class Nerv:
         brain = SimpleNamespace(name="operator", model="operator", vision=False) if operator else self.new_role_model(s.brain)
         if not operator and isinstance(brain, __import__("nerv.harness.agent", fromlist=["AgentHarness"]).AgentHarness):
             from .role_turn import RoleTurn
-            return RoleTurn(self, s, brain, emit, token or threading.Event())
+            from .user_settings import snapshot
+            limits = snapshot()
+            brain.context_manager.token_budget = min(limits["request_token_budget"], getattr(brain.llm, "context_window", None) or limits["request_token_budget"])
+            turn = RoleTurn(self, s, brain, emit, token or threading.Event())
+            turn.max_steps = limits["max_steps"]
+            turn.deadline = time.monotonic() + limits["turn_time_budget_s"]
+            turn.notes_max = limits["notes_max"]
+            return turn
         return Turn(self.store, s, brain, body, world, tools, self.gate, emit,
                     world_name=s.world or "", current=(lambda: not token.is_set()) if token else None, guard=self._runs_lock, control_token=getattr(token, "control_token", None))
 
