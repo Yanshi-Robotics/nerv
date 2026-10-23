@@ -23,6 +23,7 @@ jobs:
         env:
           NERV_STATIC_EXPORT: '1'
           NEXT_PUBLIC_API: ''
+      - run: npm --prefix frontend test
       - run: npm test
       - name: Install source archive under node_modules
         run: |

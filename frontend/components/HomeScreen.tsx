@@ -13,6 +13,12 @@ import {
 } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import RobotPreview from "./RobotPreview";
+import {
+  sessionTargets,
+  selectedTarget,
+  adjacentTarget,
+  type SessionTarget,
+} from "@/lib/session-targets";
 export type SessionDraft = {
   text: string;
   brain: string;
@@ -56,43 +62,58 @@ export default function HomeScreen({
   const configured = (registry?.brains || []).filter(
     (b) => b.available && b.name !== "operator",
   );
+  const targets = sessionTargets(registry, robot);
+  const selected = selectedTarget(targets, draft);
   useEffect(() => {
-    if (!draft.brain && configured.length)
+    const brain =
+      draft.brain ||
+      configured.find((b) => b.name === registry?.default_brain)?.name ||
+      configured[0]?.name ||
+      "";
+    const target = !draft.body ? targets[0] : undefined;
+    if (brain !== draft.brain || target)
       setDraft({
         ...draft,
-        brain:
-          configured.find((b) => b.name === registry?.default_brain)?.name ||
-          configured[0].name,
+        brain,
+        ...(target
+          ? {
+              body: target.body,
+              mode: target.mode,
+              world: target.world,
+              scheme: "",
+            }
+          : {}),
       });
-  }, [registry]);
-  const product = registry?.bodies.find((b) => b.buses.real?.provider);
-  const simBody = registry?.bodies.find(
-    (b) =>
-      b.buses.sim?.enabled &&
-      registry.worlds.some(
-        (w) =>
-          w.name.startsWith("so101-") &&
-          registry.matrix.some(
-            (m) => m.body === b.name && m.world === w.name && m.ok,
-          ),
-      ),
-  );
-  const ready =
-    !!configured.find((b) => b.name === draft.brain) &&
-    (!draft.body || draft.mode === "real" || !!draft.world);
+  }, [registry, robot?.registered, draft]);
+  function choose(target?: SessionTarget) {
+    if (target && !busy)
+      setDraft({
+        ...draft,
+        body: target.body,
+        mode: target.mode,
+        world: target.world,
+        scheme: "",
+      });
+  }
+  const ready = !!selected && !!configured.find((b) => b.name === draft.brain);
   async function start() {
-    if (!ready || busy) return;
+    if (!ready || !selected || busy) return;
     setBusy(true);
     setError("");
     try {
       const session = await createSession({
         brain: draft.brain,
-        body: draft.body || null,
-        mode: draft.mode,
-        world: draft.mode === "sim" ? draft.world || null : null,
+        body: selected.body,
+        mode: selected.mode,
+        world: selected.world || null,
         sensors: [],
       });
-      const scheme = schemes.find((s) => s.id === draft.scheme);
+      const scheme = schemes.find(
+        (s) =>
+          s.id === draft.scheme &&
+          s.robot === selected.body &&
+          s.mode === selected.mode,
+      );
       if (scheme) await selectControlScheme(session.id, scheme);
       onCreated(session.id, draft.text);
     } catch (e) {
@@ -130,36 +151,77 @@ export default function HomeScreen({
               {t(lastTask.status)} · {lastTask.goal}
             </button>
           )}
-          {!configured.length && (
-            <button onClick={() => navigate("settings/models")}>
-              <span className="status-dot" />
-              {t("Configure a chat model to start a session")}
-            </button>
-          )}
-          {!robot?.registered && (
-            <button onClick={() => navigate("robots")}>
-              <span className="status-dot" />
-              {t("Register your robot or explore simulation")}
-            </button>
-          )}
-          {robot?.registered && (
-            <button onClick={() => navigate("robots")}>
-              <span className="status-dot" />
-              {t("Robot configuration saved. Check devices before connecting.")}
-            </button>
-          )}
-          {configured.length > 0 && !lastTask && (
-            <button onClick={() => navigate("settings/models")}>
-              {t("Chat model ready")}
-            </button>
+          {selected && (
+            <span>
+              {t("Selected scene")}: {t(selected.sceneLabel)}
+            </span>
           )}
         </div>
+        {registry &&
+          robot &&
+          (!configured.length || !robot.registered || !targets.length) && (
+            <section className="home-todos" aria-label={t("Setup checklist")}>
+              <h2>{t("Setup checklist")}</h2>
+              {!configured.length && (
+                <div className="home-todo">
+                  <div>
+                    <b>{t("Configure a chat model")}</b>
+                    <p>
+                      {t("Save a model key before starting an Agent session.")}
+                    </p>
+                  </div>
+                  <button
+                    className="nerv-control action"
+                    onClick={() => navigate("settings/models")}
+                  >
+                    {t("Model settings")}
+                  </button>
+                </div>
+              )}
+              {!robot.registered && (
+                <div className="home-todo">
+                  <div>
+                    <b>{t("Register your robot")}</b>
+                    <p>
+                      {t(
+                        "Save your real robot profile. Installed simulation scenes can be used without it.",
+                      )}
+                    </p>
+                  </div>
+                  <button
+                    className="nerv-control action"
+                    onClick={() => navigate("robots")}
+                  >
+                    {t("Register SO-101")}
+                  </button>
+                </div>
+              )}
+              {!targets.length && (
+                <div className="home-todo">
+                  <div>
+                    <b>{t("Add a scene to get started")}</b>
+                    <p>
+                      {t(
+                        "Register a real robot or install a simulation component.",
+                      )}
+                    </p>
+                  </div>
+                  <button
+                    className="nerv-control action"
+                    onClick={() => navigate("settings/components")}
+                  >
+                    {t("Open components")}
+                  </button>
+                </div>
+              )}
+            </section>
+          )}
         <div className="home-grid">
           <div className="home-composer">
             <p className="text-sm text-neutral-400">NERV</p>
             <h1>{t("What would you like to do?")}</h1>
             <p className="muted">
-              {t("Start a conversation or work with your robot.")}
+              {t("Choose a scene and describe what you want the robot to do.")}
             </p>
             <div className="composer-surface">
               <textarea
@@ -186,60 +248,16 @@ export default function HomeScreen({
                     ))}
                   </select>
                 </label>
-                <label className="form-label">
-                  {t("Use with")}
-                  <select
-                    value={!draft.body ? "chat" : draft.mode}
-                    onChange={(e) =>
-                      setDraft({
-                        ...draft,
-                        body:
-                          e.target.value === "chat"
-                            ? ""
-                            : e.target.value === "real"
-                              ? product?.name || ""
-                              : simBody?.name || "",
-                        mode: e.target.value === "real" ? "real" : "sim",
-                        world: "",
-                        scheme: "",
-                      })
-                    }
-                  >
-                    <option value="chat">{t("Conversation only")}</option>
-                    {robot?.registered && product && (
-                      <option value="real">{robot.name} · Real</option>
-                    )}
-                    {simBody && <option value="sim">SO-101 · Sim</option>}
-                  </select>
-                </label>
+                <div className="form-label">
+                  {t("Selected scene")}
+                  <p className="selected-scene-summary" aria-live="polite">
+                    {selected
+                      ? `${selected.mode === "real" ? "Real" : "Sim"} · ${selected.robotLabel} · ${t(selected.sceneLabel)}`
+                      : t("Choose a robot and scene")}
+                  </p>
+                </div>
               </div>
-              {draft.body && draft.mode === "sim" && (
-                <label className="form-label">
-                  {t("Simulation world")}
-                  <select
-                    className="form-field"
-                    value={draft.world}
-                    onChange={(e) =>
-                      setDraft({ ...draft, world: e.target.value })
-                    }
-                  >
-                    <option value="">{t("Select a simulation world")}</option>
-                    {registry?.worlds
-                      .filter((w) =>
-                        registry.matrix.some(
-                          (m) =>
-                            m.body === draft.body && m.world === w.name && m.ok,
-                        ),
-                      )
-                      .map((w) => (
-                        <option key={w.name} value={w.name}>
-                          {w.label || w.name}
-                        </option>
-                      ))}
-                  </select>
-                </label>
-              )}
-              {draft.body && (
+              {selected && (
                 <label className="form-label">
                   {t("Control scheme")}
                   <select
@@ -280,7 +298,7 @@ export default function HomeScreen({
                 </button>
               </div>
             </div>
-            {draft.body && (
+            {selected && (
               <p className="mt-3 text-xs text-neutral-400">
                 {t(
                   "Creating a session does not connect motors or enable motion.",
@@ -293,22 +311,110 @@ export default function HomeScreen({
               </p>
             )}
           </div>
-          <aside className="home-robot">
-            <RobotPreview image={robot?.image} />
-            <h2>{robot?.registered ? robot.name : "SO-101"}</h2>
-            <p className="muted">
-              {t(
-                robot?.registered
-                  ? "Saved robot · check connection in workspace"
-                  : "Standard follower · register to get started",
-              )}
-            </p>
-            <button
-              className="nerv-control action mt-4"
-              onClick={() => navigate("robots")}
-            >
-              {t(robot?.registered ? "View robot" : "Register SO-101")}
-            </button>
+          <aside
+            className="home-robot"
+            aria-label={t("Session scene")}
+            tabIndex={0}
+            onKeyDown={(event) => {
+              if (event.target !== event.currentTarget) return;
+              if (event.key === "ArrowLeft" || event.key === "ArrowRight") {
+                event.preventDefault();
+                choose(
+                  adjacentTarget(
+                    targets,
+                    draft,
+                    event.key === "ArrowLeft" ? -1 : 1,
+                  ),
+                );
+              }
+            }}
+          >
+            <div className="scene-switcher">
+              <button
+                className="nerv-control scene-arrow"
+                aria-label={t("Previous scene")}
+                disabled={targets.length < 2 || busy}
+                onClick={() => choose(adjacentTarget(targets, draft, -1))}
+              >
+                ‹
+              </button>
+              <span>
+                {selected
+                  ? `${selected.mode === "real" ? "Real" : "Sim"} · ${targets.indexOf(selected) + 1} / ${targets.length}`
+                  : t("No scene available")}
+              </span>
+              <button
+                className="nerv-control scene-arrow"
+                aria-label={t("Next scene")}
+                disabled={targets.length < 2 || busy}
+                onClick={() => choose(adjacentTarget(targets, draft, 1))}
+              >
+                ›
+              </button>
+            </div>
+            {selected ? (
+              <>
+                {selected.body === "arm-lerobot-so101" ? (
+                  <RobotPreview key={selected.id} image={selected.image} />
+                ) : (
+                  <div
+                    className="robot-preview-stage flex items-center justify-center text-5xl"
+                    aria-hidden="true"
+                  >
+                    ◇
+                  </div>
+                )}
+                <div aria-live="polite">
+                  <h2>{selected.robotLabel}</h2>
+                  <p className="muted mt-2">{t(selected.sceneLabel)}</p>
+                </div>
+                <label className="form-label mt-4 text-left">
+                  {t("Session scene")}
+                  <select
+                    className="form-field"
+                    value={selected.id}
+                    disabled={busy}
+                    onChange={(event) =>
+                      choose(
+                        targets.find(
+                          (target) => target.id === event.target.value,
+                        ),
+                      )
+                    }
+                  >
+                    {targets.map((target) => (
+                      <option key={target.id} value={target.id}>
+                        {target.mode === "real" ? "Real" : "Sim"} ·{" "}
+                        {target.robotLabel} · {t(target.sceneLabel)}
+                      </option>
+                    ))}
+                  </select>
+                </label>
+                <button
+                  className="nerv-control action mt-4"
+                  onClick={() =>
+                    navigate(
+                      selected.mode === "real" ? "robots" : "settings/explore",
+                    )
+                  }
+                >
+                  {t(
+                    selected.mode === "real"
+                      ? "View robot"
+                      : "Installed simulation scenes",
+                  )}
+                </button>
+              </>
+            ) : (
+              <div className="scene-empty">
+                <p>{t("Choose a robot and scene")}</p>
+                <p className="muted mt-2">
+                  {t(
+                    "Register a real robot or install a simulation component.",
+                  )}
+                </p>
+              </div>
+            )}
           </aside>
         </div>
         <div className="home-secondary">

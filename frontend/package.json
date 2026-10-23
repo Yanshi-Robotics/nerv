@@ -8,7 +8,8 @@
     "dev": "next dev -p 8100",
     "gen:locales": "node scripts/gen-locales.mjs",
     "start": "next start -p 8100",
-    "typecheck": "tsc --noEmit"
+    "typecheck": "tsc --noEmit",
+    "test": "node --experimental-strip-types --test tests/*.test.mjs"
   },
   "dependencies": {
     "next": "^16.2.12",

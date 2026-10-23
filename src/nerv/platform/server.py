@@ -587,6 +587,8 @@ def node_status(key: str) -> dict:
 @app.post("/api/sessions")
 def new_session(inp: NewSessionIn) -> dict:
     try:
+        from .session import require_scene
+        require_scene(inp.body, inp.world, inp.mode)
         if not inp.brain or inp.brain == "operator" or inp.brain not in {b["name"] for b in list_brains()}:
             raise ValueError("select a registered visual model")
         return nerv.new_session(inp.brain or _default_brain(), inp.body, inp.world, inp.sensors, inp.agent_tools, inp.mode, inp.world_configuration)
@@ -990,6 +992,8 @@ def operator_workspace(inp: NewSessionIn):
     if not inp.body:
         raise HTTPException(400, "Select a robot for the operator workspace")
     try:
+        from .session import require_scene
+        require_scene(inp.body, inp.world, inp.mode)
         for session in nerv.store.all():
             if session.brain == "operator" and session.body == inp.body and session.mode == inp.mode and session.world == inp.world and session.status == "active":
                 return session.summary()

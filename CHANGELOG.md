@@ -5,6 +5,19 @@ The 0.1.x entries below are the pre-release trail.
 
 ## [Unreleased]
 
+## [0.8.1] — 2026-10-24
+
+- Add home scene navigation with previous/next buttons and a shared card/form selection.
+  Create sessions with the displayed robot and Real or Sim scene; clear incompatible
+  control-scheme choices when switching scenes.
+- Place Home above New session in expanded and collapsed sidebar navigation.
+- Require a robot scene for new public HTTP and CLI sessions, preserving older chat
+  history and keyless device workspaces. Scene selection does not connect or arm hardware.
+- Show setup links for missing model credentials, real robot profiles and scenes.
+  Installed simulations remain usable without a real device profile.
+- Add selection and pre-side-effect validation regressions. Hardware support and
+  Runtime protocol remain unchanged; this is a development testing release.
+
 ## [0.8.0] — 2026-10-24
 
 - Add Home, My robot and unified Settings with static-package hash navigation.
