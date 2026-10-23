@@ -114,7 +114,7 @@ def test_component_catalog_comes_from_release_manifest(tmp_path, monkeypatch):
     i.write_json(tmp_path / 'release.json', {'schema': 1, 'version': 'test', 'products': {
         'host': {'label': 'Host'}, 'fixture-simulator': {'label': 'Fixture simulation', 'files': []}}})
     assert module_jobs.catalog()['modules'] == [{'id': 'fixture-simulator', 'label': 'Fixture simulation',
-        'installed': False, 'download_bytes': 0}]
+        'installed': False, 'needs_repair': False, 'download_bytes': 0}]
     with pytest.raises(ValueError, match='Unknown official module'):
         module_jobs.start('arbitrary-command')
     with pytest.raises(ValueError, match='Unknown official module'):

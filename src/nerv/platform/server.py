@@ -587,7 +587,7 @@ def node_status(key: str) -> dict:
 @app.post("/api/sessions")
 def new_session(inp: NewSessionIn) -> dict:
     try:
-        if (inp.brain or _default_brain()) not in {b["name"] for b in list_brains()}:
+        if not inp.brain or inp.brain == "operator" or inp.brain not in {b["name"] for b in list_brains()}:
             raise ValueError("select a registered visual model")
         return nerv.new_session(inp.brain or _default_brain(), inp.body, inp.world, inp.sensors, inp.agent_tools, inp.mode, inp.world_configuration)
     except (ValueError, KeyError, RuntimeError, TimeoutError, FileNotFoundError) as e:
@@ -915,9 +915,87 @@ def status() -> dict:
     return {"version": __version__, "nodes": len(nerv.launcher.nodes), "data_root": paths.DATA_ROOT}
 
 
+
+
+@app.put("/api/config")
+def update_config(payload: dict):
+    from .user_settings import save
+    try:
+        save(payload)
+        return api_config()
+    except (ValueError, OSError) as error:
+        raise HTTPException(400, str(error))
+
+
+@app.post("/api/config/reset")
+def reset_config():
+    from .user_settings import save
+    save({}, reset=True)
+    return api_config()
+
+
+@app.get("/api/robot")
+def robot_display():
+    from .robot_profile import read
+    return read()
+
+
+@app.put("/api/robot")
+def robot_display_save(payload: dict):
+    from .robot_profile import save_name
+    try:
+        return save_name(payload.get("name"))
+    except ValueError as error:
+        raise HTTPException(400, str(error))
+
+
+@app.get("/api/robot/image")
+def robot_image():
+    from .robot_profile import root
+    from fastapi.responses import FileResponse
+    path = root() / "portrait.webp"
+    if not path.exists():
+        raise HTTPException(404, "No custom robot image")
+    return FileResponse(path, media_type="image/webp")
+
+
+@app.put("/api/robot/image")
+async def robot_image_save(request: Request):
+    from .robot_profile import MAX_IMAGE_BYTES, save_image
+    content = bytearray()
+    async for chunk in request.stream():
+        content.extend(chunk)
+        if len(content) > MAX_IMAGE_BYTES:
+            raise HTTPException(413, "Image must be at most 5 MB")
+    try:
+        return save_image(bytes(content))
+    except Exception:
+        raise HTTPException(400, "Choose a valid JPEG, PNG or WebP image up to 20 megapixels")
+
+
+@app.delete("/api/robot/image")
+def robot_image_reset():
+    from .robot_profile import reset_image
+    return reset_image()
+
+
+@app.post("/api/operator/workspace")
+def operator_workspace(inp: NewSessionIn):
+    if not inp.body:
+        raise HTTPException(400, "Select a robot for the operator workspace")
+    try:
+        for session in nerv.store.all():
+            if session.brain == "operator" and session.body == inp.body and session.mode == inp.mode and session.world == inp.world and session.status == "active":
+                return session.summary()
+        return nerv.new_session("operator", inp.body, inp.world, [], [], inp.mode, inp.world_configuration, operator_workspace=True)
+    except (ValueError, RuntimeError, KeyError) as error:
+        raise HTTPException(400, str(error))
+
+
 @app.get("/api/config")
 def api_config() -> dict:
-    return {"params": config.runtime_params(), "trust_all": trust.trust_all_enabled()}
+    from .user_settings import describe
+    return {"params": describe(), "trust_all": trust.trust_all_enabled()}
 
 
 @app.get("/api/nerv")

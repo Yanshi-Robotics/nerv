@@ -133,3 +133,7 @@ all mutating task calls require an expiring allowlist, action budget and control
 Host restart disarms all robot sessions. Installers and optional modules use independent
 environments under the user home; no release or hardware support is implied by local tests.
 The 0.6 sections above describe prior development stages.
+
+## Detailed English commits (0.8)
+
+Commit subjects and bodies must be written in English. Use a concise subject and a detailed, bulleted body covering development changes, relevant design decisions, compatibility or migration effects, and validation actually performed. State unverified areas explicitly. Do not add bilingual translations or Co-Authored-By trailers. This commit convention does not grant automatic push or release permission.
