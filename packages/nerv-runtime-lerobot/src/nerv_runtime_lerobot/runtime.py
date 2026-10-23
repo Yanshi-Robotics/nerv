@@ -26,7 +26,7 @@ class LeRobotRuntime:
     guarded_dispatch = True
     def __init__(self, profile, binding):
         self.profile, self.binding = profile, binding
-        self.name, self.family, self.version = profile.id, profile.family, "0.8.0"
+        self.name, self.family, self.version = profile.id, profile.family, "0.8.1"
         self.settings = binding.configuration
         required = ("control_rate_hz", "max_runtime_s", "supervision_timeout_s", "cancel_timeout_s",
                     "watchdog_poll_s", "max_frame_age_s", "max_action_age_s", "policy_device", "jpeg_quality", "use_degrees")

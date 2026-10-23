@@ -66,7 +66,7 @@ def test_session_model_gate_has_no_side_effects(home, monkeypatch):
     monkeypatch.setattr(hub.launcher, 'ensure_runtime', launch)
     client = TestClient(server.app)
     for payload in ({}, {'brain': 'operator'}, {'brain': 'missing-model'}, {'brain': 'openai-sol'}):
-        assert client.post('/api/sessions', json=payload).status_code == 400
+        assert client.post('/api/sessions', json={'body': 'fixture-arm', 'world': 'fixture-scene', **payload}).status_code == 400
     assert not hub.store.all()
     launch.assert_not_called()
     with pytest.raises(ValueError, match='configured chat model'):
@@ -113,3 +113,39 @@ def test_discovery_receipt_survives_profile_reload(home, monkeypatch):
     assert receipt['at'] > 0
     assert receipt['connected'] is False
     assert robot_profile.read()['last_check'] == receipt
+
+
+@pytest.mark.parametrize('payload', [
+    {'body': None, 'world': None, 'mode': 'sim'},
+    {'body': ' ', 'world': 'scene', 'mode': 'sim'},
+    {'body': 'arm', 'world': None, 'mode': 'sim'},
+    {'body': 'arm', 'world': 'scene', 'mode': 'real'},
+    {'body': 'arm', 'world': None, 'mode': 'unknown'},
+])
+def test_public_scene_requirement_precedes_creation(home, monkeypatch, payload):
+    from fastapi.testclient import TestClient
+    from nerv.platform import server, cli
+    from unittest.mock import Mock
+    from types import SimpleNamespace
+    create = Mock(side_effect=AssertionError('no session creation allowed'))
+    monkeypatch.setattr(server.nerv, 'new_session', create)
+    monkeypatch.setattr(server, 'list_brains', lambda: [{'name': 'fixture-model'}])
+    response = TestClient(server.app).post('/api/sessions', json={'brain': 'fixture-model', **payload})
+    assert response.status_code == 400
+    with pytest.raises(ValueError):
+        cli._new_session(SimpleNamespace(new_session=create), SimpleNamespace(**payload))
+    create.assert_not_called()
+
+
+@pytest.mark.parametrize('mode,world', [('real', None), ('sim', 'fixture-scene')])
+def test_public_scene_selection_is_forwarded_unchanged(home, monkeypatch, mode, world):
+    from fastapi.testclient import TestClient
+    from nerv.platform import server
+    from unittest.mock import Mock
+    create = Mock(return_value={'id': 'offline-fixture'})
+    monkeypatch.setattr(server.nerv, 'new_session', create)
+    monkeypatch.setattr(server, 'list_brains', lambda: [{'name': 'fixture-model'}])
+    response = TestClient(server.app).post('/api/sessions', json={'brain': 'fixture-model', 'body': 'fixture-arm', 'mode': mode, 'world': world})
+    assert response.status_code == 200
+    assert create.call_args.args[:3] == ('fixture-model', 'fixture-arm', world)
+    assert create.call_args.args[5] == mode
