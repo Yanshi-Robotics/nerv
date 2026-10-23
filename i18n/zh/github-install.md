@@ -18,7 +18,7 @@ nerv
 也可不做全局安装，直接运行：
 
 ```bash
-npx --yes "https://github.com/Yanshi-Robotics/nerv/archive/COMMIT.tar.gz"
+npx --yes --package="https://github.com/Yanshi-Robotics/nerv/archive/COMMIT.tar.gz" nerv
 ```
 
 这里使用 GitHub 源码归档地址。npm 的 Git 克隆安装会同时初始化子模块，额外下载仿真与策略仓库。源码归档包含前端源码，安装时编译一次网页；打包好的 npm 候选文件已包含网页。两种方式仍需下载正常的软件依赖，并非离线安装包。
@@ -36,7 +36,7 @@ nerv runtime list
 
 打开“设备与策略接入”。检测到唯一一个已安装运行时时，界面自动填写适配器和 Python 路径。再填写自己的串口、机器人 ID、已有标定与相机配置，按[标准 SO-101 指南](standard-so101.md)导入策略。
 
-使用 npx 时，在源码归档地址后追加 `runtime install lerobot0.6.1` 即可。之后启动主程序会从同一个用户目录发现该环境。
+使用 npx 时，在命令末尾的 nerv 后追加 `runtime install lerobot0.6.1` 即可。之后启动主程序会从同一个用户目录发现该环境。
 
 ## 数据目录与更新
 
