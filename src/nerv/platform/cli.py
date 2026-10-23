@@ -92,6 +92,8 @@ def _review_trust(hub, s: dict) -> None:
 
 
 def _new_session(hub, a) -> str:
+    from .session import require_scene
+    require_scene(a.body, a.world, a.mode)
     from ..vlm.store import ModelRegistry
     selected = ModelRegistry().selection() or config.DEFAULT_BRAIN
     s = hub.new_session(a.brain or selected, a.body, a.world, a.sensors or [], None, a.mode)

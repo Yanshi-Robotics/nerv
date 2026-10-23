@@ -57,8 +57,8 @@ export default function AppSidebar({
         </button>
       </div>
       <div className="space-y-1 px-2">
-        {link("home/new", "New session", "+")}
         {link("home", "Home", "⌂")}
+        {link("home/new", "New session", "+")}
         {link("robots", "My robot", "◇")}
       </div>
       <nav

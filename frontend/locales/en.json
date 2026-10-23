@@ -868,6 +868,21 @@
     "Confirm supervised acceptance before opening this unverified runtime.": "Confirm supervised acceptance before opening this unverified runtime.",
     "Top camera": "Top camera",
     "Wrist camera": "Wrist camera",
-    "Last device check": "Last device check"
+    "Last device check": "Last device check",
+    "Real workspace": "Real workspace",
+    "Selected scene": "Selected scene",
+    "Setup checklist": "Setup checklist",
+    "Configure a chat model": "Configure a chat model",
+    "Save a model key before starting an Agent session.": "Save a model key before starting an Agent session.",
+    "Register your robot": "Register your robot",
+    "Save your real robot profile. Installed simulation scenes can be used without it.": "Save your real robot profile. Installed simulation scenes can be used without it.",
+    "Add a scene to get started": "Add a scene to get started",
+    "Register a real robot or install a simulation component.": "Register a real robot or install a simulation component.",
+    "Choose a scene and describe what you want the robot to do.": "Choose a scene and describe what you want the robot to do.",
+    "Choose a robot and scene": "Choose a robot and scene",
+    "Session scene": "Session scene",
+    "Previous scene": "Previous scene",
+    "Next scene": "Next scene",
+    "No scene available": "No scene available"
   }
 }

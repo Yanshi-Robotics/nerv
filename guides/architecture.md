@@ -105,3 +105,5 @@ Interaction, decision and execution are the primary terms. System 2 and System 1
 Home, My robot, Settings and conversation views use hash navigation in the static package. The application owns the active-task toolbar and visible-operator supervision; changing pages does not transfer control or cancel execution. Robot workspaces share the existing task service. Display names and portraits do not modify calibration identity.
 
 Four allowlisted conversation settings are persisted with a file lock and atomic replacement. Each Agent turn reads a snapshot: environment configuration, then web preferences, then defaults. A task keeps its scheme revision and authority. Runtime protocol remains version 3.
+
+Home scene navigation derives its entries from registered real devices and compatible installed simulation worlds. The card and creation form share one selection. Public HTTP and CLI creation reject a missing robot or simulation scene before credentials, node startup or session writes; real workspaces require a robot and no simulation world. Internal history readers retain support for older bodyless sessions.

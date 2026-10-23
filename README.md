@@ -4,7 +4,7 @@
 
 NERV connects conversation, task decisions and local robot execution. Choose a control scheme, give it a task, and see what the robot actually did. Use a trained ACT policy, let a visual model select and supervise allowed skills, or use visual decisions with bounded joint and gripper tools.
 
-**0.8.0 is a development release for testing.** Install it from GitHub Releases or use `nerv update` from an existing release installation. SO-101 physical acceptance and student onboarding trials are pending. NERV uses externally trained policies and existing calibration; it does not train or calibrate robots.
+**0.8.1 is a development release for testing.** Install it from GitHub Releases or use `nerv update` from an existing release installation. SO-101 physical acceptance and student onboarding trials are pending. NERV uses externally trained policies and existing calibration; it does not train or calibrate robots.
 
 ## Quick install & start
 
@@ -48,7 +48,9 @@ To update, exit the running server, then run `nerv update --check`, `nerv update
 
 ## First use
 
-The home page starts a conversation with a **configured chat model**. Choose a model in **Settings → Models and API keys** before creating a chat session. Opening the home page or Settings makes no model request. Registering a new key requires an explicit image test; the interface explains the request before sending it.
+Every new Agent session requires a **configured chat model and a robot scene**. Use the left and right arrows on the home card, or its scene selector, to choose a registered real robot or an installed simulation scene. The card and task input share the same selection; the displayed robot and scene are used when you start the session. Conversation-only creation is no longer available, including through the API and CLI. Existing conversation history remains readable. Opening the home page or Settings makes no model request. Registering a new key requires an explicit image test; the interface explains the request before sending it.
+
+Home appears above New session in the sidebar. If a model or real robot profile is missing, the home checklist links directly to the relevant setup page. An installed simulation can be used without registering real hardware. Choosing a scene never connects motors or grants motion authority.
 
 **My robot** manages one standard SO-101 follower. Give it a name and optional picture, then follow runtime installation, serial device selection, existing calibration and camera confirmation. Save the configuration and connect separately. Changing the display name does not change its LeRobot calibration ID. Existing saved profiles appear without repeating registration. A connection can enable motor torque; motion authorization remains a separate operator action.
 
@@ -56,7 +58,7 @@ Without a key, you can still install components, register the robot, view camera
 
 For simulation, open **Settings → Components and simulation**. Installed components appear first, followed by installation progress and available modules. Install **SO-101 Simulation** and open its scene explorer, or choose a simulation scene when creating a chat session. The three presets are pick and place, snack sorting and Tower of Hanoi; they include local controllers, not trained task policies.
 
-<div align="center"><img src="assets/readme/images/home-0.8.jpg" alt="NERV home with task input, configured-model requirement and SO-101 preview" width="960"></div>
+<div align="center"><img src="assets/readme/images/home-0.8.1.png" alt="NERV home with scene navigation, setup checklist and SO-101 preview" width="960"></div>
 
 ### Settings and saved preferences
 

@@ -889,7 +889,22 @@ export const LOCALES: Record<string, Locale> = {
       "Confirm supervised acceptance before opening this unverified runtime.": "Confirm supervised acceptance before opening this unverified runtime.",
       "Top camera": "Top camera",
       "Wrist camera": "Wrist camera",
-      "Last device check": "Last device check"
+      "Last device check": "Last device check",
+      "Real workspace": "Real workspace",
+      "Selected scene": "Selected scene",
+      "Setup checklist": "Setup checklist",
+      "Configure a chat model": "Configure a chat model",
+      "Save a model key before starting an Agent session.": "Save a model key before starting an Agent session.",
+      "Register your robot": "Register your robot",
+      "Save your real robot profile. Installed simulation scenes can be used without it.": "Save your real robot profile. Installed simulation scenes can be used without it.",
+      "Add a scene to get started": "Add a scene to get started",
+      "Register a real robot or install a simulation component.": "Register a real robot or install a simulation component.",
+      "Choose a scene and describe what you want the robot to do.": "Choose a scene and describe what you want the robot to do.",
+      "Choose a robot and scene": "Choose a robot and scene",
+      "Session scene": "Session scene",
+      "Previous scene": "Previous scene",
+      "Next scene": "Next scene",
+      "No scene available": "No scene available"
     }
   },
   "zh": {
@@ -1762,7 +1777,22 @@ export const LOCALES: Record<string, Locale> = {
       "Confirm supervised acceptance before opening this unverified runtime.": "打开未经实机验收的运行组件前，请确认由你监督测试。",
       "Top camera": "顶部相机",
       "Wrist camera": "腕部相机",
-      "Last device check": "上次设备检查"
+      "Last device check": "上次设备检查",
+      "Real workspace": "实机工作台",
+      "Selected scene": "当前场景",
+      "Setup checklist": "待办事项",
+      "Configure a chat model": "配置聊天模型",
+      "Save a model key before starting an Agent session.": "保存模型密钥后，即可创建 Agent 会话。",
+      "Register your robot": "注册机械臂",
+      "Save your real robot profile. Installed simulation scenes can be used without it.": "保存实机档案；也可以先使用已安装的仿真场景。",
+      "Add a scene to get started": "添加可用场景",
+      "Register a real robot or install a simulation component.": "注册实机，或安装仿真组件。",
+      "Choose a scene and describe what you want the robot to do.": "选择场景，描述希望机器人完成的任务。",
+      "Choose a robot and scene": "请选择机器人与场景",
+      "Session scene": "会话场景",
+      "Previous scene": "上一个场景",
+      "Next scene": "下一个场景",
+      "No scene available": "暂无可用场景"
     }
   }
 };

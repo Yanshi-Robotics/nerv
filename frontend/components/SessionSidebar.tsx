@@ -9,7 +9,7 @@ import RuntimeParamsBar from "./RuntimeParamsBar";
 import WorldProperties from "./WorldProperties";
 import ThemeToggle from "./ThemeToggle";
 
-const CONVERSATION_ONLY = ""; // world 选中值空串 = 只聊天，不起身体、不起世界
+const UNSELECTED_WORLD = ""; // A scene must be chosen before creation.
 
 // 左侧栏，ChatGPT 式可折叠：
 //   展开 ≈ 240px：NERV 字标 + 折叠键 / 新建会话 / 会话列表 / 底部：主题、语言、两个小链接、运行上限
@@ -44,7 +44,7 @@ export default function SessionSidebar({
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [mode, setMode] = useState<"sim" | "real">("sim");
-  const [world, setWorld] = useState(CONVERSATION_ONLY);
+  const [world, setWorld] = useState(UNSELECTED_WORLD);
   const [body, setBody] = useState("");
   const [brain, setBrain] = useState("");
   const [worldValues, setWorldValues] = useState<Record<string, unknown>>({});
@@ -58,7 +58,7 @@ export default function SessionSidebar({
   // 这个世界容得下哪些身体：注册表的兼容矩阵说了算——界面灰掉的，就是后端会拒绝的。
   function openForm() {
     setMode("sim");
-    setWorld(CONVERSATION_ONLY); setWorldValues({});
+    setWorld(UNSELECTED_WORLD); setWorldValues({});
     setBody("");
     setSensors([]);
     setBrain(brains.find(b => b.name === registry?.default_brain && b.available)?.name ?? brains.find(b => b.available)?.name ?? "operator");
@@ -68,7 +68,7 @@ export default function SessionSidebar({
   }
 
   async function doCreate() {
-    if (busy || !brains.find(b => b.name === brain)?.available) return;
+    if (busy || !body || (mode === "sim" && !world) || brain === "operator" || !brains.find(b => b.name === brain)?.available) return;
     setBusy(true);
     setError("");
     try {
@@ -158,7 +158,7 @@ export default function SessionSidebar({
           <label className="block">
             <div className="mb-1 text-neutral-400">{t("Robot")}</div>
             <select value={body} className={selectCls} onChange={event => { setBody(event.target.value); setWorld(""); setWorldValues({}); setSensors([]); }}>
-              <option value="">{t("Conversation only")}</option>
+              <option value="" disabled>{t("Choose a robot and scene")}</option>
               {bodies.map(robot => <option key={robot.name} value={robot.name}>{robot.label || robot.name}</option>)}
             </select>
           </label>
@@ -215,7 +215,7 @@ export default function SessionSidebar({
 
           {brain !== "operator" && !brains.find(b => b.name === brain)?.available && <p className="text-xs"><button className="nerv-control underline" onClick={() => onPanel("models")}>{t("Configure an API key in model settings first.")}</button></p>}
           <div className="flex gap-2 pt-1">
-            <button onClick={doCreate} disabled={busy || (brain !== "operator" && !brains.find(b => b.name === brain)?.available) || (!!world && !body)} className="nerv-control rounded-lg nerv-primary px-3 py-1.5 text-white">
+            <button onClick={doCreate} disabled={busy || brain === "operator" || !brains.find(b => b.name === brain)?.available || !body || (mode === "sim" && !world)} className="nerv-control rounded-lg nerv-primary px-3 py-1.5 text-white">
               {busy ? (world ? t("Launching nodes…") : t("Creating…")) : t("Create session")}
             </button>
             <button onClick={() => setCreating(false)} disabled={busy} className="nerv-control rounded-lg bg-neutral-700 px-3 py-1.5">
