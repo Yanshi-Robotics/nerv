@@ -30,9 +30,35 @@ def catalog():
     except (ValueError, OSError):
         manifest = {"products": {}}
     return {"modules": [{"id": key, "label": product["label"], "installed": key in installed,
+                         "needs_repair": _needs_repair(key, installed),
                          "download_bytes": sum(manifest.get("files", {}).get(n, {}).get("bytes", 0)
                                                for n in manifest["products"].get(key, {}).get("files", []))}
                         for key, product in manifest["products"].items() if key != "host"], "jobs": jobs}
+
+
+def _needs_repair(key, installed):
+    """Detect broken environment pointers/assets without launching hardware workers."""
+    from pathlib import Path
+    path = installation.home() / "runtimes" / f"{key}.json"
+    if not path.exists():
+        return False
+    if key not in installed:
+        return True
+    try:
+        record = json.loads(path.read_text(encoding="utf-8"))
+        executable = Path(record["python"])
+        stage = executable.parent if os.name == "nt" else executable.parent.parent
+        receipt = stage / "nerv-install.json"
+        if not receipt.is_file():
+            return True
+        verified = json.loads(receipt.read_text(encoding="utf-8"))
+        if verified.get("python") != record["python"] or verified.get("version") != record.get("version"):
+            return True
+        if record.get("registry_root") and not (Path(record["registry_root"]) / "worlds").is_dir():
+            return True
+        return False
+    except (OSError, ValueError, KeyError):
+        return True
 
 
 def start(module):
