@@ -1,0 +1,23 @@
+{
+  "name": "@yanshi-robotics/nerv",
+  "version": "0.6.3",
+  "private": true,
+  "description": "GitHub-distributed launcher for the NERV robot platform",
+  "license": "MIT",
+  "type": "module",
+  "engines": {"node": ">=22"},
+  "bin": {"nerv": "launcher/nerv.mjs"},
+  "scripts": {
+    "prepare": "node launcher/prepare.mjs",
+    "prepack": "node launcher/prepare.mjs --force",
+    "postinstall": "node launcher/prepare.mjs",
+    "test": "node --test launcher/*.test.mjs"
+  },
+  "files": [
+    "launcher/nerv.mjs", "launcher/prepare.mjs", "launcher/products.json",
+    "src/nerv/**/*.py", "src/nerv/vlm/catalog.json", "pyproject.toml", "setup.py", "MANIFEST.in",
+    "frontend/out", "packages/nerv-runtime-sdk/pyproject.toml", "packages/nerv-runtime-sdk/src/**/*.py",
+    "packages/nerv-runtime-lerobot/pyproject.toml", "packages/nerv-runtime-lerobot/src/**/*.py",
+    "packages/nerv-runtime-lerobot/src/nerv_runtime_lerobot/product.json", "guides", "i18n/zh/standard-so101.md"
+  ]
+}

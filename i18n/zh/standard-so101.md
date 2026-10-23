@@ -8,6 +8,8 @@ NERV 0.6.3 是开发候选版，真机验收尚未完成。本版接入一台使
 
 ## 安装候选版
 
+也可使用 [GitHub 启动器](github-install.md)，安装后执行 `nerv`，或直接通过 npx 启动。启动器管理两个 Python 环境并发现已安装的设备运行时。下面的 wheel 方式作为无需 Node.js 的安装选项保留。
+
 采用 Python 3.12，主程序与设备运行时分别安装。三个 wheel 文件必须来自同一次构建；维护者通过 `python scripts/build_release.py` 在 `temp/release/wheels` 生成候选包，该命令不会发布文件。将这个目录复制到学生电脑，命名为 wheels。
 
 Linux 和 macOS：

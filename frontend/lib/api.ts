@@ -594,3 +594,9 @@ export async function manageRuntime(python: string, provider: string, operation:
   if (!response.ok) throw new ApiError(await detailOf(response), response.status);
   return response.json();
 }
+
+export async function runtimeInstallations(): Promise<Array<{provider: string; python: string; label: string}>> {
+  const response = await fetch(`${BASE}/api/runtime/installations`);
+  if (!response.ok) throw new Error("Cannot read installed runtimes");
+  return response.json();
+}
