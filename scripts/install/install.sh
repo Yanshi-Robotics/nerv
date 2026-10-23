@@ -28,7 +28,7 @@ else
   curl -fL "$release_base/launch.py" -o "$NERV_HOME/bootstrap/launch.py"
   manifest="$NERV_HOME/bootstrap/release.json"
 fi
-UV_PYTHON_INSTALL_DIR="$NERV_HOME/python" UV_CREDENTIALS_DIR="$NERV_HOME/.cache/uv-credentials" UV_CACHE_DIR="$NERV_HOME/.cache/uv" "$NERV_HOME/bin/uv" run --no-project --python 3.12 "$NERV_HOME/bootstrap/install.py" --manifest "$manifest"
+UV_PYTHON_INSTALL_DIR="$NERV_HOME/python" UV_CREDENTIALS_DIR="$NERV_HOME/.cache/uv-credentials" UV_CACHE_DIR="$NERV_HOME/.cache/uv" "$NERV_HOME/bin/uv" run --managed-python --no-project --python 3.12 "$NERV_HOME/bootstrap/install.py" --manifest "$manifest"
 cat > "$NERV_HOME/bin/nerv" <<'EOF'
 #!/bin/sh
 NERV_HOME=${NERV_HOME:-"$HOME/.nerv"}
@@ -36,7 +36,7 @@ export NERV_HOME
 export UV_PYTHON_INSTALL_DIR="$NERV_HOME/python"
 export UV_CACHE_DIR="$NERV_HOME/.cache/uv"
 export UV_CREDENTIALS_DIR="$NERV_HOME/.cache/uv-credentials"
-exec "$NERV_HOME/bin/uv" run --offline --no-project --python 3.12 "$NERV_HOME/bootstrap/launch.py" "$@"
+exec "$NERV_HOME/bin/uv" run --offline --managed-python --no-project --python 3.12 "$NERV_HOME/bootstrap/launch.py" "$@"
 EOF
 chmod +x "$NERV_HOME/bin/nerv"
 case "${SHELL:-}" in

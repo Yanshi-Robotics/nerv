@@ -5,6 +5,20 @@ The 0.1.x entries below are the pre-release trail.
 
 ## [Unreleased]
 
+### 0.7.1 candidate — installation recovery and guided device setup
+
+- Browse local calibration and checkpoint folders from the operator interface.
+- Enumerate Windows/macOS camera metadata and restore unique camera/serial identities;
+  return missing or ambiguous devices to the affected setup step.
+- Stage host and installed official modules together; restore configuration and environment
+  pointers on failure or rollback, preserving newer configuration copies and user journals.
+- Check native ACT processing with explicit synthetic inputs; load complete checkpoints
+  without downloading torchvision initialization weights.
+- Bundle the pure Python Feetech wheel and verify native imports before activating the
+  device module. Use managed Python for student installations.
+- Physical trials, native cross-platform hardware acceptance and public release remain
+  separate gates.
+
 ### 0.7.0 candidate — three-layer control and student distribution
 
 - Introduce immutable control schemes for fixed ACT, visual policy groups and visual

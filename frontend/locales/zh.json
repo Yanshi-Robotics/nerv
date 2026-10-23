@@ -743,6 +743,17 @@
     "Files changed; check again": "文件已更改，请重新检查",
     "Load check failed": "加载检查失败",
     "Not checked": "尚未检查",
-    "Testing sends one billable request with a built-in image, never a camera frame. Opening settings does not call the provider.": "测试会使用内置图片发送一次付费请求，不会上传摄像头画面。打开设置不会请求供应商。"
+    "Testing sends one billable request with a built-in image, never a camera frame. Opening settings does not call the provider.": "测试会使用内置图片发送一次付费请求，不会上传摄像头画面。打开设置不会请求供应商。",
+    "Browse folders": "浏览文件夹",
+    "Choose a folder": "选择文件夹",
+    "Folders are on the computer running NERV. Model files stay in place.": "这里显示运行 NERV 的电脑上的文件夹，模型文件保留在原位置。",
+    "Folder path": "文件夹路径",
+    "Open": "打开",
+    "Parent folder": "上级文件夹",
+    "More folders": "更多文件夹",
+    "Use this folder": "选择此文件夹",
+    "Camera enumeration failed. Check camera permissions or enter the device index manually.": "未能列出相机，请检查相机权限，或手动填写设备编号。",
+    "Native inference check passed": "原生推理检查通过",
+    "Native inference passed with synthetic inputs. Check real observations without motion after connecting.": "已用合成输入完成原生推理检查。连接后请在未启用动作时检查真实观测。"
   }
 }

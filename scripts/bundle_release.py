@@ -38,9 +38,11 @@ def bundle():
             descriptor["assets_root"] = "assets"
             z.writestr("worlds/" + path.parent.name + "/world.yaml", json.dumps(descriptor))
     sdk, host, device = (names[k] for k in ("nerv_runtime_sdk", "nerv", "nerv_runtime_lerobot"))
+    motor_driver = next(OUT.glob("feetech_servo_sdk-1.0.0-*.whl")).name
+    names["feetech_servo_sdk"] = motor_driver
     products = {
         "host": {"label": "NERV", "packages": [sdk, host], "extras": {host: "[platform]"}, "files": [sdk, host]},
-        "lerobot0.6.1": {"label": "SO-101 / LeRobot", "provider": "lerobot0.6.1", "packages": [sdk, device], "files": [sdk, device]},
+        "lerobot0.6.1": {"label": "SO-101 / LeRobot", "provider": "lerobot0.6.1", "packages": [sdk, device], "files": [sdk, device, motor_driver], "verify_module": "nerv_runtime_lerobot.install_check"},
         "so101-sim": {"label": "SO-101 Simulation", "provider": "so101-sim", "packages": [sdk, host], "extras": {host: "[sim]"}, "archive": archive.name, "files": [sdk, host, archive.name]},
     }
     # Re-resolve only when explicitly requested; normal rebuilds preserve the
@@ -66,7 +68,8 @@ def bundle():
             normalized = package.replace("_", "-")
             digest = hashlib.sha256((OUT / filename).read_bytes()).hexdigest()
             pattern = rf"(?m)^{re.escape(normalized)}==[^\n]+ \\\n(?:[ \t]+--hash[^\n]+(?:\n|$))+"
-            replacement = f"{normalized}=={__version__} \\\n    --hash=sha256:{digest}\n"
+            wheel_version = filename.split("-", 2)[1]
+            replacement = f"{normalized}=={wheel_version} \\\n    --hash=sha256:{digest}\n"
             lock_text = re.sub(pattern, lambda _: replacement, lock_text)
         lock_path.write_text(lock_text)
         products[product]["lock"] = f"{lockname}.lock"
@@ -80,7 +83,7 @@ def bundle():
     published.update({"bootstrap.py", "launch.py", "install.sh", "install.ps1"})
     files = {p.name: {"sha256": hashlib.sha256(p.read_bytes()).hexdigest(), "bytes": p.stat().st_size}
              for p in (OUT / name for name in sorted(published))}
-    value = {"schema": 1, "version": __version__, "protocol_major": 3,
+    value = {"schema": 1, "version": __version__, "protocol_major": 3, "config_schema": 1,
              "base_url": f"https://github.com/Yanshi-Robotics/nerv/releases/download/v{__version__}", "products": products, "files": files}
     (OUT / "release.json").write_text(json.dumps(value, indent=2))
     with zipfile.ZipFile(OUT / f"nerv-{__version__}-bundle.zip", "w", zipfile.ZIP_DEFLATED) as bundle_zip:

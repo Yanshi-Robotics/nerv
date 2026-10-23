@@ -8,6 +8,21 @@ CHANNELS = tuple(f"{name}.pos" for name in (*JOINTS, "gripper"))
 CAMERAS = ("top", "wrist")
 WIDTH, HEIGHT, FPS = 640, 480, 30
 UNITS = {"arm_joints": "degrees", "gripper": "percent (RANGE_0_100)"}
+# Fixed motor IDs in the upstream LeRobot 0.6.1 standard SO-101 definition.
+MOTOR_IDS = dict(zip((*JOINTS, "gripper"), range(1, 7)))
+
+
+def validate_calibration(value):
+    if not isinstance(value, dict) or set(value) != set(MOTOR_IDS):
+        raise ValueError("Calibration must contain the six standard SO-101 motors; calibrate with LeRobot")
+    fields = {"id", "drive_mode", "homing_offset", "range_min", "range_max"}
+    for name, motor_id in MOTOR_IDS.items():
+        motor = value[name]
+        if not isinstance(motor, dict) or set(motor) != fields or any(type(v) is not int for v in motor.values()):
+            raise ValueError(f"{name}: invalid LeRobot motor calibration fields")
+        if motor["id"] != motor_id or motor["drive_mode"] not in (0, 1) or motor["range_min"] >= motor["range_max"]:
+            raise ValueError(f"{name}: calibration does not match the standard SO-101 motor definition")
+    return value
 
 
 def validate_cameras(cameras):

@@ -2,7 +2,7 @@
 
 [中文](../i18n/zh/github-install.md) · [NERV](../README.md)
 
-0.7.0 is an unpublished development candidate. A release bundle contains the host, Runtime SDK and LeRobot adapter wheels, dependency locks, the optional SO-101 simulation archive, installers and `release.json`. Publishing these assets is a separate maintainer action after acceptance.
+0.7.1 is an unpublished development candidate. A release bundle contains the host, Runtime SDK and LeRobot adapter wheels, dependency locks, the optional SO-101 simulation archive, installers and `release.json`. Publishing these assets is a separate maintainer action after acceptance.
 
 ## Install a supplied candidate
 
@@ -84,9 +84,9 @@ nerv update
 nerv rollback
 ```
 
-The check downloads release metadata without installing it. Before update/rollback, stop the task, disconnect devices and exit the server. The host lock rejects updates while NERV is running. Update snapshots configuration, installs a new host environment, checks dependencies and the CLI entry, then switches `active.json`. Failed installation retains the old active version. Rollback restores the previous host and its release manifest; it does not erase newer user journals or policy files.
+The check downloads release metadata without installing it. Before update/rollback, stop the task, disconnect devices and exit the server. The host lock rejects updates while NERV is running. Update snapshots versioned configuration, installs the host and every installed official module into new environments, checks dependencies and module imports, then activates the complete set. A failure restores the previous pointers and configuration. Rollback restores that set and its configuration; credentials and event histories stay current. Configuration created after the update is preserved in the reported backup directory, including newer policy references. Original checkpoints remain untouched.
 
-Runtime components are independently installed. After a protocol upgrade, reinstall the corresponding components from the new release before using them. Incompatible workers are refused. This release does not provide hot update, arbitrary configuration downgrade migrations or an automatic cross-version rollback of independently updated components.
+Updates coordinate installed official Runtime modules and rewrite their exact interpreter references in device profiles. Unknown modules or configuration formats block the update before activation. An interrupted update blocks startup: run `nerv rollback` to recover. This release has configuration schema 1; it refuses unknown schemas instead of attempting an unverified migration. Updates require the server to be stopped.
 
 On POSIX, credentials use private file permissions; on Windows, the key store uses the operating system credential service. Updates do not move secrets into an installation environment. Backups containing private state stay under the user directory.
 
@@ -116,7 +116,7 @@ When a managed release installation exists, this launcher delegates to its activ
 
 ## Platform limits
 
-Linux is the primary software and physical acceptance target. Windows native, WSL2, Apple Silicon macOS and Intel macOS remain experimental until their dependencies and devices have been tested separately. WSL2 USB passthrough and cameras require host setup. Linux persistent camera paths are discovered automatically; other systems currently require a camera index entered in the preview step. Enumerating a serial device does not establish that its calibration or mechanics are correct.
+Linux is the primary software and physical acceptance target. Windows native, WSL2, Apple Silicon macOS and Intel macOS remain experimental until their dependencies and devices have been tested separately. WSL2 USB passthrough and cameras require host setup. Linux persistent camera paths, Windows DirectShow devices and macOS AVFoundation devices are enumerated without opening cameras. Where available, device identities are saved and resolved again before connection. Devices without a unique identity require visual confirmation; manual indices remain available if enumeration fails. Enumerating a serial device does not establish that its calibration or mechanics are correct.
 
 The bootstrap uses uv's [unmanaged installation option](https://docs.astral.sh/uv/reference/installer/)
 so uv itself does not modify global shell configuration. NERV registers its own command.

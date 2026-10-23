@@ -1,6 +1,6 @@
 {
   "name": "@yanshi-robotics/nerv",
-  "version": "0.7.0",
+  "version": "0.7.1",
   "private": true,
   "description": "GitHub-distributed launcher for the NERV robot platform",
   "license": "MIT",

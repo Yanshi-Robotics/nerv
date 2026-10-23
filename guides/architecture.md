@@ -2,7 +2,7 @@
 
 [中文](../i18n/zh/architecture.md) · [NERV](../README.md)
 
-NERV 0.7.0 separates conversation, task supervision and local execution. System 1 is the execution layer inside a runtime; it is not an additional Python environment.
+NERV 0.7.1 separates conversation, task supervision and local execution. System 1 is the execution layer inside a runtime; it is not an additional Python environment.
 
 The standard SO-101 worker owns one LeRobot device instance. ACT inference and bounded direct joint control both produce candidate targets for its shared scheduler. The host does not import LeRobot or load policy tensors.
 

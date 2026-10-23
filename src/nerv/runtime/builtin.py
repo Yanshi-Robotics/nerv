@@ -9,7 +9,7 @@ from nerv_runtime_sdk.contracts import RuntimeManifest
 
 class BuiltinProvider:
     def describe(self):
-        return RuntimeManifest(id="builtin", version="0.7.0", features=["sim", "named_sensors"])
+        return RuntimeManifest(id="builtin", version="0.7.1", features=["sim", "named_sensors"])
 
     def create(self, profile, binding):
         if binding.mode != "sim":
@@ -21,7 +21,7 @@ class BuiltinRuntime:
     guarded_dispatch = True
     def __init__(self, profile, binding):
         self.profile, self.binding = profile, binding
-        self.name, self.family, self.version = profile.id, profile.family, "0.7.0"
+        self.name, self.family, self.version = profile.id, profile.family, "0.7.1"
         self._impl = None
         self._sensor_bus = None
         self._sensor_lock = threading.Lock()

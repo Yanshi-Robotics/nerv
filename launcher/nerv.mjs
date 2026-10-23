@@ -45,7 +45,8 @@ export function main(args = process.argv.slice(2)) {
   const active = join(dataHome, "active.json");
   if (existsSync(active)) {
     const installed = JSON.parse(readFileSync(active, "utf8"));
-    run(installed.python, ["-m", "nerv.platform.cli", ...args], {env});
+    const sharedLauncher = join(dataHome, "bootstrap", "launch.py");
+    run(installed.python, existsSync(sharedLauncher) ? [sharedLauncher, ...args] : ["-m", "nerv.platform.cli", ...args], {env});
     return;
   }
   if (args[0] === "runtime" && args[1] === "list") {

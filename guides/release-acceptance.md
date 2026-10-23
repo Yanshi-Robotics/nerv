@@ -1,6 +1,6 @@
 # Standard SO-101 release acceptance
 
-The 0.7.0 package is a development candidate. This checklist defines release evidence; it
+The 0.7.1 package is a development candidate. This checklist defines release evidence; it
 does not assert that physical acceptance has already passed. Run it with the installed
 wheels outside the source checkout and retain the exact versions and artifact fingerprints.
 

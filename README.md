@@ -4,7 +4,7 @@
 
 NERV connects conversation, task decisions and local robot execution. Choose a control scheme, give it a task, and see what the robot actually did. Use a trained ACT policy, let a visual model select and supervise allowed skills, or use visual decisions with bounded joint and gripper tools.
 
-**0.7.0 is a local development candidate.** The installer and optional modules are implemented; this candidate has not been published to GitHub Releases. SO-101 physical acceptance and student onboarding trials are pending. NERV uses externally trained policies and existing calibration; it does not train or calibrate robots.
+**0.7.1 is a local development candidate.** The installer and optional modules are implemented; this candidate has not been published to GitHub Releases. SO-101 physical acceptance and student onboarding trials are pending. NERV uses externally trained policies and existing calibration; it does not train or calibrate robots.
 
 ## Quick install & start
 
@@ -134,7 +134,7 @@ nerv update
 nerv rollback
 ```
 
-Stop tasks, disconnect devices and exit NERV before updating or rolling back. New host versions are installed and checked in separate environments before activation. User data and the previous host environment are retained. Components have separate environments; reinstall them from the component page when an SDK protocol upgrade requires it. The [installation guide](guides/github-install.md) explains this boundary and recovery.
+Stop tasks, disconnect devices and exit NERV before updating or rolling back. The new host and all installed official modules are staged and checked before activation. Failed updates restore the previous configuration and environment pointers. Rollback restores the coordinated set, preserves newer configuration copies, and keeps credentials and event histories current. The [installation guide](guides/github-install.md) explains this boundary and recovery.
 
 | Platform or route | Status |
 |---|---|

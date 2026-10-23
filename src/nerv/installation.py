@@ -1,6 +1,6 @@
 # /// script
 # requires-python = ">=3.12"
-# dependencies = ["filelock==4.2.4"]
+# dependencies = ["filelock==4.2.4", "pyyaml>=6"]
 # ///
 """Release installation shared by the CLI, operator UI and bootstrap script.
 
@@ -25,6 +25,11 @@ RELEASE_BASE = "https://github.com/Yanshi-Robotics/nerv/releases/latest/download
 PYTHON_VERSION = "3.12"
 NETWORK_TIMEOUT_S = 60
 POLL_S = 0.2
+CONFIG_SCHEMA = 1  # Current on-disk configuration format; unknown formats fail before activation.
+# Credentials and append-only histories survive a downgrade. These versioned
+# settings are restored from a snapshot; newer copies remain in its recovery archive.
+RESTORE_PATHS = ("active.json", "previous.json", "release.json", "runtimes", "bodies",
+                 "devices", "schemes", "artifacts", "vlm.json", "config-schema.json")
 
 
 def home():
@@ -115,14 +120,15 @@ def unpack(archive, destination):
         bundle.extractall(destination)
 
 
-def install(product="host", *, manifest=None, cancelled=lambda: False, progress=lambda **_: None):
+def install(product="host", *, manifest=None, cancelled=lambda: False, progress=lambda **_: None,
+            activate=True, _lock=None):
     value, source = read_manifest(manifest)
     if product not in value["products"]:
         raise ValueError("Unknown official installation module")
     root = home()
     root.mkdir(parents=True, exist_ok=True)
     from filelock import FileLock, Timeout
-    lock = FileLock(root / "installation-process.lock")
+    lock = _lock or FileLock(root / "installation-process.lock")
     try:
         lock.acquire(timeout=0)
     except Timeout:
@@ -164,11 +170,13 @@ def install(product="host", *, manifest=None, cancelled=lambda: False, progress=
         if cancelled():
             raise InterruptedError("Installation cancelled")
         env = {k: v for k, v in os.environ.items() if k.upper() in {
-            "PATH", "HOME", "USERPROFILE", "SYSTEMROOT", "WINDIR", "TEMP", "TMP", "LANG", "SSL_CERT_FILE", "HTTPS_PROXY", "HTTP_PROXY"}}
-        env.update(NERV_HOME=str(root), PYTHONUTF8="1", UV_CACHE_DIR=str(root / ".cache/uv"), UV_CREDENTIALS_DIR=str(root / ".cache/uv-credentials"), UV_PYTHON_INSTALL_DIR=str(root / "python"))
+            "PATH", "HOME", "USERPROFILE", "SYSTEMROOT", "WINDIR", "TEMP", "TMP", "LANG", "SSL_CERT_FILE", "HTTPS_PROXY", "HTTP_PROXY",
+            "UV_OFFLINE", "UV_NO_INDEX"}}
+        env.update(UV_HTTP_CONNECT_TIMEOUT=str(NETWORK_TIMEOUT_S), UV_HTTP_TIMEOUT=str(NETWORK_TIMEOUT_S),
+                   NERV_HOME=str(root), PYTHONUTF8="1", UV_CACHE_DIR=str(root / ".cache/uv"), UV_CREDENTIALS_DIR=str(root / ".cache/uv-credentials"), UV_PYTHON_INSTALL_DIR=str(root / "python"))
         uv = uv_executable()
         progress(phase="environment")
-        run([uv, "venv", "--python", PYTHON_VERSION, str(stage)], env, cancelled, progress)
+        run([uv, "venv", "--managed-python", "--python", PYTHON_VERSION, str(stage)], env, cancelled, progress)
         python = str(python_at(stage))
         progress(phase="dependencies")
         requirements = [str(assets[n]) + spec.get("extras", {}).get(n, "") for n in spec["packages"]]
@@ -200,10 +208,14 @@ def install(product="host", *, manifest=None, cancelled=lambda: False, progress=
             progress(phase="verification")
             module = "nerv.platform.cli" if product == "host" else "nerv_runtime_sdk.worker"
             run([python, "-m", module, "--version" if product == "host" else "discover"], env, cancelled, progress)
+            if spec.get("verify_module"):
+                run([python, "-m", spec["verify_module"]], env, cancelled, progress)
         if cancelled():
             raise InterruptedError("Installation cancelled")
         write_json(stage / "release.json", value)
         write_json(stage / "nerv-install.json", record)
+        if not activate:
+            return record
         if product == "host":
             active = root / "active.json"
             if active.exists():
@@ -211,6 +223,9 @@ def install(product="host", *, manifest=None, cancelled=lambda: False, progress=
             write_json(active, record)
             write_json(root / "release.json", value)
         else:
+            old = root / "runtimes" / f"{product}.json"
+            if old.exists():
+                _rebind({product: json.loads(old.read_text(encoding="utf-8"))}, {product: record})
             write_json(root / "runtimes" / f"{product}.json", record)
         progress(phase="complete", state="complete")
         return record
@@ -219,52 +234,148 @@ def install(product="host", *, manifest=None, cancelled=lambda: False, progress=
         lock.release()
 
 
-def update(check=False):
+def _snapshot():
+    root = home()
+    destination = root / "backups" / (time.strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:8])
+    destination.mkdir(parents=True, mode=0o700)
+    for name in RESTORE_PATHS:
+        source = root / name
+        if source.is_dir():
+            shutil.copytree(source, destination / name)
+        elif source.is_file():
+            shutil.copy2(source, destination / name)
+    write_json(destination / "snapshot.json", {"paths": list(RESTORE_PATHS), "schema": CONFIG_SCHEMA})
+    return destination
+
+
+def _restore(snapshot):
+    root = home()
+    snapshot = Path(snapshot).resolve(strict=True)
+    if not snapshot.is_relative_to((root / "backups").resolve()):
+        raise ValueError("Recovery snapshot must belong to this NERV installation")
+    metadata = json.loads((snapshot / "snapshot.json").read_text(encoding="utf-8"))
+    if metadata.get("paths") != list(RESTORE_PATHS):
+        raise ValueError("Unsupported recovery snapshot")
+    # Preserve configurations created since the update, including new policy
+    # references. Never overwrite a student's later work without a recoverable copy.
+    saved = snapshot / ("replaced-" + uuid.uuid4().hex[:8])
+    saved.mkdir(mode=0o700)
+    for name in RESTORE_PATHS:
+        target, source = root / name, snapshot / name
+        if target.exists():
+            shutil.move(str(target), str(saved / name))
+        if source.is_dir():
+            shutil.copytree(source, target)
+        elif source.is_file():
+            shutil.copy2(source, target)
+    return str(saved)
+
+
+def _verify_record(record):
+    python = Path(record["python"])
+    if not python.is_file():
+        raise ValueError("Previous installation is unavailable")
+    module = "nerv.platform.cli" if record.get("product", "host") == "host" else "nerv_runtime_sdk.worker"
+    subprocess.run([str(python), "-m", module, "--version" if module.endswith("cli") else "discover"], check=True)
+
+
+def _rebind(previous, records):
+    # Only exact executable references change; no string replacement inside paths
+    # or user-authored text. No robot or camera is opened during this migration.
+    replacements = {old["python"]: records[product]["python"] for product, old in previous.items()
+                    if product in records}
+    import yaml
+    for path in (home() / "bodies").glob("*/body.yaml"):
+        value = yaml.safe_load(path.read_text(encoding="utf-8"))
+        changed = False
+        for binding in value.get("buses", {}).values():
+            if binding.get("python") in replacements:
+                binding["python"] = replacements[binding["python"]]
+                changed = True
+        if changed:
+            write_json(path, value)
+
+
+def update(check=False, *, manifest=None):
     from filelock import FileLock
     root = home()
     root.mkdir(parents=True, exist_ok=True)
     if check:
-        return _update(check=True)
+        return _update(check=True, manifest=manifest)
     with FileLock(str(root / "host-running.lock"), timeout=0):
-        return _update()
+        with FileLock(str(root / "installation-process.lock"), timeout=0) as lock:
+            return _update(manifest=manifest, lock=lock)
 
 
-def _update(check=False):
+def _update(check=False, *, manifest=None, lock=None):
     root = home()
-    cache = root / ".cache/releases"
-    cache.mkdir(parents=True, exist_ok=True)
-    target = cache / "latest.json"
-    fetch(RELEASE_BASE + "/release.json", target)
+    if (root / "update-pending.json").exists():
+        raise ValueError("An interrupted update needs recovery. Exit NERV and run nerv rollback.")
+    if manifest is None:
+        cache = root / ".cache/releases"
+        cache.mkdir(parents=True, exist_ok=True)
+        target = cache / ("latest-" + uuid.uuid4().hex + ".json")
+        fetch(RELEASE_BASE + "/release.json", target)
+    else:
+        target = Path(manifest)
     value, _ = read_manifest(target)
     current = json.loads((root / "active.json").read_text()) if (root / "active.json").exists() else {}
     if check:
         return {"available_version": value["version"], "installed_version": current.get("version"),
                 "update_available": value["version"] != current.get("version")}
-    snapshot = root / "backups" / (time.strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:8])
-    snapshot.mkdir(parents=True, mode=0o700)
-    for name in ("devices", "schemes", "bodies", "vlm.json", "credentials.json", "release.json"):
-        source = root / name
-        if source.is_dir():
-            shutil.copytree(source, snapshot / name)
-        elif source.exists():
-            shutil.copy2(source, snapshot / name)
-    # Runtime environments stay isolated. Incompatible protocol versions fail
-    # closed and can be upgraded explicitly from the component page.
-    return install(manifest=target)
+    schema_file = root / "config-schema.json"
+    schema = json.loads(schema_file.read_text()).get("schema") if schema_file.exists() else CONFIG_SCHEMA
+    if schema != CONFIG_SCHEMA or value.get("config_schema", CONFIG_SCHEMA) != CONFIG_SCHEMA:
+        raise ValueError("This configuration format needs a supported migration before updating")
+    previous = {p.stem: json.loads(p.read_text(encoding="utf-8")) for p in (root / "runtimes").glob("*.json")}
+    missing = set(previous) - set(value["products"])
+    if missing:
+        raise ValueError("Release does not include installed components: " + ", ".join(sorted(missing)))
+    snapshot = _snapshot()
+    pending = root / "update-pending.json"
+    write_json(pending, {"snapshot": str(snapshot), "phase": "staging"})
+    try:
+        records = {product: install(product, manifest=target, activate=False, _lock=lock)
+                   for product in [*sorted(previous), "host"]}
+        write_json(pending, {"snapshot": str(snapshot), "phase": "activating"})
+        _rebind(previous, records)
+        for product, record in records.items():
+            if product != "host":
+                write_json(root / "runtimes" / f"{product}.json", record)
+        write_json(root / "config-schema.json", {"schema": CONFIG_SCHEMA})
+        if current:
+            write_json(root / "previous.json", {**current, "snapshot": str(snapshot)})
+        write_json(root / "release.json", value)
+        write_json(root / "active.json", records["host"])
+        pending.unlink()
+        return {**records["host"], "updated_components": sorted(previous), "snapshot": str(snapshot)}
+    except BaseException:
+        _restore(snapshot)
+        pending.unlink(missing_ok=True)
+        raise
 
 
 def rollback():
     from filelock import FileLock
     root = home()
-    with FileLock(str(root / "host-running.lock"), timeout=0):
-        previous = root / "previous.json"
-        record = json.loads(previous.read_text(encoding="utf-8"))
+    with FileLock(str(root / "host-running.lock"), timeout=0), FileLock(str(root / "installation-process.lock"), timeout=0):
+        pending = root / "update-pending.json"
+        if pending.exists():
+            recovery = json.loads(pending.read_text(encoding="utf-8"))
+            _restore(recovery["snapshot"])
+            pending.unlink()
+            return {"recovered": True}
+        record = json.loads((root / "previous.json").read_text(encoding="utf-8"))
+        _verify_record(record)
+        if record.get("snapshot"):
+            snapshot = Path(record["snapshot"])
+            for path in (snapshot / "runtimes").glob("*.json"):
+                _verify_record(json.loads(path.read_text(encoding="utf-8")))
+            saved = _restore(snapshot)
+            return {**record, "preserved_newer_configuration": saved}
+        # Initial bootstrap installations from older candidates have no snapshot.
         python = Path(record["python"])
-        if not python.is_file():
-            raise ValueError("Previous installation is unavailable")
-        manifest = python.parent.parent / "release.json"
-        value, _ = read_manifest(manifest)
-        subprocess.run([str(python), "-m", "nerv.platform.cli", "--version"], check=True)
+        value, _ = read_manifest(python.parent.parent / "release.json")
         write_json(root / "release.json", value)
         write_json(root / "active.json", record)
         return record
@@ -273,10 +384,25 @@ def rollback():
 def main():
     import argparse
     parser = argparse.ArgumentParser()
-    parser.add_argument("--manifest", required=True)
+    parser.add_argument("--manifest")
     parser.add_argument("--product", default="host")
+    parser.add_argument("--rollback", action="store_true")
     args = parser.parse_args()
-    print(json.dumps(install(args.product, manifest=args.manifest)))
+    if args.rollback:
+        print(json.dumps(rollback()))
+        return
+    if not args.manifest:
+        parser.error("--manifest is required for installation")
+    if args.product == "host" and (home() / "active.json").exists():
+        result = update(manifest=args.manifest)
+    elif args.product == "host":
+        from filelock import FileLock
+        home().mkdir(parents=True, exist_ok=True)
+        with FileLock(str(home() / "host-running.lock"), timeout=0):
+            result = install(args.product, manifest=args.manifest)
+    else:
+        result = install(args.product, manifest=args.manifest)
+    print(json.dumps(result))
 
 
 if __name__ == "__main__":

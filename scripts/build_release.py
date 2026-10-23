@@ -15,4 +15,8 @@ subprocess.run([npm, "--prefix", "frontend", "run", "build"], cwd=root,
 for package in ("packages/nerv-runtime-sdk", "packages/nerv-runtime-lerobot", "."):
     subprocess.run([sys.executable, "-m", "pip", "wheel", "--no-deps",
                     "--wheel-dir", str(output / "wheels"), package], cwd=root, check=True)
+# The pinned Feetech release is source-only on PyPI. Ship its pure Python wheel
+# so students need neither a compiler nor an unverified build during installation.
+subprocess.run([sys.executable, "-m", "pip", "wheel", "--no-deps", "--wheel-dir",
+                str(output), "feetech-servo-sdk==1.0.0"], cwd=root, check=True)
 subprocess.run([sys.executable, str(root / "scripts/bundle_release.py")], cwd=root, check=True)
