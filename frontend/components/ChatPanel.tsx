@@ -446,6 +446,8 @@ export default function ChatPanel({
                 </span>
               )}
             </div>
+          ) : session.brain === "operator" ? (
+            <p className="p-3 text-sm text-neutral-400">{t("Use Toolbox for manual control. Select a configured model to chat.")}</p>
           ) : (
             <div className="p-3">
               <div className="flex gap-2">

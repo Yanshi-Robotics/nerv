@@ -60,7 +60,8 @@ def _registry() -> dict[str, dict]:
 def list_brains() -> list[dict]:
     from ...vlm.store import ModelRegistry
     return [{**m, "name": m["id"], "vendor": m["provider"], "hosting": "api"}
-            for m in ModelRegistry().list()]
+            for m in ModelRegistry().list()] + [{"id": "operator", "name": "operator", "vendor": "local",
+                "label": "Operator only", "model": "", "hosting": "local", "available": True}]
 
 
 def make_llm(name: str | None = None) -> LLM:

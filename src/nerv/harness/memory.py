@@ -7,6 +7,7 @@ import os
 import re
 import threading
 import time
+from filelock import FileLock
 from contextlib import contextmanager
 from pathlib import Path
 
@@ -34,15 +35,13 @@ class SessionMemory:
             if key in active:
                 yield
                 return
-            with open(self.directory / ".lock", "a+b") as lock:
-                import fcntl
-                fcntl.flock(lock, fcntl.LOCK_EX)
+            with FileLock(self.directory / ".lock"):
+                # OS-backed lock works on Windows and POSIX.
                 _transactions.paths = active | {key}
                 try:
                     yield
                 finally:
                     _transactions.paths = active
-                    fcntl.flock(lock, fcntl.LOCK_UN)
 
     def events(self) -> list[dict]:
         with self.transaction():

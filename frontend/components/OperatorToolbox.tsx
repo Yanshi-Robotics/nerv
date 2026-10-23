@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { armSession, estopSession, robotTaskOperation, type NodeInfo, type SessionSummary } from "@/lib/api";
+import { armSession, estopSession, robotTaskOperation, getPerception, runtimeOperation, POLL_NODES_MS, type NodeInfo, type SessionSummary } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import RuntimeControls from "./RuntimeControls";
 import { NodeTrust } from "./NodeTrust";
@@ -35,6 +35,22 @@ export default function OperatorToolbox({session, bodyNode, nodes, onChanged, ch
   const active = session?.status === "active";
   const robot = active && !!session?.body;
   const sim = robot && session?.mode === "sim" && !!session.world;
+  // Operator supervision belongs to the active workspace, not a toolbox tab.
+  useEffect(() => {
+    if (!robot || !bodyNode?.online || session?.brain !== "operator" || !session.armed) return;
+    let gone = false, pending = false;
+    const heartbeat = async () => {
+      if (pending || document.visibilityState !== "visible") return;
+      pending = true;
+      try {
+        const observation = await getPerception(session.id);
+        if (!gone && document.visibilityState === "visible") await runtimeOperation(session.id, "operator/supervise", {frame_seq: observation.state.frame_seq});
+      } catch { /* Runtime watchdog revokes control on observation or browser loss. */ }
+      finally { pending = false; }
+    };
+    const timer = setInterval(heartbeat, POLL_NODES_MS);
+    return () => { gone = true; clearInterval(timer); };
+  }, [robot, bodyNode?.online, session?.id, session?.brain, session?.armed]);
   useEffect(() => {setOpen(false); setError(""); setStopMessage(""); setGroup(GROUPS[0]);}, [session?.id]);
   useEffect(() => {
     const close = (event: KeyboardEvent) => {if (event.key === "Escape") setOpen(false);};

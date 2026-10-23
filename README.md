@@ -24,7 +24,7 @@ Agent and System 2 use separate harness instances, context, summaries, provider 
 
 ## Current status
 
-The source version is **0.6.2**. The local `v0.5.0` tag preserves the audited baseline. Version 1.0.0 requires operator physical acceptance with frozen trials and fault checks.
+The source version is **0.6.3**. The local `v0.5.0` tag preserves the audited baseline. Version 1.0.0 requires operator physical acceptance with frozen trials and fault checks.
 
 | Connection | Current scope |
 |---|---|
@@ -207,3 +207,7 @@ The release sequence is 0.5.0 baseline, 0.6.x development, then 1.0.0 after the 
 [AGENTS.md](AGENTS.md) describes repository boundaries. The [interface types](src/nerv/nerve/) and [runtime SDK](packages/nerv-runtime-sdk/src/nerv_runtime_sdk/) define the service contracts. Scenes and policies remain separate submodules.
 
 NERV is distributed under the [MIT license](LICENSE). Vendor SDKs, model weights, training data and external assets retain their own licenses.
+
+## Standard SO-101 candidate
+
+The 0.6.3 candidate adds standard-device setup, local ACT import, bounded direct joint/gripper control and operator-only sessions. The installed host wheel includes its web interface. Physical acceptance is still pending; Windows, WSL and macOS hardware support remains experimental. Follow the [student guide](guides/standard-so101.md) for the two-environment installation, existing calibration, policy checks and stop behavior. NERV does not train policies.

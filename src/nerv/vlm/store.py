@@ -35,8 +35,9 @@ def private_write(path: Path, value):
     path.parent.chmod(0o700)
     fd, filename = tempfile.mkstemp(dir=path.parent, prefix=path.name, suffix=".tmp")
     try:
-        os.fchmod(fd, 0o600)
-        with os.fdopen(fd, "w") as file:
+        if os.name != "nt":
+            os.fchmod(fd, 0o600)
+        with os.fdopen(fd, "w", encoding="utf-8") as file:
             json.dump(value, file, ensure_ascii=False, indent=2)
             file.flush()
             os.fsync(file.fileno())
@@ -50,13 +51,25 @@ class CredentialStore:
     def __init__(self, root: Path):
         self.path = root / "credentials.json"
 
+    def _windows_store(self):
+        from keyring.backends.Windows import WinVaultKeyring
+        return WinVaultKeyring()
+
+    def _credential_namespace(self):
+        # Distinct NERV_HOME directories must not share credentials.
+        import hashlib
+        return "NERV/" + hashlib.sha256(str(self.path.resolve()).encode()).hexdigest()
+
     def _read(self):
+        if os.name == "nt":
+            value = self._windows_store().get_password(self._credential_namespace(), "providers")
+            return json.loads(value) if value else {}
         if not self.path.exists():
             return {}
         if (self.path.is_symlink() or not stat.S_ISREG(self.path.stat().st_mode)
                 or self.path.stat().st_mode & 0o077):
             raise PermissionError("credential storage must be a private regular file (0600)")
-        return json.loads(self.path.read_text())
+        return json.loads(self.path.read_text(encoding="utf-8"))
 
     def resolve(self, reference: str):
         # Intentionally ignore shell/.env keys. The settings UI owns this store;
@@ -70,6 +83,13 @@ class CredentialStore:
 
     def check_writable(self):
         """Probe local persistence before a billable request, without writing a key."""
+        if os.name == "nt":
+            store = self._windows_store()
+            import uuid
+            probe = "probe-" + uuid.uuid4().hex
+            store.set_password(self._credential_namespace(), probe, "write-check")
+            store.delete_password(self._credential_namespace(), probe)
+            return
         root = self.path.parent
         if root.is_symlink() or self.path.is_symlink():
             raise PermissionError("private storage must not use symbolic links")
@@ -90,7 +110,10 @@ class CredentialStore:
                 values.pop(reference, None)
             else:
                 values[reference] = value
-            private_write(self.path, values)
+            if os.name == "nt":
+                self._windows_store().set_password(self._credential_namespace(), "providers", json.dumps(values))
+            else:
+                private_write(self.path, values)
 
 
 class VisualModel(BaseModel):
@@ -153,8 +176,8 @@ class ModelRegistry:
         self.credentials = CredentialStore(self.root)
 
     def _read(self):
-        defaults = json.loads(Path(__file__).with_name("catalog.json").read_text())
-        data = json.loads(self.path.read_text()) if self.path.exists() else {}
+        defaults = json.loads(Path(__file__).with_name("catalog.json").read_text(encoding="utf-8"))
+        data = json.loads(self.path.read_text(encoding="utf-8")) if self.path.exists() else {}
         data["models"] = {**{m["id"]: m for m in defaults}, **data.get("models", {})}
         data.setdefault("checks", {})
         data.setdefault("physical", {})

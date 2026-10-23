@@ -102,6 +102,13 @@ export default function TeleopPanel({ sessionId, armed, hasWorld, bodyTrust }: {
       const push = (line: Line) => setLines((cur) => ({ ...cur, [name]: [line] }));
       push({ kind: "progress", text: `⏳ ${t("running…")}` });
       try {
+        const fields = byName(name)?.parameters?.properties ?? {};
+        const observationFields = Object.entries(fields).filter(([, field]) => field["x-observation-field"]);
+        if (observationFields.length) {
+          const observation = await getPerception(sessionId);
+          args = {...args};
+          for (const [key, field] of observationFields) args[key] = observation.state[field["x-observation-field"]!];
+        }
         await streamTeleop(sessionId, name, args, (e: ChatEvent) => {
           if (e.type === "gate") {
             // 闸门：只有拒绝才值得一行（没上膛、参数越界）。放行是常态。
@@ -119,7 +126,7 @@ export default function TeleopPanel({ sessionId, armed, hasWorld, bodyTrust }: {
           .catch(() => {});
       }
     },
-    [running, sessionId, t],
+    [running, sessionId, t, byName],
   );
 
   async function stop() {
@@ -267,7 +274,7 @@ type FieldValue = string | number | boolean | KV[] | "";
 
 function isKvObject(s: JsonSchema): boolean {
   const ap = s.additionalProperties;
-  return s.type === "object" && !!ap && typeof ap === "object" && ap.type === "number";
+  return s.type === "object" && ((!!ap && typeof ap === "object" && ap.type === "number") || (!!s.properties && Object.values(s.properties).every(p => p.type === "number")));
 }
 
 function initialValues(schema: JsonSchema): Record<string, FieldValue> {
@@ -287,7 +294,7 @@ function ToolCard({ tool, jointKeys, lines, running, disabled, onRun }: {
 }) {
   const { t } = useI18n();
   const schema = tool.parameters ?? {};
-  const props = schema.properties ?? {};
+  const props = Object.fromEntries(Object.entries(schema.properties ?? {}).filter(([, field]) => !field["x-observation-field"]));
   const required = new Set(schema.required ?? []);
   const [vals, setVals] = useState<Record<string, FieldValue>>(() => initialValues(schema));
   const [open, setOpen] = useState(false);
@@ -355,7 +362,7 @@ function ToolCard({ tool, jointKeys, lines, running, disabled, onRun }: {
         <div className="mt-2 space-y-2">
           {Object.entries(props).map(([k, p]) => (
             <Field key={k} id={`${tool.name}-${k}`} name={k} schema={p} required={required.has(k)} value={vals[k]} onChange={(v) => set(k, v)}
-              jointKeys={jointKeys} inputCls={inputCls} />
+              jointKeys={p.properties ? Object.keys(p.properties) : jointKeys} inputCls={inputCls} />
           ))}
         </div>
       )}

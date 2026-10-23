@@ -11,10 +11,11 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 import { scanKeys } from "./scan-keys.mjs";
 
-const HERE = path.dirname(new URL(import.meta.url).pathname);
+const HERE = path.dirname(fileURLToPath(import.meta.url));
 const FRONTEND = path.resolve(HERE, "..");
 const REPO = path.resolve(FRONTEND, "..");
 const LOCALES_DIR = path.join(FRONTEND, "locales");

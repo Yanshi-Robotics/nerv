@@ -77,6 +77,8 @@ class Nerv:
     def new_role_model(self, name, effort=..., frozen_spec=None):
         """Fresh role-local provider/continuation; fixtures may inject an explicit model."""
         from ..harness.agent import AgentHarness
+        if name == "operator":
+            raise ValueError("Select a visual model before starting an Agent task")
         if name in self._brains and not isinstance(self._brains[name], AgentHarness):
             return self._brains[name]
         if effort is ...:
@@ -241,7 +243,7 @@ class Nerv:
         # Explicit injected test brains are not part of the production catalogue.
         from ..harness.agent import AgentHarness
         from ..vlm.store import ModelRegistry
-        if brain not in self._brains or isinstance(self._brains[brain], AgentHarness):
+        if brain != "operator" and (brain not in self._brains or isinstance(self._brains[brain], AgentHarness)):
             ModelRegistry().require_key(brain)
         if world and not body:
             raise ValueError("a simulated world requires a robot profile")
@@ -618,8 +620,12 @@ class Nerv:
                 try:
                     interrupt.clear(sid)
                     turn.session.brain = "operator"
+                    if route and route[0] == "body" and route[2].kind in ("primitive", "skill"):
+                        turn.observe()
                     turn.think(Think(messages.TELEOP_STEP.format(name=name), [CallTool(call_id, name, arguments)]))
                     turn.call_tool(CallTool(call_id, name, arguments))
+                except Exception as error:
+                    q.put({"type": op.EV_TOOL_RESULT, "name": name, "ok": False, "message": str(error)})
                 finally:
                     with self._runs_lock:
                         if self._runs.get(sid) is token:

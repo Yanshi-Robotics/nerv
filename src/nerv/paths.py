@@ -25,8 +25,9 @@ SESSIONS_DIR = os.path.join(MEMORY_DIR, "sessions")
 ENV_FILE = os.path.join(DATA_ROOT, ".env")
 
 # The registry directories ship with the repository (bodies/, worlds/, tools/). Extra roots
-# can be added with NERV_REGISTRY_PATHS (colon-separated) for out-of-tree nodes.
-REGISTRY_ROOT = REPO_ROOT if _IN_CHECKOUT else NERV_HOME
+# can be added with NERV_REGISTRY_PATHS (os.pathsep-separated) for out-of-tree nodes.
+REGISTRY_ROOT = REPO_ROOT if _IN_CHECKOUT else os.path.join(_PKG, "registry")
+WEB_ROOT = os.path.join(REPO_ROOT, "frontend", "out") if _IN_CHECKOUT else os.path.join(_PKG, "web")
 BODIES_DIR = os.path.join(REGISTRY_ROOT, "bodies")
 WORLDS_DIR = os.path.join(REGISTRY_ROOT, "worlds")
 TOOLS_DIR = os.path.join(REGISTRY_ROOT, "tools")

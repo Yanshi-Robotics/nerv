@@ -54,8 +54,8 @@ def _resolve_paths(data: dict) -> dict:
 
 
 def _roots() -> list[str]:
-    extra = [p for p in os.environ.get("NERV_REGISTRY_PATHS", "").split(":") if p.strip()]
-    return [paths.REGISTRY_ROOT] + extra
+    extra = [p for p in os.environ.get("NERV_REGISTRY_PATHS", "").split(os.pathsep) if p.strip()]
+    return [paths.REGISTRY_ROOT, paths.NERV_HOME] + extra
 
 
 class Registry:

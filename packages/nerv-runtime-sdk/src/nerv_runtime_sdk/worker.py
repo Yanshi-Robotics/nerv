@@ -4,6 +4,7 @@ from __future__ import annotations
 import argparse
 import importlib.metadata
 import json
+import sys
 from pathlib import Path
 
 from .contracts import ENTRY_POINT_GROUP, EnvironmentBinding, RobotProfile
@@ -33,6 +34,10 @@ def main(argv=None):
     parser = argparse.ArgumentParser()
     sub = parser.add_subparsers(dest="command", required=True)
     sub.add_parser("discover")
+    manage = sub.add_parser("manage")
+    manage.add_argument("--provider", required=True)
+    manage.add_argument("--operation", required=True)
+    manage.add_argument("--home", required=True)
     verify = sub.add_parser("check")
     verify.add_argument("--provider", required=True)
     verify.add_argument("--url")
@@ -42,6 +47,11 @@ def main(argv=None):
     serve.add_argument("--host", default="127.0.0.1")
     serve.add_argument("--port", type=int, required=True)
     args = parser.parse_args(argv)
+    if args.command == "manage":
+        provider = providers()[args.provider].load()()
+        result = provider.manage(args.operation, json.load(sys.stdin), args.home)
+        print(json.dumps(result, allow_nan=False))
+        return 0
     if args.command == "discover":
         print(json.dumps(discover()))
         return 0

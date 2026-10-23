@@ -5,6 +5,19 @@ The 0.1.x entries below are the pre-release trail.
 
 ## [Unreleased]
 
+## [0.6.3] — standard SO-101 development candidate, 2026-10-23
+
+- Fix the first real-device product contract to standard SO-101 with LeRobot 0.6.1,
+  degree joints, native 0–100 gripper positions and two named course cameras.
+- Separate the device owner from policy backends. Add bounded joint and gripper tools,
+  operator-only sessions, observation-bound decisions and native ACT import/check workflows.
+- Preserve requested, sent and measured targets separately, including native clipping and
+  failed writes. Add explicit no-motion inference, disconnect and operator torque release.
+- Ship the static interface and product defaults in the host wheel. Document separate host
+  and device environments, fixed policy declarations and software/physical support status.
+- Use portable locks and path handling; store Windows credentials in Windows Credential
+  Manager. Add a Linux/Windows/macOS software workflow. Hardware acceptance remains pending.
+
 - Consolidate manual device, robot, world, camera and task controls in Operator Toolbox.
   Keep stop task and emergency stop in the top toolbar and cameras free of configuration forms.
 - Test candidate provider keys with one generated image before saving; keep existing keys on
