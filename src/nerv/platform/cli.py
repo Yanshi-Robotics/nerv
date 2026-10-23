@@ -159,8 +159,11 @@ def cmd_run(a) -> int:
 
 def cmd_serve(a) -> int:
     import uvicorn
-    uvicorn.run("nerv.platform.server:app", host=a.host or config.SERVE_HOST,
-                port=a.port or config.SERVE_PORT, log_level="info")
+    from .serving import BrowserServer
+    server = BrowserServer(uvicorn.Config(
+        "nerv.platform.server:app", host=a.host or config.SERVE_HOST,
+        port=a.port or config.SERVE_PORT, log_level="info"), open_browser=not a.no_browser)
+    server.run()
     return 0
 
 
@@ -259,6 +262,7 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("serve", help="the NERV/Operator API")
     p.add_argument("--host", default="")
     p.add_argument("--port", type=int, default=0)
+    p.add_argument("--no-browser", action="store_true", help="serve without opening a browser")
     p.set_defaults(fn=cmd_serve)
     p = sub.add_parser("node", help="start a node by hand: node world|body|tool -- <args>")
     p.add_argument("node")
@@ -276,7 +280,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("action", choices=["new", "list"])
     _sess_args(p)
     p.set_defaults(fn=cmd_session)
-    a = ap.parse_args(argv)
+    arguments = sys.argv[1:] if argv is None else argv
+    a = ap.parse_args(arguments or ["serve"])
     if a.cmd == "node" and a.rest[:1] == ["--"]:
         a.rest = a.rest[1:]
     return a.fn(a)
