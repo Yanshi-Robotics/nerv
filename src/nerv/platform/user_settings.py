@@ -6,6 +6,8 @@ from pathlib import Path
 
 from dotenv import dotenv_values
 from filelock import FileLock
+from pydantic import TypeAdapter
+from typing import Annotated
 
 from .. import config, paths
 from ..installation import write_json
@@ -29,7 +31,7 @@ def read():
 
 def snapshot():
     saved, locked = read(), overrides()
-    baseline = config.Settings()
+    baseline = config.Settings(_env_file=paths.ENV_FILE)
     return {key: getattr(baseline, key) if key in locked else saved.get(key, config.Settings.model_fields[key].default)
             for key in FIELDS}
 
@@ -38,8 +40,14 @@ def describe():
     effective, saved, locked = snapshot(), read(), overrides()
     return [{**p, "value": effective[p["key"]], "editable": p["key"] not in locked,
              "default": config.Settings.model_fields[p["key"]].default,
+             "constraints": _adapter(p["key"]).json_schema(),
              "source": "environment" if p["key"] in locked else "saved" if p["key"] in saved else "default"}
             for p in config.runtime_params()]
+
+
+def _adapter(key):
+    field = config.Settings.model_fields[key]
+    return TypeAdapter(Annotated[field.annotation, *field.metadata])
 
 
 def save(values, reset=False):
@@ -60,9 +68,7 @@ def save(values, reset=False):
                     raise ValueError("Runtime parameters must be finite numbers")
                 if integer and not isinstance(value, int):
                     raise ValueError("This parameter requires a whole number")
-                minimum = 1024 if key == "request_token_budget" else 1 if integer else 0
-                if value < minimum or (not integer and value <= 0):
-                    raise ValueError("Runtime parameter is below its allowed minimum")
+                _adapter(key).validate_python(value, strict=True)
             saved.update(values)
         write_json(path, saved)
     return describe()

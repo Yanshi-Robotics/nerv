@@ -38,7 +38,7 @@ def save_name(name):
     directory.mkdir(parents=True, exist_ok=True)
     with FileLock(directory / "display.lock"):
         path = directory / "display.json"
-        value = json.loads(path.read_text()) if path.exists() else {}
+        value = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
         write_json(path, {**value, "name": name.strip()})
     return read()
 
@@ -62,7 +62,7 @@ def save_image(content):
         temporary.write_bytes(result.getvalue())
         temporary.replace(target)
         path = directory / "display.json"
-        value = json.loads(path.read_text()) if path.exists() else {}
+        value = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
         write_json(path, {**value, "image_version": time.time_ns()})
     return read()
 

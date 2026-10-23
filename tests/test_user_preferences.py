@@ -82,3 +82,22 @@ def test_new_robot_session_cannot_replace_active_task(home, monkeypatch):
     with pytest.raises(ValueError, match='running task'):
         hub.new_session('operator', 'fixture-arm', None, operator_workspace=True)
     assert hub.store.get(session.id).status == 'active'
+
+def test_concurrent_settings_updates_preserve_fields(home):
+    from concurrent.futures import ThreadPoolExecutor
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        list(pool.map(user_settings.save, [{'max_steps': 9}, {'notes_max': 12}]))
+    assert user_settings.snapshot()['max_steps'] == 9
+    assert user_settings.snapshot()['notes_max'] == 12
+
+
+def test_offline_action_catalog_matches_runtime(home):
+    from nerv_runtime_lerobot.action_catalog import primitive_actions
+    from nerv_runtime_lerobot.manage import manage
+    from nerv_runtime_lerobot.runtime import LeRobotRuntime
+    from types import SimpleNamespace
+    settings = {'min_duration_s': .3, 'max_duration_s': 10}
+    assert LeRobotRuntime._primitive_actions(SimpleNamespace(settings=settings)) == primitive_actions(settings)
+    options = manage('scheme_options', {}, str(home))
+    assert {a['name'] for a in options['actions']} == {'move_joints', 'nudge_joints', 'set_gripper'}
+    assert not (home / 'devices/standard.json').exists()

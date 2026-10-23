@@ -226,7 +226,7 @@ def adapter_setup(provider: str, operation: str, payload: dict):
             raise HTTPException(400, "Select a device registered by this provider")
         nerv.launcher.supervised_acceptance = {(body.name, "real")}
         return {"ok": True, "verified": False}
-    if operation not in ("discover", "calibrations", "validate_calibration", "configure_standard", "policies", "import", "inspect", "check"):
+    if operation not in ("scheme_options", "discover", "calibrations", "validate_calibration", "configure_standard", "policies", "import", "inspect", "check"):
         raise HTTPException(404, "Unknown setup operation")
     from .runtime_management import manage
     with nerv._node_lock:
@@ -809,10 +809,16 @@ def scene_test_operation(sid: str, operation: str, payload: dict):
 def set_brain(sid: str, inp: BrainIn) -> dict:
     if not nerv.store.exists(sid):
         raise HTTPException(404, "no such session")
-    if inp.brain not in {b["name"] for b in list_brains()}:
+    if inp.brain == "operator" or inp.brain not in {b["name"] for b in list_brains()}:
         raise HTTPException(400, messages.UNKNOWN_BRAIN_REPLY)
     if sid in nerv._runs:
         raise HTTPException(409, "Finish the Agent reply before changing its model")
+    try:
+        ModelRegistry().require_key(inp.brain)
+    except (ValueError, KeyError) as error:
+        raise HTTPException(400, str(error)) from error
+    if nerv.store.get(sid).brain == "operator":
+        raise HTTPException(409, "Create a separate Agent session from Home")
     ModelRegistry().remember(inp.brain)
     nerv.store.set_brain(sid, inp.brain)
     nerv.store.append(sid, {"role": "brain_divider", "brain": inp.brain})

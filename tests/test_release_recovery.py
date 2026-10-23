@@ -38,7 +38,11 @@ def setup(tmp_path, monkeypatch):
 
 def test_update_and_rollback_restore_all_components_and_archive_new_config(tmp_path, monkeypatch):
     root, manifest = setup(tmp_path, monkeypatch)
+    i.write_json(root / 'devices/standard.json', {'id': 'existing-calibration'})
     result = i.update(manifest=manifest)
+    i.write_json(root / 'devices/display.json', {'name': 'New name'})
+    i.write_json(root / 'devices/preferences.json', {'max_steps': 17})
+    (root / 'devices/portrait.webp').write_bytes(b'portrait-fixture')
     assert result['updated_components'] == ['device']
     binding = json.loads((root / 'bodies/fixture/body.yaml').read_text())['buses']['real']['python']
     assert binding == str(i.python_at(root / 'envs/device/new'))
@@ -54,6 +58,11 @@ def test_update_and_rollback_restore_all_components_and_archive_new_config(tmp_p
     assert json.loads((root / 'credentials.json').read_text())['key'] == 'changed fixture'
     assert json.loads((root / 'vlm.json').read_text())['models']['fixture']['name'] == 'original'
     assert (root / 'memory/session.json').exists()
+    saved = Path(result['preserved_newer_configuration']) / 'devices'
+    assert json.loads((saved / 'display.json').read_text())['name'] == 'New name'
+    assert json.loads((saved / 'preferences.json').read_text())['max_steps'] == 17
+    assert (saved / 'portrait.webp').read_bytes() == b'portrait-fixture'
+    assert json.loads((root / 'devices/standard.json').read_text())['id'] == 'existing-calibration'
 
 
 def test_activation_failure_restores_all_pointers(tmp_path, monkeypatch):
