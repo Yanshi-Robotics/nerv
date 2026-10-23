@@ -631,4 +631,4 @@ export async function userApi<T = any>(path: string, method = "GET", body?: unkn
   return result;
 }
 export const assetUrl = (path: string) => `${BASE}${path}`;
-export type RobotDisplay = {name: string; registered: boolean; image: string | null; device: {id?: string; port?: string; calibration_dir?: string; cameras?: Record<string, unknown>}};
+export type RobotDisplay = {name: string; registered: boolean; image: string | null; last_check?: {at: number; repair_step?: number | null} | null; device: {id?: string; port?: string; calibration_dir?: string; cameras?: Record<string, unknown>}};

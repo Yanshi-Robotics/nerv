@@ -867,6 +867,7 @@
     "Install the simulation component first.": "Install the simulation component first.",
     "Confirm supervised acceptance before opening this unverified runtime.": "Confirm supervised acceptance before opening this unverified runtime.",
     "Top camera": "Top camera",
-    "Wrist camera": "Wrist camera"
+    "Wrist camera": "Wrist camera",
+    "Last device check": "Last device check"
   }
 }
