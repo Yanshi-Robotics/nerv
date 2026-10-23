@@ -76,3 +76,23 @@ def test_journal_damage_is_not_silently_ignored(tmp_path):
         file.write(b'{"seq":2')
     with pytest.raises(ValueError, match="incomplete"):
         memory.append("message", {})
+
+
+def test_dispatch_barrier_uses_writable_handle_without_changing_history(tmp_path, monkeypatch):
+    import os
+    from nerv.harness.memory import SessionMemory
+    journal = SessionMemory(tmp_path, 'flush-portability')
+    journal.append('fixture', {'message': 'preserved'})
+    before = journal.path.read_bytes()
+    original = os.fsync
+    calls = []
+    def windows_compatible_fsync(fd):
+        # A zero-byte write checks descriptor access on POSIX too, without
+        # modifying data; Windows rejects read-only handles at FlushFileBuffers.
+        os.write(fd, b'')
+        calls.append(fd)
+        original(fd)
+    monkeypatch.setattr(os, 'fsync', windows_compatible_fsync)
+    journal.flush()
+    assert len(calls) == 1
+    assert journal.path.read_bytes() == before

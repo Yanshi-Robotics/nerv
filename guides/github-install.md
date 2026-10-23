@@ -2,7 +2,7 @@
 
 [中文](../i18n/zh/github-install.md) · [NERV](../README.md)
 
-0.7.1 is a development release for local testing. A release bundle contains the host, Runtime SDK and LeRobot adapter wheels, dependency locks, the optional SO-101 simulation archive, installers and `release.json`. Physical acceptance and student onboarding trials are still pending.
+0.7.2 is a development release for local testing. A release bundle contains the host, Runtime SDK and LeRobot adapter wheels, dependency locks, the optional SO-101 simulation archive, installers and `release.json`. Physical acceptance and student onboarding trials are still pending.
 
 ## Install a supplied candidate
 
