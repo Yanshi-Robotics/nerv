@@ -34,7 +34,7 @@ py -3.12 -m venv .nerv-device
 
 设备包会安装 `lerobot[feetech]==0.6.1`。根据自己的系统和推理设备，按 PyTorch 官方说明安装相应版本。不要为了安装 NERV 修改原有训练环境。主程序包已包含网页，学生不需要安装 Node.js 或下载其他机器人的仿真资产。
 
-打开启动命令显示的地址，默认是 `http://127.0.0.1:8000`。候选版真机通路仍标记为未验收；开展有人监督的验收时，需要在启动主程序前设置 `NERV_ALLOW_UNVERIFIED=1`。Linux、macOS 使用 export，PowerShell 使用 `$env:NERV_ALLOW_UNVERIFIED='1'`。该设置只允许使用实验通路，不会连接机械臂或启用动作。
+打开启动命令显示的地址，默认是 `http://127.0.0.1:8170`。候选版真机通路仍标记为未验收；开展有人监督的验收时，需要在启动主程序前设置 `NERV_ALLOW_UNVERIFIED=1`。Linux、macOS 使用 export，PowerShell 使用 `$env:NERV_ALLOW_UNVERIFIED='1'`。该设置只允许使用实验通路，不会连接机械臂或启用动作。
 
 ## 配置设备
 

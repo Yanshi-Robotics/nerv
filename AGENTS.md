@@ -38,6 +38,10 @@ If not, it belongs in a family, a node or a registry entry — never in the plat
 
 ## Commands
 
+`nerv` serves the interface and API on `127.0.0.1:8170` by default. Override with
+`nerv serve --port PORT` or `NERV_SERVE_PORT`. Frontend development uses port 8100;
+the packaged interface shares the host port and uses same-origin API requests.
+
 ```
 .venv/bin/nerv registry | doctor | chat | run | serve | node | conformance | session
 .venv/bin/python -m pytest tests -q                # everything, MuJoCo included (one venv: pip install -e '.[all,dev]')

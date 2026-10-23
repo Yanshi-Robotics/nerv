@@ -1,7 +1,7 @@
 // Operator-only scene interfaces. These never enter a brain's tool sheet.
 import { ApiError } from "./api";
 
-const BASE = process.env.NEXT_PUBLIC_API ?? "http://localhost:8000";
+const BASE = process.env.NEXT_PUBLIC_API ?? "http://localhost:8170";
 export const SCENE_HEARTBEAT_MS = 500; // Refresh the two-second server lease independently of images.
 export const SCENE_FRAME_FPS = Number(process.env.NEXT_PUBLIC_SCENE_FRAME_FPS) || 12;
 const SCENE_REQUEST_TIMEOUT_MS = 5000; // Bound normal operator requests independently of camera frames.

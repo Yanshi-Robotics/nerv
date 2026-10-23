@@ -91,7 +91,7 @@ class Settings(BaseSettings):
     # ---- HTTP ----
     cors_origins: str = Field("http://localhost:8100", validation_alias="NERV_CORS_ORIGINS")
     serve_host: str = Field("127.0.0.1", validation_alias="NERV_SERVE_HOST")
-    serve_port: int = Field(8000, validation_alias="NERV_SERVE_PORT")
+    serve_port: int = Field(8170, validation_alias="NERV_SERVE_PORT")
     scene_entry_timeout_s: float = Field(6.0, gt=0, validation_alias="NERV_SCENE_ENTRY_TIMEOUT_S")
     scene_entry_poll_s: float = Field(0.1, gt=0, validation_alias="NERV_SCENE_ENTRY_POLL_S")
 

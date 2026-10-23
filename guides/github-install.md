@@ -46,7 +46,7 @@ nerv
 
 The first launch installs the host and matching Runtime SDK. Later launches reuse that
 environment. Once the server is ready, NERV opens your default browser at the printed URL,
-normally `http://127.0.0.1:8000`. To choose another port, use `nerv serve --port 8100`.
+normally `http://127.0.0.1:8170`. To choose another port, use `nerv serve --port 8100`.
 For SSH or a session without a desktop browser, use `nerv serve --no-browser` and open
 the address manually. A browser launch failure leaves the server running. Ctrl+C ends this server.
 

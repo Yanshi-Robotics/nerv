@@ -36,7 +36,7 @@ npm install -g "https://github.com/Yanshi-Robotics/nerv/archive/COMMIT.tar.gz"
 nerv
 ```
 
-首次启动自动安装主程序及配套 SDK，后续启动复用该环境。服务就绪后，NERV 自动在默认浏览器中打开终端显示的地址，默认是 `http://127.0.0.1:8000`。需要指定端口时执行 `nerv serve --port 8100`；按 Ctrl+C 结束本次服务。
+首次启动自动安装主程序及配套 SDK，后续启动复用该环境。服务就绪后，NERV 自动在默认浏览器中打开终端显示的地址，默认是 `http://127.0.0.1:8170`。需要指定端口时执行 `nerv serve --port 8100`；按 Ctrl+C 结束本次服务。
 
 通过 SSH 或在无桌面环境中使用时，执行 `nerv serve --no-browser`，然后手动打开对应地址。浏览器打开失败时，服务仍会继续运行。
 

@@ -36,7 +36,7 @@ py -3.12 -m venv .nerv-device
 
 The device package installs `lerobot[feetech]==0.6.1`. Select the PyTorch installation suitable for your OS and inference device using its official installation instructions. Do not upgrade the training environment to install NERV. The host wheel includes the web interface; students do not need Node.js or simulation submodules.
 
-Open the address printed by `nerv serve`. The default is `http://127.0.0.1:8000`. Candidate real bindings remain unverified: supervised acceptance requires setting `NERV_ALLOW_UNVERIFIED=1` before starting the host (`export` on POSIX, `$env:NERV_ALLOW_UNVERIFIED='1'` in PowerShell). This acknowledges an experimental route; it does not connect or arm the robot.
+Open the address printed by `nerv serve`. The default is `http://127.0.0.1:8170`. Candidate real bindings remain unverified: supervised acceptance requires setting `NERV_ALLOW_UNVERIFIED=1` before starting the host (`export` on POSIX, `$env:NERV_ALLOW_UNVERIFIED='1'` in PowerShell). This acknowledges an experimental route; it does not connect or arm the robot.
 
 ## Configure the device
 
