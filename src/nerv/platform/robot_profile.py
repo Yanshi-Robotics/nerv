@@ -26,7 +26,10 @@ def read():
     display = json.loads(path.read_text(encoding="utf-8")) if path.exists() else {}
     standard = directory / "standard.json"
     device = json.loads(standard.read_text(encoding="utf-8")) if standard.exists() else {}
+    check_path = directory / "last-check.json"
+    last_check = json.loads(check_path.read_text(encoding="utf-8")) if check_path.exists() else None
     return {"name": display.get("name", "SO-101"), "registered": bool(device),
+            "last_check": last_check,
             "image": "/api/robot/image?v=" + str(display.get("image_version", 0)) if (directory / "portrait.webp").exists() else None,
             "device": {key: device.get(key) for key in ("id", "port", "calibration_dir", "cameras", "policy_device")}}
 

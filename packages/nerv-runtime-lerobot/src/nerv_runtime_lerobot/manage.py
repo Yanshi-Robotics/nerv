@@ -118,7 +118,12 @@ def _manage(operation, payload, home):
         return {"actions": [a for a in actions if a["kind"] in ("skill", "primitive")]}
     if operation == "discover":
         from .discovery import discover
-        return discover(home)
+        result = discover(home)
+        _write(Path(home) / "devices/last-check.json", {
+            "at": time.time(), "repair_step": result.get("repair_step"),
+            "connected": False,
+        })
+        return result
     if operation == "calibrations":
         directory = Path(payload["directory"]).expanduser().resolve(strict=True)
         return {"calibrations": [{"id": p.stem, "directory": str(directory)}

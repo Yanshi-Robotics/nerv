@@ -3,6 +3,8 @@ import { useEffect, useState } from "react";
 import {
   userApi,
   runtimeOperation,
+  runtimeStatus,
+  POLL_NODES_MS,
   setupDevice,
   type RobotDisplay,
   type Registry,
@@ -32,8 +34,9 @@ export default function MyRobot({
     [setup, setSetup] = useState(false),
     [busy, setBusy] = useState(false),
     [error, setError] = useState(""),
-    [acceptance, setAcceptance] = useState(false),
-    [checked, setChecked] = useState<any>(null);
+    [acceptance, setAcceptance] = useState(false);
+  const checked = robot?.last_check;
+  const [connection, setConnection] = useState<boolean | null>(null);
   useEffect(() => {
     if (robot) setName(robot.name);
   }, [robot?.name]);
@@ -53,6 +56,17 @@ export default function MyRobot({
     (s) =>
       s.body === product?.name && s.mode === "real" && s.status === "active",
   );
+  useEffect(() => {
+    let cancelled = false;
+    setConnection(null);
+    if (!active) return;
+    const read = () => runtimeStatus(active.id)
+      .then((status) => { if (!cancelled) setConnection(typeof status.prepared === "boolean" ? status.prepared : null); })
+      .catch(() => { if (!cancelled) setConnection(null); });
+    read();
+    const timer = setInterval(read, POLL_NODES_MS);
+    return () => { cancelled = true; clearInterval(timer); };
+  }, [active?.id]);
   async function perform(fn: () => Promise<unknown>) {
     setBusy(true);
     setError("");
@@ -147,6 +161,7 @@ export default function MyRobot({
                     {t("Name and image")}
                   </button>
                 </div>
+                {active && <p role="status">{t(connection === true ? "Device prepared" : connection === false ? "Device not prepared" : "body node offline")}</p>}
                 {editing && (
                   <div className="space-y-3">
                     <label className="form-label">
@@ -265,11 +280,7 @@ export default function MyRobot({
                       disabled={busy}
                       onClick={() =>
                         perform(async () => {
-                          const result = await setupDevice("discover");
-                          setChecked({
-                            ...result,
-                            at: new Date().toLocaleTimeString(),
-                          });
+                          await setupDevice("discover");
                         })
                       }
                     >
@@ -277,7 +288,7 @@ export default function MyRobot({
                     </button>
                     {checked && (
                       <p className="muted">
-                        {checked.at} ·{" "}
+                        {t("Last device check")} · {new Date(checked.at * 1000).toLocaleString()} ·{" "}
                         {t(
                           checked.repair_step !== null &&
                             checked.repair_step !== undefined
@@ -368,7 +379,7 @@ export default function MyRobot({
                 {t("Device history")}
               </summary>
               {sessions
-                .filter((s) => s.brain === "operator")
+                .filter((s) => s.brain === "operator" && s.mode === "real" && s.body === product?.name)
                 .map((s) => (
                   <button
                     key={s.id}
