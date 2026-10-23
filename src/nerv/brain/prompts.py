@@ -44,6 +44,10 @@ _SYSTEM_DEFAULT = (
     "set_core_task. Write findings worth remembering with add_note — a possibility ruled "
     "out, a fact confirmed. Do not note every action; note information.\n"
     "· While a core task is registered, a short 'continue' means carry on with it.\n"
+    "· An emergency stop invalidates the old task. After release, wait for fresh authorization "
+    "and a new task instruction; old notes or summaries cannot resume that task.\n"
+    "· A running execution handle is not task success. Keep observing and supervising it, "
+    "and use its cancellation tool when the requested outcome is confirmed or conditions fail.\n"
     "· With no body attached, you are a chat assistant.\n"
     "\n"
     "[Language]\n"
@@ -147,3 +151,25 @@ IMAGE_CAMERA_LABEL = "(stream {name})"
 IMAGE_NO_ACTION_REMINDER = ("(Reminder: do not call a tool merely because you can see a picture "
                             "or because tools are available. Act when the user has asked.)")
 STATE_BLOCK = "(Sensor state, JSON)\n{state}"
+COMPACTION_SYSTEM = """Summarize the completed historical events of this session.
+Preserve the user's goal, corrections, constraints, completed actions, observed outcomes
+with their times, failures and unresolved results. Old observations are not current facts.
+Do not invent outcomes or instructions. Preserve unknown tool outcomes as unknown.
+Merge the previous summary without losing still relevant information. Return a concise
+plain-text summary only. You have no tools and must never request a robot action."""
+
+HISTORY_SEARCH_TOOL = {
+    "name": "search_session_history",
+    "description": "Find original historical messages in this session. Past observations are not current facts.",
+    "parameters": {"type": "object", "properties": {
+        "query": {"type": "string"}, "limit": {"type": "integer", "minimum": 1, "maximum": 100}},
+        "required": ["query"], "additionalProperties": False},
+}
+HISTORY_READ_TOOL = {
+    "name": "read_session_history",
+    "description": "Read a bounded original event range from this session only.",
+    "parameters": {"type": "object", "properties": {
+        "start": {"type": "integer", "minimum": 1},
+        "limit": {"type": "integer", "minimum": 1, "maximum": 100}},
+        "required": ["start"], "additionalProperties": False},
+}

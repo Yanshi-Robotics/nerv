@@ -10,10 +10,10 @@ from __future__ import annotations
 from dataclasses import dataclass, field
 from typing import Any, Protocol
 
-from ... import config
 from ...nerve.body import ToolSpec
 
-MAX_TOKENS = config.MAX_TOKENS
+# Legacy providers retain their default; registered providers inject a budget.
+MAX_TOKENS = 1024
 
 
 @dataclass
@@ -28,6 +28,8 @@ class LLMReply:
     text: str | None = None
     tool_calls: list[ToolCall] = field(default_factory=list)
     usage: dict[str, int] | None = None
+    continuation: dict = field(default_factory=dict)
+    finish_status: str = "completed"
 
 
 class LLM(Protocol):

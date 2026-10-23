@@ -1,11 +1,12 @@
 "use client";
-import { useMemo, useState } from "react";
+import { useState } from "react";
 
 import { createSession, deleteSession, type Registry, type SessionSummary } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import { StatusBadge } from "./ChatPanel";
 import LangToggle from "./LangToggle";
 import RuntimeParamsBar from "./RuntimeParamsBar";
+import WorldProperties from "./WorldProperties";
 import ThemeToggle from "./ThemeToggle";
 
 const CONVERSATION_ONLY = ""; // world 选中值空串 = 只聊天，不起身体、不起世界
@@ -15,7 +16,7 @@ const CONVERSATION_ONLY = ""; // world 选中值空串 = 只聊天，不起身�
 //   收起 ≈ 56px：展开键 + 一列带提示的图标键（新建、仪表盘、日志、主题）；列表和上限藏起来
 // 折叠状态由 app/page.tsx 持有（栅格列宽要跟着变），存 localStorage 的 `nerv-sidebar`。
 // 右侧显示的面板；Dashboard 和 Logs 不是跳页，是换掉右边两栏，侧栏不动。
-export type Panel = "session" | "dashboard" | "logs" | "explore";
+export type Panel = "session" | "dashboard" | "logs" | "explore" | "models" | "setup" | "schemes" | "modules";
 
 export default function SessionSidebar({
   sessions,
@@ -42,9 +43,11 @@ export default function SessionSidebar({
   const [creating, setCreating] = useState(false);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
+  const [mode, setMode] = useState<"sim" | "real">("sim");
   const [world, setWorld] = useState(CONVERSATION_ONLY);
   const [body, setBody] = useState("");
   const [brain, setBrain] = useState("");
+  const [worldValues, setWorldValues] = useState<Record<string, unknown>>({});
   const [sensors, setSensors] = useState<string[]>([]);
 
   const worlds = registry?.worlds ?? [];
@@ -53,41 +56,29 @@ export default function SessionSidebar({
   const worldSpec = worlds.find((w) => w.name === world) ?? null;
 
   // 这个世界容得下哪些身体：注册表的兼容矩阵说了算——界面灰掉的，就是后端会拒绝的。
-  const compat = useMemo(() => {
-    const m = new Map<string, { ok: boolean; reason: string }>();
-    for (const c of registry?.matrix ?? []) if (c.world === world) m.set(c.body, { ok: c.ok, reason: c.reason });
-    return m;
-  }, [registry, world]);
-
   function openForm() {
-    setWorld(CONVERSATION_ONLY);
+    setMode("sim");
+    setWorld(CONVERSATION_ONLY); setWorldValues({});
     setBody("");
     setSensors([]);
-    setBrain(registry?.default_brain ?? brains.find((b) => b.available)?.name ?? brains[0]?.name ?? "");
+    setBrain(brains.find(b => b.name === registry?.default_brain && b.available)?.name ?? brains.find(b => b.available)?.name ?? "operator");
     setError("");
     setCreating(true);
     if (collapsed) onToggleCollapsed(); // 表单住在展开态里：收起时按「+」先展开
   }
 
-  function pickWorld(name: string) {
-    setWorld(name);
-    setSensors([]);
-    // 默认选第一个这个世界支持的身体；没有就留空，让用户看到全灰的下拉和原因。
-    const m = new Map<string, boolean>();
-    for (const c of registry?.matrix ?? []) if (c.world === name) m.set(c.body, c.ok);
-    setBody(bodies.find((b) => m.get(b.name))?.name ?? "");
-  }
-
   async function doCreate() {
-    if (busy) return;
+    if (busy || !brains.find(b => b.name === brain)?.available) return;
     setBusy(true);
     setError("");
     try {
       const created = await createSession({
         brain: brain || undefined,
-        body: world ? body || null : null,
-        world: world || null,
+        body: body || null,
+        mode,
+        world: mode === "sim" ? world || null : null,
         sensors: world ? sensors : [],
+        world_configuration: mode === "sim" ? worldValues : {},
       });
       setCreating(false);
       onChanged(created.id);
@@ -104,34 +95,35 @@ export default function SessionSidebar({
     onChanged();
   }
 
-  const selectCls = "w-full rounded-md border border-neutral-700 bg-neutral-800 px-2 py-1 text-xs text-neutral-200 disabled:opacity-50";
+  const selectCls = "w-full rounded-md border border-neutral-700 bg-neutral-800 px-2 py-1 text-xs text-neutral-200";
   const iconBtn =
-    "flex h-9 w-9 items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500";
+    "flex h-9 w-9 items-center justify-center rounded-lg text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--control-focus)]";
   const navRow =
-    "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500";
+    "flex w-full items-center gap-2 rounded-md px-2 py-1.5 text-xs text-neutral-400 transition-colors hover:bg-neutral-800 hover:text-neutral-100 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--control-focus)]";
 
   // ---------------- 收起态：一条竖的图标带 ----------------
   if (collapsed) {
     return (
       <aside className="flex h-screen flex-col items-center overflow-hidden border-r border-neutral-800 bg-neutral-900 py-2">
         <BrandMark className="relative -top-px mb-1 mt-1 h-7" />
-        <button onClick={onToggleCollapsed} title={t("Expand sidebar")} aria-label={t("Expand sidebar")} aria-expanded={false} className={iconBtn}>
+        <button onClick={onToggleCollapsed} title={t("Expand sidebar")} aria-label={t("Expand sidebar")} aria-expanded={false} className={`nerv-control ${iconBtn}`}>
           <PanelIcon />
         </button>
         <div className="mt-2 flex flex-col items-center gap-1">
-          <button onClick={openForm} title={t("New session")} aria-label={t("New session")} className={`${iconBtn} text-blue-400 hover:text-blue-300`}>
+          <button onClick={openForm} title={t("New session")} aria-label={t("New session")} className={`nerv-control ${iconBtn}`}>
             <PlusIcon />
           </button>
           <button onClick={() => onPanel("dashboard")} title={t("NERV dashboard")} aria-label={t("NERV dashboard")} aria-pressed={panel === "dashboard"}
-            className={`${iconBtn} ${panel === "dashboard" ? "bg-neutral-800 text-neutral-100" : ""}`}>
+            className={`nerv-control ${iconBtn} ${panel === "dashboard" ? "bg-neutral-800 text-neutral-100" : ""}`}>
             <DashboardIcon />
           </button>
           <button onClick={() => onPanel("explore")} title="Nerv World Explore" aria-label="Nerv World Explore" aria-pressed={panel === "explore"}
-            className={`${iconBtn} ${panel === "explore" ? "bg-neutral-800 text-neutral-100" : ""}`}>
+            className={`nerv-control ${iconBtn} ${panel === "explore" ? "bg-neutral-800 text-neutral-100" : ""}`}>
             <ExploreIcon />
           </button>
+          <button onClick={() => onPanel("models")} className={`nerv-control ${iconBtn}`} title={t("Visual models")}>VLM</button>
           <button onClick={() => onPanel("logs")} title="Session Logs" aria-label="Session Logs" aria-pressed={panel === "logs"}
-            className={`${iconBtn} ${panel === "logs" ? "bg-neutral-800 text-neutral-100" : ""}`}>
+            className={`nerv-control ${iconBtn} ${panel === "logs" ? "bg-neutral-800 text-neutral-100" : ""}`}>
             <LogsIcon />
           </button>
         </div>
@@ -149,59 +141,42 @@ export default function SessionSidebar({
       <div className="flex items-center justify-between border-b border-neutral-800 py-2 pl-3 pr-1.5">
         <span className="flex items-center gap-2 text-sm font-semibold tracking-wide text-neutral-200"><BrandMark className="relative -top-[3px] h-7" /> NERV</span>
         <button onClick={onToggleCollapsed} title={t("Collapse sidebar")} aria-label={t("Collapse sidebar")} aria-expanded={true}
-          className="flex h-7 w-7 items-center justify-center rounded-md text-neutral-500 transition-colors hover:bg-neutral-800 hover:text-neutral-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+          className="nerv-control flex h-7 w-7 items-center justify-center rounded-md text-neutral-500 transition-colors hover:bg-neutral-800 hover:text-neutral-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--control-focus)]">
           <PanelIcon />
         </button>
       </div>
       <div className="border-b border-neutral-800 p-3">
-        <button onClick={openForm} className="w-full rounded-lg bg-blue-600 px-3 py-2 text-sm font-medium text-white hover:bg-blue-500">
+        <button onClick={openForm} className="nerv-control w-full rounded-lg nerv-primary px-3 py-2 text-sm font-medium text-white">
           + {t("New session")}
         </button>
       </div>
 
       {creating && (
-        <div className="space-y-3 border-b border-neutral-800 p-3 text-xs">
-          <div className="text-[11px] text-neutral-500">{t("A session is brain × body × world.")}</div>
+        <div className="max-h-[65vh] space-y-3 overflow-y-auto border-b border-neutral-800 p-3 text-xs">
+          <div className="text-[11px] text-neutral-500">{t("Choose a robot and its startup environment.")}</div>
 
           <label className="block">
-            <div className="mb-1 text-neutral-400">{t("World")}</div>
-            <select value={world} onChange={(e) => pickWorld(e.target.value)} className={selectCls}>
-              <option value={CONVERSATION_ONLY}>{t("— conversation only (no body, no world) —")}</option>
-              {worlds.map((w) => (
-                <option key={w.name} value={w.name}>{w.label || w.name} · {w.kind}</option>
-              ))}
+            <div className="mb-1 text-neutral-400">{t("Robot")}</div>
+            <select value={body} className={selectCls} onChange={event => { setBody(event.target.value); setWorld(""); setWorldValues({}); setSensors([]); }}>
+              <option value="">{t("Conversation only")}</option>
+              {bodies.map(robot => <option key={robot.name} value={robot.name}>{robot.label || robot.name}</option>)}
             </select>
           </label>
-
-          {world && (
-            <label className="block">
-              <div className="mb-1 text-neutral-400">{t("Body")}</div>
-              <select value={body} onChange={(e) => setBody(e.target.value)} className={selectCls}>
-                {!body && <option value="">{t("— pick a body —")}</option>}
-                {bodies.map((b) => {
-                  const c = compat.get(b.name);
-                  const ok = c?.ok ?? false;
-                  return (
-                    <option key={b.name} value={b.name} disabled={!ok} title={ok ? undefined : c?.reason}>
-                      {b.label || b.name} · {b.family}{ok ? "" : ` — ${t("not supported here")}`}
-                    </option>
-                  );
-                })}
-              </select>
-              {body && !compat.get(body)?.ok && <div className="mt-1 text-[11px] text-amber-400">{compat.get(body)?.reason}</div>}
-              {/* 灰掉的原因：<option> 的 title 大多数浏览器不显示，所以把原因也列在下面。 */}
-              {bodies.some((b) => !compat.get(b.name)?.ok) && (
-                <details className="mt-1 text-[10px] text-neutral-500">
-                  <summary className="cursor-pointer">{t("why some bodies are greyed out")}</summary>
-                  <ul className="mt-0.5 space-y-0.5">
-                    {bodies.filter((b) => !compat.get(b.name)?.ok).map((b) => (
-                      <li key={b.name}><span className="font-mono">{b.name}</span>: {compat.get(b.name)?.reason ?? t("(not in the matrix)")}</li>
-                    ))}
-                  </ul>
-                </details>
-              )}
-            </label>
-          )}
+          {body && <>
+            <div className="grid grid-cols-2 gap-2" role="group" aria-label={t("Environment")}>
+              {(["sim", "real"] as const).map(environment => {
+                const available = !!bodies.find(robot => robot.name === body)?.buses[environment]?.enabled;
+                return <button key={environment} disabled={!available} onClick={() => { setMode(environment); setWorld(""); setWorldValues({}); setSensors([]); }} aria-pressed={mode === environment} className={`nerv-control rounded-md border p-2 ${mode === environment ? "nerv-selected" : "border-neutral-700"}`}>
+                  {t(environment === "sim" ? "Simulation" : "Real hardware")}{!available && <span className="block text-[10px]">{t("Not configured")}</span>}
+                </button>;
+              })}
+            </div>
+            {mode === "sim" && <label className="block"><div className="mb-1 text-neutral-400">{t("World")}</div>
+              <select value={world} onChange={event => { setWorld(event.target.value); setWorldValues({}); setSensors([]); }} className={selectCls}>
+                <option value="">{t("Select a simulation world")}</option>
+                {worlds.filter(w => w.kind === "sim").map(w => <option key={w.name} value={w.name} disabled={!registry?.matrix.some(cell => cell.world === w.name && cell.body === body && cell.ok)}>{w.label || w.name}</option>)}
+              </select></label>}
+          </>}
 
           {worldSpec && worldSpec.ambient.length > 0 && (
             <div>
@@ -219,9 +194,11 @@ export default function SessionSidebar({
             </div>
           )}
 
+          {mode === "sim" && worldSpec?.configuration && <div className="space-y-2"><p className="text-neutral-300">{t("World properties")}</p><WorldProperties schema={worldSpec.configuration.schema} values={worldValues} onChange={setWorldValues}/><p className="text-[11px] text-neutral-500">{t("Changing objects requires a new instance.")}</p></div>}
           <label className="block">
-            <div className="mb-1 text-neutral-400">{t("Brain")}</div>
+            <div className="mb-1 text-neutral-400">{t("NERV Agent")}</div>
             <select value={brain} onChange={(e) => setBrain(e.target.value)} className={selectCls}>
+              <option value="operator">{t("Set up without an API key")}</option>
               {brains.map((b) => (
                 <option key={b.name} value={b.name}>
                   {t(b.label)}{b.available ? "" : ` (${t("not configured")})`}
@@ -236,11 +213,12 @@ export default function SessionSidebar({
             </div>
           )}
 
+          {brain !== "operator" && !brains.find(b => b.name === brain)?.available && <p className="text-xs"><button className="nerv-control underline" onClick={() => onPanel("models")}>{t("Configure an API key in model settings first.")}</button></p>}
           <div className="flex gap-2 pt-1">
-            <button onClick={doCreate} disabled={busy || (!!world && !body)} className="rounded-lg bg-blue-600 px-3 py-1.5 text-white disabled:opacity-50">
+            <button onClick={doCreate} disabled={busy || (brain !== "operator" && !brains.find(b => b.name === brain)?.available) || (!!world && !body)} className="nerv-control rounded-lg nerv-primary px-3 py-1.5 text-white">
               {busy ? (world ? t("Launching nodes…") : t("Creating…")) : t("Create session")}
             </button>
-            <button onClick={() => setCreating(false)} disabled={busy} className="rounded-lg bg-neutral-700 px-3 py-1.5">
+            <button onClick={() => setCreating(false)} disabled={busy} className="nerv-control rounded-lg bg-neutral-700 px-3 py-1.5">
               {t("Cancel")}
             </button>
           </div>
@@ -254,18 +232,18 @@ export default function SessionSidebar({
         {sessions.map((s) => (
           <div key={s.id} className={`group mb-1 flex items-start rounded-lg ${s.id === currentId ? "bg-neutral-800" : "hover:bg-neutral-800/50"}`}>
             <button onClick={() => onSelect(s.id)} aria-current={s.id === currentId ? "true" : undefined}
-              className="min-w-0 flex-1 rounded-lg p-2 text-left text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500">
+              className="nerv-control min-w-0 flex-1 rounded-lg p-2 text-left text-xs focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--control-focus)]">
               <div className="flex items-center justify-between gap-1">
                 <span className="truncate font-medium">{s.title}</span>
                 {s.status !== "active" && <StatusBadge status={s.status} />}
               </div>
               <div className="mt-0.5 flex items-center gap-1 text-[10px] text-neutral-500">
                 {s.armed && <span className="text-red-400" title={t("armed")}>●</span>}
-                <span className="truncate">{s.world ? `${s.world} / ${s.body}` : t("Conversation only")} · {s.brain}</span>
+                <span className="truncate">{s.world ? `${s.world} / ${s.body}` : s.body || t("Conversation only")} · {s.brain}</span>
               </div>
             </button>
             <button onClick={() => doDelete(s.id)} title={t("Delete session")} aria-label={t("Delete session")}
-              className="mr-1 mt-1 shrink-0 rounded px-1.5 py-1 text-[11px] text-neutral-600 opacity-0 hover:bg-neutral-700 hover:text-red-400 focus:opacity-100 group-hover:opacity-100">
+              className="nerv-control nerv-danger-quiet mr-1 mt-1 shrink-0 rounded px-1.5 py-1 text-[11px] text-neutral-600 opacity-0 hover:bg-neutral-700 hover:text-red-400 focus:opacity-100 group-hover:opacity-100">
               ✕
             </button>
           </div>
@@ -274,13 +252,17 @@ export default function SessionSidebar({
 
       <div className="shrink-0 border-t border-neutral-800">
         <nav className="flex flex-col px-2 pt-2" aria-label={t("Pages")}>
-          <button onClick={() => onPanel("dashboard")} className={`${navRow} ${panel === "dashboard" ? "bg-neutral-800 text-neutral-100" : ""}`} title={t("NERV dashboard")} aria-pressed={panel === "dashboard"}>
+          <button onClick={() => onPanel("dashboard")} className={`nerv-control ${navRow} ${panel === "dashboard" ? "bg-neutral-800 text-neutral-100" : ""}`} title={t("NERV dashboard")} aria-pressed={panel === "dashboard"}>
             <DashboardIcon /> <span>{t("Dashboard")}</span>
           </button>
-          <button onClick={() => onPanel("explore")} className={`${navRow} ${panel === "explore" ? "bg-neutral-800 text-neutral-100" : ""}`} title="Nerv World Explore" aria-pressed={panel === "explore"}>
+          <button onClick={() => onPanel("schemes")} className={`nerv-control ${navRow}`}>{t("Control schemes")}</button>
+          <button onClick={() => onPanel("modules")} className={`nerv-control ${navRow}`}>{t("Simulation and components")}</button>
+          <button onClick={() => onPanel("setup")} className={`nerv-control ${navRow}`}>{t("Device and policy setup")}</button>
+          <button onClick={() => onPanel("models")} className={`nerv-control ${navRow}`}>{t("Visual models")}</button>
+          <button onClick={() => onPanel("explore")} className={`nerv-control ${navRow} ${panel === "explore" ? "bg-neutral-800 text-neutral-100" : ""}`} title="Nerv World Explore" aria-pressed={panel === "explore"}>
             <ExploreIcon /> <span>Nerv World Explore</span>
           </button>
-          <button onClick={() => onPanel("logs")} className={`${navRow} ${panel === "logs" ? "bg-neutral-800 text-neutral-100" : ""}`} title="Session Logs" aria-pressed={panel === "logs"}>
+          <button onClick={() => onPanel("logs")} className={`nerv-control ${navRow} ${panel === "logs" ? "bg-neutral-800 text-neutral-100" : ""}`} title="Session Logs" aria-pressed={panel === "logs"}>
             <LogsIcon /> <span>{t("Logs")}</span>
           </button>
         </nav>

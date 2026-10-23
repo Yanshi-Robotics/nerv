@@ -59,7 +59,7 @@ export default function WorldExplore({ worlds, defaultWorld }: { worlds: WorldSp
     }
     setSelection(next);
   }
-  const button = "rounded-md border border-neutral-700 px-2.5 py-1.5 text-xs text-neutral-300 hover:bg-neutral-800 focus-visible:outline-2 focus-visible:outline-blue-500";
+  const button = "rounded-md border border-neutral-700 px-2.5 py-1.5 text-xs text-neutral-300 hover:bg-neutral-800 focus-visible:outline-2 focus-visible:outline-[var(--control-focus)]";
   return (
     <section className="flex h-full min-w-0 flex-col overflow-hidden" aria-label="Nerv World Explore">
       <header className="flex shrink-0 flex-wrap items-center gap-x-5 gap-y-2 border-b border-neutral-800 bg-neutral-900 px-5 py-3">
@@ -77,7 +77,7 @@ export default function WorldExplore({ worlds, defaultWorld }: { worlds: WorldSp
             {manifest?.rooms.some((r) => r.exterior) && <option value="courtyard">{t("Courtyard")}</option>}
           </select>
         </label>
-        <button className={button} onClick={() => { setSelection(null); setReset((n) => n + 1); }}>{t("Restore view")}</button>
+        <button className={`nerv-control ${button}`} onClick={() => { setSelection(null); setReset((n) => n + 1); }}>{t("Restore view")}</button>
         <div className="flex w-full flex-wrap gap-4 text-[11px] text-neutral-400">
           <label className="flex items-center gap-1.5"><input type="checkbox" checked={labels} onChange={(e) => setLabels(e.target.checked)} />{t("Room labels")}</label>
           <label className="flex items-center gap-1.5"><input type="checkbox" checked={facilities} onChange={(e) => setFacilities(e.target.checked)} />{t("Facility markers")}</label>
@@ -95,10 +95,10 @@ export default function WorldExplore({ worlds, defaultWorld }: { worlds: WorldSp
         <aside className="flex min-h-0 flex-col border-l border-neutral-800 bg-neutral-900" aria-label={t("Rooms and facilities")}>
           <div className="shrink-0 border-b border-neutral-800 p-3">
             <input aria-label={t("Search rooms and facilities")} placeholder={t("Search rooms and facilities")} value={search} onChange={(e) => setSearch(e.target.value)}
-              className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-xs outline-none focus:border-blue-500" />
+              className="w-full rounded-lg border border-neutral-700 bg-neutral-950 px-3 py-2 text-xs outline-none focus:border-[var(--control-focus)]" />
           </div>
           {(room || facility) && <div className="max-h-[45%] shrink-0 overflow-auto border-b border-neutral-800 p-4 text-xs">
-            <button className="float-right text-neutral-500 hover:text-neutral-200" aria-label={t("Clear selection")} onClick={() => setSelection(null)}>×</button>
+            <button className="nerv-control float-right text-neutral-500 hover:text-neutral-200" aria-label={t("Clear selection")} onClick={() => setSelection(null)}>×</button>
             <p className="pr-4 text-sm font-medium">{localized((facility ?? room)?.label, lang)}</p>
             <p className="mt-1 text-[11px] text-neutral-500">{localized(manifest?.floors.find((f) => f.id === (facility ?? room)?.floor)?.label, lang)}{facility && relatedRoom ? ` · ${localized(relatedRoom.label, lang)}` : ""}</p>
             {facility && <>
@@ -108,14 +108,14 @@ export default function WorldExplore({ worlds, defaultWorld }: { worlds: WorldSp
               <p className="mt-3 font-medium text-neutral-300">{t("Test method")}</p>
               <p className="mt-1 leading-relaxed text-neutral-400">{localized(facility.test, lang)}</p>
             </>}
-            {room && <div className="mt-3 space-y-1">{manifest?.facilities.filter((f) => f.room === room.id).map((f) => <button key={f.id} onClick={() => pick({ kind: "facility", id: f.id })} className="block text-left text-blue-400 hover:text-blue-300">{localized(f.label, lang)}</button>)}</div>}
+            {room && <div className="mt-3 space-y-1">{manifest?.facilities.filter((f) => f.room === room.id).map((f) => <button key={f.id} onClick={() => pick({ kind: "facility", id: f.id })} className="nerv-control block text-left text-blue-400">{localized(f.label, lang)}</button>)}</div>}
           </div>}
           <div className="min-h-0 flex-1 overflow-auto p-3">
             <p className="px-1 pb-2 text-[10px] font-medium uppercase tracking-wide text-neutral-500">{t("Rooms")}</p>
-            {roomList.map((r) => <button key={r.id} className={`mb-0.5 block w-full rounded-md px-2 py-2 text-left text-xs hover:bg-neutral-800 ${selection?.id === r.id ? "bg-blue-600/15 text-blue-400" : "text-neutral-300"}`}
+            {roomList.map((r) => <button key={r.id} className={`nerv-control mb-0.5 block w-full rounded-md px-2 py-2 text-left text-xs hover:bg-neutral-800 ${selection?.id === r.id ? "nerv-selected" : "text-neutral-300"}`}
               onClick={() => pick({ kind: "room", id: r.id })}>{localized(r.label, lang)}</button>)}
             <p className="mt-4 px-1 pb-2 text-[10px] font-medium uppercase tracking-wide text-neutral-500">{t("Facilities")}</p>
-            {facilityList.map((f) => <button key={f.id} className={`mb-0.5 block w-full rounded-md px-2 py-2 text-left text-xs hover:bg-neutral-800 ${selection?.id === f.id ? "bg-blue-600/15 text-blue-400" : "text-neutral-400"}`}
+            {facilityList.map((f) => <button key={f.id} className={`nerv-control mb-0.5 block w-full rounded-md px-2 py-2 text-left text-xs hover:bg-neutral-800 ${selection?.id === f.id ? "nerv-selected" : "text-neutral-400"}`}
               onClick={() => pick({ kind: "facility", id: f.id })}><span>{localized(f.label, lang)}</span><span className="mt-0.5 block text-[10px] text-neutral-500">{t(KIND_LABELS[f.kind])}</span></button>)}
             {manifest && roomList.length + facilityList.length === 0 && <p className="p-2 text-xs text-neutral-500">{t("No matching rooms or facilities.")}</p>}
           </div>

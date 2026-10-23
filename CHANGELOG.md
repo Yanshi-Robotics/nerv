@@ -5,14 +5,129 @@ The 0.1.x entries below are the pre-release trail.
 
 ## [Unreleased]
 
+## [0.7.1] — 2026-10-24
+
+Development release for local testing; physical and student acceptance remain pending.
+
+- Publish GitHub installation assets and support `nerv update` migration from the npm launcher.
+- Verify the migration installer hash and retain the previous host for rollback.
+- Avoid reinstalling an already-current remote release; explain active-server update conflicts.
+
+### Installation recovery and guided device setup
+
+- Browse local calibration and checkpoint folders from the operator interface.
+- Enumerate Windows/macOS camera metadata and restore unique camera/serial identities;
+  return missing or ambiguous devices to the affected setup step.
+- Stage host and installed official modules together; restore configuration and environment
+  pointers on failure or rollback, preserving newer configuration copies and user journals.
+- Check native ACT processing with explicit synthetic inputs; load complete checkpoints
+  without downloading torchvision initialization weights.
+- Bundle the pure Python Feetech wheel and verify native imports before activating the
+  device module. Use managed Python for student installations.
+- Physical trials, native cross-platform hardware acceptance and public release remain
+  separate gates.
+
+### 0.7.0 candidate — three-layer control and student distribution
+
+- Introduce immutable control schemes for fixed ACT, visual policy groups and visual
+  direct control. Freeze task configuration and keep chat models independent.
+- Enforce bounded action grants in Runtime protocol 3, with action budgets, expiry,
+  generation checks and confirmed-stop requirements. Fixed tasks need no model key.
+- Add guided SO-101 discovery, calibration selection, camera preview/handoff, saved
+  device profiles, policy import and explicit supervised acceptance.
+- Add scheme structure views, optional component installation, durable install jobs,
+  cancellation/retry, hashed dependency bundles and managed update/rollback commands.
+- Ship Shell/PowerShell candidate installers and three SO-101 simulation presets.
+  Pin MuJoCo 3.12.0 to the validated scene format. Preserve the npm compatibility entry.
+- Document software, hardware and student acceptance separately. No release publication
+  or physical-support claim is implied by this candidate.
+
+- Add a GitHub-archive npm/npx launcher with uv-managed, fingerprinted host and device
+  environments. Discover installed runtime interpreters in the setup interface.
+- Use `~/.nerv` for user data in both source and installed launches. Preserve old
+  checkout-local histories without automatic migration or overwriting user data.
+
+## [0.6.3] — standard SO-101 development candidate, 2026-10-23
+
+- Fix the first real-device product contract to standard SO-101 with LeRobot 0.6.1,
+  degree joints, native 0–100 gripper positions and two named course cameras.
+- Separate the device owner from policy backends. Add bounded joint and gripper tools,
+  operator-only sessions, observation-bound decisions and native ACT import/check workflows.
+- Preserve requested, sent and measured targets separately, including native clipping and
+  failed writes. Add explicit no-motion inference, disconnect and operator torque release.
+- Ship the static interface and product defaults in the host wheel. Document separate host
+  and device environments, fixed policy declarations and software/physical support status.
+- Use portable locks and path handling; store Windows credentials in Windows Credential
+  Manager. Add a Linux/Windows/macOS software workflow. Hardware acceptance remains pending.
+
+- Consolidate manual device, robot, world, camera and task controls in Operator Toolbox.
+  Keep stop task and emergency stop in the top toolbar and cameras free of configuration forms.
+- Test candidate provider keys with one generated image before saving; keep existing keys on
+  failed, cancelled or superseded tests. Session creation checks registered keys before side effects.
+- Separate optional API diagnostics from model eligibility and surface sanitized, localized
+  model failures without cancelling independent robot tasks. Bind access permission to the
+  capability manifest reviewed by the operator.
+
+## [0.6.2] — development snapshot, 2026-10-21
+
+- Split conversational Agent and System 2 into independent harness runs, context views,
+  cancellation signals and usage scopes. Add versioned task updates and acknowledged stops.
+- Separate five capability domains; runtime protocol 2 exposes robot actions independently
+  from auxiliary Agent tools and sensors. Incompatible workers fail before preparation.
+- Keep chat available during execution and teleoperation. Add independent task events and
+  sourced robot-activity bubbles inside the camera frame, separate from raw image inputs.
+- Add simulation-only World Control, per-instance MJCF generation, object schemas and source
+  fingerprints. Reset keeps configuration; rebuild creates a new instance and freezes old sessions.
+- Serialize journal readers with writers, preserve old histories, and mark interrupted tasks
+  unknown without replay. Retain the G1 path and all prior README media.
+- This local development snapshot does not certify paid VLM behavior, physical tasks or ultimate.
+
+- Set the supported MuJoCo simulation baseline to 3.12, matching the qualified workbench environment.
+- Enable SO-101 simulation with single-object basket placement, three-snack sorting and five-disk Hanoi worlds. Add replaceable rigid/native-flex objects, cameras, offline task measurements and asset qualification in the worlds submodule.
+- Add validated `spawn.initial_joints` world configuration, retained during initialization and whole-scene reset. Keep task truth outside body observations and the real ACT binding independent.
+
+## [0.6.1] — development snapshot, 2026-10-20
+
+- Added provider-level, write-only API key settings for OpenAI, DeepSeek, Gemini, xAI
+  and Anthropic, stored outside the checkout with private directory/file permissions.
+  Existing environment keys are ignored by the visual registry; users re-enter keys.
+- Added curated Gemini, Grok and Claude VLMs, native reasoning effort choices,
+  stateless Interactions and Messages adapters, and signed continuation replay.
+- Replaced JSON-only registration editing with model settings forms; invalidated stale
+  readiness receipts when their request contract changes. Validation remains explicit
+  and billable; offline software fixtures do not qualify models for physical acceptance.
+- Runtime SDK and LeRobot adapter remain at 0.6.0; this host update does not change
+  their protocol or the 1.0.0 physical acceptance requirements.
+
+## [0.6.0] — development snapshot, 2026-10-19
+
+- Added durable session journals, legacy migration, scoped history queries, whole-tool-group
+  compaction, request budgeting, cancellable Responses providers and generation-guarded commits.
+- Extracted independent runtime SDK and entry-point discovery; wrapped the existing simulator
+  and added the LeRobot 0.6.1 native ACT adapter with shared cameras and local supervision.
+- Registered the original snack_into_box artifact by file fingerprint. Added explicit device
+  preparation, policy loading, managed execution and disarmed emergency-release behavior.
+- Added visual-only model registration, write-only credentials, per-model effort and separate
+  image/tool/continuation checks. Added startup robot/environment selection and named camera views.
+- Context overflow now returns an explicit pause message; incomplete provider responses are
+  retained in raw events without replaying their continuation as live tool calls.
+- Physical acceptance, paid API verification and full rendered G1 regression remain separate.
+  This development snapshot does not qualify for 1.0.0.
+
+## [0.5.0] — 2026-10-19
+
+Audited development baseline after moving the checkout. Recreated the local Python
+entry points and editable installation at the current checkout. Existing v0.2.0
+history and both submodule revisions are retained. Context, turn and gate baseline:
+10 tests passed. This checkpoint does not certify hardware or current cloud APIs.
+
 The 2026-09-08 interaction update adds operator testing for apt's 22 appliance joints
 and nine movable objects, measured refrigerator-task evaluation, interruption and reset
 handling, house lighting phases, and collision-based ground-support and turning checks.
 Nerv World Explore provides a read-only floor guide built from the scene models. The
 existing robot policy is unchanged; autonomous manipulation and stair traversal remain
-outside this update. See the [detailed development record (Chinese)](docs/development/2026-09-08-world-interaction-explore.md)
-and [validation evidence](docs/validation/world-explore/README.md) for retained failures,
-actual routes, browser measurements and the authorized local service activation.
+outside this update. The development and validation records retain failures, actual routes,
+browser measurements and the authorized local service activation.
 
 The residence catalogue now exposes `apt` and `house`. The duplex keeps the original
 apartment's Central Park environment and four lighting phases, and the hillside mansion

@@ -1,0 +1,73 @@
+{
+  "name": "arm-lerobot-so101",
+  "family": "arm",
+  "label": "SO-101 arm (LeRobot)",
+  "version": "1",
+  "sensors": [
+    {
+      "name": "camera:top",
+      "camera": "top",
+      "description": "fixed overhead camera"
+    },
+    {
+      "name": "camera:wrist",
+      "camera": "wrist",
+      "description": "camera on the wrist (sim: MJCF camera 'wrist'; real: LeRobot camera key 'wrist')"
+    }
+  ],
+  "skills": {},
+  "actuators": {
+    "joints": [
+      "shoulder_pan",
+      "shoulder_lift",
+      "elbow_flex",
+      "wrist_flex",
+      "wrist_roll",
+      "gripper"
+    ],
+    "gripper": "gripper",
+    "pd_mode": "position_actuator",
+    "rate_hz": 50,
+    "max_step_deg": 30,
+    "min_duration_s": 0.3,
+    "max_duration_s": 10,
+    "default_duration_s": 2.0,
+    "settle_tol_deg": 2.0
+  },
+  "buses": {
+    "real": {
+      "kind": "lerobot",
+      "provider": "lerobot0.6.1",
+      "verified": false,
+      "python": "${NERV_LEROBOT_PYTHON}",
+      "settings": {
+        "use_degrees": true,
+        "robot_type": "so101_follower",
+        "port": "${SO101_PORT}",
+        "id": "${SO101_ID}",
+        "calibration_dir": "${SO101_CALIBRATION_DIR}",
+        "cameras": "${SO101_CAMERAS}",
+        "camera_config_file": "${SO101_CAMERA_CONFIG}",
+        "control_rate_hz": 30,
+        "decision_max_age_s": 20,
+        "decision_max_drift": 2,
+        "min_duration_s": 0.3,
+        "max_duration_s": 10,
+        "max_step_deg": 30,
+        "settle_tol": 2,
+        "max_runtime_s": 45,
+        "supervision_timeout_s": 20,
+        "cancel_timeout_s": 5,
+        "watchdog_poll_s": 0.05,
+        "max_frame_age_s": 0.5,
+        "policy_device": "cpu",
+        "jpeg_quality": 80,
+        "disable_torque_on_disconnect": false,
+        "max_relative_target": 5,
+        "gripper": "gripper",
+        "max_action_age_s": 0.5
+      }
+    }
+  },
+  "guidance": "Standard SO-101. Observe top and wrist and read_state before motion. Use returned frame_seq and instance_id. Stop when observation is stale or task outcome is uncertain. A completed command is not task success."
+}

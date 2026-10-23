@@ -1,0 +1,2 @@
+recursive-include frontend/out *
+include packages/nerv-runtime-lerobot/src/nerv_runtime_lerobot/product.json

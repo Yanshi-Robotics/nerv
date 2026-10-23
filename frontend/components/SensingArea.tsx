@@ -2,13 +2,19 @@
 import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
 
 import { useI18n } from "@/lib/i18n";
-import SceneTestPanel from "./SceneTestPanel";
+
+import { ToolboxSlot } from "./OperatorToolbox";
+import RobotActivity from "./RobotActivity";
+
+
+
 import {
   getPerception,
   DEFAULT_CHASE_VIEW,
   getWorldSensors,
   setWorldChaseView,
   type ChaseView,
+  type SensorDecl,
   POLL_PERCEIVE_MS,
   worldCameraStreamUrl,
   type NodeInfo,
@@ -20,7 +26,7 @@ import {
 //   observation   大脑看到的：GET /api/perceive 的结果，每一路一格、带名字。这就是下一回合送进模型的东西。
 //   body          身体节点的连续视频（MJPEG /stream）——给人看的，大脑一回合只拿一张快照。
 //   world         世界节点的追拍相机（/stream）——上帝视角，**大脑从来看不到**，标题必须写明。
-//   cam:<name>    世界节点 /sensors 列出的每一路相机（/stream/<去前缀名>），同样只给人看。
+//   cam:<name>    Named simulation cameras; robot profile mappings determine sensor ownership.
 // 默认勾 observation + body。
 type ViewId = string;
 const VIEW_OBSERVATION: ViewId = "observation";
@@ -47,11 +53,13 @@ export default function SensingArea({
   session,
   bodyNode,
   worldNode,
+  robotSensors = [],
   onStateChanged,
 }: {
   session: SessionSummary | null;
   bodyNode: NodeInfo | null;
   worldNode: NodeInfo | null;
+  robotSensors?: SensorDecl[];
   onStateChanged?: () => void;
 }) {
   const { t } = useI18n();
@@ -63,7 +71,6 @@ export default function SensingArea({
   const [views, setViews] = useState<ViewId[]>(DEFAULT_VIEWS);
   const [worldSensors, setWorldSensors] = useState<string[]>([]);
   const [expanded, setExpanded] = useState<ViewId | null>(null); // 放大到整块中间区的那一格
-  const [sceneTest, setSceneTest] = useState(false);
 
   const sid = session?.id ?? "";
   const hasBody = !!session?.body;
@@ -88,7 +95,7 @@ export default function SensingArea({
   // 视图选择按会话持久化
   useEffect(() => {
     if (!sid) return;
-    setViews(readViews(sid));
+    setViews(session?.mode === "real" ? [VIEW_OBSERVATION] : readViews(sid));
     setExpanded(null);
   }, [sid]);
   const toggleView = (id: ViewId) =>
@@ -110,12 +117,13 @@ export default function SensingArea({
       setPerc(await getPerception(sid));
       setErr("");
     } catch (e) {
+      setPerc(null);
       setErr((e as Error).message);
     }
     setBusy(false);
   }, [sid, hasBody, active]);
 
-  const wantObservation = !sceneTest && views.includes(VIEW_OBSERVATION);
+  const wantObservation = views.includes(VIEW_OBSERVATION);
   useEffect(() => {
     setPerc(null);
     setErr("");
@@ -144,6 +152,15 @@ export default function SensingArea({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [worldUrl, worldOnline, (relayed ?? []).join("|")]);
 
+  useEffect(() => {
+    if (!sid || !worldSensors.length || localStorage.getItem(viewsKey(sid))) return;
+    setViews(worldSensors.map(name => CAM_VIEW_PREFIX + name));
+  }, [sid, worldSensors.join("|")]);
+
+  // Camera ownership and order come from the robot profile, never camera-name guesses.
+  const robotCameras = useMemo(() => robotSensors.map(sensor =>
+    sensor.camera ? `camera:${sensor.camera.replace(/^camera:/, "")}` : sensor.name), [robotSensors]);
+
   // 可选的视图清单
   const chips = useMemo(() => {
     const out: { id: ViewId; label: string; title?: string; group: "robot" | "third" }[] = [
@@ -152,15 +169,18 @@ export default function SensingArea({
     ];
     if (session?.world) {
       out.push({ id: VIEW_WORLD, label: `🛰 ${t("World chase (operator only)")}`, title: t("the brain never sees this"), group: "third" });
-      for (const s of worldSensors) out.push({ id: CAM_VIEW_PREFIX + s, label: `📷 ${s}`, title: t("world camera — the brain never sees this"), group: "third" });
+      for (const s of worldSensors) out.push({ id: CAM_VIEW_PREFIX + s, label: `📷 ${s}`, group: robotCameras.includes(s) ? "robot" : "third" });
     }
     return out;
-  }, [session?.world, worldSensors, t]);
+  }, [session?.world, worldSensors, robotCameras, t]);
 
   // 选中的视图 → 一格格瓦片
   const tiles = useMemo(() => {
     if (!session || !hasBody || !active) return [];
-    const out: { id: ViewId; label: string; sub?: string; muted?: boolean; body: ReactNode }[] = [];
+    const out: { id: ViewId; label: string; sub?: string; operatorOnly?: boolean; muted?: boolean; body: ReactNode }[] = [];
+    if (session.mode === "real" && bodyNode) {
+      for (const name of bodyNode.sensors ?? []) out.push({id: `runtime:${name}`, label: name, sub: t("Live sensor"), body: <Stream nonce={nonce} url={bodyOnline ? `${bodyNode.url}/streams/${encodeURIComponent(name)}` : null} alt={name} missing={t("No fresh camera frame")} />});
+    }
     for (const v of views) {
       if (v === VIEW_OBSERVATION) {
         const images = perc?.images ?? [];
@@ -200,33 +220,35 @@ export default function SensingArea({
         out.push({
           id: v,
           label: `🛰 ${t("World chase (operator only)")} · ${worldNode?.key ?? `world:${session.world}/${session.body}`}`,
-          sub: t("the brain never sees this"),
+          operatorOnly: true,
           muted: true,
           body: (
             <div className="relative flex h-full w-full items-center justify-center">
               <Stream nonce={nonce} url={worldOnline && worldNode ? `${worldNode.url}/stream` : null} alt={t("World chase (operator only)")}
                 missing={worldNode ? t("world node offline") : t("world node not launched")} muted />
-              {worldOnline && worldNode && <ChaseControls view={chase} onChange={setChase} />}
             </div>
           ),
         });
       } else if (v.startsWith(CAM_VIEW_PREFIX)) {
         const name = v.slice(CAM_VIEW_PREFIX.length);
-        if (!worldSensors.includes(name)) continue; // 这个世界（已经）没有这路相机
+        if (worldOnline && !worldSensors.includes(name)) continue; // Preserve offline camera tiles and their error state.
         out.push({
           id: v,
           label: `📷 ${name}`,
-          sub: t("world camera — the brain never sees this"),
-          muted: true,
+          operatorOnly: !robotCameras.includes(name),
           body: (
             <Stream nonce={nonce} url={worldOnline && worldNode ? worldCameraStreamUrl(worldNode.url, name) : null} alt={name}
-              missing={worldNode ? t("world node offline") : t("world node not launched")} muted />
+              missing={worldNode ? t("world node offline") : t("world node not launched")} />
           ),
         });
       }
     }
-    return out;
-  }, [session, hasBody, active, views, perc, err, bodyNode, worldNode, bodyOnline, worldOnline, worldSensors, nonce, t, chase]);
+    return out.sort((a, b) => {
+      const rank = (tile: typeof a) => tile.operatorOnly ? Number.MAX_SAFE_INTEGER
+        : tile.id.startsWith(CAM_VIEW_PREFIX) ? robotCameras.indexOf(tile.id.slice(CAM_VIEW_PREFIX.length)) : -1;
+      return rank(a) - rank(b);
+    });
+  }, [robotCameras, session, hasBody, active, views, perc, err, bodyNode, worldNode, bodyOnline, worldOnline, worldSensors, nonce, t, chase]);
 
   // Esc 关掉放大的那一格
   useEffect(() => {
@@ -251,6 +273,8 @@ export default function SensingArea({
 
   return (
     <section className="relative flex min-w-0 flex-col overflow-hidden">
+      <ToolboxSlot name="observation">
+        {worldOnline && worldNode && <ChaseControls view={chase} onChange={setChase} />}
       {/* ---- 视图选择 ---- */}
       <div className="flex flex-wrap items-center gap-1.5 border-b border-neutral-800 bg-neutral-900/60 px-3 py-2">
         <div className="flex flex-wrap items-center gap-3" role="group" aria-label={t("Views")}>
@@ -263,9 +287,9 @@ export default function SensingArea({
               {items.map((c) => {
                 const on = views.includes(c.id);
                 return (
-                  <button key={c.id} disabled={sceneTest} onClick={() => toggleView(c.id)} aria-pressed={on} title={c.title}
-                    className={`rounded-full border px-2.5 py-0.5 text-[11px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 ${
-                      on ? "border-blue-600 bg-blue-600 text-white" : "border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-neutral-200"
+                  <button key={c.id} onClick={() => toggleView(c.id)} aria-pressed={on} title={c.title}
+                    className={`nerv-control rounded-full border px-2.5 py-0.5 text-[11px] transition-colors focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--control-focus)] ${
+                      on ? "nerv-selected" : "border-neutral-700 text-neutral-400 hover:border-neutral-500 hover:text-neutral-200"
                     }`}>
                     {c.label}
                   </button>
@@ -276,10 +300,6 @@ export default function SensingArea({
         })}
         </div>
         <span className="ml-auto flex items-center gap-1.5">
-          {worldOnline && <button onClick={() => { setExpanded(null); setSceneTest(true); }} disabled={sceneTest}
-            className="rounded-md border border-blue-700 bg-blue-600/15 px-2 py-1 text-[11px] text-blue-400 disabled:opacity-50">
-            {t("Scene test")}
-          </button>}
           {wantObservation && (
             <>
               <label className="flex items-center gap-1 text-[11px] text-neutral-400">
@@ -287,21 +307,23 @@ export default function SensingArea({
                 {t("auto-refresh")}
               </label>
               <button onClick={load} disabled={busy || !active}
-                className="rounded-md border border-neutral-700 bg-neutral-800 px-2 py-1 text-[11px] text-neutral-300 hover:bg-neutral-700 disabled:opacity-50">
+                className="nerv-control rounded-md border border-neutral-700 bg-neutral-800 px-2 py-1 text-[11px] text-neutral-300 hover:bg-neutral-700">
                 {busy ? t("Perceiving…") : t("Perceive now")}
               </button>
             </>
           )}
           <button onClick={() => setNonce((n) => n + 1)} title={t("reconnect the video streams")}
-            className="rounded border border-neutral-800 px-1.5 py-1 text-[10px] text-neutral-500 hover:text-neutral-300">
+            className="nerv-control rounded border border-neutral-800 px-1.5 py-1 text-[10px] text-neutral-500 hover:text-neutral-300">
             {t("reconnect")}
           </button>
         </span>
       </div>
 
+      </ToolboxSlot>
       {/* 中间区不滚动：几路视图就分几格，行列按数量算，图像按比例缩进格子里。
           这样视频流重连、观察刷新都不会把页面拉回顶部。 */}
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden p-4">
+      <RobotActivity session={session} onChanged={onStateChanged}>
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden p-3">
         <div className="shrink-0 text-[11px] text-neutral-500">
           {session.body} · {session.world}
           {session.sensors.length ? ` · ${t("ambient")}: ${session.sensors.join(", ")}` : ""}
@@ -313,32 +335,22 @@ export default function SensingArea({
           </div>
         )}
 
-        {sceneTest ? (
-          <div className="grid min-h-0 flex-1 grid-rows-[minmax(100px,0.35fr)_minmax(280px,1fr)] gap-3">
-            <div className="flex min-h-0 flex-col overflow-hidden rounded-xl border border-neutral-800 bg-neutral-900 p-2">
-              <p className="mb-1 text-[11px] text-neutral-400">{t("Body live")}</p>
-              <div className="flex min-h-0 flex-1 items-center justify-center overflow-hidden bg-neutral-950">
-                <Stream nonce={nonce} url={bodyOnline && bodyNode ? `${bodyNode.url}/stream` : null} alt={t("Body live")} missing={t("body node offline")} />
-              </div>
-            </div>
-            <SceneTestPanel sessionId={sid} onClose={() => setSceneTest(false)} onStateChanged={onStateChanged ?? (() => {})} />
-          </div>
-        ) : tiles.length === 0 ? (
+        {tiles.length === 0 ? (
           <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-neutral-800 text-xs text-neutral-500">
-            {active ? t("No view selected — pick one above.") : t("Open the conversation to view saved observations.")}
+            {active ? session.world && !worldOnline ? t("World node unavailable. End this instance and create a new one.") : t("No view selected. Choose a camera in the toolbox.") : t("Open the conversation to view saved observations.")}
           </div>
         ) : (
           <div className="grid min-h-0 flex-1 gap-3"
             style={{ gridTemplateColumns: `repeat(${gridColumns(tiles.length)}, minmax(0, 1fr))`, gridAutoRows: "minmax(0, 1fr)" }}>
             {tiles.map((tile) => (
-              <Tile key={tile.id} label={tile.label} sub={tile.sub} muted={tile.muted} onExpand={() => setExpanded(tile.id)} fill>
+              <Tile key={tile.id} label={tile.label} operatorOnly={tile.operatorOnly} sub={tile.sub} muted={tile.muted} onExpand={() => setExpanded(tile.id)} fill>
                 {tile.body}
               </Tile>
             ))}
           </div>
         )}
 
-        {wantObservation && perc && (
+        <ToolboxSlot name="observation">        {wantObservation && perc && (
           <details className="shrink-0 rounded-lg bg-neutral-900/60 text-xs">
             <summary className="cursor-pointer px-3 py-1.5 text-neutral-400">
               {t("state the brain is told")} · {stateKeys.length} {t("keys")}
@@ -347,13 +359,14 @@ export default function SensingArea({
               {JSON.stringify(perc.state ?? {}, null, 2)}
             </pre>
           </details>
-        )}
+        )}</ToolboxSlot>
       </div>
 
+      </RobotActivity>
       {/* ---- 放大：盖住整块中间区 ---- */}
       {expandedTile && (
         <div className="absolute inset-0 z-20 flex flex-col bg-neutral-950 p-3" role="dialog" aria-modal="true" aria-label={expandedTile.label}>
-          <Tile label={expandedTile.label} sub={expandedTile.sub} muted={expandedTile.muted} expanded onExpand={() => setExpanded(null)} fill>
+          <Tile label={expandedTile.label} operatorOnly={expandedTile.operatorOnly} sub={expandedTile.sub} muted={expandedTile.muted} expanded onExpand={() => setExpanded(null)} fill>
             {expandedTile.body}
           </Tile>
         </div>
@@ -363,19 +376,22 @@ export default function SensingArea({
 }
 
 // 一格：标题 + 放大键 + 内容
-function Tile({ label, sub, muted = false, expanded = false, fill = false, onExpand, children }: {
-  label: string; sub?: string; muted?: boolean; expanded?: boolean; fill?: boolean; onExpand: () => void; children: ReactNode;
+function Tile({ label, sub, operatorOnly = false, muted = false, expanded = false, fill = false, onExpand, children }: {
+  label: string; sub?: string; operatorOnly?: boolean; muted?: boolean; expanded?: boolean; fill?: boolean; onExpand: () => void; children: ReactNode;
 }) {
   const { t } = useI18n();
   return (
     <div className={`flex min-w-0 flex-col gap-1 rounded-2xl border bg-neutral-900 p-2 ${muted ? "border-neutral-800/60" : "border-neutral-800"} ${fill ? "h-full" : ""}`}>
       <div className="flex items-start gap-2">
         <div className="min-w-0 flex-1">
-          <div className={`truncate text-[11px] ${muted ? "text-neutral-500" : "text-neutral-300"}`} title={label}>{label}</div>
+          <div className="flex items-center gap-2">
+            <span className={`truncate text-[11px] ${muted ? "text-neutral-500" : "text-neutral-300"}`} title={label}>{label}</span>
+            {operatorOnly && <span className="shrink-0 rounded-full border border-[var(--control-focus)] bg-[var(--control-selected-bg)] px-2 text-[10px] text-[var(--control-selected-fg)]">{t("Operator view")}</span>}
+          </div>
           {sub && <div className="truncate text-[10px] text-neutral-600">{sub}</div>}
         </div>
         <button onClick={onExpand} title={expanded ? t("Close (Esc)") : t("Expand")} aria-label={expanded ? t("Close (Esc)") : t("Expand")}
-          className="flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500"
+          className="nerv-control flex h-6 w-6 shrink-0 items-center justify-center rounded-md text-neutral-500 hover:bg-neutral-800 hover:text-neutral-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--control-focus)]"
           autoFocus={expanded}>
           {expanded ? <CloseIcon /> : <ExpandIcon />}
         </button>
@@ -415,19 +431,19 @@ const CHASE_YAW_WRAP = 360;
 function ChaseControls({ view, onChange }: { view: ChaseView; onChange: (v: ChaseView) => void }) {
   const { t } = useI18n();
   const isDefault = view.zoom === DEFAULT_CHASE_VIEW.zoom && view.yaw === DEFAULT_CHASE_VIEW.yaw && view.pitch === DEFAULT_CHASE_VIEW.pitch;
-  const btn = "flex h-7 w-7 items-center justify-center rounded-md bg-neutral-900/80 text-[13px] text-neutral-300 backdrop-blur hover:bg-neutral-700 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500 disabled:opacity-40";
+  const btn = "flex h-7 w-7 items-center justify-center rounded-md bg-neutral-900/80 text-[13px] text-neutral-300 backdrop-blur hover:bg-neutral-700 hover:text-white focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--control-focus)] ";
   const set = (patch: Partial<ChaseView>) => onChange({ ...view, ...patch });
   return (
-    <div className="absolute bottom-1.5 right-1.5 flex items-center gap-1 rounded-lg border border-neutral-800 bg-neutral-950/60 p-1" role="group" aria-label={t("Adjust the chase camera")}>
-      <button className={btn} onClick={() => set({ zoom: view.zoom / CHASE_ZOOM_STEP })} title={t("Zoom in")} aria-label={t("Zoom in")}>＋</button>
-      <button className={btn} onClick={() => set({ zoom: view.zoom * CHASE_ZOOM_STEP })} title={t("Zoom out")} aria-label={t("Zoom out")}>－</button>
+    <div className="flex flex-wrap items-center gap-1 rounded-lg border border-neutral-800 bg-neutral-950/60 p-1" role="group" aria-label={t("Adjust the chase camera")}>
+      <button className={`nerv-control ${btn}`} onClick={() => set({ zoom: view.zoom / CHASE_ZOOM_STEP })} title={t("Zoom in")} aria-label={t("Zoom in")}>＋</button>
+      <button className={`nerv-control ${btn}`} onClick={() => set({ zoom: view.zoom * CHASE_ZOOM_STEP })} title={t("Zoom out")} aria-label={t("Zoom out")}>－</button>
       <span className="mx-0.5 h-4 w-px bg-neutral-700" />
-      <button className={btn} onClick={() => set({ yaw: (view.yaw - CHASE_YAW_STEP + CHASE_YAW_WRAP) % CHASE_YAW_WRAP })} title={t("Orbit left")} aria-label={t("Orbit left")}>◀</button>
-      <button className={btn} onClick={() => set({ yaw: (view.yaw + CHASE_YAW_STEP) % CHASE_YAW_WRAP })} title={t("Orbit right")} aria-label={t("Orbit right")}>▶</button>
-      <button className={btn} onClick={() => set({ pitch: view.pitch + CHASE_PITCH_STEP })} title={t("Tilt up")} aria-label={t("Tilt up")}>▲</button>
-      <button className={btn} onClick={() => set({ pitch: view.pitch - CHASE_PITCH_STEP })} title={t("Tilt down")} aria-label={t("Tilt down")}>▼</button>
+      <button className={`nerv-control ${btn}`} onClick={() => set({ yaw: (view.yaw - CHASE_YAW_STEP + CHASE_YAW_WRAP) % CHASE_YAW_WRAP })} title={t("Orbit left")} aria-label={t("Orbit left")}>◀</button>
+      <button className={`nerv-control ${btn}`} onClick={() => set({ yaw: (view.yaw + CHASE_YAW_STEP) % CHASE_YAW_WRAP })} title={t("Orbit right")} aria-label={t("Orbit right")}>▶</button>
+      <button className={`nerv-control ${btn}`} onClick={() => set({ pitch: view.pitch + CHASE_PITCH_STEP })} title={t("Tilt up")} aria-label={t("Tilt up")}>▲</button>
+      <button className={`nerv-control ${btn}`} onClick={() => set({ pitch: view.pitch - CHASE_PITCH_STEP })} title={t("Tilt down")} aria-label={t("Tilt down")}>▼</button>
       <span className="mx-0.5 h-4 w-px bg-neutral-700" />
-      <button className={btn} onClick={() => onChange(DEFAULT_CHASE_VIEW)} disabled={isDefault} title={t("Default view")} aria-label={t("Default view")}>⟲</button>
+      <button className={`nerv-control ${btn}`} onClick={() => onChange(DEFAULT_CHASE_VIEW)} disabled={isDefault} title={t("Default view")} aria-label={t("Default view")}>⟲</button>
     </div>
   );
 }

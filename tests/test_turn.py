@@ -97,6 +97,8 @@ def test_teleop_uses_the_same_gate_and_records_the_step(tmp_path):
     impl, store, s, body, tool, servers = _setup(tmp_path, armed_session=False)
     try:
         hub = Nerv(registry=Registry(), store=store, launcher=Launcher(Registry()))
+        # This fixture reconnects the in-process device after host recovery.
+        store.set_status(s.id, "active")
         hub._bodies["fake-arm"] = body
         hub.launcher.nodes["body:fake-arm"] = type("H", (), {"url": body.base, "alive": lambda self: True,
                                                              "kind": "body", "name": "body:fake-arm",
@@ -133,6 +135,8 @@ def test_estop_holds_the_body_and_tells_the_brain(tmp_path):
     impl, store, s, body, tool, servers = _setup(tmp_path, armed_session=True)
     try:
         hub = Nerv(registry=Registry(), store=store, launcher=Launcher(Registry()))
+        # This fixture reconnects the in-process device after host recovery.
+        store.set_status(s.id, "active")
         hub._bodies["fake-arm"] = body
         hub.launcher.nodes["body:fake-arm"] = type("H", (), {"url": body.base, "alive": lambda self: True,
                                                              "kind": "body", "name": "body:fake-arm",
@@ -145,7 +149,8 @@ def test_estop_holds_the_body_and_tells_the_brain(tmp_path):
         assert msgs[-1]["role"] == "assistant" and msgs[-1]["brain"] == "operator" and "emergency stop" in msgs[-1]["text"]
         evs = list(hub.teleop_stream(s.id, "set_angle", {"deg": 15}))
         res = next(e for e in evs if e["type"] == "tool_result")
-        assert not res["ok"] and "holding" in res["message"]
+        assert not res["ok"] and "not armed" in res["message"]
+        assert not store.get(s.id).armed and store.get(s.id).core_task == ""
         r = hub.release(s.id)
         assert r["ok"] and not r["held"] and not impl.held
         assert "released" in store.get(s.id).messages[-1]["text"]

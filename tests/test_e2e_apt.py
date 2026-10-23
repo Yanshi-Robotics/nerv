@@ -39,13 +39,18 @@ class ScriptedBrain:
 @pytest.mark.skipif(any(not os.path.isfile(k) for k in NEEDS), reason="needs the worlds and policies submodules")
 def test_scripted_brain_walks_one_metre(tmp_path, monkeypatch):
     monkeypatch.setenv("NERV_TRUST_ALL", "1")
-    monkeypatch.setattr(config, "NODE_PORTS", "8180-8189")
+    monkeypatch.setattr(config, "NODE_PORTS", "8112-8131")
     hub = Nerv(store=SessionStore(str(tmp_path / "s")))
     brain = ScriptedBrain()
     hub._brains["scripted"] = brain
     try:
         s = hub.new_session("scripted", "humanoid-unitree-g1", "apt")
         sid = s["id"]
+        from nerv.platform.control_schemes import SchemeStore
+        hub.schemes = SchemeStore(tmp_path / "schemes")
+        plan = hub.schemes.save(dict(name="Scripted regression", robot=s["body"], mode="sim",
+            template="policy_group", decision_model="scripted", actions=["move_forward"]))
+        hub.tasks.select_scheme(sid, plan.id)
         # disarmed: the gate refuses the skill and the brain is told why
         out = hub.handle(sid, "walk")
         r = brain.results[0]

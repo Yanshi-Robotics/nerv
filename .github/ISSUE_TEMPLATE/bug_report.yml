@@ -1,0 +1,27 @@
+name: Reproducible problem
+description: Report a software or operator-observed hardware problem.
+body:
+  - type: textarea
+    id: environment
+    attributes:
+      label: Environment
+      description: NERV, Runtime SDK, adapter and LeRobot versions; OS and architecture; CPU/CUDA/MPS. Exclude private device IDs.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps and result
+      description: What did you do, what did you expect, and what happened? State whether a real robot was connected.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Sanitized evidence
+      description: Include error text and relevant checks. Distinguish requested targets, sent targets, measured positions and physical task results. Remove credentials and private data before submitting.
+  - type: textarea
+    id: intervention
+    attributes:
+      label: Operator intervention
+      description: For physical runs, describe any stop, support, repositioning or recovery. Leave blank for software-only reports.

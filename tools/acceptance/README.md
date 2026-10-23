@@ -40,4 +40,4 @@ Reserve the GPU through the host's existing queue before running:
 
 `--queue-id` records an existing reservation; it does not acquire one. The tool renders the native head and chase cameras plus authored room and route views. Time changes run on the production render thread, and the report compares physical state immediately before and after each mutation.
 
-For scene generation, interaction fixtures, Explore export and dual-camera performance, use the [world-library tools](../../worlds/docs/explore/README.md). The [release validation record](../../docs/validation/world-explore/README.md) separates current results, retained failures, actual browser operations and measurements that require manual browser inspection.
+For scene generation, interaction fixtures, Explore export and dual-camera performance, use the [world-library tools](../../worlds/docs/explore/README.md). Validation records distinguish current results, retained failures, actual browser operations and measurements that require manual browser inspection.

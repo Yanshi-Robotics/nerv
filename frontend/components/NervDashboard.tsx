@@ -3,8 +3,7 @@ import { useEffect, useRef, useState, type ReactNode } from "react";
 
 import { useI18n } from "@/lib/i18n";
 import LangToggle from "./LangToggle";
-import StopSimulation from "./StopSimulation";
-import { NodeTrust, TrustBadge } from "./NodeTrust";
+import { TrustBadge } from "./NodeTrust";
 import { StatusBadge } from "./ChatPanel";
 import {
   getNerv, getNodeStatus, nervEventsUrl, POLL_NODES_MS, SIGNAL_LOG_SHOWN,
@@ -64,10 +63,10 @@ function StatusPeek({ nodeKey }: { nodeKey: string }) {
   return (
     <div>
       <button onClick={() => getNodeStatus(nodeKey).then((s) => { setSt(s); setErr(""); }).catch((e) => setErr((e as Error).message))}
-        className="rounded border border-neutral-700 px-2 py-0.5 text-[11px] text-neutral-300 hover:bg-neutral-800">
+        className="nerv-control rounded border border-neutral-700 px-2 py-0.5 text-[11px] text-neutral-300 hover:bg-neutral-800">
         {st ? t("Refresh status") : t("Peek at /status (god view, the brain cannot see this)")}
       </button>
-      {err && <span className="ml-2 text-[11px] text-red-400">{err}</span>}
+      {err && <span className="ml-2 text-[11px] text-[var(--control-danger-text)]">{err}</span>}
       {st && <Json value={st} />}
     </div>
   );
@@ -108,12 +107,11 @@ function BodyCard({ spec, node, onChanged }: { spec: BodySpec; node: NodeInfo | 
         </Region>
         {node && (
           <Region title={t("Node")} color="#f59e0b" sub={node.url}>
-            {node.tools && node.tools.length > 0 && (
-              <div className="text-[12px] text-neutral-300">{t("tools")}: <span className="font-mono">{node.tools.join(", ")}</span></div>
+            {(node.robot_actions?.length || node.agent_tools?.length || 0) > 0 && (
+              <div className="text-[12px] text-neutral-300">{node.kind === "body" ? "robot_actions" : "agent_tools"}: <span className="font-mono">{(node.robot_actions?.length ? node.robot_actions : node.agent_tools)?.join(", ")}</span></div>
             )}
-            <NodeTrust node={node} onChanged={onChanged} />
+            <p className="text-xs text-neutral-500">{t("Manage access and manual controls in the session toolbox.")}</p>
             {node.online && <StatusPeek nodeKey={node.key} />}
-            <StopSimulation node={node} onChanged={onChanged} />
           </Region>
         )}
       </div>
@@ -181,10 +179,10 @@ function ToolCard({ spec, node, onChanged }: { spec: ToolSpec; node: NodeInfo | 
       </div>
       {node ? (
         <div className="mt-3 space-y-2">
-          {node.tools && node.tools.length > 0 && (
-            <div className="text-[12px] text-neutral-300">{t("tools")}: <span className="font-mono">{node.tools.join(", ")}</span></div>
+          {(node.robot_actions?.length || node.agent_tools?.length || 0) > 0 && (
+            <div className="text-[12px] text-neutral-300">{node.kind === "body" ? "robot_actions" : "agent_tools"}: <span className="font-mono">{(node.robot_actions?.length ? node.robot_actions : node.agent_tools)?.join(", ")}</span></div>
           )}
-          <NodeTrust node={node} onChanged={onChanged} />
+          <p className="text-xs text-neutral-500">{t("Manage access and manual controls in the session toolbox.")}</p>
         </div>
       ) : (
         <div className="mt-2 text-xs text-neutral-500">{t("(launches with the next session that mounts it)")}</div>
@@ -269,10 +267,10 @@ export default function NervDashboard({ embedded = false, onOpenLogs, onNodesCha
         </div>
 
         <p className="text-sm leading-relaxed text-neutral-400">
-          {t("A session is brain × body × world. NERV launches one body node per body, one world node per (world, body) pair and one tool node per tool; the brain talks to bodies and tools only, and a world reaches the brain only through the sensor streams a session opts into.")}{" "}
+          {t("One instance binds one robot and one environment. The registry provides its tools and sensors; the active conversation owns control.")}{" "}
           {t("This page shows what the registry declares, which nodes are up, where each stands with you (trust), and every signal that crosses NERV. For one session's full chain, see")}{" "}
           {embedded && onOpenLogs ? (
-            <button onClick={onOpenLogs} className="text-blue-400 hover:underline">Session Logs</button>
+            <button onClick={onOpenLogs} className="nerv-control text-blue-400 hover:underline">Session Logs</button>
           ) : (
             <a href="/session-logs" className="text-blue-400 hover:underline">Session Logs</a>
           )}.
@@ -282,7 +280,7 @@ export default function NervDashboard({ embedded = false, onOpenLogs, onNodesCha
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-5">
             <Stat label={t("Bodies")} value={reg.bodies.length} />
             <Stat label={t("Worlds")} value={reg.worlds.length} />
-            <Stat label={t("Tools")} value={reg.tools.length} />
+            <Stat label={t("Tools")} value={reg.agent_tools.length} />
             <Stat label={t("nodes up")} value={`${nodes.filter((n) => n.online).length} / ${nodes.length}`} />
             <Stat label={t("Sessions")} value={data.sessions.length} />
           </div>
@@ -309,8 +307,8 @@ export default function NervDashboard({ embedded = false, onOpenLogs, onNodesCha
         <section>
           <h2 className="mb-2 text-sm font-medium text-neutral-400">🧰 {t("Tools")} <span className="text-xs font-normal text-neutral-600">{t("· pure-computation advisors the brain consults (question in, answer out)")}</span></h2>
           <div className="space-y-3">
-            {reg?.tools.map((x) => <ToolCard key={x.name} spec={x} node={nodeFor(`tool:${x.name}`)} onChanged={onChanged} />)}
-            {reg && reg.tools.length === 0 && <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4 text-xs text-neutral-500">{t("(no tools in the registry)")}</div>}
+            {reg?.agent_tools.map((x) => <ToolCard key={x.name} spec={x} node={nodeFor(`tool:${x.name}`)} onChanged={onChanged} />)}
+            {reg && reg.agent_tools.length === 0 && <div className="rounded-xl border border-neutral-800 bg-neutral-900 p-4 text-xs text-neutral-500">{t("(no tools in the registry)")}</div>}
           </div>
         </section>
 

@@ -46,8 +46,12 @@ def build(messages: list[dict], token_budget: int | None = None) -> list[dict]:
         elif role == "assistant":
             tcs = [ToolCall(t["id"], t["name"], t.get("arguments", {})) for t in m.get("tool_calls", [])]
             out.append({"role": "assistant", "text": m.get("text", ""), "tool_calls": tcs})
+            if m.get("continuation"):
+                out[-1]["continuation"] = m["continuation"]
         elif role == "tool":
             out.append({"role": "tool", "id": m["id"], "name": m["name"], "content": m["content"]})
+        if "seq" in m:
+            out[-1]["seq"] = m["seq"]
     return out
 
 
@@ -70,7 +74,7 @@ def _sanitize_pairs(kept: list[dict]) -> list[dict]:
             for tid, name in want:
                 if tid not in got:
                     out.append({"role": "tool", "id": tid, "name": name,
-                                "content": prompts.ORPHAN_TOOL_RESULT})
+                                "content": prompts.ORPHAN_TOOL_RESULT, **({"seq": m["seq"]} if "seq" in m else {})})
             i = j
         else:
             i += 1

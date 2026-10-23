@@ -25,6 +25,14 @@ class Settings(BaseSettings):
                                       description="Wall clock per turn (seconds).")
     context_token_budget: int = Field(6000, validation_alias="NERV_CONTEXT_BUDGET", ge=100,
                                       description="Sliding-window budget for history.")
+    request_token_budget: int = Field(32768, validation_alias="NERV_REQUEST_TOKEN_BUDGET", ge=1024,
+                                     description="Conservative total request budget, including images and output.")
+    image_token_allowance: int = Field(2048, validation_alias="NERV_IMAGE_TOKEN_ALLOWANCE", ge=1,
+                                      description="Estimated input allowance per image; not billed token usage.")
+    supervision_wait_s: float = Field(1, validation_alias="NERV_SUPERVISION_WAIT_S", gt=0,
+                                      description="Bounded host wait between model supervision observations.")
+    robot_events_poll_s: float = Field(0.5, validation_alias="NERV_ROBOT_EVENTS_POLL_S", gt=0,
+                                      description="Task event refresh interval; independent of local safety supervision.")
     notes_max: int = Field(20, validation_alias="NERV_NOTES_MAX", ge=1)
     note_max_chars: int = Field(120, validation_alias="NERV_NOTE_MAX_CHARS", ge=10)
 
@@ -52,6 +60,8 @@ class Settings(BaseSettings):
                             description="Port pool for launched nodes, 'lo-hi'.")
     node_health_wait_s: float = Field(60, validation_alias="NERV_NODE_HEALTH_WAIT_S", gt=0,
                                       description="How long to wait for a launched node's /health.")
+    runtime_stream_fps: float = Field(12, validation_alias="NERV_RUNTIME_STREAM_FPS", gt=0,
+                                      description="UI stream rate; independent from native policy control rate.")
     lerobot_python: str = Field("", validation_alias="NERV_LEROBOT_PYTHON",
                                 description="Interpreter with LeRobot installed (real arms only; "
                                             "empty = this one).")
@@ -71,7 +81,7 @@ class Settings(BaseSettings):
     max_tokens: int = Field(1024, validation_alias="NERV_MAX_TOKENS", ge=1)
     ollama_probe_timeout: float = Field(0.6, validation_alias="NERV_OLLAMA_PROBE_TIMEOUT", gt=0)
     ollama_base_url: str = Field("http://localhost:11434/v1", validation_alias="OLLAMA_BASE_URL")
-    default_brain: str = Field("claude", validation_alias="NERV_DEFAULT_BRAIN")
+    default_brain: str = Field("deepseek-flash", validation_alias="NERV_DEFAULT_BRAIN")
     model_claude: str = Field("claude-opus-4-8", validation_alias="NERV_CLAUDE_MODEL")
     model_claude_fast: str = Field("claude-haiku-4-5", validation_alias="NERV_CLAUDE_FAST_MODEL")
     model_openai: str = Field("gpt-5.5", validation_alias="NERV_OPENAI_MODEL")
@@ -81,7 +91,7 @@ class Settings(BaseSettings):
     # ---- HTTP ----
     cors_origins: str = Field("http://localhost:8100", validation_alias="NERV_CORS_ORIGINS")
     serve_host: str = Field("127.0.0.1", validation_alias="NERV_SERVE_HOST")
-    serve_port: int = Field(8000, validation_alias="NERV_SERVE_PORT")
+    serve_port: int = Field(8170, validation_alias="NERV_SERVE_PORT")
     scene_entry_timeout_s: float = Field(6.0, gt=0, validation_alias="NERV_SCENE_ENTRY_TIMEOUT_S")
     scene_entry_poll_s: float = Field(0.1, gt=0, validation_alias="NERV_SCENE_ENTRY_POLL_S")
 
@@ -91,6 +101,9 @@ _settings = Settings()
 MAX_STEPS = _settings.max_steps
 TURN_TIME_BUDGET_S = _settings.turn_time_budget_s
 CONTEXT_TOKEN_BUDGET = _settings.context_token_budget
+REQUEST_TOKEN_BUDGET = _settings.request_token_budget
+IMAGE_TOKEN_ALLOWANCE = _settings.image_token_allowance
+SUPERVISION_WAIT_S = _settings.supervision_wait_s
 NOTES_MAX = _settings.notes_max
 NOTE_MAX_CHARS = _settings.note_max_chars
 GUIDANCE_MAX_CHARS = _settings.guidance_max_chars
@@ -102,10 +115,12 @@ NODE_CONNECT_TIMEOUT = _settings.node_connect_timeout
 NODE_LIVENESS_TIMEOUT = _settings.node_liveness_timeout
 NODE_INVOKE_HARD_CAP = _settings.node_invoke_hard_cap
 BRIDGE_WATCHDOG_POLL_S = _settings.bridge_watchdog_poll_s
+ROBOT_EVENTS_POLL_S = _settings.robot_events_poll_s
 BRIDGE_GRACE_S = _settings.bridge_grace_s
 TOOL_TIMEOUT = _settings.tool_timeout
 NODE_PORTS = _settings.node_ports
 NODE_HEALTH_WAIT_S = _settings.node_health_wait_s
+RUNTIME_STREAM_FPS = _settings.runtime_stream_fps
 LEROBOT_PYTHON = _settings.lerobot_python
 NODE_BIND_HOST = _settings.node_bind_host
 TITLE_MAX_LEN = _settings.title_max_len
@@ -129,14 +144,16 @@ SERVE_PORT = _settings.serve_port
 SCENE_ENTRY_TIMEOUT_S = _settings.scene_entry_timeout_s
 SCENE_ENTRY_POLL_S = _settings.scene_entry_poll_s
 
-_RUNTIME_PARAMS_SHOWN = ("max_steps", "turn_time_budget_s", "context_token_budget", "notes_max")
+_RUNTIME_PARAMS_SHOWN = ("max_steps", "turn_time_budget_s", "request_token_budget", "notes_max")
 _RUNTIME_PARAM_LABELS = {"max_steps": "Steps per turn", "turn_time_budget_s": "Time per turn (s)",
                          "context_token_budget": "Context budget (tokens)",
+                         "request_token_budget": "Request budget (estimated tokens)",
                          "notes_max": "Notebook capacity"}
 _RUNTIME_PARAM_HINTS = {
     "max_steps": "A seatbelt, not a metronome: the brain ends a turn by answering in words.",
     "turn_time_budget_s": "Wall clock per turn — the real cost gate; reaching it is a resumable pause.",
     "context_token_budget": "History window, packed from the most recent message backwards.",
+    "request_token_budget": "Full estimated request: system, notes, summary, tool groups, schemas, images, continuation and output reserve.",
     "notes_max": "Notebook capacity; when full the brain is told and can strike an entry.",
 }
 

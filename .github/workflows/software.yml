@@ -1,0 +1,52 @@
+name: Software contracts
+on: [push, pull_request]
+jobs:
+  contracts:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          submodules: recursive
+      - uses: astral-sh/setup-uv@v6
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '22'
+      - run: npm --prefix frontend ci
+      - run: npm --prefix frontend run build
+        env:
+          NERV_STATIC_EXPORT: '1'
+          NEXT_PUBLIC_API: ''
+      - run: npm test
+      - name: Install source archive under node_modules
+        run: |
+          python -c "from pathlib import Path; Path('temp/launcher-ci').mkdir(parents=True, exist_ok=True)"
+          git archive --format=tar.gz --prefix=package/ --output=temp/launcher-ci/source.tar.gz HEAD
+          npm install --prefix temp/launcher-ci/installed --cache temp/launcher-ci/npm-cache --foreground-scripts ./temp/launcher-ci/source.tar.gz
+        env:
+          NERV_HOME: ${{ github.workspace }}/temp/launcher-ci/home
+      - run: python -m pip install -e ./packages/nerv-runtime-sdk -e ".[platform,dev]"
+      - run: python -m pip install --no-deps -e ./packages/nerv-runtime-lerobot
+      - run: python -m pytest tests/test_standard_product.py tests/test_lerobot_adapter.py tests/test_runtime_sdk.py tests/test_runtime_management.py tests/test_user_paths.py tests/test_control_schemes.py tests/test_installation.py tests/test_release_recovery.py tests/test_setup_discovery.py -q
+      - run: npm --prefix frontend run check:locales
+      - run: python scripts/build_release.py
+      - name: Installed host and recovery smoke test
+        run: python scripts/verify_release.py --manifest temp/release/release.json --home temp/release-smoke
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: candidate-${{ matrix.os }}
+          path: |
+            temp/release/*.whl
+            temp/release/*.zip
+            temp/release/*.lock
+            temp/release/release.json
+            temp/release/bootstrap.py
+            temp/release/launch.py
+            temp/release/install.*

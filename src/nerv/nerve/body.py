@@ -61,11 +61,17 @@ class ToolSpec:
 class Capabilities:
     name: str
     version: str
-    tools: list[ToolSpec]
+    robot_actions: list[ToolSpec] = field(default_factory=list)
+    agent_tools: list[ToolSpec] = field(default_factory=list)
     guidance: str = ""
     config: dict = field(default_factory=dict)
     family: str = ""
     sensors: list[str] = field(default_factory=list)   # e.g. ["camera:head"]
+
+    @property
+    def operations(self) -> list[ToolSpec]:
+        """Transport enumeration; application domains remain separate fields."""
+        return self.robot_actions + self.agent_tools
 
 
 @runtime_checkable

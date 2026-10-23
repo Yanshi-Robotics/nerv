@@ -2,7 +2,7 @@
 
 // Two build modes, one codebase.
 //
-//   npm run dev / build     the development server, talking to a backend on :8000
+//   npm run dev / build     the development server, talking to a backend on :8170
 //   npm run build:static    a folder of files with no server behind them, which the
 //                           Python package carries so `nerv serve` can hand it out
 //
@@ -13,7 +13,7 @@
 //
 // 两种构建模式，一套代码。
 //
-//   npm run dev / build     开发服务器，连 :8000 的后端
+//   npm run dev / build     开发服务器，连 :8170 的后端
 //   npm run build:static    一堆背后没有服务器的静态文件，由 Python 包带着走，
 //                           好让 `nerv serve` 自己把它端出去
 //

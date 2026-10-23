@@ -52,9 +52,13 @@ class _McpNode:
         self.capabilities()
         return self._raw
 
-    def approve(self, store: trust.TrustStore | None = None) -> str:
+    def approve(self, store: trust.TrustStore | None = None, expected_hash: str | None = None) -> str:
+        if expected_hash is not None:
+            self.refresh()
         raw = self.raw_capabilities()
-        h = (store or trust.TrustStore()).approve(self.key, raw.tools, raw.guidance, self.name, url=self.base)
+        if expected_hash is not None and trust.manifest_hash(trust.manifest(self.base, raw.operations, raw.guidance)) != expected_hash:
+            raise ValueError("Capabilities changed — review again")
+        h = (store or trust.TrustStore()).approve(self.key, raw.operations, raw.guidance, self.name, url=self.base)
         self.refresh()
         return h
 
@@ -79,7 +83,7 @@ class _McpNode:
                     for c in rd.contents:
                         if getattr(c, "text", None):
                             meta = json.loads(c.text) or {}
-                            kinds = meta.get("tools") or {}
+                            kinds = meta.get("robot_actions" if self.what == "body" else "tools") or {}
                             family = meta.get("family", "")
                             sensors = list(meta.get("sensors") or [])
                             version = str(meta.get("version", ""))
@@ -113,13 +117,13 @@ class _McpNode:
         t0 = time.perf_counter()
         tools, guidance, cfg, family, sensors, version = run_sync(
             with_session(self.mcp_url, op, self.timeout), self.timeout + config.BRIDGE_GRACE_S)
-        self._raw = Capabilities(name=self.name, version=version, tools=tools, guidance=guidance,
+        self._raw = Capabilities(name=self.name, version=version, **{"robot_actions" if self.what == "body" else "agent_tools": tools}, guidance=guidance,
                                  config=cfg, family=family, sensors=sensors)
         self._trust = trust.TrustStore().check(self.key, tools, guidance, url=self.base)
         if self._trust.allowed:
             self._caps = self._raw
         else:
-            self._caps = Capabilities(name=self.name, version=version, tools=[], guidance="",
+            self._caps = Capabilities(name=self.name, version=version, guidance="",
                                       config=cfg, family=family, sensors=sensors)
         log.record_node(self.log_kind, self.name, "capabilities", "handshake [mcp]",
                         (time.perf_counter() - t0) * 1000,
@@ -129,7 +133,7 @@ class _McpNode:
 
     # -- invoke ---------------------------------------------------------------------------
     def invoke(self, name: str, *, _on_progress: Optional[Callable] = None,
-               _should_abort: Optional[Callable[[], bool]] = None, **kwargs: Any) -> ActionResult:
+               _should_abort: Optional[Callable[[], bool]] = None, _control_token: str | None = None, **kwargs: Any) -> ActionResult:
         if self._caps is None:
             self.capabilities()
         t0 = time.perf_counter()
@@ -145,7 +149,11 @@ class _McpNode:
                 except Exception:
                     pass
 
+        if _control_token:
+            kwargs["_nerv_control"] = _control_token
         async def op(s):
+            if _should_abort and _should_abort():
+                raise mcp_bridge.CallAborted()
             r = await s.call_tool(name, kwargs, progress_callback=_cb)
             text = "".join(c.text for c in r.content if getattr(c, "text", None))
             return (not bool(getattr(r, "isError", False))), text, (r.structuredContent or {})
@@ -289,6 +297,16 @@ class WorldControl:
             return r.json() if r.status_code == 200 else None
         except Exception:
             return None
+
+    def control_get(self):
+        response = self._http.get(self.base + "/control")
+        response.raise_for_status()
+        return response.json()
+
+    def control_post(self, payload):
+        response = self._http.post(self.base + "/control", json=payload)
+        response.raise_for_status()
+        return response.json()
 
     def scene_get(self, resource: str) -> dict:
         response = self._http.get(self.base + "/scene/" + resource)

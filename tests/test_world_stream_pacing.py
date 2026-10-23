@@ -24,7 +24,7 @@ def test_stream_frame_period_includes_work(monkeypatch, work_s, expected_sleep):
 
     monkeypatch.setattr(mujoco_node.time, 'perf_counter', lambda: clock[0])
     monkeypatch.setattr(mujoco_node, '_jpeg', lambda frame, quality: frame)
-    monkeypatch.setattr(asyncio, 'sleep', sleep)
+    monkeypatch.setattr(mujoco_node, "asyncio", SimpleNamespace(sleep=sleep))
     sim = SimpleNamespace(world_name='test', phys={
         'stream_fps': 10, 'jpeg_quality': 70, 'third_person': True}, render_chase=render)
     app = mujoco_node.build_app(sim, [])
@@ -60,7 +60,7 @@ def test_failed_frame_is_not_replaced_or_busy_retried(monkeypatch):
 
     monkeypatch.setattr(mujoco_node.time, 'perf_counter', lambda: clock[0])
     monkeypatch.setattr(mujoco_node, '_jpeg', lambda frame, quality: frame)
-    monkeypatch.setattr(asyncio, 'sleep', sleep)
+    monkeypatch.setattr(mujoco_node, "asyncio", SimpleNamespace(sleep=sleep))
     sim = SimpleNamespace(world_name='test', phys={
         'stream_fps': 10, 'jpeg_quality': 70, 'third_person': True}, render_chase=render)
     endpoint = next(r.endpoint for r in mujoco_node.build_app(sim, []).routes if r.path == '/stream')

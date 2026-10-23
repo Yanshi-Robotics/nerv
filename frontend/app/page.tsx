@@ -1,6 +1,11 @@
 "use client";
 import { useCallback, useEffect, useState } from "react";
 
+import OperatorToolbox from "@/components/OperatorToolbox";
+import ControlSchemes from "@/components/ControlSchemes";
+import ModulesPanel from "@/components/ModulesPanel";
+import RuntimeSetup from "@/components/RuntimeSetup";
+import VlmPanel from "@/components/VlmPanel";
 import ChatPanel from "@/components/ChatPanel";
 import NervDashboard from "@/components/NervDashboard";
 import SensingArea from "@/components/SensingArea";
@@ -45,6 +50,7 @@ export default function Home() {
 
   const refreshSessions = useCallback(async () => {
     const s = await listSessions().catch(() => []);
+    setRegistry(await getRegistry().catch(() => null));
     setSessions(s);
     return s;
   }, []);
@@ -66,13 +72,19 @@ export default function Home() {
     return () => clearInterval(id);
   }, [refreshNodes, refreshSessions]);
 
+  useEffect(() => {
+    const created = (event: Event) => {setCurrentId((event as CustomEvent<string>).detail); refreshSessions(); refreshNodes();};
+    window.addEventListener("nerv-instance-created", created);
+    return () => window.removeEventListener("nerv-instance-created", created);
+  }, [refreshSessions, refreshNodes]);
+
   const current = sessions.find((x) => x.id === currentId) || null;
-  const bodyNode = current?.body ? nodes.find((n) => n.key === `body:${current.body}` && n.meta.world === current.world) ?? null : null;
+  const bodyNode = current?.body ? nodes.find((n) => n.key === `body:${current.body}` && (n.meta.world || null) === current.world) ?? null : null;
   const worldNode = current?.world && current.body ? nodes.find((n) => n.key === `world:${current.world}/${current.body}`) ?? null : null;
 
   return (
     <main
-      className={`grid h-screen bg-neutral-950 text-neutral-100 transition-[grid-template-columns] duration-200 ease-out ${
+      className={`nerv-shell grid h-screen bg-neutral-950 text-neutral-100 transition-[grid-template-columns] duration-200 ease-out ${
         collapsed ? "grid-cols-[56px_minmax(0,1fr)_440px]" : "grid-cols-[240px_minmax(0,1fr)_440px]"
       }`}
     >
@@ -98,6 +110,10 @@ export default function Home() {
         }}
       />
 
+      {panel === "schemes" && <ControlSchemes bodyNode={bodyNode} onSetup={() => setPanel("setup")} onModels={() => setPanel("models")} session={current} brains={registry?.brains ?? []} onChanged={() => {refreshSessions();}} />}
+      {panel === "modules" && <ModulesPanel onChanged={() => getRegistry().then(setRegistry)} />}
+      {panel === "setup" && <RuntimeSetup registry={registry} onChanged={() => getRegistry().then(setRegistry)} onCreated={id => {setCurrentId(id); setPanel("session"); refreshSessions(); refreshNodes();}} />}
+      {panel === "models" && <div className="col-span-2 min-h-0 overflow-hidden"><VlmPanel onChanged={() => getRegistry().then(setRegistry)} /></div>}
       {panel === "dashboard" && (
         <div className="col-span-2 min-h-0 min-w-0 overflow-hidden">
           <NervDashboard embedded onOpenLogs={() => setPanel("logs")} onNodesChanged={() => { refreshNodes(); refreshSessions(); }} />
@@ -114,16 +130,20 @@ export default function Home() {
         </div>
       )}
       {panel === "session" && (
-        <>
+        <OperatorToolbox key={`${current?.id}:${current?.epoch}`} session={current} bodyNode={bodyNode} nodes={nodes} onChanged={() => {refreshSessions(); refreshNodes();}}
+          chat={<ChatPanel onSetup={() => setPanel("setup")} session={current} brains={registry?.brains ?? []} bodyNode={bodyNode} onModels={() => setPanel("models")} onSessionsChanged={() => { refreshSessions(); refreshNodes(); }} />}>
           {current ? (
-            <SensingArea key={`${current.id}:${current.status}`} session={current} bodyNode={bodyNode} worldNode={worldNode} onStateChanged={() => { refreshSessions(); refreshNodes(); }} />
+            <SensingArea key={`${current.id}:${current.status}`} session={current} bodyNode={bodyNode} worldNode={worldNode} robotSensors={registry?.bodies.find(body => body.name === current.body)?.sensors} onStateChanged={() => { refreshSessions(); refreshNodes(); }} />
           ) : (
-            <div className="flex min-w-0 items-center justify-center overflow-hidden bg-neutral-950 p-8 text-center text-sm text-neutral-600">
-              {t("Pick a session on the left, or create one.")}
-            </div>
+            <section className="flex min-w-0 flex-col items-center justify-center gap-5 p-8">
+              <h1 className="text-2xl">{t("Start with your robot")}</h1>
+              <p className="max-w-md text-center text-sm text-neutral-400">{t("Choose a real arm or install a simulation. You can add an API key later.")}</p>
+              <button className="nerv-control w-full max-w-md rounded-xl border border-neutral-600 p-5 text-left" onClick={() => setPanel("setup")}><span className="block text-lg">{t("Connect a real SO-101")}</span><span className="text-sm text-neutral-400">{t("Arm, calibration and two cameras")}</span></button>
+              <button className="nerv-control w-full max-w-md rounded-xl border border-neutral-600 p-5 text-left" onClick={() => setPanel("modules")}><span className="block text-lg">{t("Use simulation")}</span><span className="text-sm text-neutral-400">{t("Install the SO-101 workbench")}</span></button>
+              <button className="nerv-control text-sm underline" onClick={() => setPanel("models")}>{t("Set up an AI model")}</button>
+            </section>
           )}
-          <ChatPanel session={current} brains={registry?.brains ?? []} bodyNode={bodyNode} onSessionsChanged={() => { refreshSessions(); refreshNodes(); }} />
-        </>
+        </OperatorToolbox>
       )}
     </main>
   );

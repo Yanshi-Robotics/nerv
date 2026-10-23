@@ -3,10 +3,9 @@ import { useCallback, useEffect, useMemo, useState } from "react";
 
 import { useI18n } from "@/lib/i18n";
 import {
-  estopSession,
   getPerception,
   getSessionTools,
-  interruptSession,
+  robotTaskOperation,
   releaseSession,
   resetSessionWorld,
   streamTeleop,
@@ -88,7 +87,7 @@ export default function TeleopPanel({ sessionId, armed, hasWorld, bodyTrust }: {
       { key: "skills", label: t("Body · skills"), tools: body("skill") },
       { key: "primitives", label: t("Body · primitives"), tools: body("primitive") },
       { key: "read", label: t("Body · read"), tools: body("read") },
-      { key: "tools", label: t("Tools"), tools: ts.filter((x) => x.origin === "tool") },
+      { key: "tools", label: t("Agent tools"), tools: ts.filter((x) => x.origin === "tool") },
     ].filter((g) => g.tools.length > 0);
   }, [tools, t]);
 
@@ -103,6 +102,13 @@ export default function TeleopPanel({ sessionId, armed, hasWorld, bodyTrust }: {
       const push = (line: Line) => setLines((cur) => ({ ...cur, [name]: [line] }));
       push({ kind: "progress", text: `⏳ ${t("running…")}` });
       try {
+        const fields = byName(name)?.parameters?.properties ?? {};
+        const observationFields = Object.entries(fields).filter(([, field]) => field["x-observation-field"]);
+        if (observationFields.length) {
+          const observation = await getPerception(sessionId);
+          args = {...args};
+          for (const [key, field] of observationFields) args[key] = observation.state[field["x-observation-field"]!];
+        }
         await streamTeleop(sessionId, name, args, (e: ChatEvent) => {
           if (e.type === "gate") {
             // 闸门：只有拒绝才值得一行（没上膛、参数越界）。放行是常态。
@@ -120,27 +126,16 @@ export default function TeleopPanel({ sessionId, armed, hasWorld, bodyTrust }: {
           .catch(() => {});
       }
     },
-    [running, sessionId, t],
+    [running, sessionId, t, byName],
   );
 
   async function stop() {
     setStopping(true);
-    await interruptSession(sessionId).catch(() => {});
-  }
-
-  // 急停：锁住当前姿态。任何时候都能按，不管有没有动作在跑。
-  async function estop() {
-    if (holdBusy) return;
-    setHoldBusy(true);
     try {
-      const r = await estopSession(sessionId);
-      setHeld(r.held);
-      setHoldMsg(t(r.message));
-    } catch (e) {
-      setHoldMsg(`${t("(cannot reach the backend)")} ${(e as Error).message ?? ""}`);
-    } finally {
-      setHoldBusy(false);
-    }
+      const result = await robotTaskOperation(sessionId, "cancel");
+      if (!result.ok) setErr(result.message || t("Stop not confirmed"));
+    } catch (e) {setErr((e as Error).message);}
+    finally {setStopping(false);}
   }
 
   async function release() {
@@ -159,7 +154,6 @@ export default function TeleopPanel({ sessionId, armed, hasWorld, bodyTrust }: {
 
   async function resetWorld() {
     if (holdBusy) return;
-    if (!confirm(t("Reset the whole scene? The robot, furniture and props return to their initial positions. The current time of day is kept."))) return;
     setHoldBusy(true);
     try {
       const r = await resetSessionWorld(sessionId);
@@ -187,7 +181,7 @@ export default function TeleopPanel({ sessionId, armed, hasWorld, bodyTrust }: {
   }, [byName]);
 
   const quickBtn =
-    "flex flex-col items-center justify-center gap-0.5 rounded-xl border border-neutral-700 bg-neutral-800 px-2 py-3 text-neutral-100 transition-colors hover:border-blue-500 hover:bg-neutral-700 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-blue-500";
+    "flex flex-col items-center justify-center gap-0.5 rounded-xl border border-neutral-700 bg-neutral-800 px-2 py-3 text-neutral-100 transition-colors hover:border-[var(--control-focus)] hover:bg-neutral-700 disabled:cursor-not-allowed focus:outline-none focus-visible:ring-2 focus-visible:ring-[var(--control-focus)]";
 
   return (
     <div className="space-y-3 text-xs">
@@ -195,7 +189,7 @@ export default function TeleopPanel({ sessionId, armed, hasWorld, bodyTrust }: {
         <span className="font-medium text-neutral-200">🎮 {t("Remote control")}</span>
         {!armed && <span className="rounded border border-amber-700/60 bg-amber-950/40 px-1.5 py-0.5 text-[10px] text-amber-300">{t("disarmed — moving verbs will be refused at the gate")}</span>}
         <button onClick={stop} disabled={!running || stopping}
-          className="ml-auto rounded-md bg-red-700 px-3 py-1 text-[11px] font-semibold text-white hover:bg-red-600 disabled:opacity-40">
+          className="nerv-control ml-auto rounded-md nerv-danger bg-red-700 px-3 py-1 text-[11px] font-semibold text-white hover:bg-red-600">
           ■ {stopping ? t("Stopping…") : t("Stop")}
         </button>
       </div>
@@ -203,27 +197,22 @@ export default function TeleopPanel({ sessionId, armed, hasWorld, bodyTrust }: {
       {/* 急停一排：大红键锁姿态；锁着时给「放开」；有仿真世界时给「复位」。都是控制面，大脑没有这些工具。 */}
       <div className={`flex items-center gap-2 rounded-lg border p-2 ${held ? "border-red-600 bg-red-950/50" : "border-neutral-800 bg-neutral-900"}`}
            role="group" aria-label={t("Emergency stop")}>
-        <button onClick={estop} disabled={holdBusy || held === true}
-          title={t("Hold the pose now: the body stops thinking and keeps every joint where it is. Not a power cut — the servos stay on.")}
-          className="rounded-lg bg-red-600 px-4 py-2 text-sm font-bold tracking-wide text-white shadow hover:bg-red-500 disabled:cursor-not-allowed disabled:opacity-50 focus:outline-none focus-visible:ring-2 focus-visible:ring-red-400">
-          ⛔ {t("E-STOP")}
-        </button>
         <div className="min-w-0 flex-1 text-[11px]">
           {held === true && <div className="font-semibold text-red-300">{t("HOLDING — the body keeps its pose and refuses every move")}</div>}
-          {held === false && <div className="text-neutral-500">{t("not holding — E-STOP locks the pose at any moment (arming is the switch at the bottom)")}</div>}
+          {held === false && <div className="text-neutral-500">{t("Emergency stop remains available in the top toolbar.")}</div>}
           {holdMsg && <div className="truncate text-neutral-400" title={holdMsg}>{holdMsg}</div>}
         </div>
         {held === true && (
           <button onClick={release} disabled={holdBusy}
             title={t("Let the body move again (refused while it is down — reset the world or stand it up first)")}
-            className="rounded-md border border-neutral-600 px-3 py-1.5 text-[11px] font-semibold text-neutral-100 hover:bg-neutral-800 disabled:opacity-50">
+            className="nerv-control rounded-md border border-neutral-600 px-3 py-1.5 text-[11px] font-semibold text-neutral-100 hover:bg-neutral-800">
             {t("Release")}
           </button>
         )}
         {hasWorld && (
           <button onClick={resetWorld} disabled={holdBusy}
             title={t("Restore the robot, furniture and props to their initial positions. The current time of day is kept.")}
-            className="rounded-md border border-neutral-600 px-3 py-1.5 text-[11px] text-neutral-300 hover:bg-neutral-800 disabled:opacity-50">
+            className="nerv-control rounded-md border border-neutral-600 px-3 py-1.5 text-[11px] text-neutral-300 hover:bg-neutral-800">
             ↺ {t("Reset whole scene")}
           </button>
         )}
@@ -234,7 +223,7 @@ export default function TeleopPanel({ sessionId, armed, hasWorld, bodyTrust }: {
         <div className="rounded-md border border-amber-700/60 bg-amber-950/40 p-2 text-[11px] text-amber-300">
           {bodyTrust === "offline"
             ? t("The body node is unreachable, so none of its verbs are here.")
-            : t("The body node is not approved, so its verbs are hidden here (the brain does not see them either). Review and approve it on the Dashboard, then reopen the remote control.")}
+            : t("Allow access under Device and access in the toolbox before using robot actions.")}
         </div>
       )}
       {tools === null && !err && <div className="text-neutral-500">{t("Loading the tool sheet…")}</div>}
@@ -246,17 +235,17 @@ export default function TeleopPanel({ sessionId, armed, hasWorld, bodyTrust }: {
 
       {quick && (
         <div className="grid grid-cols-3 gap-2" role="group" aria-label={t("Quick moves")}>
-          <button onClick={() => run(QUICK.left, { [quick.left.key]: quick.left.value })} disabled={!!running} className={quickBtn}
+          <button onClick={() => run(QUICK.left, { [quick.left.key]: quick.left.value })} disabled={!!running} className={`nerv-control ${quickBtn}`}
             title={`${QUICK.left}(${quick.left.key}=${quick.left.value})`}>
             <span className="text-xl">◀</span>
             <span className="text-[10px] text-neutral-400">{t("left")} {quick.left.value}°</span>
           </button>
-          <button onClick={() => run(QUICK.forward, { [quick.forward.key]: quick.forward.value })} disabled={!!running} className={quickBtn}
+          <button onClick={() => run(QUICK.forward, { [quick.forward.key]: quick.forward.value })} disabled={!!running} className={`nerv-control ${quickBtn}`}
             title={`${QUICK.forward}(${quick.forward.key}=${quick.forward.value})`}>
             <span className="text-xl">▲</span>
             <span className="text-[10px] text-neutral-400">{t("forward")} {quick.forward.value} m</span>
           </button>
-          <button onClick={() => run(QUICK.right, { [quick.right.key]: quick.right.value })} disabled={!!running} className={quickBtn}
+          <button onClick={() => run(QUICK.right, { [quick.right.key]: quick.right.value })} disabled={!!running} className={`nerv-control ${quickBtn}`}
             title={`${QUICK.right}(${quick.right.key}=${quick.right.value})`}>
             <span className="text-xl">▶</span>
             <span className="text-[10px] text-neutral-400">{t("right")} {quick.right.value}°</span>
@@ -285,7 +274,7 @@ type FieldValue = string | number | boolean | KV[] | "";
 
 function isKvObject(s: JsonSchema): boolean {
   const ap = s.additionalProperties;
-  return s.type === "object" && !!ap && typeof ap === "object" && ap.type === "number";
+  return s.type === "object" && ((!!ap && typeof ap === "object" && ap.type === "number") || (!!s.properties && Object.values(s.properties).every(p => p.type === "number")));
 }
 
 function initialValues(schema: JsonSchema): Record<string, FieldValue> {
@@ -305,7 +294,7 @@ function ToolCard({ tool, jointKeys, lines, running, disabled, onRun }: {
 }) {
   const { t } = useI18n();
   const schema = tool.parameters ?? {};
-  const props = schema.properties ?? {};
+  const props = Object.fromEntries(Object.entries(schema.properties ?? {}).filter(([, field]) => !field["x-observation-field"]));
   const required = new Set(schema.required ?? []);
   const [vals, setVals] = useState<Record<string, FieldValue>>(() => initialValues(schema));
   const [open, setOpen] = useState(false);
@@ -345,7 +334,7 @@ function ToolCard({ tool, jointKeys, lines, running, disabled, onRun }: {
 
   const { args, missing } = buildArgs();
   const mutating = tool.kind !== "read";
-  const inputCls = "w-full rounded-md border border-neutral-700 bg-neutral-800 px-2 py-1 text-xs text-neutral-200 focus:border-blue-500 focus:outline-none";
+  const inputCls = "w-full rounded-md border border-neutral-700 bg-neutral-800 px-2 py-1 text-xs text-neutral-200 focus:border-[var(--control-focus)] focus:outline-none";
 
   return (
     <div className={`rounded-lg border p-2.5 ${running ? "border-blue-600/60 bg-blue-950/20" : "border-neutral-800 bg-neutral-900"}`}>
@@ -357,14 +346,14 @@ function ToolCard({ tool, jointKeys, lines, running, disabled, onRun }: {
             <span className="text-[10px] text-neutral-600">{tool.node}</span>
           </div>
           {tool.description && (
-            <button onClick={() => setOpen((v) => !v)} className="mt-0.5 text-left text-[10px] leading-snug text-neutral-500 hover:text-neutral-300" aria-expanded={open}>
+            <button onClick={() => setOpen((v) => !v)} className="nerv-control mt-0.5 text-left text-[10px] leading-snug text-neutral-500 hover:text-neutral-300" aria-expanded={open}>
               {open ? tool.description : `${tool.description.slice(0, 90)}${tool.description.length > 90 ? "…" : ""}`}
             </button>
           )}
         </div>
         <button onClick={() => onRun(args)} disabled={disabled || missing.length > 0}
           title={missing.length ? t("required: {names}", { names: missing.join(", ") }) : undefined}
-          className="shrink-0 rounded-md bg-blue-600 px-3 py-1 text-[11px] font-medium text-white hover:bg-blue-500 disabled:cursor-not-allowed disabled:opacity-40">
+          className="nerv-control shrink-0 rounded-md nerv-primary px-3 py-1 text-[11px] font-medium text-white  disabled:cursor-not-allowed">
           {running ? t("Running…") : t("Run")}
         </button>
       </div>
@@ -373,7 +362,7 @@ function ToolCard({ tool, jointKeys, lines, running, disabled, onRun }: {
         <div className="mt-2 space-y-2">
           {Object.entries(props).map(([k, p]) => (
             <Field key={k} id={`${tool.name}-${k}`} name={k} schema={p} required={required.has(k)} value={vals[k]} onChange={(v) => set(k, v)}
-              jointKeys={jointKeys} inputCls={inputCls} />
+              jointKeys={p.properties ? Object.keys(p.properties) : jointKeys} inputCls={inputCls} />
           ))}
         </div>
       )}
@@ -433,11 +422,11 @@ function Field({ id, name, schema, required, value, onChange, jointKeys, inputCl
               )}
               <input type="number" step="any" value={r.value} onChange={(e) => setRows(rows.map((x, j) => (j === i ? { ...x, value: e.target.value } : x)))}
                 placeholder={t("value")} className={`${inputCls} w-24`} aria-label={t("value")} />
-              <button onClick={() => setRows(rows.filter((_, j) => j !== i))} className="rounded px-1.5 py-1 text-neutral-500 hover:bg-neutral-800 hover:text-red-400" title={t("remove")} aria-label={t("remove")}>✕</button>
+              <button onClick={() => setRows(rows.filter((_, j) => j !== i))} className="nerv-control nerv-danger-quiet rounded px-1.5 py-1 text-neutral-500 hover:bg-neutral-800 hover:text-red-400" title={t("remove")} aria-label={t("remove")}>✕</button>
             </div>
           ))}
           <button id={id} onClick={() => setRows([...rows, { key: unused[0] ?? "", value: "" }])}
-            className="rounded-md border border-dashed border-neutral-700 px-2 py-0.5 text-[10px] text-neutral-400 hover:border-neutral-500 hover:text-neutral-200">
+            className="nerv-control rounded-md border border-dashed border-neutral-700 px-2 py-0.5 text-[10px] text-neutral-400 hover:border-neutral-500 hover:text-neutral-200">
             + {t("add {what}", { what: jointKeys.length ? t("joint") : t("key") })}
           </button>
         </div>
@@ -476,7 +465,7 @@ function Field({ id, name, schema, required, value, onChange, jointKeys, inputCl
         <div className="mt-1 flex items-center gap-2">
           {hasRange && (
             <input type="range" min={schema.minimum} max={schema.maximum} step={step} value={num === "" ? schema.minimum : Number(num)}
-              onChange={(e) => onChange(Number(e.target.value))} className="flex-1 accent-blue-500" aria-label={`${name} (${t("slider")})`} />
+              onChange={(e) => onChange(Number(e.target.value))} className="flex-1 accent-[var(--control-focus)]" aria-label={`${name} (${t("slider")})`} />
           )}
           <input id={id} type="number" min={schema.minimum} max={schema.maximum} step={step} value={num} placeholder={schema.default !== undefined ? String(schema.default) : ""}
             onChange={(e) => onChange(e.target.value === "" ? "" : Number(e.target.value))} className={`${inputCls} ${hasRange ? "w-24" : ""}`} />

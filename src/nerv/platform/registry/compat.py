@@ -12,6 +12,8 @@ def check(world: WorldSpec, body: BodySpec) -> tuple[bool, str]:
     if world.kind not in body.buses:
         return False, (f"body `{body.name}` has no bus endpoint for a {world.kind} world "
                        f"(has: {', '.join(body.buses) or 'none'})")
+    if not body.buses[world.kind].enabled:
+        return False, "this environment binding is not configured for the current runtime"
     if world.kind == KIND_SIM and not (world.supports[body.name] or "").strip():
         return False, f"world `{world.name}` lists `{body.name}` but names no arena file"
     return True, ""

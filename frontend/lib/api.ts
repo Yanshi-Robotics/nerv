@@ -5,7 +5,7 @@
 //    于是下面每一处 `${BASE}/api/...` 都变成 `/api/...`——相对于当前页面的源。
 //    这正是把网页交给 `nerv serve` 自己端出来时需要的：换个端口，页面照样连得上。
 //    注意用的是 `??` 不是 `||`：空串必须能穿过去。
-const BASE = process.env.NEXT_PUBLIC_API ?? "http://localhost:8000";
+const BASE = process.env.NEXT_PUBLIC_API ?? "http://localhost:8170";
 
 // 前端轮询 / 显示上限：集中此处、可用 NEXT_PUBLIC_* env 覆盖，不在各组件内联写死。
 export const SIGNAL_LOG_SHOWN = Number(process.env.NEXT_PUBLIC_SIGNAL_LOG_SHOWN) || 300; // ≤ 后端 NERV_SIGNAL_LOG_MAXLEN
@@ -21,11 +21,12 @@ export type Brain = {
   model: string;
   hosting: "api" | "local";
   available: boolean;
+  efforts?: string[]; effort?: string | null;
 };
 
 // ---- registry (bodies / worlds / tools declared on disk) ---------------------------------
 export type SensorDecl = { name: string; description: string; camera: string; width: number; height: number };
-export type BusEndpoint = { kind: string; python: string; settings: Record<string, unknown>; verified: boolean };
+export type BusEndpoint = { provider?: string; enabled: boolean; kind: string; python: string; settings: Record<string, unknown>; verified: boolean };
 export type BodySpec = {
   name: string;
   family: string;
@@ -39,6 +40,7 @@ export type BodySpec = {
   dir: string;
 };
 export type WorldSpec = {
+  configuration?: {schema: PropertySchema};
   name: string;
   kind: "sim" | "real";
   label: string;
@@ -56,7 +58,7 @@ export type MatrixCell = { world: string; body: string; ok: boolean; reason: str
 export type Registry = {
   bodies: BodySpec[];
   worlds: WorldSpec[];
-  tools: ToolSpec[];
+  agent_tools: ToolSpec[];
   matrix: MatrixCell[];
   brains: Brain[];
   default_brain: string;
@@ -95,7 +97,8 @@ export type NodeInfo = {
   meta: Record<string, unknown>;
   online?: boolean;
   trust?: NodeTrust; // body / tool 才有（world 节点不进信任门：大脑从不读它的文字）
-  tools?: string[];
+  robot_actions?: string[];
+  agent_tools?: string[];
   family?: string;
   sensors?: string[];
 };
@@ -104,6 +107,7 @@ export type NodeInfo = {
 // ⛔ 这是未经信任过滤的原文：给人看的必须和被批准的是同一份，否则这次审批毫无意义。
 export type ManifestTool = { name: string; kind: string; description: string; parameters: unknown };
 export type NodeManifest = {
+  hash: string;
   key: string;
   url: string;
   manifest: { url: string; guidance: string; tools: ManifestTool[] };
@@ -133,8 +137,8 @@ export async function getNodeManifest(key: string): Promise<NodeManifest> {
   return (await r.json()) as NodeManifest;
 }
 
-export async function approveNode(key: string): Promise<{ ok: boolean; hash: string }> {
-  const r = await fetch(`${nodePath(key)}/approve`, { method: "POST" });
+export async function approveNode(key: string, expectedHash: string): Promise<{ ok: boolean; hash: string }> {
+  const r = await fetch(`${nodePath(key)}/approve`, { method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({expected_hash: expectedHash}) });
   if (!r.ok) throw new ApiError(await detailOf(r), r.status);
   return await r.json();
 }
@@ -166,39 +170,46 @@ export async function getNodeStatus(key: string): Promise<Record<string, unknown
 // ---- sessions ---------------------------------------------------------------------------
 export type SessionStatus = "active" | "frozen" | "reconnect_required";
 export type SessionSummary = {
+  control_scheme?: string; control_scheme_revision?: number;
+  task_model?: string; task_effort?: string | null;
   id: string;
   brain: string;
   body: string | null; // null = conversation only
   world: string | null;
   status: SessionStatus;
+  mode: "sim" | "real";
+  binding: string;
   created_at: string;
   title: string;
   sensors: string[]; // ambient streams the brain also sees
-  tools: string[]; // tool nodes mounted
+  agent_tools: string[]; // auxiliary nodes mounted
   armed: boolean; // hardware may move only when true
   epoch: string;
   core_task: string; // 一句话：我在干什么（大脑自己写）
   notes: string[]; // 一条条：我发现了什么
 };
 
-export type ToolCall = { id: string; name: string; arguments: Record<string, unknown> };
+export type ToolCall = { id: string; name: string; domain?: string; capability_name?: string; arguments: Record<string, unknown> };
 
 // 会话记录里的一条（后端落盘格式）
 export type RecMsg =
+  | { role: "error"; code: string; message: string; brain?: string }
   | { role: "user"; text: string; ts?: string }
   | { role: "perception"; image_ref: string | null; images?: { name: string; ref: string }[]; state: Record<string, unknown>; ts?: string }
   | { role: "assistant"; text: string; tool_calls?: ToolCall[]; brain?: string; ts?: string }
-  | { role: "tool"; id: string; name: string; content: string; ts?: string }
+  | { role: "tool"; id: string; name: string; domain?: string; capability_name?: string; content: string; ts?: string }
   | { role: "brain_divider"; brain: string; ts?: string };
 
 export type SessionFull = SessionSummary & { messages: RecMsg[] };
 
 export type NewSession = {
+  world_configuration?: Record<string, unknown>;
   brain?: string;
+  mode?: "sim" | "real";
   body?: string | null;
   world?: string | null;
   sensors: string[];
-  tools?: string[];
+  agent_tools?: string[];
 };
 
 /** 后端用 4xx + {detail} 说"不行"（注册表拒绝这对组合、节点起不来、会话不存在）。
@@ -216,6 +227,7 @@ async function detailOf(r: Response): Promise<string> {
     const j = await r.json();
     // 后端把 str(KeyError) 直接当 detail，外面会多一层引号——剥掉，别把引号显示给人。
     if (typeof j?.detail === "string") return j.detail.replace(/^"([\s\S]*)"$/, "$1");
+    if (typeof j?.detail?.message === "string") return j.detail.message;
     return JSON.stringify(j);
   } catch {
     return `${r.status} ${r.statusText}`;
@@ -277,11 +289,12 @@ export async function resetSessionWorld(id: string): Promise<{ ok: boolean; mess
 }
 
 export async function setSessionBrain(id: string, brain: string): Promise<void> {
-  await fetch(`${BASE}/api/sessions/${encodeURIComponent(id)}/brain`, {
+  const r = await fetch(`${BASE}/api/sessions/${encodeURIComponent(id)}/brain`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ brain }),
   });
+  if (!r.ok) throw new ApiError(await detailOf(r), r.status);
 }
 
 // ARM / DISARM：硬件只有在 armed 时才许动。只有人能按这个键；大脑没有这个工具。
@@ -299,8 +312,12 @@ export async function armSession(id: string, armed: boolean): Promise<{ ok: bool
 // 流式聊天的事件（SSE），一轮按这个顺序产生：start · perception · thinking · tool_call · gate ·
 // progress · tool_result · reply · done。stop_reason 只在这一轮被闸门收尾时才有。
 export type ChatEvent =
+  | {type: "model_error"; code: string; message: string}
+  | {type: "instance_created"; session_id: string}
+  | {type: "capability_call"; domain: string; name: string; args: Record<string, unknown>}
+  | {type: "capability_result"; domain: string; name: string; ok: boolean; message: string}
   | { type: "start"; brain: string; model: string }
-  | { type: "perception"; image_b64: string | null; state: Record<string, unknown>; n_images: number; cameras: string[] }
+  | { type: "perception"; image_b64: string | null; state: Record<string, unknown>; n_images: number; cameras: string[]; images?: {name: string; b64: string}[] }
   | { type: "thinking"; text: string }
   | { type: "tool_call"; name: string; args: Record<string, unknown> }
   | { type: "gate"; name: string; allowed: boolean; reason: string } // 安全门的裁决；allowed=false 时这一步不会执行
@@ -358,11 +375,12 @@ export async function streamChat(session: string, text: string, onEvent: (e: Cha
 // ---- teleop (operator remote control) -----------------------------------------------------
 // 这个会话里大脑会看到的工具单：身体的动词（read / primitive / skill）+ 工具节点的函数。
 // 遥控面板照着它生成表单——⛔ 前端不知道任何具体身体有哪些动词，全从这里读。
-export type ToolKind = "read" | "primitive" | "skill";
+export type ToolKind = "read" | "primitive" | "skill" | "control";
 export type ToolSheetEntry = {
+  domain: "robot_actions" | "agent_tools";
   name: string;
   kind: ToolKind;
-  origin: "body" | "tool";
+  origin: "body" | "tool" | "memory";
   node: string;
   description: string;
   parameters: JsonSchema;
@@ -370,6 +388,7 @@ export type ToolSheetEntry = {
 
 // 工具参数的 JSON Schema（只列表单生成用得到的那几个字段）
 export type JsonSchema = {
+  "x-observation-field"?: string;
   type?: string;
   description?: string;
   properties?: Record<string, JsonSchema>;
@@ -382,9 +401,10 @@ export type JsonSchema = {
 };
 
 export async function getSessionTools(id: string): Promise<ToolSheetEntry[]> {
-  const r = await fetch(`${BASE}/api/sessions/${encodeURIComponent(id)}/tools`);
+  const r = await fetch(`${BASE}/api/sessions/${encodeURIComponent(id)}/capabilities`);
   if (!r.ok) throw new ApiError(await detailOf(r), r.status);
-  return (await r.json()) as ToolSheetEntry[];
+  const domains = await r.json();
+  return [...domains.robot_actions, ...domains.agent_tools] as ToolSheetEntry[];
 }
 
 // 操作员直接调一个工具。同一道闸门、同一批节点、同一份日志，事件与 chat 流完全一样
@@ -516,3 +536,89 @@ export async function getSessionLogs(limit = 500, session = ""): Promise<{ entri
   const j = (await r.json()) as { entries: SignalEntry[]; sessions?: string[] };
   return { entries: j.entries, sessions: j.sessions ?? [] };
 }
+
+export type VlmModel = {
+  id: string; provider: string; label: string; model: string; base_url: string;
+  protocol: string; credential_ref: string; input_modalities: string[];
+  supports_tools: boolean; efforts: string[]; evidence: string;
+  context_window: number | null; max_output_tokens: number; request_timeout_s: number; enabled: boolean;
+  credential: { configured: boolean; source: string | null; writable: boolean };
+  checks: Record<string, string>; effort: string | null; available: boolean;
+  physical?: { status: string };
+  provider_default_effort?: string | null;
+};
+export type VlmProvider = {
+  id: string; label: string; credential_ref: string; protocol: string;
+  credential: VlmModel["credential"];
+};
+async function modelRequest(path: string, method = "GET", body?: unknown) {
+  const response = await fetch(`${BASE}/api/${path}`, { method, headers: {"Content-Type":"application/json"}, ...(body === undefined ? {} : {body: JSON.stringify(body)}) });
+  if (!response.ok) throw new ApiError(await detailOf(response), response.status);
+  return response.json();
+}
+export const getVlm = (): Promise<{models: VlmModel[]; providers: VlmProvider[]; credential_path: string; selection: string; task_locked: boolean}> => modelRequest("vlm");
+export type ConfigurationResult = {ok: boolean; saved: boolean; error?: {code: string; message: string}};
+export async function configureVlm(id: string, value: string, signal: AbortSignal): Promise<ConfigurationResult> {
+  const response = await fetch(`${BASE}/api/vlm/${encodeURIComponent(id)}/configure`, {method: "POST", headers: {"Content-Type":"application/json"}, body: JSON.stringify({value}), signal});
+  if (!response.ok) throw new ApiError(await detailOf(response), response.status);
+  return response.json();
+}
+export const putVlm = (model: Pick<VlmModel, "id"> & Record<string, unknown>) => modelRequest(`vlm/${encodeURIComponent(model.id)}`, "PUT", model);
+export const selectVlm = (id: string, effort: string | null) => modelRequest(`vlm/${encodeURIComponent(id)}/select`, "POST", {effort});
+export const validateVlm = (id: string) => modelRequest(`vlm/${encodeURIComponent(id)}/validate`, "POST", {});
+export const saveCredential = (reference: string, value: string | null) => modelRequest(`credentials/${encodeURIComponent(reference)}`, "PUT", {value});
+export const runtimeOperation = (session: string, operation: string, payload = {}) => modelRequest(`sessions/${encodeURIComponent(session)}/runtime/${operation}`, "POST", payload);
+export const runtimeStatus = (session: string) => modelRequest(`sessions/${encodeURIComponent(session)}/runtime`);
+
+// Business domains stay distinct even when provider APIs encode calls as functions.
+export type PropertyField = { type: string; title?: string; description?: string; default?: unknown; enum?: string[]; oneOf?: { const: string; title: string; title_locales?: Record<string, string>; description_locales?: Record<string, string>; description?: string }[] };
+export type PropertySchema = { properties?: Record<string, PropertyField> };
+export type WorldDescriptor = { instance_id: string; revision: number; configuration: PropertySchema; state: {configuration?: Record<string, unknown>}; commands: { name: string; description: string; parameters: PropertySchema; effect: string }[] };
+export type RobotEvent = { seq: number; time: number; instance_id: string; task_id?: string; version?: number; source?: string; type?: string; text?: string; message?: string; status?: string; ok?: boolean };
+export type RobotTask = { task_id: string; instance_id: string; version: number; status: string; goal: string; model: string | null; effort?: string; message?: string; scheme?: ControlScheme };
+export type RobotSnapshot = { task: RobotTask | null; events: RobotEvent[]; cursor: number };
+export function robotEventUrl(sid: string, cursor = 0) { return `${BASE}/api/sessions/${encodeURIComponent(sid)}/robot-events?after=${cursor}`; }
+async function domainRequest(path: string, payload?: unknown) {
+  const response = await fetch(`${BASE}${path}`, payload === undefined ? {} : {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify(payload)});
+  if (!response.ok) throw new ApiError(await detailOf(response), response.status);
+  const data = await response.json();
+  if (data.ok === false) throw new Error(data.message || "Operation failed");
+  return data;
+}
+export const robotTaskOperation = (sid: string, operation: string, arguments_: Record<string, unknown> = {}) => domainRequest(`/api/sessions/${sid}/robot-tasks`, {operation, arguments: arguments_});
+export const setTaskModel = (sid: string, model: string, effort: string | null) => domainRequest(`/api/sessions/${sid}/task-model`, {model, effort});
+export const getWorldControl = (sid: string): Promise<WorldDescriptor> => domainRequest(`/api/sessions/${sid}/world-control`);
+export const changeWorld = (sid: string, descriptor: WorldDescriptor, command: string, arguments_: Record<string, unknown>) => domainRequest(`/api/sessions/${sid}/world-control`, {instance_id: descriptor.instance_id, revision: descriptor.revision, command, arguments: arguments_});
+
+export async function manageRuntime(python: string, provider: string, operation: string, payload: Record<string, unknown>) {
+  const response = await fetch(`${BASE}/api/runtime/manage`, {method: "POST", headers: {"Content-Type": "application/json"}, body: JSON.stringify({python, provider, operation, payload})});
+  if (!response.ok) throw new ApiError(await detailOf(response), response.status);
+  return response.json();
+}
+
+export async function runtimeInstallations(): Promise<Array<{provider: string; python: string; label: string}>> {
+  const response = await fetch(`${BASE}/api/runtime/installations`);
+  if (!response.ok) throw new Error("Cannot read installed runtimes");
+  return response.json();
+}
+
+export type ControlScheme = {
+  id: string; revision: number; name: string; robot: string; mode: "sim" | "real";
+  template: "fixed_policy" | "policy_group" | "visual_direct";
+  decision_model: string | null; effort: string | null; actions: string[];
+  max_runtime_s: number; action_budget: number; ready?: boolean; reason?: string; structure?: unknown;
+};
+export type SchemeOptions = {selected?: ControlScheme | null; schemes: ControlScheme[]; actions: {name: string; description: string; kind: string}[]};
+export const listControlSchemes = (sid?: string): Promise<SchemeOptions> => domainRequest(`/api/control-schemes${sid ? `?sid=${encodeURIComponent(sid)}` : ""}`);
+export const saveControlScheme = (scheme: Partial<ControlScheme>): Promise<ControlScheme> => domainRequest("/api/control-schemes", scheme);
+export const selectControlScheme = (sid: string, scheme: ControlScheme) => domainRequest(`/api/sessions/${sid}/control-scheme`, {id: scheme.id, revision: scheme.revision});
+export const getRobotTask = (sid: string): Promise<RobotSnapshot> => domainRequest(`/api/sessions/${sid}/robot-tasks`);
+export const setupDevice = (operation: string, payload: Record<string, unknown> = {}) => domainRequest(`/api/setup/lerobot0.6.1/${operation}`, payload);
+export const browseDirectories = (path?: string, offset = 0) => domainRequest("/api/operator/directories", {path, offset});
+export const setupCamera = (operation: string, payload: Record<string, unknown> = {}) => domainRequest(`/api/setup-camera/lerobot0.6.1/${operation}`, payload);
+export const moduleCatalog = () => domainRequest("/api/modules");
+export const installModule = (id: string) => domainRequest(`/api/modules/${id}/install`, {});
+export const cancelModuleInstall = (id: string) => domainRequest(`/api/modules/${id}/cancel`, {});
+
+export const installationLog = (id: string): Promise<{log: string}> => domainRequest(`/api/modules/jobs/${id}/log`);
+export const checkRelease = (): Promise<{available_version: string; installed_version: string | null; update_available: boolean}> => domainRequest("/api/releases/check");

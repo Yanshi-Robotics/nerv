@@ -25,6 +25,8 @@ def test_hub_refuses_incompatible_session(tmp_path):
     from nerv.platform.hub import Nerv
     from nerv.platform.session import SessionStore
     hub = Nerv(store=SessionStore(str(tmp_path / "s")))
+    from types import SimpleNamespace
+    hub._brains["mock"] = SimpleNamespace(model="offline-fixture")
     try:
         hub.new_session("mock", "arm-lerobot-so101", "apt")
     except ValueError as e:
