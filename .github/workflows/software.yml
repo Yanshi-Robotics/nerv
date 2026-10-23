@@ -21,6 +21,13 @@ jobs:
           NERV_STATIC_EXPORT: '1'
           NEXT_PUBLIC_API: ''
       - run: npm test
+      - name: Install source archive under node_modules
+        run: |
+          python -c "from pathlib import Path; Path('temp/launcher-ci').mkdir(parents=True, exist_ok=True)"
+          git archive --format=tar.gz --prefix=package/ --output=temp/launcher-ci/source.tar.gz HEAD
+          npm install --prefix temp/launcher-ci/installed --cache temp/launcher-ci/npm-cache --foreground-scripts ./temp/launcher-ci/source.tar.gz
+        env:
+          NERV_HOME: ${{ github.workspace }}/temp/launcher-ci/home
       - run: python -m pip install -e ./packages/nerv-runtime-sdk -e ".[platform,dev]"
       - run: python -m pip install --no-deps -e ./packages/nerv-runtime-lerobot
       - run: python -m pytest tests/test_standard_product.py tests/test_lerobot_adapter.py tests/test_runtime_sdk.py tests/test_runtime_management.py tests/test_user_paths.py -q
