@@ -3,9 +3,17 @@ import {mkdtempSync, mkdirSync, writeFileSync, symlinkSync} from "node:fs";
 import {join, resolve} from "node:path";
 import {spawnSync} from "node:child_process";
 import {test} from "node:test";
-import {fingerprint, home, pythonAt, uvEnvironment, root} from "./nerv.mjs";
+import {fingerprint, home, pythonAt, uvEnvironment, root, verifyReleaseAsset} from "./nerv.mjs";
+import {createHash} from "node:crypto";
 
 const temporary = join(root, "temp/launcher-tests");
+test("migration refuses a modified release installer before executing it", () => {
+  const bytes = Buffer.from("explicit installer fixture");
+  const receipt = {sha256: createHash("sha256").update(bytes).digest("hex")};
+  verifyReleaseAsset(bytes, receipt);
+  assert.throws(() => verifyReleaseAsset(Buffer.from("changed"), receipt), /checksum/);
+  assert.throws(() => verifyReleaseAsset(bytes, {}), /checksum/);
+});
 mkdirSync(temporary, {recursive: true});
 writeFileSync(join(temporary, "README.md"), "2026-10-23: launcher tests; disposable after verification. Contains explicit fixtures only.\n");
 test("all runtime data roots derive from the selected home", () => {

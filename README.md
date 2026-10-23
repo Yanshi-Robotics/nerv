@@ -4,22 +4,22 @@
 
 NERV connects conversation, task decisions and local robot execution. Choose a control scheme, give it a task, and see what the robot actually did. Use a trained ACT policy, let a visual model select and supervise allowed skills, or use visual decisions with bounded joint and gripper tools.
 
-**0.7.1 is a local development candidate.** The installer and optional modules are implemented; this candidate has not been published to GitHub Releases. SO-101 physical acceptance and student onboarding trials are pending. NERV uses externally trained policies and existing calibration; it does not train or calibrate robots.
+**0.7.1 is a development release for testing.** Install it from GitHub Releases or use `nerv update` from an existing release installation. SO-101 physical acceptance and student onboarding trials are pending. NERV uses externally trained policies and existing calibration; it does not train or calibrate robots.
 
 ## Quick install & start
 
 The release installer manages uv, Python 3.12 and the prebuilt interface. Students do not need Node.js, Git or a frontend build. The default installation contains the host only; install SO-101 and simulation components from the interface when needed.
 
-For a candidate bundle supplied by the maintainer, extract it and run from that directory. Linux/macOS:
+Linux/macOS:
 
 ```bash
-sh ./install.sh --bundle .
+curl -fsSL https://github.com/Yanshi-Robotics/nerv/releases/latest/download/install.sh | sh
 ```
 
 Windows PowerShell (experimental; not yet hardware validated):
 
 ```powershell
-./install.ps1 -Bundle .
+irm https://github.com/Yanshi-Robotics/nerv/releases/latest/download/install.ps1 | iex
 ```
 
 Open a new terminal, then start:
@@ -44,7 +44,7 @@ nerv doctor
 
 Normal use stores configuration, sessions, installation environments and caches in `~/.nerv`. `NERV_HOME` is an optional override for isolated tests. Starting NERV never connects motors, enables motion or resumes an old task.
 
-Once a corresponding release is published, the [GitHub installation guide](guides/github-install.md) provides the one-command Shell and PowerShell entry points. **Do not use the latest-release URL to obtain this unpublished candidate.** The guide also covers building a candidate and the existing npm compatibility entry.
+To update, exit the running server, then run `nerv update --check`, `nerv update` and `nerv`. The [installation guide](guides/github-install.md) covers rollback, extracted bundles and migration from older npm launchers.
 
 ## First use
 

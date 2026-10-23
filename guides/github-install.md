@@ -2,7 +2,7 @@
 
 [中文](../i18n/zh/github-install.md) · [NERV](../README.md)
 
-0.7.1 is an unpublished development candidate. A release bundle contains the host, Runtime SDK and LeRobot adapter wheels, dependency locks, the optional SO-101 simulation archive, installers and `release.json`. Publishing these assets is a separate maintainer action after acceptance.
+0.7.1 is a development release for local testing. A release bundle contains the host, Runtime SDK and LeRobot adapter wheels, dependency locks, the optional SO-101 simulation archive, installers and `release.json`. Physical acceptance and student onboarding trials are still pending.
 
 ## Install a supplied candidate
 
@@ -32,7 +32,7 @@ If a previous `nerv` command exists, the installer prints its location. Check `c
 
 ## GitHub one-command entry
 
-These entry points require a release containing the new assets. They cannot download an unpublished local candidate. Do not use them until the release notes identify this installer version.
+These commands install the latest published development release. Read its release notes for the tested platforms and remaining acceptance work.
 
 Linux/macOS:
 
@@ -112,7 +112,7 @@ npm install --global --install-links .
 nerv
 ```
 
-When a managed release installation exists, this launcher delegates to its active host. The source fallback still builds the frontend and creates a source-fingerprinted environment; it is not the recommended student distribution. No new npm registry registration is needed.
+Launchers shipped from 0.7.1 support `nerv update` and delegate to the active release after migration. Older npm launchers do not gain new commands when a release is published: run the GitHub installer once to register the managed command, then open a new terminal. Future updates use `nerv update`. When a managed release installation exists, the current npm launcher delegates to its active host. The source fallback still builds the frontend and creates a source-fingerprinted environment; it is not the recommended student distribution. No new npm registry registration is needed.
 
 ## Platform limits
 

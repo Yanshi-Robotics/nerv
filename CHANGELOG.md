@@ -5,7 +5,15 @@ The 0.1.x entries below are the pre-release trail.
 
 ## [Unreleased]
 
-### 0.7.1 candidate — installation recovery and guided device setup
+## [0.7.1] — 2026-10-24
+
+Development release for local testing; physical and student acceptance remain pending.
+
+- Publish GitHub installation assets and support `nerv update` migration from the npm launcher.
+- Verify the migration installer hash and retain the previous host for rollback.
+- Avoid reinstalling an already-current remote release; explain active-server update conflicts.
+
+### Installation recovery and guided device setup
 
 - Browse local calibration and checkpoint folders from the operator interface.
 - Enumerate Windows/macOS camera metadata and restore unique camera/serial identities;

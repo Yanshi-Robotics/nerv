@@ -34,19 +34,81 @@ function run(command, args, options) {
   if (result.status !== 0) throw new Error(`${command} exited ${result.status ?? result.signal}`);
 }
 
-export function main(args = process.argv.slice(2)) {
+export const releaseBase = "https://github.com/Yanshi-Robotics/nerv/releases/latest/download";
+export function verifyReleaseAsset(bytes, receipt) {
+  if (!receipt?.sha256 || createHash("sha256").update(bytes).digest("hex") !== receipt.sha256) {
+    throw new Error("Release checksum mismatch; the installed version has not changed.");
+  }
+}
+
+async function legacyUpdate(args, dataHome, env, products) {
+  if (args.some(arg => !["update", "--check"].includes(arg))) throw new Error("Use nerv update [--check]");
+  const response = await fetch(`${releaseBase}/release.json`, {signal: AbortSignal.timeout(60000)});
+  if (!response.ok) throw new Error(`Release check failed: HTTP ${response.status}`);
+  const manifest = await response.json();
+  if (manifest.schema !== 1 || !manifest.version || !manifest.products?.host) throw new Error("Unsupported release manifest");
+  const inputs = ["launcher/products.json", `${products.sdk}/pyproject.toml`, `${products.sdk}/src`,
+    "pyproject.toml", "setup.py", "src/nerv", "frontend/out", "packages/nerv-runtime-lerobot/src/nerv_runtime_lerobot/product.json"];
+  const python = pythonAt(join(dataHome, "envs/host", fingerprint(root, inputs)));
+  const version = existsSync(python) ? spawnSync(python, ["-m", "nerv.platform.cli", "--version"], {encoding: "utf8", env}) : null;
+  if (args.includes("--check")) {
+    console.log(JSON.stringify({available_version: manifest.version, installed_version: version?.stdout?.trim().replace(/^nerv /, "") || null,
+      update_available: true, migration_required: true}, null, 2));
+    return;
+  }
+  const cache = join(dataHome, ".cache/releases", `migration-${Date.now()}`);
+  mkdirSync(cache, {recursive: true});
+  writeFileSync(join(cache, "release.json"), JSON.stringify(manifest));
+  const url = new URL(manifest.base_url);
+  if (url.origin !== "https://github.com" || !url.pathname.startsWith("/Yanshi-Robotics/nerv/releases/download/")) throw new Error("Invalid official release origin");
+  const download = await fetch(`${url.href}/bootstrap.py`, {signal: AbortSignal.timeout(60000)});
+  if (!download.ok) throw new Error(`Installer download failed: HTTP ${download.status}`);
+  const bytes = Buffer.from(await download.arrayBuffer());
+  verifyReleaseAsset(bytes, manifest.files["bootstrap.py"]);
+  const bootstrap = join(cache, "bootstrap.py");
+  writeFileSync(bootstrap, bytes);
+  const launcherResponse = await fetch(`${url.href}/launch.py`, {signal: AbortSignal.timeout(60000)});
+  if (!launcherResponse.ok) throw new Error(`Launcher download failed: HTTP ${launcherResponse.status}`);
+  const launcherBytes = Buffer.from(await launcherResponse.arrayBuffer());
+  verifyReleaseAsset(launcherBytes, manifest.files["launch.py"]);
+  mkdirSync(join(dataHome, "bootstrap"), {recursive: true});
+  writeFileSync(join(dataHome, "bootstrap/install.py"), bytes);
+  writeFileSync(join(dataHome, "bootstrap/launch.py"), launcherBytes);
+  const installArgs = [bootstrap, "--update", "--manifest", join(cache, "release.json")];
+  if (existsSync(python)) run(python, [...installArgs, "--legacy-python", python], {env});
+  else run("uv", ["run", "--no-project", "--managed-python", "--python", products.python, ...installArgs], {env});
+  console.log("Update complete. Run nerv --version, then nerv.");
+}
+
+export async function main(args = process.argv.slice(2)) {
   const products = JSON.parse(readFileSync(join(root, "launcher/products.json"), "utf8"));
   if (args[0] === "launcher-help") {
     console.log("nerv [serve options via: serve --port PORT] | doctor | --version\nnerv runtime install <provider>\nnerv runtime list\nRequires Node.js 22+ and uv. Default data: ~/.nerv. No command connects hardware automatically.");
     return;
   }
   const dataHome = home(), env = uvEnvironment(dataHome);
+  const pending = join(dataHome, "update-pending.json");
+  if (existsSync(pending)) {
+    if (args.length !== 1 || args[0] !== "rollback") throw new Error("An update was interrupted. Run nerv rollback before starting NERV.");
+    const recovery = JSON.parse(readFileSync(pending, "utf8"));
+    const previous = JSON.parse(readFileSync(join(recovery.snapshot, "active.json"), "utf8"));
+    run(previous.python, [join(dataHome, "bootstrap/install.py"), "--rollback"], {env});
+    return;
+  }
   // Release installations have one stable pointer, shared with Shell/PowerShell.
   const active = join(dataHome, "active.json");
   if (existsSync(active)) {
     const installed = JSON.parse(readFileSync(active, "utf8"));
+    if (installed.legacy && args[0] === "update") {
+      await legacyUpdate(args, dataHome, env, products);
+      return;
+    }
     const sharedLauncher = join(dataHome, "bootstrap", "launch.py");
     run(installed.python, existsSync(sharedLauncher) ? [sharedLauncher, ...args] : ["-m", "nerv.platform.cli", ...args], {env});
+    return;
+  }
+  if (args[0] === "update") {
+    await legacyUpdate(args, dataHome, env, products);
     return;
   }
   if (args[0] === "runtime" && args[1] === "list") {
@@ -99,5 +161,5 @@ export function main(args = process.argv.slice(2)) {
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) {
-  try { main(); } catch (error) { console.error(`NERV: ${error.message}`); process.exitCode = 1; }
+  try { await main(); } catch (error) { console.error(`NERV: ${error.message}`); process.exitCode = 1; }
 }

@@ -2,7 +2,7 @@
 
 [English](../../guides/github-install.md) · [NERV](README.md)
 
-0.7.1 是尚未公开发布的开发候选版。完整发布包包含主程序、Runtime SDK、LeRobot 适配器、依赖锁文件、SO-101 仿真资源、安装器和 release.json。上传发布资产是验收后的独立操作。
+0.7.1 是供本地测试的开发版。完整发布包包含主程序、Runtime SDK、LeRobot 适配器、依赖锁文件、SO-101 仿真资源、安装器和 release.json。实机验收和学生首次使用测试尚未完成。
 
 ## 安装候选包
 
@@ -32,7 +32,7 @@ nerv
 
 ## GitHub 一条命令安装
 
-以下命令只适用于已经包含新安装资产的 GitHub Release，无法取得尚未发布的本地候选版。使用前应确认发布说明中的版本。
+以下命令安装最新发布的开发版。已测试的平台和剩余验收项目见对应发布说明。
 
 Linux/macOS：
 
@@ -119,3 +119,5 @@ nerv
 Linux 是首要验收平台。Windows 原生、WSL2、Apple Silicon macOS 和 Intel macOS 的依赖与硬件需要分别验证，当前均为实验性。WSL2 的 USB 透传和相机需要主机配置。Linux 枚举持久相机路径，Windows 和 macOS 分别通过 DirectShow、AVFoundation 枚举设备，此过程不打开相机。系统提供唯一身份时，NERV 会保存并在连接前重新匹配；没有唯一身份的设备需要通过画面确认。枚举失败时仍可手动输入编号。检测到串口不代表标定或机械结构已经正确。
 
 安装器采用 uv 的[非托管安装选项](https://docs.astral.sh/uv/reference/installer/)，避免由 uv 修改全局 Shell 配置，再由 NERV 注册自身入口。临时验证不希望修改 Shell 配置时，Shell 安装器可加 --no-path，随后使用打印出的绝对命令路径，并保持同一个 NERV_HOME。
+
+从 0.7.1 起，npm 启动器支持 `nerv update`，迁移后使用当前发布版。更早的 npm 启动器不会因远端发布而自动增加命令，需要先运行一次 GitHub 安装器并重新打开终端；之后统一使用 `nerv update`。

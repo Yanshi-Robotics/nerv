@@ -296,18 +296,21 @@ def _rebind(previous, records):
             write_json(path, value)
 
 
-def update(check=False, *, manifest=None):
-    from filelock import FileLock
+def update(check=False, *, manifest=None, legacy_python=None):
+    from filelock import FileLock, Timeout
     root = home()
     root.mkdir(parents=True, exist_ok=True)
     if check:
         return _update(check=True, manifest=manifest)
-    with FileLock(str(root / "host-running.lock"), timeout=0):
-        with FileLock(str(root / "installation-process.lock"), timeout=0) as lock:
-            return _update(manifest=manifest, lock=lock)
+    try:
+        with FileLock(str(root / "host-running.lock"), timeout=0):
+            with FileLock(str(root / "installation-process.lock"), timeout=0) as lock:
+                return _update(manifest=manifest, lock=lock, legacy_python=legacy_python)
+    except Timeout as exc:
+        raise ValueError("Exit NERV and wait for any installation to finish, then run nerv update again.") from exc
 
 
-def _update(check=False, *, manifest=None, lock=None):
+def _update(check=False, *, manifest=None, lock=None, legacy_python=None):
     root = home()
     if (root / "update-pending.json").exists():
         raise ValueError("An interrupted update needs recovery. Exit NERV and run nerv rollback.")
@@ -320,9 +323,16 @@ def _update(check=False, *, manifest=None, lock=None):
         target = Path(manifest)
     value, _ = read_manifest(target)
     current = json.loads((root / "active.json").read_text()) if (root / "active.json").exists() else {}
+    if not current and legacy_python:
+        version = subprocess.check_output([legacy_python, "-m", "nerv.platform.cli", "--version"], text=True).strip()
+        if not version.startswith("nerv "):
+            raise ValueError("Cannot identify the previous NERV installation")
+        current = {"python": str(Path(legacy_python).absolute()), "version": version[5:], "product": "host", "legacy": True}
     if check:
         return {"available_version": value["version"], "installed_version": current.get("version"),
                 "update_available": value["version"] != current.get("version")}
+    if current.get("version") == value["version"] and manifest is None and not legacy_python:
+        return {"version": value["version"], "updated": False, "message": "NERV is already up to date."}
     schema_file = root / "config-schema.json"
     schema = json.loads(schema_file.read_text()).get("schema") if schema_file.exists() else CONFIG_SCHEMA
     if schema != CONFIG_SCHEMA or value.get("config_schema", CONFIG_SCHEMA) != CONFIG_SCHEMA:
@@ -332,6 +342,9 @@ def _update(check=False, *, manifest=None, lock=None):
     if missing:
         raise ValueError("Release does not include installed components: " + ", ".join(sorted(missing)))
     snapshot = _snapshot()
+    if legacy_python and not (root / "active.json").exists():
+        # Retain the source-installed host as a usable rollback target.
+        write_json(snapshot / "active.json", current)
     pending = root / "update-pending.json"
     write_json(pending, {"snapshot": str(snapshot), "phase": "staging"})
     try:
@@ -387,14 +400,16 @@ def main():
     parser.add_argument("--manifest")
     parser.add_argument("--product", default="host")
     parser.add_argument("--rollback", action="store_true")
+    parser.add_argument("--update", action="store_true")
+    parser.add_argument("--legacy-python")
     args = parser.parse_args()
     if args.rollback:
         print(json.dumps(rollback()))
         return
     if not args.manifest:
         parser.error("--manifest is required for installation")
-    if args.product == "host" and (home() / "active.json").exists():
-        result = update(manifest=args.manifest)
+    if args.update or (args.product == "host" and (home() / "active.json").exists()):
+        result = update(manifest=args.manifest, legacy_python=args.legacy_python)
     elif args.product == "host":
         from filelock import FileLock
         home().mkdir(parents=True, exist_ok=True)
