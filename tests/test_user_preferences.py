@@ -101,3 +101,15 @@ def test_offline_action_catalog_matches_runtime(home):
     options = manage('scheme_options', {}, str(home))
     assert {a['name'] for a in options['actions']} == {'move_joints', 'nudge_joints', 'set_gripper'}
     assert not (home / 'devices/standard.json').exists()
+
+
+def test_discovery_receipt_survives_profile_reload(home, monkeypatch):
+    from nerv_runtime_lerobot import discovery
+    from nerv_runtime_lerobot.manage import manage
+    monkeypatch.setattr(discovery, 'discover', lambda _: {'repair_step': 3, 'cameras': []})
+    manage('discover', {}, str(home))
+    receipt = robot_profile.read()['last_check']
+    assert receipt['repair_step'] == 3
+    assert receipt['at'] > 0
+    assert receipt['connected'] is False
+    assert robot_profile.read()['last_check'] == receipt
