@@ -24,7 +24,7 @@ class LeRobotProvider:
                 path = root / relative
                 if path.is_file():
                     sdk_hashes[relative] = hashlib.sha256(path.read_bytes()).hexdigest()
-        return RuntimeManifest(id="lerobot0.6.1", version="0.8.0",
+        return RuntimeManifest(id="lerobot0.6.1", version="0.8.1",
                                features=["real", "named_sensors", "managed_execution", "native_act", "bounded_primitives", "policy_backends", "offline_setup"],
                                source={"sdk": "lerobot", "required_version": "0.6.1",
                                        "installed_version": installed, "adapter_sha256": adapter_hashes, "sdk_source_sha256": sdk_hashes},
