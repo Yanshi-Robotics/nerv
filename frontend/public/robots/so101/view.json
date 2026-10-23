@@ -1,0 +1,26 @@
+{
+  "up": [
+    0,
+    0,
+    1
+  ],
+  "restPoseDegrees": {
+    "shoulder_pan": 0,
+    "shoulder_lift": -30,
+    "elbow_flex": 60,
+    "wrist_flex": -30,
+    "wrist_roll": 0,
+    "gripper": 30
+  },
+  "cameraDirection": [
+    1,
+    -1,
+    0.65
+  ],
+  "hideNodes": [
+    "so101_leader",
+    "opt_cam_yanshi",
+    "opt_plate_yanshi"
+  ],
+  "source": "Website SO101_REST_POSE_DEG and so101.model.json; display pose only, never a device target."
+}

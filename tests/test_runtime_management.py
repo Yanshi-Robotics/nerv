@@ -14,7 +14,7 @@ def test_manual_session_needs_no_model_credentials(tmp_path, monkeypatch):
     require = Mock(side_effect=AssertionError("manual mode must not query credentials"))
     monkeypatch.setattr(ModelRegistry, "require_key", require)
     hub = Nerv(store=SessionStore(str(tmp_path)))
-    session = hub.new_session("operator", None, None, tools=[])
+    session = hub.new_session("operator", None, None, tools=[], operator_workspace=True)
     assert session["brain"] == "operator"
     assert not session["armed"]
     require.assert_not_called()

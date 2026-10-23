@@ -33,7 +33,7 @@ jobs:
           NERV_HOME: ${{ github.workspace }}/temp/launcher-ci/home
       - run: python -m pip install -e ./packages/nerv-runtime-sdk -e ".[platform,dev]"
       - run: python -m pip install --no-deps -e ./packages/nerv-runtime-lerobot
-      - run: python -m pytest tests/test_standard_product.py tests/test_lerobot_adapter.py tests/test_runtime_sdk.py tests/test_runtime_management.py tests/test_user_paths.py tests/test_control_schemes.py tests/test_installation.py tests/test_release_recovery.py tests/test_setup_discovery.py tests/test_harness_memory.py -q
+      - run: python -m pytest tests/test_user_preferences.py tests/test_standard_product.py tests/test_lerobot_adapter.py tests/test_runtime_sdk.py tests/test_runtime_management.py tests/test_user_paths.py tests/test_control_schemes.py tests/test_installation.py tests/test_release_recovery.py tests/test_setup_discovery.py tests/test_harness_memory.py -q
       - run: npm --prefix frontend run check:locales
       - run: python scripts/build_release.py
       - name: Installed host and recovery smoke test

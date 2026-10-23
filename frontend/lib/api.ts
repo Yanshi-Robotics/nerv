@@ -622,3 +622,13 @@ export const cancelModuleInstall = (id: string) => domainRequest(`/api/modules/$
 
 export const installationLog = (id: string): Promise<{log: string}> => domainRequest(`/api/modules/jobs/${id}/log`);
 export const checkRelease = (): Promise<{available_version: string; installed_version: string | null; update_available: boolean}> => domainRequest("/api/releases/check");
+
+// Operator settings and robot identity use the same local host as the workspace.
+export async function userApi<T = any>(path: string, method = "GET", body?: unknown): Promise<T> {
+  const response = await fetch(`${BASE}/api/${path}`, {method, headers: body instanceof Blob ? {} : {"Content-Type": "application/json"}, body: body === undefined ? undefined : body instanceof Blob ? body : JSON.stringify(body)});
+  const result = await response.json();
+  if (!response.ok) throw new Error(typeof result.detail === "string" ? result.detail : JSON.stringify(result.detail || result));
+  return result;
+}
+export const assetUrl = (path: string) => `${BASE}${path}`;
+export type RobotDisplay = {name: string; registered: boolean; image: string | null; device: {id?: string; port?: string; calibration_dir?: string; cameras?: Record<string, unknown>}};

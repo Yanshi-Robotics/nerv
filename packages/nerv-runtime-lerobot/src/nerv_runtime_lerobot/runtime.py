@@ -15,7 +15,7 @@ import os
 
 from nerv_runtime_sdk.policies import backend
 from .device import DeviceSession
-from .standard import CHANNELS, JOINTS, validate_manifest, validate_action
+from .standard import CHANNELS, validate_manifest, validate_action
 from pathlib import Path
 
 from nerv_runtime_sdk.contracts import PolicyArtifact
@@ -26,7 +26,7 @@ class LeRobotRuntime:
     guarded_dispatch = True
     def __init__(self, profile, binding):
         self.profile, self.binding = profile, binding
-        self.name, self.family, self.version = profile.id, profile.family, "0.6.3"
+        self.name, self.family, self.version = profile.id, profile.family, "0.8.0"
         self.settings = binding.configuration
         required = ("control_rate_hz", "max_runtime_s", "supervision_timeout_s", "cancel_timeout_s",
                     "watchdog_poll_s", "max_frame_age_s", "max_action_age_s", "policy_device", "jpeg_quality", "use_degrees")
@@ -340,17 +340,8 @@ class LeRobotRuntime:
         return self.dispatch.write(token, write)
 
     def _primitive_actions(self):
-        evidence = {"frame_seq": {"type": "integer", "x-observation-field": "frame_seq"}, "instance_id": {"type": "string", "x-observation-field": "instance_id"}}
-        duration = {"type": "number", "minimum": self.settings["min_duration_s"], "maximum": self.settings["max_duration_s"]}
-        targets = {"type": "object", "properties": {k: {"type": "number"} for k in JOINTS},
-                   "additionalProperties": False, "minProperties": 1}
-        specs = [("read_state", "Read a fresh observation and its frame_seq and instance_id before motion.", {}, "read"),
-                 ("move_joints", "Move standard arm joints to degree targets; reobserve afterwards.", {"targets": targets, "duration_s": duration, **evidence}, "primitive"),
-                 ("nudge_joints", "Move standard arm joints by bounded degree increments.", {"targets": targets, "duration_s": duration, **evidence}, "primitive"),
-                 ("set_gripper", "Set native gripper opening from 0 (closed) to 100 (open).", {"percent": {"type": "number", "minimum": 0, "maximum": 100}, "duration_s": duration, **evidence}, "primitive")]
-        return [{"name": name, "description": description, "kind": kind,
-                 "parameters": {"type": "object", "properties": props, "required": list(props), "additionalProperties": False}}
-                for name, description, props, kind in specs]
+        from .action_catalog import primitive_actions
+        return primitive_actions(self.settings)
 
     def _primitive(self, name, args, guard):
         if name == "read_state":
