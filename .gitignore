@@ -4,6 +4,7 @@
 __pycache__/
 *.pyc
 *.egg-info/
+build/
 .cache/
 logs/
 memory/
@@ -17,3 +18,5 @@ frontend/tsconfig.tsbuildinfo
 MUJOCO_LOG.TXT
 CLAUDE.md
 .claude/
+# Local research, architecture notes, development history and acceptance evidence.
+/docs/

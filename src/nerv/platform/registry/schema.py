@@ -14,15 +14,22 @@ class LaunchSpec(BaseModel):
 
 
 class BusEndpoint(BaseModel):
-    kind: str                         # zmq | lerobot | unitree
+    enabled: bool = True
+    kind: str                         # arbitrary vendor transport
     python: str = ""                  # interpreter the body node must run in for this bus
     settings: dict = Field(default_factory=dict)
     verified: bool = True             # False = interface written, never run on hardware
+    provider: str = "builtin"
+    url: str = ""
+    command: list[str] = Field(default_factory=list)
 
 
 class SkillDecl(BaseModel):
+    modes: list[str] = Field(default_factory=lambda: ["sim", "real"])
     policy: str = ""                  # policy release directory (env-expanded)
     description: str = ""
+    artifact: str = ""
+    manifest: str = ""
 
 
 class SensorDecl(BaseModel):
@@ -49,8 +56,8 @@ class BodySpec(BaseModel):
 
     @model_validator(mode="after")
     def _families(self):
-        if self.family not in ("humanoid", "arm"):
-            raise ValueError(f"unknown family {self.family!r}; known: humanoid, arm")
+        if not self.family.strip():
+            raise ValueError("family must be a nonempty descriptive identifier")
         for k in self.buses:
             if k not in (KIND_SIM, KIND_REAL):
                 raise ValueError(f"bus key must be 'sim' or 'real', got {k!r}")
@@ -67,6 +74,7 @@ class WorldSpec(BaseModel):
     spawn: dict = Field(default_factory=dict)                  # {"module": ..., "attr": ...} or xyz/yaw
     ambient: list[SensorDecl] = Field(default_factory=list)
     physics: dict = Field(default_factory=dict)
+    configuration: dict = Field(default_factory=dict)
     explore: str = ""                  # generated display manifest, relative to assets_root
     python: str = ""
     guidance: str = ""

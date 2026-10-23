@@ -132,3 +132,23 @@ def test_each_physics_step_observes_task_contacts(monkeypatch):
     monkeypatch.setattr(mujoco, "mj_step", step)
     sim._loop()
     assert order == ["firmware", "tick", "step", "observe"] * 3
+
+
+def test_overloaded_physics_yields_without_holding_motor_lock(monkeypatch):
+    sim = WorldSim.__new__(WorldSim)
+    sim.model, sim.data, _ = scene()
+    sim._lock, sim._running = threading.RLock(), True
+    sim.phys = {"steps_per_tick": 1, "realtime_factor": 1, "scheduler_yield_s": 0.002}
+    sim.scene_operator = None
+    sim._apply_firmware = lambda: None
+    sim._update_imu = lambda _: setattr(sim, "_running", False)
+    # A 100 ms tick is deliberately slower than the scene's 2 ms simulation step.
+    clock = iter([0.0, 0.1, 0.1])
+    monkeypatch.setattr("nerv.world.mujoco_node.time.perf_counter", lambda: next(clock))
+    pauses = []
+    def pause(duration):
+        assert not sim._lock._is_owned()
+        pauses.append(duration)
+    monkeypatch.setattr("nerv.world.mujoco_node.time.sleep", pause)
+    sim._loop()
+    assert pauses == [sim.phys["scheduler_yield_s"]]

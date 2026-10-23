@@ -46,17 +46,7 @@ def cmd_doctor(a) -> int:
     print(f"data root      {paths.DATA_ROOT}")
     print(f".env           {paths.ENV_FILE} {'(present)' if os.path.isfile(paths.ENV_FILE) else '(missing)'}")
     print(f"node ports     {config.NODE_PORTS}")
-    for sub, probe in (("worlds", "scenes/manifest.py"), ("policies", "README.md")):
-        ok = os.path.isfile(os.path.join(paths.REPO_ROOT, sub, probe))
-        print(f"submodule {sub:<10} {'ok' if ok else '⚠ empty — run: git submodule update --init --recursive'}")
-    try:
-        import mujoco  # noqa: F401
-        print("mujoco            ok (this venv can run world and simulated body nodes)")
-    except Exception:
-        print("mujoco            ⚠ missing — pip install -e '.[all]'")
-    lp = config.LEROBOT_PYTHON
-    print(f"NERV_LEROBOT_PYTHON {lp or '(unset — only needed for the real arm)'}"
-          f"{'' if not lp or os.path.exists(lp) else '  ⚠ not found'}")
+    print("Runtime dependencies are checked in their selected interpreter with nerv-runtime check.")
     for b in list_brains():
         print(f"brain {b['name']:<12} {'ready' if b['available'] else 'not configured'}")
     reg = Registry()
@@ -66,7 +56,7 @@ def cmd_doctor(a) -> int:
             print(f"arena {w.name}×{body}: {p} {'ok' if os.path.isfile(p) else '⚠ missing'}")
     for b in reg.bodies.values():
         for sk, d in b.skills.items():
-            print(f"policy {b.name}.{sk}: {d.policy} {'ok' if os.path.isfile(os.path.join(d.policy, 'policy.onnx')) else '⚠ missing'}")
+            print(f"policy {b.name}.{sk}: {d.manifest or d.policy} {'present' if os.path.exists(d.manifest or d.policy) else 'missing'}")
     return 0
 
 
@@ -102,7 +92,9 @@ def _review_trust(hub, s: dict) -> None:
 
 
 def _new_session(hub, a) -> str:
-    s = hub.new_session(a.brain or config.DEFAULT_BRAIN, a.body, a.world, a.sensors or [], None)
+    from ..vlm.store import ModelRegistry
+    selected = ModelRegistry().selection() or config.DEFAULT_BRAIN
+    s = hub.new_session(a.brain or selected, a.body, a.world, a.sensors or [], None, a.mode)
     print(f"session {s['id']}  brain={s['brain']} body={s['body']} world={s['world']} armed={s['armed']}")
     _review_trust(hub, s)
     return s["id"]
@@ -167,8 +159,17 @@ def cmd_run(a) -> int:
 
 def cmd_serve(a) -> int:
     import uvicorn
-    uvicorn.run("nerv.platform.server:app", host=a.host or config.SERVE_HOST,
-                port=a.port or config.SERVE_PORT, log_level="info")
+    from .serving import BrowserServer
+    server = BrowserServer(uvicorn.Config(
+        "nerv.platform.server:app", host=a.host or config.SERVE_HOST,
+        port=a.port or config.SERVE_PORT, log_level="info"), open_browser=not a.no_browser)
+    from filelock import FileLock
+    from pathlib import Path
+    Path(paths.NERV_HOME).mkdir(parents=True, exist_ok=True)
+    with FileLock(str(Path(paths.NERV_HOME) / "host-running.lock"), timeout=0):
+        if (Path(paths.NERV_HOME) / "update-pending.json").exists():
+            raise ValueError("An update was interrupted. Run nerv rollback before starting NERV.")
+        server.run()
     return 0
 
 
@@ -212,6 +213,24 @@ def cmd_session(a) -> int:
     return 2
 
 
+def cmd_policy(a):
+    from .runtime_management import manage
+    payload = {"id": a.id} if a.action in ("inspect", "check") else {}
+    if a.action == "import":
+        payload = {"id": a.id, "path": a.path, "conditions": a.conditions,
+                   "standard_declared": a.standard_declared}
+    if a.action == "check":
+        payload["device"] = a.device
+    if a.action == "configure":
+        payload = {key: getattr(a, key) for key in ("port", "id", "calibration_dir", "camera_config_file", "policy_device")}
+    try:
+        print(json.dumps(manage(a.python, a.provider, a.action, payload), indent=2))
+        return 0
+    except (ValueError, OSError) as error:
+        print(str(error), file=sys.stderr)
+        return 1
+
+
 def main(argv: list[str] | None = None) -> int:
     load_dotenv(paths.ENV_FILE)
     ap = argparse.ArgumentParser(prog="nerv", description="NERV — a nervous system for robots")
@@ -221,9 +240,33 @@ def main(argv: list[str] | None = None) -> int:
     def _sess_args(p):
         p.add_argument("--brain", default="")
         p.add_argument("--body", default=None)
+        p.add_argument("--mode", choices=["sim", "real"], default="sim")
         p.add_argument("--world", default=None)
         p.add_argument("--sensors", nargs="*", default=[], help="ambient streams to include")
         p.add_argument("--arm", action="store_true", help="arm the session at start (sim only!)")
+
+    from .. import installation
+    p = sub.add_parser("update", help="check or install the next official release after exiting NERV")
+    p.add_argument("--check", action="store_true")
+    p.add_argument("--manifest", help="use an extracted release bundle manifest")
+    p.set_defaults(fn=lambda a: print(json.dumps(installation.update(a.check, manifest=a.manifest), indent=2)) or 0)
+    p = sub.add_parser("rollback", help="restore the previous working installation")
+    p.set_defaults(fn=lambda a: print(json.dumps(installation.rollback(), indent=2)) or 0)
+    p = sub.add_parser("runtime", help="install an official isolated module")
+    p.add_argument("action", choices=["install", "list"])
+    p.add_argument("provider", nargs="?")
+    p.set_defaults(fn=lambda a: print(json.dumps(installation.install(a.provider) if a.action == "install" else __import__("nerv.platform.module_jobs", fromlist=["catalog"]).catalog(), indent=2)) or 0)
+
+    p = sub.add_parser("policy", help="manage a provider's local device and policy configuration")
+    p.add_argument("action", choices=["describe", "configure", "import", "inspect", "check"])
+    p.add_argument("--python", required=True)
+    p.add_argument("--provider", required=True)
+    for field in ("id", "path", "conditions", "port", "calibration-dir", "camera-config-file"):
+        p.add_argument("--" + field, default="")
+    p.add_argument("--device", default="cpu")
+    p.add_argument("--policy-device", default="cpu")
+    p.add_argument("--standard-declared", action="store_true")
+    p.set_defaults(fn=cmd_policy)
 
     p = sub.add_parser("chat", help="a conversation in the terminal")
 
@@ -237,6 +280,7 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("serve", help="the NERV/Operator API")
     p.add_argument("--host", default="")
     p.add_argument("--port", type=int, default=0)
+    p.add_argument("--no-browser", action="store_true", help="serve without opening a browser")
     p.set_defaults(fn=cmd_serve)
     p = sub.add_parser("node", help="start a node by hand: node world|body|tool -- <args>")
     p.add_argument("node")
@@ -254,7 +298,8 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("action", choices=["new", "list"])
     _sess_args(p)
     p.set_defaults(fn=cmd_session)
-    a = ap.parse_args(argv)
+    arguments = sys.argv[1:] if argv is None else argv
+    a = ap.parse_args(arguments or ["serve"])
     if a.cmd == "node" and a.rest[:1] == ["--"]:
         a.rest = a.rest[1:]
     return a.fn(a)

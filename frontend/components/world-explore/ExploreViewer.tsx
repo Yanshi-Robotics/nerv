@@ -292,11 +292,11 @@ export default function ExploreViewer({ manifest, floor, labels, facilities, sur
         button.type = "button";
         button.style.cssText = "position:absolute;left:0;top:0;pointer-events:auto;white-space:nowrap;cursor:pointer;visibility:hidden";
         if (source.kind === "room") {
-          button.className = "rounded-md border border-white/70 bg-white/90 px-2 py-1 text-[11px] font-medium text-slate-700 shadow-sm hover:bg-blue-100 focus-visible:outline-2 focus-visible:outline-blue-500";
+          button.className = "nerv-control nerv-overlay-control rounded-md border border-white/70 bg-white/90 px-2 py-1 text-[11px] font-medium text-slate-700 shadow-sm  focus-visible:outline-2 focus-visible:outline-[var(--control-focus)]";
           source.point.y = convert((source.item as typeof manifest.rooms[number]).bounds[0]).y + 0.18;
         } else {
           button.style.width = `${FACILITY_MARKER_SIZE_PX}px`; button.style.height = `${FACILITY_MARKER_SIZE_PX}px`;
-          button.className = "rounded-full border-2 border-white bg-blue-600 shadow-md hover:scale-125 focus-visible:outline-2 focus-visible:outline-blue-500";
+          button.className = "nerv-control rounded-full border-2 border-white nerv-primary shadow-md hover:scale-125 focus-visible:outline-2 focus-visible:outline-[var(--control-focus)]";
         }
         button.onclick = () => selectRef.current({ kind: source.kind, id: source.item.id });
         overlay.appendChild(button);

@@ -19,8 +19,9 @@
  */
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const HERE = path.dirname(new URL(import.meta.url).pathname);
+const HERE = path.dirname(fileURLToPath(import.meta.url));
 const FRONTEND = path.resolve(HERE, "..");
 const LOCALES_DIR = path.join(FRONTEND, "locales");
 const OUT = path.join(FRONTEND, "lib", "locales.generated.ts");

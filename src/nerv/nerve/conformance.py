@@ -85,7 +85,7 @@ async def _mcp(url: str, rep: Report, kind: str) -> None:
                             cr = await s.read_resource(AnyUrl(CAPABILITIES_URI))
                             meta = json.loads(next(c.text for c in cr.contents if getattr(c, "text", None)))
                             rep.add("capabilities", "family declared", bool(meta.get("family")), str(meta.get("family")))
-                            kinds = {n: v.get("kind") for n, v in (meta.get("tools") or {}).items()}
+                            kinds = {n: v.get("kind") for n, v in (meta.get("robot_actions") or {}).items()}
                             bad = [n for n, k in kinds.items() if k not in (KIND_READ, KIND_PRIMITIVE, KIND_SKILL)]
                             rep.add("capabilities", "tool kinds valid", not bad, str(bad) if bad else "")
                             rep.add("capabilities", "every tool has a kind", set(kinds) >= {t.name for t in tl.tools})

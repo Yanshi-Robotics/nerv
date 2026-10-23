@@ -1,0 +1,107 @@
+{
+  "id": "snack_into_box",
+  "format": "lerobot-act",
+  "root_env": "SO101_ACT_CHECKPOINT",
+  "sdk_version": "0.6.1",
+  "sha256": {
+    "config.json": "b6408eeeff7b4ddd3031227c1a771a9a68b2bddd1a6de9a1a1c919a0c32f9b1d",
+    "model.safetensors": "df59354de551f19a3c406b85ce8f143701abd3fce648781f5f8ec1b7ff387999",
+    "policy_postprocessor.json": "648b415125a183dfd6cbc47c1dc04ab3f2d912654ef22a12ca5e8b93d7d85cdd",
+    "policy_postprocessor_step_0_unnormalizer_processor.safetensors": "4c1cb27c5149696018fe40ae31c799ba5055ba5edc5bf43a32b57f5c54e005f5",
+    "policy_preprocessor.json": "bd1cfb2a0765035c7beaadd2403fa8f25e585076c4513735614f5f4b0473a636",
+    "policy_preprocessor_step_3_normalizer_processor.safetensors": "3a967c93c1dd8934f02f08a668e9bbabe7242df9a8c98b4c9b713d5a743aad76",
+    "train_config.json": "ffc1ead5cd4e6eefe6cc13c36dd6c83609e3abace5334f40a0602284519fd7ea"
+  },
+  "input_features": {
+    "observation.state": {
+      "type": "STATE",
+      "shape": [
+        6
+      ]
+    },
+    "observation.images.top": {
+      "type": "VISUAL",
+      "shape": [
+        3,
+        480,
+        640
+      ]
+    },
+    "observation.images.wrist": {
+      "type": "VISUAL",
+      "shape": [
+        3,
+        480,
+        640
+      ]
+    }
+  },
+  "state_names": [
+    "shoulder_pan.pos",
+    "shoulder_lift.pos",
+    "elbow_flex.pos",
+    "wrist_flex.pos",
+    "wrist_roll.pos",
+    "gripper.pos"
+  ],
+  "action_names": [
+    "shoulder_pan.pos",
+    "shoulder_lift.pos",
+    "elbow_flex.pos",
+    "wrist_flex.pos",
+    "wrist_roll.pos",
+    "gripper.pos"
+  ],
+  "image_names": [
+    "top",
+    "wrist"
+  ],
+  "conditions": "Use the original snack bag and box, original top/wrist camera poses and orientation, original calibration, and the demonstrated placement area. Begin at the documented Rest pose with an empty gripper. Within one invocation the policy can reattempt. Completion requires the entire bag inside the box, released, and the policy returning empty-handed to Rest. Position coverage and autonomous Rest return require physical verification.",
+  "position_units": {
+    "arm_joints": "degrees",
+    "gripper": "percent (RANGE_0_100)"
+  },
+  "inputs": {
+    "observation.state": {
+      "type": "STATE",
+      "shape": [
+        6
+      ]
+    },
+    "observation.images.top": {
+      "type": "VISUAL",
+      "shape": [
+        3,
+        480,
+        640
+      ]
+    },
+    "observation.images.wrist": {
+      "type": "VISUAL",
+      "shape": [
+        3,
+        480,
+        640
+      ]
+    }
+  },
+  "outputs": {
+    "action": {
+      "shape": [
+        6
+      ],
+      "names": [
+        "shoulder_pan.pos",
+        "shoulder_lift.pos",
+        "elbow_flex.pos",
+        "wrist_flex.pos",
+        "wrist_roll.pos",
+        "gripper.pos"
+      ],
+      "units": {
+        "arm_joints": "degrees",
+        "gripper": "percent (RANGE_0_100)"
+      }
+    }
+  }
+}

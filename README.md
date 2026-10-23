@@ -1,227 +1,176 @@
 # NERV
 
-[![Python](https://img.shields.io/badge/python-3.11+-blue.svg)](https://www.python.org)
-[![MCP](https://img.shields.io/badge/protocol-MCP-6f42c1.svg)](https://modelcontextprotocol.io)
-[![MuJoCo](https://img.shields.io/badge/sim-MuJoCo-orange.svg)](https://mujoco.org)
-[![LeRobot](https://img.shields.io/badge/real-LeRobot-ffcc4d.svg)](https://github.com/huggingface/lerobot)
-[![License](https://img.shields.io/badge/license-MIT-green.svg)](LICENSE)
+[简体中文](i18n/zh/README.md) · [Quick install & start](#quick-install--start) · [SO-101 setup](guides/standard-so101.md) · [Architecture](guides/architecture.md) · [Runtime SDK](packages/nerv-runtime-sdk/README.md)
 
-<a href="README.md"><img src="https://img.shields.io/badge/Language-English-2f81f7?style=flat-square" alt="English"></a>
-<a href="docs/i18n/zh/README.md"><img src="https://img.shields.io/badge/%E8%AF%AD%E8%A8%80-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-e67e22?style=flat-square" alt="简体中文"></a>
+NERV connects conversation, task decisions and local robot execution. Choose a control scheme, give it a task, and see what the robot actually did. Use a trained ACT policy, let a visual model select and supervise allowed skills, or use visual decisions with bounded joint and gripper tools.
 
-A nervous system for robots: a language-model brain, a robot body and a world — simulated or real — coupled by one platform that routes, gates and logs every signal.
+**0.7.1 is a development release for testing.** Install it from GitHub Releases or use `nerv update` from an existing release installation. SO-101 physical acceptance and student onboarding trials are pending. NERV uses externally trained policies and existing calibration; it does not train or calibrate robots.
 
-> 🤖 **If you are an AI agent, read [AGENTS.md](AGENTS.md) first** — the machine-facing entry point: the layering rule, where each fact lives, the commands.
+## Quick install & start
 
-## Overview
+The release installer manages uv, Python 3.12 and the prebuilt interface. Students do not need Node.js, Git or a frontend build. The default installation contains the host only; install SO-101 and simulation components from the interface when needed.
 
-NERV connects a **brain**, a **body**, a **world** and **tools**. The brain is a plugin; the body, world and tools run in separate processes. The platform registers their capabilities, assembles sensor observations, checks action permissions and arguments, and records the interaction.
-
-The brain chooses task steps, the body's controller executes actions, and a simulated world computes contact, motion and sensor images. Tools such as the calculator provide separate capabilities. A body can connect to a simulation bus or a hardware driver through the same interface. The brain does not read the simulator's position or room ground truth.
-
-An operator can test simulated furniture through a separate control interface. Its camera, facility catalogue and task ground truth never enter the brain's observation or tool list. Scene testing preserves the rule that the brain's actions execute through the body.
-
-## Key features
-
-- **Two systems, two clocks**: the brain (System 2) reasons once per step; the body (System 1) runs a learned policy at 30–50 Hz for as long as one command lasts and reports what it measured. They meet only inside NERV; the policy never waits for the model.
-- **Senses, never ground truth**: a camera on the wrist, a camera over the desk, a rangefinder — each is a sensor stream published by whoever carries it. NERV assembles the brain's observation from the streams a session declares and refuses anything that looks like a simulator's truth.
-- **A session is brain × body × world**: the registry says which triples exist; a world that has no arena for a body refuses it before anything starts.
-- **One vocabulary for sim and real**: a body family's verbs — primitives like `move_joints`, skills like `move_forward` — are written once. Simulation and hardware are two endpoints of the same motor bus.
-- **The brain is a plugin behind a message protocol**: Claude, OpenAI-compatible, Ollama or a mock, running the simplest see–think–gate–act loop. NERV never sees a prompt; it sees `Think`, `CallTool`, `Say`.
-- **Hardware moves only after a person arms the session**: every body action passes the safety gate; until the switch is flipped the body gets nothing and the brain is told why.
-- **Scene testing and exploration**: operate simulated furniture, inspect measured task progress, or browse the generated buildings and furnishings by floor without starting a simulation.
-- **Auditable, interruptible, bridgeable**: one log for every frame, thought, command and bus message; a stop that works mid-skill; and anything that speaks NERV/Body or NERV/Tool is a node — a ROS system behind a thin bridge included.
-
----
-
-## Architecture
-
-Four kinds of node, five interfaces, one platform. Nodes never import one another; they meet through registry files and the interfaces below.
-
-<div align="center"><img src="docs/images/structure.svg" alt="NERV between brain, body, world and tools" width="860"></div>
-
-Every interface has two planes. The data plane is what the brain may see; the control plane is what only NERV and the operator see — health, launch, reset, ground truth, video, the arming switch. Nothing crosses from the second to the first.
-
-| Interface | Between | Data plane | Control plane |
-|---|---|---|---|
-| **NERV/Operator** | you ⇄ NERV | — | registry, sessions, chat + event stream, stop, arm, scene testing, World Explore |
-| **NERV/Brain** | NERV ⇄ brain plugin | `UserMessage`, `ToolResult` in; `Think`, `CallTool`, `SetRegister`, `Say` out | load, capabilities, usage |
-| **NERV/Body** | NERV ⇄ body node (MCP) | tools = verbs, `nerv://observation`, guidance, config, capabilities | `/health` `/status` `/config` (arm) `/stop` `/hold` (e-stop) `/release` `/stream` |
-| **NERV/World** | body ⇄ world (bus) · NERV ⇄ world (sensors) | the motor bus; sensor streams mounted in the world | launch, `/health` (epoch), spawn, `/reset`, `/status`, `/stream` |
-| **NERV/Tool** | NERV ⇄ tool node (MCP) | tools only | `/health` |
-
-<details>
-<summary><b>NERV/Operator</b> — HTTP + SSE, served by <code>nerv serve</code></summary>
-
-`POST /api/sessions {brain, body, world, sensors}` creates a session after the compatibility check and launches the nodes; `POST /api/sessions/{id}/arm {armed}` flips the switch; `POST /api/chat/stream {session, text}` streams `start · perception · thinking · tool_call · gate · progress · tool_result · reply · done`. Nodes: `GET /api/nodes`, `/manifest`, `POST …/approve`. Registry: `GET /api/registry` with the compatibility matrix. Full list in [docs/nerv-operator.md](docs/nerv-operator.md).
-</details>
-
-<details>
-<summary><b>NERV/Brain</b> — messages, not prompts</summary>
-
-The brain gets a `Link` with `observe()`, `tools()`, `history()`, `registers()`, `call_tool()`, `set_register()`, `say()` and `stop_reason()`. Its decision for a step is one `Think(text, tool_calls)`; the gate runs inside `call_tool`. Three stops end a turn from the platform's side — the person's interrupt, the step ceiling, the wall clock — each a pause the person can resume. Registers (`set_core_task`, `add_note`) are the brain's working memory and ride in the system prompt. [docs/nerv-brain.md](docs/nerv-brain.md).
-</details>
-
-<details>
-<summary><b>NERV/Body</b> — four channels over MCP, a control plane over HTTP</summary>
-
-Over MCP at `/mcp/`: `tools/list` + `tools/call` (with progress notifications as signs of life), `resources/read nerv://observation` (state JSON, then image blobs named by `state.cameras`), `prompts/get guidance`, `nerv://config`, and `nerv://capabilities` (`family`, tool kinds `read · primitive · skill`, sensors, armed, epoch). Over HTTP: `/health`, `/status`, `/config` with the node's own arming switch, `/stop`, `/hold` (the emergency stop that keeps the pose — a fall latches it by itself), `/release`, `/stream`. `nerv conformance <url>` checks a node against this. [docs/nerv-body.md](docs/nerv-body.md).
-</details>
-
-<details>
-<summary><b>NERV/World</b> — the motor bus and the world's sensors</summary>
-
-The bus is JSON over ZMQ in simulation and the driver itself on hardware: `spawn(joint_names, pd_mode, kp, kd, torque_limit, default_pos)`, `read → {t, joint_pos, joint_vel, imu_quat, imu_gyro, imu_acc, odom_xy, odom_yaw, base_height}`, `write {targets, kp?, kd?}`, `reset`, `sensors`, `sensor(name)`, `rays(angles_deg, max_range_m)`, `epoch`. The PD loop lives on the world side (implicit · explicit · position_actuator) for the same reason it lives in servo firmware. World sensors are streams named `camera:top` and the like, readable by the body's policy at full rate and by NERV once per step. Control plane: `/health` with an epoch that changes on restart, `/status` (ground truth, for people), `/sensors`, `/reset`, `/stream` (chase camera). [docs/nerv-world.md](docs/nerv-world.md).
-</details>
-
-<details>
-<summary><b>NERV/Tool</b> — tools only</summary>
-
-An MCP server with `tools/list` + `tools/call` and a `/health`. Its functions join the brain's tool sheet next to the body's verbs; the body wins name collisions. Not subject to the arming switch, but gated and logged. [docs/nerv-tool.md](docs/nerv-tool.md).
-</details>
-
-### One instruction, two clocks
-
-<div align="center"><img src="docs/images/flow.svg" alt="System 2 and System 1 timelines across the nodes" width="860"></div>
-
-<div align="center"><img src="docs/images/walk-to-the-living-room.gif" alt="gpt-5.5 told to walk to the living room: it notes what it sees, walks 2 m, 2 m and 1 m with the gait policy, recognises the tall windows, the white sofa and the plant, and reports arrival" width="960"></div>
-
-Recorded in an earlier map, the video shows one unedited turn at 2.5× speed ([the same turn as an MP4, real time](docs/media/walk-to-the-living-room.mp4)). The instruction is "Walk to the living room." System 2 is gpt-5.5: it writes down its task, looks through the head camera, notes "a bright room with large windows and white seating ahead; likely the living room", and calls `move_forward` three times. System 1 is the gait policy on the body node, turning each call into 50 Hz joint targets and reporting the measured distance — 2.20 m, 2.21 m, 1.20 m. At the doorway the brain notes the tall windows, the white sofa, the plant and the wood floor, and answers "I'm in the living room." The chase camera on the lower left is the operator's; the brain only ever saw the top-left frames.
-
-**See** — the brain asks to observe; NERV assembles one frame from the body's observation and each ambient stream the session declared. **Think** — one model call: answer, or pick a tool. **Gate** — NERV checks the session is armed, the verb is allowed and the arguments are inside what the body declared; a refusal comes back as a tool result the brain can act on. **Act** — a primitive writes a target and settles; a skill starts a policy loop on the body node — a gait at 50 Hz turning "two metres" into velocity commands, reading the bus, writing joint targets — until done, timed out or stopped, sending progress on the way and a measured result at the end: distance covered, stalled, fallen, gripper closed. Then the brain sees again.
-
-### Primitives and skills
-
-| Family | Kind | Verb | What the body reports back |
-|---|---|---|---|
-| humanoid | skill | `move_forward(meters)` | measured distance, braked / stalled / fallen, room ahead |
-| humanoid | skill | `turn_left(degrees)`, `turn_right(degrees)` | measured turn, drift |
-| arm | read | `read_joints()` | joint angles (°), gripper (%) |
-| arm | primitive | `move_joints(targets, duration_s)` | measured angles, max error, clamped joints |
-| arm | primitive | `nudge(joint, delta_deg)` | measured angle |
-| arm | primitive | `set_gripper(percent)` | measured opening |
-
-A primitive is one target, interpolated and settled. A skill is a learned behaviour that keeps running for as long as one command lasts; its policy is a released artifact on the policy shelf, named in `bodies/<name>/body.yaml` under `skills`. That is how a trained model reaches the platform — never through the brain.
-
-```text
-src/nerv/nerve/       the five interfaces: message types, motor bus, sensor streams, conformance
-src/nerv/platform/    registry, sessions, observation assembly, router, safety gate, launcher, trust, HTTP, CLI
-src/nerv/brain/       the brain plugin: see–think–gate–act loop, model providers, prompts
-src/nerv/body/        body node: NERV/Body server, skill runner, families (humanoid, arm), bus endpoints
-src/nerv/world/       world node: the MuJoCo server
-src/nerv/tool/        tool node: the calculator
-bodies/  tools/       the registry              worlds/  submodule nerv-world (scenes + world descriptors)
-policies/             submodule nerv-policies   frontend/  the web app
-```
-
----
-
-## Installation
+Linux/macOS:
 
 ```bash
-git clone --recurse-submodules https://github.com/Yanshi-Robotics/nerv.git
-cd nerv
-python3 -m venv .venv && .venv/bin/pip install -e ".[all]"   # platform, brain, tools, MuJoCo — one venv
-cp .env.example .env                                         # an API key, or a local Ollama
-.venv/bin/nerv doctor                                        # what is configured, which triples are possible
+curl -fsSL https://github.com/Yanshi-Robotics/nerv/releases/latest/download/install.sh | sh
 ```
 
-The scene definitions and released policies are included as submodules: `worlds/` is the [nerv-world](https://github.com/Yanshi-Robotics/nerv-world) submodule (the scene library, carrying the world descriptors) and `policies/` is the [nerv-policies](https://github.com/Yanshi-Robotics/nerv-policies) submodule (released gait policies: `policy.onnx` + `contract.json` + `release.yaml`). If you cloned without `--recurse-submodules`, run `git submodule update --init --recursive`; `nerv doctor` says so if you forgot.
+Windows PowerShell (experimental; not yet hardware validated):
 
-Downloaded furniture and generated display models are prepared locally; their bytes are not stored in Git. Follow the [scene asset setup](worlds/docs/interactions/README.md#asset-setup), then generate both maps and their optional Explore resources:
+```powershell
+irm https://github.com/Yanshi-Robotics/nerv/releases/latest/download/install.ps1 | iex
+```
+
+Open a new terminal, then start:
 
 ```bash
-.venv/bin/python -m pip install -r worlds/requirements-explore.txt
-.venv/bin/python worlds/tools/make_house.py --scene apt
-.venv/bin/python worlds/tools/make_house.py --scene house
-.venv/bin/python worlds/tools/export_explore.py --scene apt
-.venv/bin/python worlds/tools/export_explore.py --scene house
-npm ci --prefix frontend
-npm run build:static --prefix frontend
+nerv
 ```
 
-Explore assets live in `worlds/.cache/explore/{apt,house}/`. Regenerate them after changing scene definitions or assets. Missing, stale or modified resources produce an explicit error.
-
-## Running
+The server opens your browser after becoming ready at [http://127.0.0.1:8170](http://127.0.0.1:8170). It serves the interface and API together. Ctrl+C exits. An occupied port produces an error; NERV does not kill another process or silently change ports.
 
 ```bash
-.venv/bin/nerv chat --world apt --body humanoid-unitree-g1 --brain claude
+nerv serve --no-browser
 ```
 
-NERV launches the world node, then the body node and the tools, waits for each `/health`, shows you what the body declares and asks you to approve it, and starts the conversation. Type `arm` to arm the session (in simulation that is safe), then "walk forward two metres and turn left, then tell me 17 times 23".
-
-```text
-nerv chat  --world W --body B --brain X      a conversation in the terminal
-nerv run   --world W --body B --say "..."    one turn, scripted
-nerv serve                                   the NERV/Operator API on :8000 (serves the web app when built)
-nerv node world|body|tool -- <args>          start a node by hand, or on another machine
-nerv registry                                brains, bodies, worlds, tools, compatibility matrix
-nerv conformance URL [--kind body|tool|world]  check a node against its interface
-nerv doctor                                  what is configured and what is reachable
+```bash
+nerv serve --port 8171
 ```
 
-The web app (`frontend/`, Next.js) is a client of NERV/Operator: `npm ci --prefix frontend` then `npm run dev --prefix frontend` on :8100, or `npm run build:static --prefix frontend` and let `nerv serve` serve it. See [The web app](#the-web-app) below.
+```bash
+nerv doctor
+```
 
-### The real arm
+Normal use stores configuration, sessions, installation environments and caches in `~/.nerv`. `NERV_HOME` is an optional override for isolated tests. Starting NERV never connects motors, enables motion or resumes an old task.
 
-For `arm-lerobot-so101` the motor bus *is* LeRobot's `SOFollower`. Either `pip install -e ".[lerobot]"` into the same venv, or point `NERV_LEROBOT_PYTHON` at an environment that already has LeRobot; set `SO101_PORT`, `SO101_ID` and `SO101_CAMERAS` in `.env`, and calibrate with `lerobot-calibrate` as usual. A session against hardware starts disarmed twice over — in NERV and in the body node — and the brain gets "not armed" from every command until you arm it, with your hand near the power switch. A grasping skill is a policy you train with LeRobot and drop on the policy shelf; the skill runner is already waiting for it.
+To update, exit the running server, then run `nerv update --check`, `nerv update` and `nerv`. The [installation guide](guides/github-install.md) covers rollback, extracted bundles and migration from older npm launchers.
 
-## The web app
+## First use
 
-<div align="center"><img src="docs/images/web-session.png" alt="A session: what the brain sees, the body's live camera, the operator-only chase camera, and the conversation" width="960"></div>
+Choose **Connect a real SO-101** or **Use simulation**. API keys can be configured later. Without a key, you can install components, configure the device, view cameras, inspect a policy and run a fixed ACT inside NERV.
 
-One session on screen. Left: the sessions. Middle, *robot's own view*: the observation the brain received (one frame per step) and the body's live camera; *third-person view*: the chase camera and any world camera — operator only, the brain never sees them, and the chase camera can be zoomed, orbited and tilted without touching the stream. Right: the conversation with the brain — reasoning, the observation it got, every tool call and gate decision — with the model picker and the **ARMED / DISARMED** switch at the bottom. Only a person flips that switch.
+Real-device setup guides you through the runtime installation, serial device, existing calibration, two camera roles and policy import. Configuration is remembered. Reopening a saved profile offers connection directly; the individual steps remain available to repair a missing or changed device. A connection can enable motor torque, so the operator connects and authorizes motion separately.
 
-<div align="center"><img src="docs/images/web-teleop.png" alt="Remote control: E-STOP, quick moves, and one card per verb and tool generated from the tool sheet" width="960"></div>
+For simulation, open **Simulation and components**, install **SO-101 Simulation**, then create a simulation session. The installer verifies scene loading and camera rendering before registering the module. The three presets are pick and place, snack sorting and Tower of Hanoi. They contain scenes and local controls, not trained task policies.
 
-**Remote control** (Teleop). The operator drives the body directly through the same gate, nodes and log the brain uses; every step is recorded in the session so the brain sees it next turn. The cards are generated from the tool sheet the brain would see — a body that declares a new verb shows up here with no change to the web app. **E-STOP** holds the pose (the joints stay powered where they are — not a power cut, which would let a robot drop); a fall holds the pose by itself. **Reset the entire scene** cancels interactions, clears task progress, and restores the robot, furniture and props to their initial state. The selected time of day is preserved.
+<div align="center"><img src="assets/readme/images/onboarding-0.7.png" alt="NERV first launch offers real SO-101 setup or optional simulation without requiring an API key" width="960"></div>
 
-**Scene testing.** In an active simulation, the operator can test apt’s 22 appliance joints, six dining chairs and three props, inspect measured motion, and follow the refrigerator placement task. Selection checks the visible surface and a two-metre reach. The operator camera replaces the chase view while the robot’s head camera stays visible. The robot stops before testing begins; leaving testing requires the operator to arm it again. These controls apply simulated forces and do not provide G1 with manipulation skills.
+## Three-layer architecture
 
-The refrigerator task requires the entire can to rest on the designated middle shelf, released and stable, with the door closed and contact within tolerance. Turning knobs changes their mechanical state; cooking, water flow and temperature are not simulated.
+The layers describe responsibilities, not three mandatory models. System 2 and System 1 are auxiliary terms for the optional decision layer and the execution layer.
 
-<div align="center"><img src="docs/images/world-explore/apt-scene-test.png" alt="Scene testing: the actual refrigerator task completed after releasing the can and closing the door" width="960"></div>
+```mermaid
+flowchart TB
+  U[User selects a control scheme] --> I
+  subgraph I[Interaction layer]
+    UI[NERV interface] <--> AG[NERV Agent / chat model]
+  end
+  I --> T[Task entry / frozen scheme revision]
+  subgraph D[Decision layer / System 2 / optional]
+    V[Selected visual model]
+  end
+  subgraph E[Execution layer / System 1]
+    P[Allowed ACT skills / one at a time]
+    J[Local joint and gripper controller]
+  end
+  T -->|Fixed policy| P
+  T -->|Policy group or visual direct control| V
+  V -->|Allowed skills| P
+  V -->|Allowed tools| J
+  P --> R[Shared control authority, validation, stop and journal]
+  J --> R
+  R --> B[Runtime / real device or simulation]
+  B --> O[Observations and execution feedback]
+  O --> V
+  O --> UI
+```
 
-**Nerv World Explore** opens from the sidebar and displays apt or house without starting a simulation. Browse the generated building and furniture models by floor, search rooms and facilities, and read their supported operations and test instructions. The view shows the scene’s initial design with daytime materials. Selecting a model focuses the view and opens its description without changing a running world.
+The host manages sessions, tasks and authorization. An independent worker owns the device and cameras. For SO-101 it uses one native LeRobot instance; all motion passes through `robot.send_action()`. ACT inference and bounded tool execution share the same scheduler. Neither the Agent nor the decision model can expand the selected action set.
 
-<div align="center"><img src="docs/images/world-explore/apt-cutaway.png" alt="Nerv World Explore: apartment first-floor cutaway with room names, real furnishings and facility markers" width="960"></div>
+## Choose a control scheme
 
-House also provides morning, daytime, dusk and night lighting, including the entrance, west walkway, gate and pool terrace. G1 checks physical ground support and obstacles before continuing; it stops at unsupported drops and terrain beyond its flat-ground policy.
-
-<div align="center"><img src="docs/images/world-explore/house-west_pool-night.png" alt="The actual MuJoCo house pool terrace and western path at night" width="960"></div>
-
-The [validation record](docs/validation/world-explore/README.md) separates physics, actual G1 routes, browser checks and rendering performance, with reproducible commands and retained failure cases.
-
-**Changing maps.** To move the same robot between `apt` and `house`, select **Stop simulation / change world** in the active session or the Dashboard's body details, then confirm. The robot and its simulated world stop together. Affected sessions become read-only, with their history and saved observations preserved. Once the simulation has stopped, choose **New session** and select the target map.
-
-<div align="center"><img src="docs/images/web-dashboard.png" alt="The dashboard: registry, nodes, trust, sessions and live signals" width="960"></div>
-
-**Dashboard** and **Logs** open in place. The dashboard shows what the registry declares, which nodes are up, and where each stands with you: a node's text reaches the brain only after you have read its manifest and approved it, and it is asked again if the manifest changes. Logs are the one signal trace — every frame, thought, command and bus message — per session or across all.
-
-## What ships
-
-| Body | Family | Verbs | Sensors | Bus endpoints |
-|---|---|---|---|---|
-| `humanoid-unitree-g1` | humanoid | skills `move_forward`, `turn_left`, `turn_right` (released gait policy) | `camera:head`, 8 range rays | sim (MuJoCo) · real (LeRobot G1 bridge, **unverified**) |
-| `arm-lerobot-so101` | arm | `read_joints`, `move_joints`, `nudge`, `set_gripper` | `camera:wrist` + any world camera you subscribe to | sim (MuJoCo) · real (LeRobot `SOFollower`) |
-
-| World | Kind | Supports | World sensors |
+| Scheme | Decision layer | Execution layer | Requirements |
 |---|---|---|---|
-| `apt` | sim | `humanoid-unitree-g1` — 62F–63F Manhattan duplex, Central Park views, operator furniture interaction and four times of day | none |
-| `house` | sim | `humanoid-unitree-g1` — three-floor California hillside mansion, garden, pool, closed estate boundary and four times of day | none |
+| Fixed policy | Disabled | One selected ACT | Compatible imported policy; no API key for the Run button |
+| Policy group | Selected visual model | One or more allowed ACT skills, sequentially | Visual model credentials and compatible skills |
+| Visual direct control | Selected visual model | Bounded joint moves, increments and gripper commands | Visual model credentials; no ACT required |
 
-| Tool | Functions |
+Fixed ACT runs entirely inside NERV. You do not launch a LeRobot policy in another terminal. One-skill policy groups provide visual supervision of that skill. Unverified transitions between different skills stop for operator intervention; listing several ACT policies does not establish that they compose reliably.
+
+The right chat panel shows the **chat model**, **control scheme**, its actual decision model and execution skills, **View structure**, and the current task. Fixed schemes expose **Run selected policy**. Chat replies and robot tasks have separate cancellation. Changing the chat model does not replace a running task's model or scheme. Editing a scheme creates a new revision; running tasks keep their original configuration.
+
+On first use, review and allow the runtime's capabilities from the scheme area. This makes its skills available for selection; motion still requires separate authorization. Missing credentials remain visible with a direct link to model settings.
+
+<div align="center"><img src="assets/readme/images/control-scheme-0.7.png" alt="Installed SO-101 simulation with top and wrist views and a visual control scheme awaiting model credentials" width="960"></div>
+
+**Stop reply**, **Stop task** and **Emergency stop** have separate purposes. Robot stop remains available outside the model conversation. Stop and confirm termination before switching schemes or between Sim and Real. Runtime protocol 3 requires an expiring action allowlist and control generation; older workers cannot silently execute unrestricted tasks.
+
+## Standard SO-101 and policy import
+
+The real-device product is one standard SO-101 follower with `lerobot[feetech]==0.6.1`. Five arm joints use degrees, the gripper uses LeRobot's 0–100 range, and cameras are `top` and `wrist` at 640 × 480 and 30 FPS. A leader is unnecessary for inference. Students supply connection details, calibration and their trained policy, without joint mappings.
+
+Import an ACT export through **Device and policy setup**. NERV checks weights, native processors and statistics, camera inputs, six-channel shapes and file fingerprints. A fixed standard declaration records units/order as user-declared when the training export cannot establish them. Load checks do not move hardware. After connecting, use **Check policy without motion** before enabling actions. Original exports remain read-only; changed files require another import/check.
+
+Ordinary disconnect retains torque. Explicit torque release requires supporting the arm. Software stop requests a hold; communication loss cannot confirm that it happened. Requested targets, targets actually sent by LeRobot, and measured positions are recorded separately. An execution ending or a model saying “done” is not independent proof of task success.
+
+See the [SO-101 guide](guides/standard-so101.md) for discovery, saved profiles, calibration, camera handoff and recovery. Unverified real bindings use an explicit operator acceptance checkbox; this does not certify the hardware integration.
+
+## Modules, updates and support
+
+**Models and API keys** uses a short select → key → test-and-save flow. The test sends one built-in image request and may be billed by the provider. It does not upload a live camera image. Keys are excluded from journals and diagnostics. Conversation and decision models are chosen independently.
+
+Module installation has persistent progress, cancellation, checksum verification and retry. Arbitrary simulator imports are not exposed in this release. The [module and scheme contract](guides/control-schemes.md) documents extension boundaries. SO-101 real and simulation bindings remain separate; a real ACT does not become simulation-compatible merely because its tensor dimensions match.
+
+```bash
+nerv update --check
+```
+
+```bash
+nerv update
+```
+
+```bash
+nerv rollback
+```
+
+Stop tasks, disconnect devices and exit NERV before updating or rolling back. The new host and all installed official modules are staged and checked before activation. Failed updates restore the previous configuration and environment pointers. Rollback restores the coordinated set, preserves newer configuration copies, and keeps credentials and event histories current. The [installation guide](guides/github-install.md) explains this boundary and recovery.
+
+| Platform or route | Status |
 |---|---|
-| `calculator` | `calc(expression)` — arithmetic, powers, roots; refuses anything that is not arithmetic |
+| Linux host and SO-101 simulation | Software candidate; local installation and regression checks are separate from hardware acceptance |
+| SO-101 real / Linux | Adapter and guided setup implemented; physical grasping acceptance pending |
+| Windows native / WSL2 | Experimental; USB, camera backends and passthrough require hardware testing |
+| macOS Apple Silicon / Intel | Experimental; dependencies, camera permissions and CPU/MPS each require validation |
+| G1 simulation | Existing source workflow retained for regression; not a one-click student module |
+| GR00T / SmolVLA | Future policy backends; not delivered integrations |
 
-A world for the arm — a real desk, then a simulated one — is the next thing to add; the registry is already shaped for it.
+The [release acceptance guide](guides/release-acceptance.md) separates software, simulation, real ACT, visual supervision, direct visual control and novice onboarding. No simulator task result or mock test substitutes for a physical grasp.
 
-The G1 uses its released flat-ground gait. Furniture manipulation, grasping, autonomous sitting and stair traversal require additional robot skills and are not provided by scene testing.
+## Demo and interface
 
-## Add your own
+The G1 recording below is from an earlier simulation version. It demonstrates head-camera observation and a gait skill; it is not SO-101 hardware evidence. The instruction is “Walk to the living room.” The unedited turn plays at 2.5× speed; an [original-speed MP4](assets/readme/media/walk-to-the-living-room.mp4) is available.
 
-A **brain** implements [NERV/Brain](docs/nerv-brain.md). A **body** is a directory under `bodies/` with a `body.yaml` — family, sensors, skills and their policies, actuator spec, bus endpoints — and a `guidance.md` for the brain; the verbs come with the family. Or a process that speaks [NERV/Body](docs/nerv-body.md) directly, which is how a ROS robot would join. A **world** is a directory under `worlds/` with a `world.yaml` — kind, assets, which bodies it has an arena for, which sensors it carries — or any endpoint that speaks [NERV/World](docs/nerv-world.md). A **tool** is any MCP server that speaks [NERV/Tool](docs/nerv-tool.md). A **front end** speaks [NERV/Operator](docs/nerv-operator.md). A new family is rarer, and a pull request.
+<div align="center"><img src="assets/readme/images/walk-to-the-living-room.gif" alt="Earlier G1 simulation: camera observation and a gait skill used to walk to the living room" width="960"></div>
 
-## Acknowledgements
+<details>
+<summary>Earlier interface and world views</summary>
 
-Scenes come from [nerv-world](https://github.com/Yanshi-Robotics/nerv-world). The humanoid's gait policy was trained in yanshi-rl-lab on Isaac Lab. Physics is [MuJoCo](https://mujoco.org); hardware access is [LeRobot](https://github.com/huggingface/lerobot); the SO-101 model is from [TheRobotStudio/SO-ARM100](https://github.com/TheRobotStudio/SO-ARM100); the G1 model originates from [MuJoCo Menagerie](https://github.com/google-deepmind/mujoco_menagerie).
+The model, task and device setup controls have changed in 0.7. These preserved screenshots show earlier navigation, observation and operator views. The chase camera and World Explore views are operator-only.
+
+<div align="center"><img src="assets/readme/images/web-session.png" alt="Earlier session view" width="960"></div>
+<div align="center"><img src="assets/readme/images/web-teleop.png" alt="Earlier operator controls" width="960"></div>
+<div align="center"><img src="assets/readme/images/web-dashboard.png" alt="Earlier registry and session dashboard" width="960"></div>
+<div align="center"><img src="assets/readme/images/world-explore/apt-scene-test.png" alt="Operator scene test in the apartment" width="960"></div>
+<div align="center"><img src="assets/readme/images/world-explore/apt-cutaway.png" alt="Apartment layout for operators" width="960"></div>
+<div align="center"><img src="assets/readme/images/world-explore/house-west_pool-night.png" alt="Simulated house pool terrace at night" width="960"></div>
+
+The [world-library tools](worlds/docs/explore/README.md) cover scene testing and browser views. G1's flat-ground gait does not supply grasping, furniture manipulation, autonomous sitting or stair traversal. Scene checks do not certify autonomous task success.
+
+</details>
+
+## Extend and contribute
+
+The [Runtime SDK](packages/nerv-runtime-sdk/README.md) provides versioned discovery, lifecycle and bounded dispatch. Device SDKs stay in workers; policy backends produce candidate targets without owning hardware. See [CONTRIBUTING.md](CONTRIBUTING.md), [AGENTS.md](AGENTS.md) and [CHANGELOG.md](CHANGELOG.md).
+
+Report versions and sanitized reproduction steps. Do not include keys, unreviewed camera frames or private configuration archives. NERV uses the [MIT license](LICENSE); SDKs, models and external assets retain their own licenses.

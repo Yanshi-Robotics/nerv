@@ -12,10 +12,13 @@ import json
 import os
 import shutil
 import time
+import threading
+from contextlib import contextmanager
 from dataclasses import asdict, dataclass, field
 
 from ... import config, paths
 from ...nerve import operator as op
+from ...harness.memory import SessionMemory
 
 _ROOT = os.getenv("NERV_SESSION_ROOT", paths.SESSIONS_DIR)
 
@@ -38,26 +41,56 @@ class Session:
     created_at: str
     title: str
     sensors: list = field(default_factory=list)     # ambient streams the brain also sees
-    tools: list = field(default_factory=list)       # tool nodes mounted
+    agent_tools: list = field(default_factory=list)       # tool nodes mounted
     armed: bool = False                             # hardware may move only when True
     epoch: str = ""                                 # world node epoch at bind time
     core_task: str = ""
     notes: list = field(default_factory=list)
     messages: list = field(default_factory=list)
+    mode: str = "sim"
+    binding: str = ""
+    control_scheme: str = ""
+    control_scheme_revision: int = 0
+    task_model: str = ""
+    task_effort: str | None = None
 
     def summary(self) -> dict:
         return {"id": self.id, "brain": self.brain, "body": self.body, "world": self.world,
                 "status": self.status, "created_at": self.created_at, "title": self.title,
-                "sensors": list(self.sensors), "tools": list(self.tools), "armed": self.armed,
-                "epoch": self.epoch, "core_task": self.core_task, "notes": list(self.notes)}
+                "sensors": list(self.sensors), "agent_tools": list(self.agent_tools), "armed": self.armed,
+                "epoch": self.epoch, "core_task": self.core_task, "notes": list(self.notes),
+                "mode": self.mode, "binding": self.binding,
+                "task_model": self.task_model, "task_effort": self.task_effort,
+                "control_scheme": self.control_scheme, "control_scheme_revision": self.control_scheme_revision}
+
+
+def _decode_session(data):
+    # The old metadata field denoted auxiliary node IDs, never mixed model calls.
+    # Preserve the source journal / .legacy snapshot; new snapshots use agent_tools.
+    data = dict(data)
+    old = data.pop("tools", None)
+    if "agent_tools" not in data:
+        data["agent_tools"] = old or []
+    return Session(**data)
 
 
 class SessionStore:
-    def __init__(self, root: str = _ROOT) -> None:
-        self.root = os.path.abspath(root)
+    def __init__(self, root: str | None = None) -> None:
+        self.root = os.path.abspath(root or os.environ.get("NERV_SESSION_ROOT") or _ROOT)
         os.makedirs(self.root, exist_ok=True)
+        self._lock = threading.RLock()
+
+    def memory(self, sid: str) -> SessionMemory:
+        return SessionMemory(self.root, sid)
+
+    @contextmanager
+    def transaction(self):
+        with self._lock:
+            yield
 
     def _path(self, sid: str) -> str:
+        if not sid or any(c not in "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789_-" for c in sid):
+            raise ValueError("invalid session id")
         return os.path.join(self.root, f"{sid}.json")
 
     def _imgs_dir(self, sid: str) -> str:
@@ -66,26 +99,65 @@ class SessionStore:
         return d
 
     def save(self, s: Session) -> None:
+        memory = self.memory(s.id)
+        events = memory.events()
+        recorded = [e["data"] for e in events if e["kind"] == "message"]
+        clean = [{k: v for k, v in m.items() if k != "seq"} for m in s.messages]
+        if clean[:len(recorded)] != recorded:
+            raise ValueError("session history is append-only")
+        if not events:
+            initial = asdict(s)
+            initial.pop("messages")
+            memory.append("metadata", initial)
+        for message in clean[len(recorded):]:
+            memory.append("message", message)
+        metadata = asdict(s)
+        metadata.pop("messages")
+        memory.append("metadata", metadata)
         tmp = self._path(s.id) + ".tmp"
         with open(tmp, "w", encoding="utf-8") as f:
             json.dump(asdict(s), f, ensure_ascii=False, indent=2)
         os.replace(tmp, self._path(s.id))
 
     def load(self, sid: str) -> Session:
+        self._path(sid)
+        memory = self.memory(sid)
+        if memory.path.exists():
+            events = memory.events()
+            legacy = self._path(sid) + ".legacy"
+            if os.path.isfile(legacy) and not any(event["kind"] == "migration_completed" for event in events):
+                with open(legacy, encoding="utf-8") as file:
+                    original = _decode_session(json.load(file))
+                # Resume a migration interrupted between durable events. The
+                # retained source remains authoritative until its completion.
+                self.save(original)
+                memory.append("migration_completed", {"source": "legacy_json", "messages": len(original.messages)})
+                events = memory.events()
+            metadata = next((e["data"] for e in reversed(events) if e["kind"] == "metadata"), None)
+            if metadata is None:
+                raise ValueError("session journal has no metadata")
+            return _decode_session({**metadata, "messages": memory.messages()})
         with open(self._path(sid), encoding="utf-8") as f:
-            return Session(**json.load(f))
+            s = _decode_session(json.load(f))
+        # A migration snapshot is retained and never included in the session list.
+        shutil.copy2(self._path(sid), self._path(sid) + ".legacy")
+        self.save(s)
+        return self.load(sid)
 
     def exists(self, sid: str) -> bool:
-        return os.path.exists(self._path(sid))
+        return os.path.exists(self._path(sid)) or os.path.isfile(os.path.join(self.root, sid, "events.jsonl"))
 
     def all(self) -> list[Session]:
         out = []
-        for fn in os.listdir(self.root):
-            if fn.endswith(".json"):
-                try:
-                    out.append(self.load(fn[:-5]))
-                except Exception:
-                    pass
+        ids = set()
+        for entry in os.scandir(self.root):
+            if entry.is_file() and entry.name.endswith(".json"):
+                ids.add(entry.name[:-5])
+            elif entry.is_dir() and os.path.isfile(os.path.join(entry.path, "events.jsonl")):
+                ids.add(entry.name)
+        for sid in ids:
+            # Corrupt journals must be visible as errors, never silently dropped.
+            out.append(self.load(sid))
         out.sort(key=lambda s: s.created_at, reverse=True)
         return out
 
@@ -94,14 +166,14 @@ class SessionStore:
         frozen: list[str] = []
         if body:
             for s in self.all():
-                if s.body == body and s.status == op.SESSION_ACTIVE:
+                if s.body and s.status == op.SESSION_ACTIVE:
                     s.status = op.SESSION_FROZEN
                     s.armed = False
                     self.save(s)
                     frozen.append(s.id)
         s = Session(id=_gen_id(), brain=brain, body=body, world=world, status=op.SESSION_ACTIVE,
                     created_at=_now(), title="(new session)", sensors=list(sensors or []),
-                    tools=list(tools or []), epoch=epoch)
+                    agent_tools=list(tools or []), epoch=epoch)
         self.save(s)
         return s, frozen
 
@@ -173,3 +245,17 @@ class SessionStore:
 
     def is_active(self, sid: str) -> bool:
         return self.load(sid).status == op.SESSION_ACTIVE
+
+
+def _serialized(method):
+    def call(self, *args, **kwargs):
+        with self._lock:
+            return method(self, *args, **kwargs)
+    return call
+
+
+# Read-modify-write operations share one host lock. Journal append also uses a
+# file lock; session deletion and snapshot reads cannot race a writer thread.
+for _name in ("save", "load", "new", "append", "append_perception", "delete", "set_brain",
+              "set_status", "set_armed", "set_core_task", "set_notes"):
+    setattr(SessionStore, _name, _serialized(getattr(SessionStore, _name)))

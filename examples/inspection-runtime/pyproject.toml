@@ -1,0 +1,15 @@
+[build-system]
+requires = ["setuptools>=77"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nerv-inspection-example"
+version = "0.1.0"
+requires-python = ">=3.11"
+dependencies = ["nerv-runtime-sdk>=0.6.2,<0.7"]
+
+[project.entry-points."nerv.runtime_providers"]
+inspection = "nerv_inspection_example:Provider"
+
+[tool.setuptools.packages.find]
+where = ["src"]

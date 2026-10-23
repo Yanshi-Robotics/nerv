@@ -1,0 +1,23 @@
+[build-system]
+requires = ["setuptools>=77", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "nerv-runtime-lerobot"
+version = "0.7.1"
+description = "LeRobot 0.6.1 device and native ACT adapter for NERV"
+requires-python = ">=3.11"
+license = "MIT"
+dependencies = ["nerv-runtime-sdk==0.7.1", "lerobot[feetech]==0.6.1", "filelock>=3.16", "jsonschema>=4", "pyyaml>=6", "cv2-enumerate-cameras==1.3.3"]
+
+[project.entry-points."nerv.runtime_providers"]
+"lerobot0.6.1" = "nerv_runtime_lerobot:LeRobotProvider"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[project.entry-points."nerv.policy_backends"]
+"lerobot-act" = "nerv_runtime_lerobot.policy:ACTRunner"
+
+[tool.setuptools.package-data]
+nerv_runtime_lerobot = ["product.json"]

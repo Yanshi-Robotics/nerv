@@ -25,7 +25,7 @@ class FakeArm:
         self.held = False
         self.hold_reason = ""
 
-    def tools(self):
+    def actions(self):
         return [{"name": "read_angle", "kind": KIND_READ, "description": "read", "parameters": {"type": "object", "properties": {}}},
                 {"name": "set_angle", "kind": KIND_PRIMITIVE, "description": "set",
                  "parameters": {"type": "object", "properties": {"deg": {"type": "number", "minimum": -90, "maximum": 90}}, "required": ["deg"]}}]
@@ -83,7 +83,7 @@ def test_handshake_observe_invoke_and_conformance():
         b = RemoteBody("fake-arm", url)
         caps = b.capabilities()
         assert caps.family == "arm" and caps.sensors == ["camera:wrist"]
-        kinds = {t.name: t.kind for t in caps.tools}
+        kinds = {t.name: t.kind for t in caps.operations}
         assert kinds == {"read_angle": "read", "set_angle": "primitive"}
         assert caps.guidance == "I am a fake arm."
         obs = b.perceive()
@@ -124,10 +124,12 @@ def test_hold_is_an_emergency_stop_that_keeps_the_pose_not_a_power_cut():
         assert node.stop.is_set()                                   # a running skill would end now
         assert b.health()["held"] is True
         r = b.invoke("set_angle", deg=20)
-        assert not r.ok and "holding" in r.message and impl.angle == 10   # nothing moved
+        assert not r.ok and "not armed" in r.message and impl.angle == 10   # nothing moved
         assert b.invoke("read_angle").ok                            # reads are never refused
         assert b.perceive().state["held"] is True                   # the brain is told
         assert b.release()["ok"] and b.health()["held"] is False
+        assert not b.invoke("set_angle", deg=20).ok
+        assert b.set_config("armed", "true")["ok"]
         assert b.invoke("set_angle", deg=20).ok and impl.angle == 20
     finally:
         srv.should_exit = True

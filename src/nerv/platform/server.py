@@ -9,14 +9,16 @@ from typing import Optional
 
 import httpx
 
-from fastapi import FastAPI, HTTPException, Query
+from fastapi import FastAPI, HTTPException, Query, Request
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, Response, StreamingResponse
+from fastapi.exceptions import RequestValidationError
+from fastapi.responses import FileResponse, Response, StreamingResponse, JSONResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from .. import __version__, config, paths
 from ..brain.providers import list_brains
+from ..vlm.store import ModelRegistry, VisualModel
 from . import messages, trust
 from . import explore
 from .hub import Nerv
@@ -27,8 +29,29 @@ app = FastAPI(title="NERV", version=__version__)
 app.add_middleware(CORSMiddleware, allow_origins=config.CORS_ORIGINS, allow_methods=["*"], allow_headers=["*"])
 
 
+@app.middleware("http")
+async def operator_origin(request: Request, call_next):
+    if request.method not in ("GET", "HEAD", "OPTIONS"):
+        from urllib.parse import urlsplit
+        origin = request.headers.get("origin")
+        if origin and (urlsplit(origin).hostname not in ("localhost", "127.0.0.1", "::1") or
+                       (urlsplit(origin).netloc != request.headers.get("host") and origin not in config.CORS_ORIGINS)):
+            return JSONResponse(status_code=403, content={"detail": "Operator action requires the local NERV interface"})
+    return await call_next(request)
+
+
+@app.exception_handler(RequestValidationError)
+async def private_validation_error(_request, error):
+    # Never reflect a rejected credential or request body into a 422 response.
+    return JSONResponse(status_code=422, content={"detail": [
+        {key: value for key, value in item.items() if key in ("loc", "msg", "type")}
+        for item in error.errors()]})
+
+
 @app.on_event("shutdown")
 def _shutdown() -> None:
+    from .setup_preview import preview
+    preview.close()
     nerv.shutdown()
 
 
@@ -37,12 +60,24 @@ class NewSessionIn(BaseModel):
     body: Optional[str] = None
     world: Optional[str] = None
     sensors: list[str] = []
-    tools: Optional[list[str]] = None
+    agent_tools: Optional[list[str]] = None
+    mode: str = "sim"
+    world_configuration: dict = {}
 
 
 class ChatIn(BaseModel):
     session: str
     text: str
+
+
+class TaskOperationIn(BaseModel):
+    operation: str
+    arguments: dict = {}
+
+
+class TaskModelIn(BaseModel):
+    model: str
+    effort: str | None = None
 
 
 class ArmIn(BaseModel):
@@ -70,11 +105,320 @@ class StopSimulationIn(BaseModel):
 
 
 def _default_brain() -> str:
-    brains = {b["name"]: b for b in list_brains()}
-    d = brains.get(config.DEFAULT_BRAIN)
-    if d is None or d["available"]:
-        return config.DEFAULT_BRAIN
-    return next((n for n, b in brains.items() if b["available"]), config.DEFAULT_BRAIN)
+    return ModelRegistry().selection() or "deepseek-flash"
+
+
+def _models_idle():
+    if nerv._runs or any((c.post("/executions/status") or {}).get("running") for c in nerv._bodies.values()):
+        raise HTTPException(409, "Finish the active task before changing model configuration")
+
+
+@app.get("/api/runtime/installations")
+def runtime_installations():
+    from .runtime_management import installations
+    return installations()
+
+
+@app.get("/api/modules")
+def modules_catalog():
+    from .module_jobs import catalog
+    from .registry import Registry
+    if not nerv._bound_runtime:
+        nerv.registry = Registry()
+        nerv.launcher.registry = nerv.registry
+    return catalog()
+
+
+@app.get("/api/modules/jobs/{job_id}/log")
+def module_log(job_id: str):
+    from pathlib import Path
+    from .. import paths
+    if not job_id or any(c not in "0123456789abcdef" for c in job_id):
+        raise HTTPException(400, "Invalid installation job ID")
+    path = Path(paths.NERV_HOME) / "install-jobs" / f"{job_id}.log"
+    if not path.is_file():
+        raise HTTPException(404, "Installation log not found")
+    return {"log": "\n".join(path.read_text(encoding="utf-8", errors="replace").splitlines()[-80:])}
+
+
+@app.get("/api/releases/check")
+def check_release():
+    from ..installation import update
+    try:
+        return update(check=True)
+    except Exception as error:
+        raise HTTPException(503, str(error))
+
+
+@app.post("/api/modules/{module}/install")
+def module_install(module: str):
+    if nerv._bound_runtime:
+        raise HTTPException(409, "Close the robot instance before installing components")
+    from .module_jobs import start
+    try:
+        return start(module)
+    except (ValueError, OSError) as error:
+        raise HTTPException(409, str(error))
+
+
+@app.post("/api/modules/{job_id}/cancel")
+def module_cancel(job_id: str):
+    from .module_jobs import cancel
+    try:
+        return cancel(job_id)
+    except ValueError as error:
+        raise HTTPException(400, str(error))
+
+
+class RuntimeManagementIn(BaseModel):
+    python: str
+    provider: str
+    operation: str
+    payload: dict = {}
+
+
+@app.post("/api/runtime/manage")
+def manage_runtime(body: RuntimeManagementIn, request: Request):
+    from urllib.parse import urlsplit
+    origin = request.headers.get("origin")
+    if origin and urlsplit(origin).netloc != request.headers.get("host") and origin not in config.CORS_ORIGINS:
+        raise HTTPException(403, "runtime management requires an allowed local origin")
+    from .runtime_management import manage
+    from .registry import Registry
+    with nerv._node_lock:
+        if body.operation in ("configure", "import") and nerv._bound_runtime:
+            raise HTTPException(409, "Close the current robot instance before changing its configuration")
+        try:
+            result = manage(body.python, body.provider, body.operation, body.payload)
+            if body.operation in ("configure", "import"):
+                nerv.registry = Registry()
+                nerv.launcher.registry = nerv.registry
+            return result
+        except (ValueError, OSError) as error:
+            raise HTTPException(400, str(error))
+
+
+def _setup_installation(provider):
+    from .runtime_management import installations
+    value = next((item for item in installations() if item["provider"] == provider), None)
+    if not value:
+        raise HTTPException(409, "Install the device runtime first")
+    return value
+
+
+@app.post("/api/operator/directories")
+def operator_directories(payload: dict):
+    from .local_files import directories
+    try:
+        return directories(payload.get("path"), int(payload.get("offset", 0)))
+    except (OSError, ValueError) as error:
+        raise HTTPException(400, str(error))
+
+
+@app.post("/api/setup/{provider}/{operation}")
+def adapter_setup(provider: str, operation: str, payload: dict):
+    installation = _setup_installation(provider)
+    if operation == "acceptance":
+        if payload.get("accepted") is not True:
+            raise HTTPException(400, "Explicit supervised acceptance is required")
+        body = nerv.registry.bodies.get(payload.get("robot"))
+        if not body or "real" not in body.buses or body.buses["real"].provider != provider:
+            raise HTTPException(400, "Select a device registered by this provider")
+        nerv.launcher.supervised_acceptance = {(body.name, "real")}
+        return {"ok": True, "verified": False}
+    if operation not in ("discover", "calibrations", "validate_calibration", "configure_standard", "policies", "import", "inspect", "check"):
+        raise HTTPException(404, "Unknown setup operation")
+    from .runtime_management import manage
+    with nerv._node_lock:
+        if operation in ("configure_standard", "import") and nerv._bound_runtime:
+            raise HTTPException(409, "Close the robot instance before changing its configuration")
+        try:
+            result = manage(installation["python"], installation["provider"], operation, payload)
+            if operation in ("configure_standard", "import"):
+                from .registry import Registry
+                nerv.registry = Registry()
+                nerv.launcher.registry = nerv.registry
+            return result
+        except Exception as error:
+            raise HTTPException(400, str(error))
+
+
+@app.post("/api/setup-camera/{provider}/{operation}")
+def setup_camera(provider: str, operation: str, payload: dict):
+    from .setup_preview import preview
+    with nerv._node_lock:
+        if operation == "close":
+            return preview.close()
+        if nerv._bound_runtime:
+            raise HTTPException(409, "Close the robot instance before opening setup preview")
+        if operation not in ("open", "frames"):
+            raise HTTPException(404, "Unknown preview operation")
+        try:
+            from .runtime_management import manage
+            installation = _setup_installation(provider)
+            descriptor = manage(installation["python"], provider, "describe", {})
+            module = descriptor.get("camera_preview_module")
+            if not module:
+                raise ValueError("This adapter does not provide camera setup")
+            return preview.request(installation["python"], operation, payload.get("cameras"), module=module)
+        except Exception as error:
+            raise HTTPException(400, str(error))
+
+
+@app.get("/api/vlm")
+def vlm_models():
+    registry = ModelRegistry()
+    binding = nerv.binding_signature()
+    return {"models": registry.list(binding), "providers": registry.providers(),
+            "credential_path": str(registry.credentials.path),
+            "binding_signature": binding,
+            "selection": registry.selection(), "task_locked": bool(nerv._runs)}
+
+
+@app.put("/api/vlm/{model_id}")
+def vlm_save(model_id: str, model: VisualModel):
+    _models_idle()
+    if model.id != model_id:
+        raise HTTPException(400, "model id does not match the URL")
+    ModelRegistry().upsert(model.model_dump())
+    nerv._brains.clear()
+    return {"ok": True}
+
+
+class CredentialIn(BaseModel):
+    value: str | None = None
+
+
+@app.put("/api/credentials/{reference}")
+def credential_save(reference: str, payload: CredentialIn):
+    _models_idle()
+    if payload.value is not None:
+        raise HTTPException(400, "Use the model configuration test to register a key")
+    registry = ModelRegistry()
+    try:
+        registry.credentials.set(reference, payload.value)
+        registry.invalidate_credential(reference)
+        nerv._brains.clear()
+        return {"ok": True, **registry.credentials.describe(reference)}
+    except (ValueError, PermissionError) as error:
+        raise HTTPException(400, str(error))
+
+
+@app.post("/api/vlm/{model_id}/configure")
+async def vlm_configure(model_id: str, payload: CredentialIn, request: Request):
+    import asyncio
+    import threading
+    from ..vlm.errors import ModelError
+    _models_idle()
+    cancelled = threading.Event()
+    async def watch_disconnect():
+        while not cancelled.is_set():
+            if await request.is_disconnected():
+                cancelled.set()
+                return
+            await asyncio.sleep(0.1)
+    watcher = asyncio.create_task(watch_disconnect())
+    try:
+        result = await asyncio.to_thread(ModelRegistry().configure, model_id, payload.value,
+                                         cancelled=cancelled.is_set)
+        if result["saved"]:
+            nerv._brains.clear()
+        return result
+    except ModelError as error:
+        raise HTTPException(400, error.public()) from None
+    except (ValueError, KeyError):
+        raise HTTPException(400, "Select a registered visual model") from None
+    finally:
+        cancelled.set()
+        watcher.cancel()
+
+
+class SelectionIn(BaseModel):
+    effort: str | None = None
+
+
+@app.post("/api/vlm/{model_id}/select")
+def vlm_select(model_id: str, payload: SelectionIn):
+    _models_idle()
+    try:
+        ModelRegistry().select(model_id, payload.effort)
+        nerv._brains.clear()
+        return {"ok": True}
+    except (ValueError, KeyError) as error:
+        raise HTTPException(400, str(error))
+
+
+class PhysicalAcceptanceIn(BaseModel):
+    binding_signature: str
+    signature: str
+    status: str
+    evidence: str
+
+
+@app.post("/api/vlm/{model_id}/acceptance")
+def vlm_acceptance(model_id: str, payload: PhysicalAcceptanceIn):
+    _models_idle()
+    try:
+        if not payload.binding_signature or payload.binding_signature != nerv.binding_signature():
+            raise ValueError("physical evidence does not match the current prepared robot binding")
+        ModelRegistry().record_acceptance(model_id, payload.signature, payload.status, payload.evidence,
+                                          payload.binding_signature)
+        return {"ok": True}
+    except (ValueError, KeyError) as error:
+        raise HTTPException(400, str(error))
+
+
+@app.post("/api/vlm/{model_id}/validate")
+def vlm_validate(model_id: str):
+    _models_idle()
+    try:
+        return ModelRegistry().validate(model_id)
+    except (ValueError, KeyError) as error:
+        raise HTTPException(400, str(error))
+
+
+@app.post("/api/sessions/{sid}/runtime/{operation:path}")
+def runtime_operation(sid: str, operation: str, payload: dict):
+    if not nerv.store.exists(sid):
+        raise HTTPException(404, "no such session")
+    session = nerv.store.get(sid)
+    if nerv._control_error(session) or not session.body:
+        raise HTTPException(409, "this session does not control the robot")
+    task = nerv.tasks.snapshot(sid)["task"] or {}
+    active = task.get("status") in ("starting", "running", "updating", "stopping")
+    if operation == "operator/supervise":
+        if active and task.get("scheme", {}).get("template") != "fixed_policy":
+            raise HTTPException(403, "Decision tasks use their own supervision")
+    elif active or sid in nerv._runs:
+        raise HTTPException(409, "Stop the task before preparing or loading")
+    if operation not in ("prepare", "policies/load", "policies/check", "device/close", "device/torque-off", "operator/supervise"):
+        raise HTTPException(404, "unknown runtime operation")
+    client = nerv.body_client(session.body)
+    if client is None:
+        raise HTTPException(503, "body node offline")
+    if operation in ("device/close", "device/torque-off"):
+        nerv.arm(sid, False)
+    if operation == "prepare":
+        from .setup_preview import preview
+        preview.close()
+    result = client.post("/" + operation, payload)
+    client.refresh()
+    if operation in ("device/close", "device/torque-off") and result.get("ok") and session.mode == "real":
+        nerv.launcher.stop(f"body:{session.body}")
+        nerv._bodies.pop(session.body, None)
+        nerv._bound_runtime = None
+        nerv.store.set_status(sid, "reconnect_required")
+    return result
+
+
+@app.get("/api/sessions/{sid}/runtime")
+def runtime_status(sid: str):
+    session = nerv.store.get(sid)
+    client = nerv.body_client(session.body) if session.body else None
+    status = client.status() if client else None
+    if not status:
+        raise HTTPException(503, "body node offline")
+    return status
 
 
 # ---- registry / brains ---------------------------------------------------------------------
@@ -142,7 +486,8 @@ def nodes() -> list:
                 d = c.trust_decision()
                 item["trust"] = {"state": d.state, "reason": d.reason, "changes": d.changes}
                 caps = c.capabilities()
-                item["tools"] = [t.name for t in caps.tools]
+                item["robot_actions"] = [t.name for t in caps.robot_actions]
+                item["agent_tools"] = [t.name for t in caps.agent_tools]
                 item["family"] = caps.family
                 item["sensors"] = caps.sensors
             except Exception as e:
@@ -165,17 +510,25 @@ def node_manifest(key: str) -> dict:
         raise HTTPException(404, "no such node")
     raw = c.raw_capabilities()
     d = c.trust_decision()
-    return {"key": key, "url": c.base, "manifest": trust.manifest(c.base, raw.tools, raw.guidance),
+    return {"key": key, "domain": "robot_actions" if key.startswith("body:") else "agent_tools", "url": c.base, "manifest": trust.manifest(c.base, raw.operations, raw.guidance),
             "trust": {"state": d.state, "reason": d.reason, "changes": d.changes},
+            "hash": trust.manifest_hash(trust.manifest(c.base, raw.operations, raw.guidance)),
             "family": raw.family, "sensors": raw.sensors}
 
 
+class AccessApprovalIn(BaseModel):
+    expected_hash: str
+
+
 @app.post("/api/nodes/{key:path}/approve")
-def node_approve(key: str) -> dict:
+def node_approve(key: str, payload: AccessApprovalIn) -> dict:
     c = nerv.node_client(key)
     if c is None:
         raise HTTPException(404, "no such node")
-    h = c.approve()
+    try:
+        h = c.approve(expected_hash=payload.expected_hash)
+    except ValueError as error:
+        raise HTTPException(409, str(error)) from None
     return {"ok": True, "hash": h}
 
 
@@ -234,9 +587,12 @@ def node_status(key: str) -> dict:
 @app.post("/api/sessions")
 def new_session(inp: NewSessionIn) -> dict:
     try:
-        return nerv.new_session(inp.brain or _default_brain(), inp.body, inp.world, inp.sensors, inp.tools)
+        if (inp.brain or _default_brain()) not in {b["name"] for b in list_brains()}:
+            raise ValueError("select a registered visual model")
+        return nerv.new_session(inp.brain or _default_brain(), inp.body, inp.world, inp.sensors, inp.agent_tools, inp.mode, inp.world_configuration)
     except (ValueError, KeyError, RuntimeError, TimeoutError, FileNotFoundError) as e:
-        raise HTTPException(400, e.args[0] if e.args else str(e))
+        from ..vlm.errors import ModelError
+        raise HTTPException(400, e.public() if isinstance(e, ModelError) else e.args[0] if e.args else str(e))
 
 
 @app.get("/api/sessions")
@@ -255,6 +611,8 @@ def get_session(sid: str) -> dict:
 @app.delete("/api/sessions/{sid}")
 def delete_session(sid: str) -> dict:
     nerv.stop(sid) if nerv.store.exists(sid) else None
+    if sid in nerv._runs:
+        raise HTTPException(409, "Wait for the interrupted model request to exit before deleting its session")
     return {"ok": nerv.store.delete(sid)}
 
 
@@ -262,8 +620,122 @@ def delete_session(sid: str) -> dict:
 def interrupt_session(sid: str) -> dict:
     if not nerv.store.exists(sid):
         raise HTTPException(404, "no such session")
-    nerv.stop(sid)
+    nerv.stop_reply(sid)
     return {"ok": True}
+
+
+@app.get("/api/sessions/{sid}/world-control")
+def world_control_descriptor(sid: str):
+    try:
+        return nerv.world_controls.capabilities(sid)
+    except httpx.HTTPError as error:
+        raise HTTPException(503, "World node unavailable. End this instance and create a new one.") from error
+    except (ValueError, KeyError) as error:
+        raise HTTPException(409, str(error)) from error
+
+
+@app.post("/api/sessions/{sid}/world-control")
+def world_control_invoke(sid: str, payload: dict):
+    try:
+        if "instance_id" not in payload or "revision" not in payload:
+            raise ValueError("Instance and revision are required")
+        return nerv.world_controls.invoke(sid, payload["command"], payload.get("arguments", {}),
+            instance_id=payload["instance_id"], revision=payload["revision"])
+    except Exception as error:
+        raise HTTPException(409, str(error)) from error
+
+
+@app.get("/api/control-schemes")
+def control_schemes(sid: str | None = None):
+    from .control_schemes import resolve
+    session = nerv.store.get(sid) if sid else None
+    items = []
+    for scheme in nerv.schemes.list():
+        item = {**scheme.model_dump(), "structure": scheme.structure(), "ready": False}
+        try:
+            if session:
+                resolve(nerv, session, scheme)
+                item["ready"] = True
+        except (ValueError, OSError) as error:
+            item["reason"] = str(error)
+        items.append(item)
+    actions = []
+    if session and session.body and nerv.body_client(session.body):
+        actions = [{"name": a.name, "description": a.description, "kind": a.kind}
+                   for a in nerv.body_client(session.body).capabilities().operations if a.kind in ("skill", "primitive")]
+    selected = None
+    if session and session.control_scheme:
+        pinned = nerv.schemes.get(session.control_scheme, session.control_scheme_revision)
+        selected = {**pinned.model_dump(), "ready": False}
+        try:
+            resolve(nerv, session, pinned)
+            selected["ready"] = True
+        except (ValueError, OSError) as error:
+            selected["reason"] = str(error)
+    return {"schemes": items, "actions": actions, "selected": selected}
+
+
+@app.post("/api/control-schemes")
+def save_control_scheme(payload: dict):
+    try:
+        return nerv.schemes.save(payload).model_dump()
+    except (ValueError, OSError) as error:
+        raise HTTPException(409, str(error))
+
+
+@app.post("/api/sessions/{sid}/control-scheme")
+def select_control_scheme(sid: str, payload: dict):
+    try:
+        return nerv.tasks.select_scheme(sid, payload["id"], payload.get("revision"))
+    except (KeyError, ValueError, OSError) as error:
+        raise HTTPException(409, str(error))
+
+
+@app.get("/api/sessions/{sid}/robot-tasks")
+def robot_tasks(sid: str, after: int = Query(0, ge=0)):
+    if not nerv.store.exists(sid):
+        raise HTTPException(404, "no such session")
+    return nerv.tasks.snapshot(sid, after)
+
+
+@app.post("/api/sessions/{sid}/robot-tasks")
+def robot_task_operation(sid: str, inp: TaskOperationIn):
+    if not nerv.store.exists(sid):
+        raise HTTPException(404, "no such session")
+    try:
+        from jsonschema import validate
+        schema = next((schema for name, _, schema in nerv.tasks.capabilities() if name == inp.operation), None)
+        if schema is None:
+            raise ValueError("Unknown task operation")
+        validate(inp.arguments, schema)
+        return nerv.tasks.invoke(sid, inp.operation, inp.arguments)
+    except Exception as error:
+        raise HTTPException(409, str(error))
+
+
+@app.get("/api/sessions/{sid}/robot-events")
+def robot_events(sid: str, request: Request, after: int = Query(0, ge=0)):
+    if not nerv.store.exists(sid):
+        raise HTTPException(404, "no such session")
+
+    async def events():
+        import asyncio
+        try:
+            cursor = max(after, int(request.headers.get("last-event-id", "0")))
+        except ValueError:
+            cursor = after
+        while nerv.store.exists(sid) and not await request.is_disconnected():
+            snapshot = await asyncio.to_thread(nerv.tasks.snapshot, sid, cursor)
+            cursor = snapshot["cursor"]
+            yield "id: " + str(cursor) + "\ndata: " + json.dumps(snapshot) + "\n\n"
+            await asyncio.sleep(config.ROBOT_EVENTS_POLL_S)
+    return StreamingResponse(events(), media_type="text/event-stream",
+                             headers={"Cache-Control": "no-cache"})
+
+
+@app.post("/api/sessions/{sid}/task-model")
+def task_model(sid: str, inp: TaskModelIn):
+    raise HTTPException(409, "Select a decision model in a control scheme")
 
 
 @app.post("/api/sessions/{sid}/estop")
@@ -339,6 +811,9 @@ def set_brain(sid: str, inp: BrainIn) -> dict:
         raise HTTPException(404, "no such session")
     if inp.brain not in {b["name"] for b in list_brains()}:
         raise HTTPException(400, messages.UNKNOWN_BRAIN_REPLY)
+    if sid in nerv._runs:
+        raise HTTPException(409, "Finish the Agent reply before changing its model")
+    ModelRegistry().remember(inp.brain)
     nerv.store.set_brain(sid, inp.brain)
     nerv.store.append(sid, {"role": "brain_divider", "brain": inp.brain})
     return {"ok": True}
@@ -349,6 +824,15 @@ def arm(sid: str, inp: ArmIn) -> dict:
     if not nerv.store.exists(sid):
         raise HTTPException(404, "no such session")
     return nerv.arm(sid, inp.armed)
+
+
+@app.get("/api/sessions/{sid}/capabilities")
+def session_capabilities(sid: str) -> dict:
+    if not nerv.store.exists(sid):
+        raise HTTPException(404, "no such session")
+    entries = nerv.tool_sheet(sid)
+    return {domain: [entry for entry in entries if entry["domain"] == domain]
+            for domain in ("agent_tools", "robot_actions")}
 
 
 @app.get("/api/sessions/{sid}/tools")
@@ -372,19 +856,30 @@ def teleop(sid: str, inp: TeleopIn) -> StreamingResponse:
                              headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
 
 
+def _chat_ready(sid):
+    if not nerv.store.exists(sid):
+        raise HTTPException(404, "no such session")
+    selected = nerv.store.get(sid).brain
+    from ..vlm.errors import ModelError
+    try:
+        ModelRegistry().require_key(selected)
+    except ModelError as error:
+        raise HTTPException(400, error.public()) from None
+    except KeyError:
+        raise HTTPException(400, messages.BRAIN_NOT_CONFIGURED_REPLY) from None
+
+
 # ---- chat ------------------------------------------------------------------------------------
 @app.post("/api/chat")
 def chat(inp: ChatIn) -> dict:
-    if not nerv.store.exists(inp.session):
-        raise HTTPException(404, "no such session")
+    _chat_ready(inp.session)
     out = nerv.handle(inp.session, inp.text)
-    return {"reply": out["reply"], "stop_reason": out["stop_reason"]}
+    return {"reply": out["reply"], "stop_reason": out["stop_reason"], "error": out.get("error")}
 
 
 @app.post("/api/chat/stream")
 def chat_stream(inp: ChatIn) -> StreamingResponse:
-    if not nerv.store.exists(inp.session):
-        raise HTTPException(404, "no such session")
+    _chat_ready(inp.session)
 
     def gen():
         for ev in slog.bound_stream(inp.session, nerv.handle_stream(inp.session, inp.text)):
@@ -449,7 +944,7 @@ def session_logs(session: str = "", limit: int = 300) -> dict:
 
 
 # ---- static web app (frontend/out) -------------------------------------------------------
-_WEB = os.path.join(paths.REPO_ROOT, "frontend", "out")
+_WEB = paths.WEB_ROOT
 if os.path.isdir(_WEB):
     app.mount("/", StaticFiles(directory=_WEB, html=True), name="web")
 else:

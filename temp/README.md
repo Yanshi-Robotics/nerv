@@ -1,1 +1,6 @@
-Temporary material for this repository only (see the workspace rule). Each item states: created on, for which task, and when it can be deleted.
+# Temporary verification material
+
+Created: 2026-10-19. Task: modular Agent harness and robot runtime integration.
+Generated test, build and browser evidence belongs in task subdirectories here.
+It can be removed after the corresponding implementation and verification records
+have been accepted and their durable results retained in development documentation.

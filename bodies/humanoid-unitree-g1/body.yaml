@@ -48,6 +48,7 @@ buses:
   sim:
     kind: zmq                      # runs in the same venv as NERV
   real:
+    enabled: false                 # real hardware integration is outside 0.6
     kind: unitree
     verified: false                # interface written against lerobot.robots.unitree_g1; never run on hardware
     python: "${NERV_LEROBOT_PYTHON}"
