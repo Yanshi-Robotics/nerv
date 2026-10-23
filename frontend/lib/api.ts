@@ -5,7 +5,7 @@
 //    于是下面每一处 `${BASE}/api/...` 都变成 `/api/...`——相对于当前页面的源。
 //    这正是把网页交给 `nerv serve` 自己端出来时需要的：换个端口，页面照样连得上。
 //    注意用的是 `??` 不是 `||`：空串必须能穿过去。
-const BASE = process.env.NEXT_PUBLIC_API ?? "http://localhost:8000";
+const BASE = process.env.NEXT_PUBLIC_API ?? "http://localhost:8170";
 
 // 前端轮询 / 显示上限：集中此处、可用 NEXT_PUBLIC_* env 覆盖，不在各组件内联写死。
 export const SIGNAL_LOG_SHOWN = Number(process.env.NEXT_PUBLIC_SIGNAL_LOG_SHOWN) || 300; // ≤ 后端 NERV_SIGNAL_LOG_MAXLEN
