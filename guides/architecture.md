@@ -69,7 +69,7 @@ OpenAI, DeepSeek and xAI use provider-specific Responses dialects. Gemini uses t
 
 Catalogue capabilities were checked against supplier documentation on 2026-10-20: [OpenAI](https://developers.openai.com/api/docs/models/gpt-6.1-sol), [DeepSeek](https://api-docs.deepseek.com/api/create-response/), [Gemini](https://ai.google.dev/gemini-api/docs/thinking), [xAI](https://docs.x.ai/developers/model-capabilities/text/reasoning), [Anthropic](https://platform.claude.com/docs/en/build-with-claude/effort). Key registration sends one image request only when the operator submits the form. Opening settings, changing selections and creating sessions do not call the provider.
 
-The optional API diagnostics endpoint checks image input, tool calls and continuation. Their results do not gate VLM session creation or model use; those require only a nonempty registered key. Operator-only sessions need no key. Existing keys do not need to be registered again. A subsequently expired key permits session creation and produces a clear conversation error when used. Failed replies preserve the input and offer retry and model settings; retries do not replay old robot actions.
+The optional API diagnostics endpoint checks image input, tool calls and continuation. Their results do not gate VLM session creation or model use; those require only a nonempty registered key. Operator workspaces are created through a separate endpoint and excluded from chat history. They need no key; public chat creation rejects the operator identity before starting nodes or writing a session. Existing keys do not need to be registered again. A subsequently expired key permits session creation and produces a clear conversation error when used. Failed replies preserve the input and offer retry and model settings; retries do not replay old robot actions.
 
 Changing endpoint, model, effort or credentials invalidates matching diagnostic and physical records. One successful key registration does not certify other models, general visual performance or robot performance. Agent errors do not cancel independent robot tasks; System 2 failures retain local stopping and supervision rules.
 
@@ -99,3 +99,9 @@ The [runtime SDK guide](../packages/nerv-runtime-sdk/README.md) and [inspection-
 [Control schemes and module contracts](control-schemes.md) describe immutable revisions, fixed-policy tasks, independent decision contexts and protocol 3 grants. The right panel shows only the selected path. The old all-path illustration above documents transport relationships; it does not grant access to every action.
 
 Interaction, decision and execution are the primary terms. System 2 and System 1 remain auxiliary labels in diagrams and existing journal role IDs. A fixed-policy task does not instantiate a model. A visual-direct task still uses a local controller; model output never writes motor registers.
+
+## Application navigation and preferences
+
+Home, My robot, Settings and conversation views use hash navigation in the static package. The application owns the active-task toolbar and visible-operator supervision; changing pages does not transfer control or cancel execution. Robot workspaces share the existing task service. Display names and portraits do not modify calibration identity.
+
+Four allowlisted conversation settings are persisted with a file lock and atomic replacement. Each Agent turn reads a snapshot: environment configuration, then web preferences, then defaults. A task keeps its scheme revision and authority. Runtime protocol remains version 3.

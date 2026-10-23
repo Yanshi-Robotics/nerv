@@ -1,7 +1,7 @@
 "use client";
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { createPortal } from "react-dom";
-import { armSession, estopSession, robotTaskOperation, getRobotTask, getPerception, runtimeOperation, POLL_NODES_MS, type NodeInfo, type SessionSummary } from "@/lib/api";
+import { armSession, runtimeOperation, type NodeInfo, type SessionSummary } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import RuntimeControls from "./RuntimeControls";
 import { NodeTrust } from "./NodeTrust";
@@ -35,24 +35,7 @@ export default function OperatorToolbox({session, bodyNode, nodes, onChanged, ch
   const active = session?.status === "active";
   const robot = active && !!session?.body;
   const sim = robot && session?.mode === "sim" && !!session.world;
-  // Operator supervision belongs to the active workspace, not a toolbox tab.
-  useEffect(() => {
-    if (!robot || !bodyNode?.online || !session.armed) return;
-    let gone = false, pending = false;
-    const heartbeat = async () => {
-      if (pending || document.visibilityState !== "visible") return;
-      pending = true;
-      try {
-        const task = (await getRobotTask(session.id)).task;
-        if (task && ["starting", "running", "updating", "stopping"].includes(task.status) && task.scheme?.template !== "fixed_policy") return;
-        const observation = await getPerception(session.id);
-        if (!gone && document.visibilityState === "visible") await runtimeOperation(session.id, "operator/supervise", {frame_seq: observation.state.frame_seq});
-      } catch { /* Runtime watchdog revokes control on observation or browser loss. */ }
-      finally { pending = false; }
-    };
-    const timer = setInterval(heartbeat, POLL_NODES_MS);
-    return () => { gone = true; clearInterval(timer); };
-  }, [robot, bodyNode?.online, session?.id, session?.brain, session?.armed]);
+  // Supervision is owned by GlobalTaskBar across all application pages.
   useEffect(() => {setOpen(false); setError(""); setStopMessage(""); setGroup(GROUPS[0]);}, [session?.id]);
   useEffect(() => {
     const close = (event: KeyboardEvent) => {if (event.key === "Escape") setOpen(false);};
@@ -78,8 +61,6 @@ export default function OperatorToolbox({session, bodyNode, nodes, onChanged, ch
       <header className="nerv-operator-bar z-30 flex shrink-0 flex-wrap items-center gap-2 border-b border-neutral-800 bg-neutral-900 px-3 py-2 text-xs">
         <span className="mr-auto truncate text-neutral-400">{session?.body || t("Conversation only")} {session?.world ? `· ${session.world}` : ""}</span>
         {stopMessage && <span role="status">{t(stopMessage)}</span>}
-        {robot && <><button className="nerv-control nerv-warning rounded border px-3 py-1.5" disabled={pending.stop} onClick={() => perform("stop", () => robotTaskOperation(session!.id, "cancel"))}>{t(pending.stop ? "Stopping…" : "Stop task")}</button>
-        <button className="nerv-control nerv-danger rounded border px-3 py-1.5 font-semibold" onClick={() => perform("emergency", () => estopSession(session!.id))}>{t("Emergency stop")}</button></>}
         <button className="nerv-control rounded border px-3 py-1.5" aria-expanded={open} aria-controls="operator-toolbox" onClick={() => setOpen(!open)}>{t("Toolbox")}</button>
         {error && <p role="alert" className="w-full text-[var(--control-danger-text)]">{t(error)}</p>}
       </header>
@@ -87,7 +68,7 @@ export default function OperatorToolbox({session, bodyNode, nodes, onChanged, ch
         {children}
         <aside className="nerv-right-panel flex min-h-0 min-w-0 flex-col overflow-hidden border-l border-neutral-800">
           <nav aria-label={t("Interaction mode")} className="flex shrink-0 gap-2 border-b border-neutral-800 bg-neutral-900 p-2">
-            <button className="nerv-control flex-1 rounded border px-3 py-2 text-sm" aria-pressed={!open} aria-controls="agent-conversation" onClick={() => setOpen(false)}>{t("Agent chat")}</button>
+            <button className="nerv-control flex-1 rounded border px-3 py-2 text-sm" aria-pressed={!open} aria-controls="agent-conversation" onClick={() => setOpen(false)}>{t(session?.brain === "operator" ? "Control schemes" : "Agent chat")}</button>
             <button className="nerv-control flex-1 rounded border px-3 py-2 text-sm" aria-pressed={open} aria-controls="operator-toolbox" onClick={() => setOpen(true)}>{t("Toolbox")}</button>
           </nav>
           {/* Keep the conversation mounted so view changes preserve drafts and streams. */}

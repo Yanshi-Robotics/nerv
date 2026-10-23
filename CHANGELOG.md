@@ -5,6 +5,21 @@ The 0.1.x entries below are the pre-release trail.
 
 ## [Unreleased]
 
+## [0.8.0] — 2026-10-24
+
+- Add Home, My robot and unified Settings with static-package hash navigation.
+- Require configured chat credentials before session side effects. Preserve keyless
+  device and fixed-policy workspaces separately from conversation history.
+- Save robot display names and validated, metadata-free portraits independently of
+  calibration. Recognize existing standard profiles and separate policy import from setup.
+- Bundle a local follower-only 3D viewer, preview and decoder with license notices.
+- Persist four conversation limits with environment precedence and per-turn snapshots.
+- Keep task supervision and stop controls at application scope during navigation.
+- Put installed components first and report broken installation pointers as needing repair.
+- Preserve new display assets and preferences in update and rollback recovery copies.
+- Keep physical acceptance, paid-model trials and student onboarding pending. This is
+  a development testing release; Runtime protocol and hardware support levels are unchanged.
+
 ## [0.7.2] — 2026-10-24
 
 - Fix the journal dispatch barrier on Windows by opening a writable, non-truncating

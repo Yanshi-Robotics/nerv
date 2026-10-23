@@ -47,7 +47,7 @@ def _needs_repair(key, installed):
     try:
         record = json.loads(path.read_text(encoding="utf-8"))
         executable = Path(record["python"])
-        stage = executable.parent if os.name == "nt" else executable.parent.parent
+        stage = executable.parent.parent
         receipt = stage / "nerv-install.json"
         if not receipt.is_file():
             return True
