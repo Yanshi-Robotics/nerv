@@ -3,7 +3,7 @@
 The SDK runs in the adapter's Python environment. NERV Host does not import vendor SDKs,
 PyTorch or device objects. Non-Python adapters can serve the equivalent HTTP/MCP protocol.
 
-Protocol **2.0** separates `robot_actions` from Agent auxiliary tools. A `RuntimeProvider`
+Protocol **3.0** separates `robot_actions` from Agent auxiliary tools. A `RuntimeProvider`
 registers under the `nerv.runtime_providers` Python entry-point group. `describe()` returns
 identity, version, configuration schema and source fingerprints without touching devices.
 The worker checks protocol compatibility before calling `create()` or preparing a device.
@@ -39,15 +39,29 @@ capability metadata. Its capability resource contains `robot_actions`, not a mix
   capture, ACT execution and local supervision.
 - [Contracts](src/nerv_runtime_sdk/contracts.py) and [dispatch authority](src/nerv_runtime_sdk/control.py).
 
-A protocol check is not a physical acceptance test. Existing protocol 1 workers must be
+A protocol check is not a physical acceptance test. Existing protocol 1 and 2 workers must be
 upgraded; the host does not silently downgrade to the mixed capability contract.
 
 ## Optional provider management and policy backends
 
-Protocol 2 providers may implement `manage(operation, payload, home)` for offline setup, import, inspection and model loading. The host invokes this through the selected interpreter's worker CLI with JSON on stdin. It does not import the vendor SDK. Management must not connect hardware. Providers describe their forms with JSON Schema; product-specific fields stay in the provider.
+Protocol 3 providers may implement `manage(operation, payload, home)` for offline setup, import, inspection and model loading. The host invokes this through the selected interpreter's worker CLI with JSON on stdin. It does not import the vendor SDK. Management must not connect hardware. Providers describe their forms with JSON Schema; product-specific fields stay in the provider.
 
 Policy runner contract version 1 uses the `nerv.policy_backends` entry-point group. The entry name identifies an artifact format. Its factory takes `(manifest, device)` and returns `reset()`, `action(observation)` and `close()`. The runtime remains the sole actuator owner; returning an action does not grant dispatch authority. Sequence queues and model preprocessing stay inside the backend.
 
 Optional operator endpoints are `/policies/check` (disarmed observation inference), `/device/close`, `/device/torque-off`, and `/operator/supervise`. Torque release must not appear as an Agent tool. A tool field may use `x-observation-field` to let the manual UI fill an observation receipt; Agent calls still provide the explicit receipt they observed. Runtime freshness and instance checks remain authoritative.
 
 Standard product setup and limitations are documented in the [student guide](../../guides/standard-so101.md). No physical support is implied by protocol conformance.
+
+
+## Bounded control grants
+
+`POST /control/claim` requires a token, stable host owner, monotonically increasing generation,
+`allowed_actions`, positive `max_runtime_s` and positive `action_budget`. A claim is refused
+while an earlier execution remains active. Every motion call needs the current token and
+an allowed action. Expiry and stop revoke dispatch; late responses cannot renew their own
+observation or authority. `POST /stop` accepts `expected_control` to prevent an old task
+from stopping a newer one. Operator emergency stop remains unscoped.
+
+Workers must preserve this check inside asynchronous actuator loops through the supplied
+control guard. Protocol version equality alone is not proof of a third-party driver's
+correct implementation. Read-only conformance and controlled fault tests remain necessary.

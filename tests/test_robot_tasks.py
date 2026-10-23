@@ -26,6 +26,17 @@ class WaitingBrain:
         link.say(Say("Fixture controller ended; no task success claim"))
 
 
+def choose_scheme(hub, session, robot, tmp_path):
+    from nerv.platform.control_schemes import SchemeStore
+    from nerv.nerve.body import Capabilities, ToolSpec
+    hub.schemes = SchemeStore(tmp_path / "schemes")
+    hub._brains[session.brain] = WaitingBrain()
+    robot.capabilities = lambda: Capabilities("fixture", "3", robot_actions=[ToolSpec("move", "Fixture move", {"type": "object"}, "primitive")])
+    scheme = hub.schemes.save({"name": "Fixture plan", "robot": session.body, "mode": session.mode,
+        "template": "visual_direct", "decision_model": session.brain, "actions": ["move"]})
+    hub.tasks.select_scheme(session.id, scheme.id)
+
+
 @pytest.fixture
 def task_host(tmp_path, monkeypatch):
     hub = Nerv(store=SessionStore(str(tmp_path)))
@@ -36,6 +47,7 @@ def task_host(tmp_path, monkeypatch):
     monkeypatch.setattr(hub, "_control_error", lambda _: None)
     monkeypatch.setattr(hub, "claim_robot", Mock(return_value="control"))
     monkeypatch.setattr(hub, "stop_robot", Mock(return_value={"ok": True}))
+    choose_scheme(hub, session, robot, tmp_path)
     brain = WaitingBrain()
     monkeypatch.setattr(hub, "new_role_model", lambda *_: brain)
     yield hub, session, brain
@@ -194,6 +206,7 @@ def test_offline_dual_role_chat_queries_task_without_interrupting(tmp_path, monk
     monkeypatch.setattr(hub, "_control_error", lambda _: None)
     monkeypatch.setattr(hub, "_epoch_ok", lambda _: True)
     monkeypatch.setattr("nerv.platform.router.assemble", lambda *_: Observation({"frame_seq": {"camera": 1}}, []))
+    choose_scheme(hub, session, robot, tmp_path)
     try:
         hub.tasks.start(session.id, "Explicit offline task")
         assert entered.wait(1)

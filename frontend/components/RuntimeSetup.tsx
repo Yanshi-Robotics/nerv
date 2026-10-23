@@ -1,62 +1,103 @@
 "use client";
-import { useEffect, useState } from "react";
-import { manageRuntime, runtimeInstallations, type Registry } from "@/lib/api";
-import { useI18n } from "@/lib/i18n";
+import {useEffect, useState} from "react";
+import {createSession, runtimeOperation, runtimeInstallations, setupDevice, setupCamera, POLL_NODES_MS, type Registry} from "@/lib/api";
+import {useI18n} from "@/lib/i18n";
+import ModulesPanel from "./ModulesPanel";
 
-type Field = {type: string; title: string; enum?: string[]; default?: string | boolean};
-type Descriptor = {label: string; operations: Record<string, {properties: Record<string, Field>}>};
+type Camera = {type: string; index_or_path: number | string; width: number; height: number; fps: number; rotation: number};
+type Profile = {port: string; id: string; calibration_dir: string; policy_device: string; cameras: Record<string, Camera>};
+type Discovery = {ports: {port: string; label: string; serial?: string}[]; cameras: {device: string; label: string; stable: boolean}[]; calibrations: {id: string; directory: string}[]; saved?: Profile};
+const steps = ["Install runtime", "Choose the arm", "Existing calibration", "Set up cameras", "Import a policy", "Connect the arm"];
+const cameraDefault = (device: number): Camera => ({type: "opencv", index_or_path: device, width: 640, height: 480, fps: 30, rotation: 0});
+const field = "w-full rounded-lg border border-neutral-600 bg-neutral-900 p-2 text-sm";
 
-export default function RuntimeSetup({registry, onChanged}: {registry: Registry | null; onChanged: () => void}) {
+export default function RuntimeSetup({registry, onChanged, onCreated}: {registry: Registry | null; onChanged: () => void; onCreated?: (id: string) => void}) {
   const {t} = useI18n();
-  const bindings = registry?.bodies.flatMap(b => Object.values(b.buses)) ?? [];
-  const [python, setPython] = useState("");
-  const [provider, setProvider] = useState("");
-  const [descriptor, setDescriptor] = useState<Descriptor | null>(null);
-  const [values, setValues] = useState<Record<string, Record<string, string | boolean>>>({});
+  const [step, setStep] = useState(0);
+  const [installed, setInstalled] = useState(false);
+  const [data, setData] = useState<Discovery>({ports: [], cameras: [], calibrations: []});
+  const [profile, setProfile] = useState<Profile>({port: "", id: "", calibration_dir: "", policy_device: "cpu", cameras: {top: cameraDefault(0), wrist: cameraDefault(1)}});
   const [busy, setBusy] = useState(false);
-  const [result, setResult] = useState("");
   const [error, setError] = useState("");
+  const [message, setMessage] = useState("");
+  const [preview, setPreview] = useState(false);
+  const [frames, setFrames] = useState<Record<string, string>>({});
+  const [confirmed, setConfirmed] = useState(false);
+  const [acceptance, setAcceptance] = useState(false);
+  const [policy, setPolicy] = useState({path: "", id: "", conditions: "", standard_declared: false});
+  const [policies, setPolicies] = useState<{id: string; conditions: string; check?: {state: string; device?: string}}[]>([]);
+  const product = registry?.bodies.find(b => b.name === "arm-lerobot-so101");
   useEffect(() => {
-    let active = true;
-    runtimeInstallations().then(items => {
-      if (active && items.length === 1) {
-        setPython(current => current || items[0].python);
-        setProvider(current => current || items[0].provider);
-      }
-    }).catch(() => {});
-    return () => { active = false; };
+    const read = () => runtimeInstallations().then(v => setInstalled(v.some(x => x.provider === "lerobot0.6.1"))).catch(e => setError(e.message));
+    read(); const timer = setInterval(read, POLL_NODES_MS);
+    return () => clearInterval(timer);
   }, []);
-  async function run(operation: string) {
-    setBusy(true); setError(""); setResult("");
-    try {
-      const response = await manageRuntime(python, provider, operation, values[operation] ?? {});
-      if (operation === "describe") {
-        setDescriptor(response as Descriptor);
-        setValues(Object.fromEntries(Object.entries((response as Descriptor).operations).map(([op, schema]) =>
-          [op, Object.fromEntries(Object.entries(schema.properties).map(([key, field]) => [key, field.default ?? (field.type === "boolean" ? false : "")]))])));
-      } else { setResult(JSON.stringify(response, null, 2)); onChanged(); }
-    } catch (e) { setError((e as Error).message); }
-    finally { setBusy(false); }
+  useEffect(() => {
+    if (!installed) return;
+    setupDevice("discover").then((value: Discovery) => {setData(value); if (value.saved) {setProfile(value.saved); setConfirmed(true); setStep(value.ports.some(p => p.port === value.saved?.port) ? 5 : 1);}}).catch(e => setError(e.message));
+    setupDevice("policies").then(v => setPolicies(v.policies)).catch(e => setError(e.message));
+  }, [installed]);
+  useEffect(() => {
+    if (!preview) return;
+    const timer = setInterval(() => setupCamera("frames").then(v => setFrames(v.frames || {})).catch(e => setError(e.message)), POLL_NODES_MS);
+    return () => {clearInterval(timer); setupCamera("close").catch(() => {});};
+  }, [preview]);
+  async function perform(action: () => Promise<void>) {
+    setBusy(true); setError(""); setMessage("");
+    try {await action();} catch(e) {setError((e as Error).message);} finally {setBusy(false);}
   }
-  const input = "w-full rounded border border-neutral-600 bg-neutral-900 p-2 text-sm";
-  return <section className="col-span-2 overflow-auto p-6 space-y-5">
-    <h1 className="text-xl">{t("Device and policy setup")}</h1>
-    <p>{t("Configure an installed runtime and import a trained policy. These steps do not connect the robot.")}</p>
-    <label className="block">{t("Runtime Python executable")}<input className={input} value={python} onChange={e => setPython(e.target.value)} /></label>
-    <label className="block">{t("Runtime provider")}<input list="runtime-providers" className={input} value={provider} onChange={e => setProvider(e.target.value)} /></label>
-    <datalist id="runtime-providers">{Array.from(new Set(bindings.map(b => b.provider).filter(Boolean))).map(p => <option key={p} value={p} />)}</datalist>
-    <button className="nerv-control rounded border p-2" disabled={busy || !python || !provider} onClick={() => run("describe")}>{t("Read setup options")}</button>
-    {descriptor && <h2>{descriptor.label}</h2>}
-    {descriptor && Object.entries(descriptor.operations).map(([operation, schema]) => <fieldset key={operation} disabled={busy} className="border border-neutral-700 rounded p-4 space-y-3">
-      <legend>{t(operation)}</legend>
-      {Object.entries(schema.properties).map(([key, field]) => <label key={key} className="block text-sm">{t(field.title)}
-        {field.type === "boolean" ? <input type="checkbox" className="ml-3" checked={Boolean(values[operation]?.[key])} onChange={e => setValues(v => ({...v, [operation]: {...v[operation], [key]: e.target.checked}}))} />
-          : field.enum ? <select className={input} value={String(values[operation]?.[key] ?? "")} onChange={e => setValues(v => ({...v, [operation]: {...v[operation], [key]: e.target.value}}))}>{field.enum.map(value => <option key={value} value={value}>{value}</option>)}</select>
-          : <input required className={input} value={String(values[operation]?.[key] ?? "")} onChange={e => setValues(v => ({...v, [operation]: {...v[operation], [key]: e.target.value}}))} />}
-      </label>)}
-      <button className="nerv-control rounded border p-2" onClick={() => run(operation)}>{t("Apply")}</button>
-    </fieldset>)}
-    {error && <p role="alert" className="text-red-400">{error}</p>}
-    {result && <pre className="whitespace-pre-wrap text-xs">{result}</pre>}
-  </section>;
+  async function next() {
+    if (step === 3) {
+      if (!confirmed) throw new Error(t("Confirm the two camera views before saving"));
+      setPreview(false); await setupCamera("close");
+      await setupDevice("configure_standard", profile); onChanged();
+    }
+    setStep(s => Math.min(steps.length - 1, s + 1));
+  }
+  async function connect() {
+    setPreview(false); await setupCamera("close");
+    if (!product?.buses.real?.verified) await setupDevice("acceptance", {accepted: acceptance, robot: "arm-lerobot-so101"});
+    const session = await createSession({brain: "operator", body: "arm-lerobot-so101", mode: "real", sensors: []});
+    await runtimeOperation(session.id, "prepare"); onCreated?.(session.id); onChanged();
+  }
+  return <section className="col-span-2 overflow-auto p-6"><div className="mx-auto max-w-3xl space-y-6">
+    <header><h1 className="text-xl">{t("Connect your SO-101")}</h1><p className="mt-2 text-sm text-neutral-400">{t("Use your existing LeRobot calibration and trained policy. Setup is remembered on this computer.")}</p></header>
+    <nav className="flex flex-wrap gap-2" aria-label={t("Setup steps")}>{steps.map((label, i) => <button key={label} disabled={busy || (!data.saved && i > step)} className={`nerv-control rounded-full border px-3 py-1 text-xs ${i === step ? "nerv-selected" : "text-neutral-400"}`} onClick={() => {setPreview(false); setStep(i);}} aria-current={i === step ? "step" : undefined}>{i + 1}. {t(label)}</button>)}</nav>
+    <h2 className="text-lg">{t(steps[step])}</h2>
+    {step === 0 && <ModulesPanel only="lerobot0.6.1" onChanged={onChanged} />}
+    {step === 1 && <div className="space-y-3">
+      <button className="nerv-control rounded border px-3 py-2" disabled={busy} onClick={() => perform(async () => setData(await setupDevice("discover")))}>{t("Scan connected devices")}</button>
+      {data.ports.map(p => <button key={p.port} className={`nerv-control block w-full rounded-xl border p-4 text-left ${profile.port === p.port ? "nerv-selected" : "border-neutral-700"}`} onClick={() => setProfile({...profile, port: p.port})}><span className="block">{p.label}</span><span className="text-xs text-neutral-400">{p.port}{p.serial ? ` · ${p.serial}` : ""}</span></button>)}
+      <label className="block text-sm">{t("Serial port")}<input className={field} value={profile.port} onChange={e => setProfile({...profile, port: e.target.value})} placeholder="/dev/serial/by-id/… or COM5" /></label>
+      <p className="text-xs text-neutral-400">{t("Scanning does not connect or energize the arm.")}</p>
+    </div>}
+    {step === 2 && <div className="space-y-3">
+      {data.calibrations.map(c => <button className="nerv-control rounded border p-3" key={c.id} onClick={() => setProfile({...profile, id: c.id, calibration_dir: c.directory})}>{c.id}</button>)}
+      <label className="block text-sm">{t("Robot ID")}<input className={field} value={profile.id} onChange={e => setProfile({...profile, id: e.target.value})} /></label>
+      <label className="block text-sm">{t("Calibration directory")}<input className={field} value={profile.calibration_dir} onChange={e => setProfile({...profile, calibration_dir: e.target.value})} /></label>
+      <p className="text-xs text-neutral-400">{t("Choose the folder containing your robot ID JSON file. Calibration stays in LeRobot.")}</p>
+      <label className="block text-sm">{t("Inference device")}<select className={field} value={profile.policy_device} onChange={e => setProfile({...profile, policy_device: e.target.value})}>{["cpu", "cuda", "mps"].map(device => <option key={device}>{device}</option>)}</select></label>
+    </div>}
+    {step === 3 && <div className="space-y-4"><div className="grid gap-4 sm:grid-cols-2">{["top", "wrist"].map(name => <div key={name} className="space-y-2">
+      <h3>{t(name === "top" ? "Top camera" : "Wrist camera")}</h3>
+      <div className="flex aspect-[4/3] items-center justify-center overflow-hidden rounded-xl bg-neutral-950">{frames[name] ? <img src={frames[name]} alt={t(name === "top" ? "Top camera" : "Wrist camera")} /> : <p className="text-xs text-neutral-500">{t("Preview appears here")}</p>}</div>
+      <input aria-label={t("Camera device")} className={field} list="camera-devices" disabled={preview} value={profile.cameras[name].index_or_path} onChange={e => {setConfirmed(false); setProfile({...profile, cameras: {...profile.cameras, [name]: {...profile.cameras[name], index_or_path: /^\d+$/.test(e.target.value) ? Number(e.target.value) : e.target.value}}});}} />
+      <select aria-label={t("Camera rotation")} className={field} disabled={preview} value={profile.cameras[name].rotation || 0} onChange={e => {setConfirmed(false); setProfile({...profile, cameras: {...profile.cameras, [name]: {...profile.cameras[name], rotation: Number(e.target.value)}}});}}>{[0, 90, 180, 270].map(n => <option key={n} value={n}>{n}°</option>)}</select>
+    </div>)}</div><datalist id="camera-devices">{data.cameras.map(c => <option key={c.device} value={c.device}>{c.label}</option>)}</datalist>
+      <button className="nerv-control rounded border px-3 py-2" disabled={busy} onClick={() => perform(async () => {if (preview) {await setupCamera("close"); setPreview(false);} else {await setupCamera("open", {cameras: profile.cameras}); setPreview(true);}})}>{t(preview ? "Close preview" : "Open camera preview")}</button>
+      <label className="flex items-start gap-2 text-sm"><input type="checkbox" checked={confirmed} onChange={e => setConfirmed(e.target.checked)} />{t("The top and wrist views and their directions are correct")}</label>
+    </div>}
+    {step === 4 && <div className="space-y-3"><p className="text-sm text-neutral-400">{t("Import an ACT checkpoint, or skip this step for visual direct control.")}</p>
+      {policies.map(p => <div className="rounded border border-neutral-700 p-3 text-sm" key={p.id}>{p.id} · {p.conditions}<span className="block text-xs text-neutral-400">{t(p.check?.state === "loaded" ? "Load check passed" : p.check?.state === "changed" ? "Files changed; check again" : p.check?.state === "failed" ? "Load check failed" : "Not checked")}{p.check?.device ? ` · ${p.check.device}` : ""}</span><button className="nerv-control ml-3 underline" disabled={busy} onClick={() => perform(async () => {try {await setupDevice("check", {id: p.id, device: profile.policy_device});} finally {setPolicies((await setupDevice("policies")).policies);} setMessage(t("Policy loaded. Check real observations without motion after connecting."));})}>{t("Check")}</button></div>)}
+      {([['path', 'Checkpoint directory'], ['id', 'Policy ID'], ['conditions', 'Demonstrated task and scene']] as const).map(([key, label]) => <label className="block text-sm" key={key}>{t(label)}<input className={field} value={policy[key]} onChange={e => setPolicy({...policy, [key]: e.target.value})} /></label>)}
+      <label className="flex gap-2 text-sm"><input type="checkbox" checked={policy.standard_declared} onChange={e => setPolicy({...policy, standard_declared: e.target.checked})} />{t("I trained with the standard SO-101 course convention")}</label>
+      <button className="nerv-control rounded border px-3 py-2" disabled={busy || !policy.standard_declared || !policy.path || !policy.id} onClick={() => perform(async () => {await setupDevice("import", policy); setPolicies((await setupDevice("policies")).policies); try {await setupDevice("check", {id: policy.id, device: profile.policy_device});} finally {setPolicies((await setupDevice("policies")).policies);} setMessage(t("Policy loaded. Check real observations without motion after connecting.")); onChanged();})}>{t("Import and check policy")}</button>
+    </div>}
+    {step === 5 && <div className="space-y-4"><p className="text-sm">{profile.id} · {profile.port}</p><p className="text-sm text-amber-300">{t("Connecting may enable motor torque. Support the arm and clear the work area. Motion remains disabled.")}</p>
+      {!product?.buses.real?.verified && <label className="flex gap-2 text-sm"><input type="checkbox" checked={acceptance} onChange={e => setAcceptance(e.target.checked)} />{t("I will supervise this unverified hardware integration. This does not certify it.")}</label>}
+      <button className="nerv-control nerv-primary rounded-lg px-4 py-2" disabled={busy || !product?.buses.real?.verified && !acceptance} onClick={() => perform(connect)}>{t("Connect and open workspace")}</button>
+    </div>}
+    {message && <p role="status" className="text-sm">{message}</p>}{error && <p role="alert" className="text-sm text-[var(--control-danger-text)]">{error}</p>}
+    <footer className="flex gap-3">{step > 0 && <button className="nerv-control rounded border px-4 py-2" disabled={busy} onClick={() => {setPreview(false); setStep(s => s - 1);}}>{t("Back")}</button>}{step < steps.length - 1 && <button className="nerv-control nerv-primary rounded px-4 py-2" disabled={busy || step === 0 && !installed || step === 1 && !profile.port || step === 2 && (!profile.id || !profile.calibration_dir) || step === 3 && !confirmed} onClick={() => perform(next)}>{t("Continue")}</button>}</footer>
+  </div></section>;
 }

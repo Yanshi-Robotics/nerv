@@ -2,14 +2,44 @@
 
 [English](../../guides/architecture.md) · [NERV](README.md)
 
-NERV 0.6.3 将对话、任务监督与本地执行分开。System 1 表示 Runtime 内的执行层，不是额外一个 Python 环境。
+NERV 0.7.0 将对话、任务监督与本地执行分开。System 1 表示 Runtime 内的执行层，不是额外一个 Python 环境。
 
 标准 SO-101 worker 持有唯一的 LeRobot 设备实例。ACT 推理和有限关节控制都向同一个调度器提交候选目标；主进程不导入 LeRobot，也不加载策略张量。
+
+## 三层职责
+
+交互层处理对话与任务提交，决策层根据观测选择和监督允许的动作，执行层运行 ACT 或本地有限动作控制器。固定策略任务不创建决策模型，点击运行无需 API key。视觉直接控制仍经过本地执行器。System 2、System 1 仅作为图示和历史日志角色的辅助名称。
+
+用户选定完整控制方案，任务启动后锁定其版本、模型配置、策略指纹和实例。聊天模型与任务模型独立，更换聊天模型不会改变正在执行的机器人任务。Agent 统一通过任务入口请求运动，不能越过方案直接操作关节。
 
 ## 架构
 NERV Agent 将机器人目标交给 System 2；System 1 执行受限动作和策略，Robot Runtime 独占设备与传感器。World Control 管理仿真世界干预。宿主协调控制权、实例生命周期与事件记录。机器人驱动与策略推理运行在独立的 worker 环境中。
 
-<div align="center"><img src="../../assets/readme/images/layers.svg" alt="NERV Agent 对话、System 2 任务监督、System 1 执行与仿真世界控制的分层关系" width="960"></div>
+```mermaid
+flowchart TB
+  U[用户选择控制方案] --> I
+  subgraph I[交互层]
+    UI[NERV 界面] <--> AG[NERV Agent / 聊天模型]
+  end
+  I --> T[任务入口 / 锁定方案版本]
+  subgraph D[决策层 / System 2 / 可选]
+    V[用户选定的视觉模型]
+  end
+  subgraph E[执行层 / System 1]
+    P[允许使用的 ACT 技能 / 每次一个]
+    J[本地关节与夹爪控制器]
+  end
+  T -->|固定策略| P
+  T -->|策略组或视觉直接控制| V
+  V -->|允许的技能| P
+  V -->|允许的工具| J
+  P --> R[共用控制权、校验、停止与记录]
+  J --> R
+  R --> B[Runtime / 真机或仿真]
+  B --> O[观测与执行反馈]
+  O --> V
+  O --> UI
+```
 
 原有节点拓扑继续作为传输基础：
 
@@ -67,4 +97,6 @@ OpenAI、DeepSeek 和 xAI 分别使用对应的 Responses 协议参数。Gemini 
 
 模块导入和 `describe()` 不得操作设备或 GPU。准备、加载策略、使能、执行、取消、急停、解除和断连分别处理。机器人描述、环境绑定和策略资产各有独立契约。宿主不会向 worker 注入整仓源码或模型密钥。
 
-[Runtime SDK 指南](../../packages/nerv-runtime-sdk/README.md)与[只读插件示例](../../examples/inspection-runtime/)说明协议 2 的接入方式。插件须提供 `actions()`；不兼容的 worker 在准备前被拒绝。SDK 提供插件发现、协议接口和只读一致性检查。
+[Runtime SDK 指南](../../packages/nerv-runtime-sdk/README.md)与[只读插件示例](../../examples/inspection-runtime/)说明协议 3 的接入方式。插件须提供 `actions()`；不兼容的 worker 在准备前被拒绝。SDK 提供插件发现、协议接口和只读一致性检查。
+
+方案与组件的协议详见[控制方案与组件接口](../../guides/control-schemes.md)。

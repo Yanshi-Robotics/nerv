@@ -2,49 +2,26 @@
 
 [中文](../i18n/zh/standard-so101.md)
 
-NERV 0.6.3 is a development candidate. Its real-device adapter targets one standard SO-101 follower running LeRobot 0.6.1, with `top` and `wrist` OpenCV cameras at 640 × 480 and 30 FPS. Five arm joints use degrees; the native gripper uses 0–100. Real acceptance is pending. Model loading and software tests do not establish grasp reliability.
+NERV 0.7.0 is a development candidate. Its real-device adapter targets one standard SO-101 follower running LeRobot 0.6.1, with `top` and `wrist` OpenCV cameras at 640 × 480 and 30 FPS. Five arm joints use degrees; the native gripper uses 0–100. Real acceptance is pending. Model loading and software tests do not establish grasp reliability.
 
 Train and calibrate with LeRobot before using NERV. Keep the original checkpoint, calibration and course camera configuration. The leader arm is not needed for inference. Do not run LeRobot teleoperation and NERV against the same serial port or cameras simultaneously.
 
-## Install the candidate
+## Guided device setup
 
-The [GitHub launcher](github-install.md) supports installation followed by `nerv`, or
-direct `npx` launch. It manages the two Python environments and discovers installed
-runtimes automatically. The wheel installation below remains an alternative without Node.js.
+Install the [candidate bundle](github-install.md), start `nerv`, and select **Connect a real SO-101**. The guided steps replace manual interpreter paths and camera JSON editing:
 
-Use Python 3.12 for the tested dependency baseline. Obtain all three wheels from the same candidate build. A maintainer builds these with `python scripts/build_release.py`; this creates files under `temp/release/wheels` and publishes nothing. Copy that wheel directory to the student machine as `wheels`.
+1. Install **SO-101 / LeRobot** in its independent environment.
+2. Scan serial candidates and select the follower. Scanning does not open the motor bus.
+3. Select an existing calibration or enter its directory and robot ID. Choose CPU, CUDA or MPS only when supported by the installed backend.
+4. Preview the two camera devices, assign top/wrist and rotation, and confirm their physical roles. Linux offers persistent device paths; other systems currently require camera indices.
+5. Import and check ACT, or continue without a policy for visual direct control.
+6. Review the supervised-acceptance notice and connect. Connection can enable torque; motion remains disarmed.
 
-Linux and macOS:
+No hidden environment variable is required for the normal setup flow. Acceptance acknowledges an unverified integration; it does not change its support status. The preview process releases its cameras before the native LeRobot instance takes ownership. Preview and runtime never intentionally open the same camera together.
 
-```bash
-python3.12 -m venv .nerv-host
-python3.12 -m venv .nerv-device
-.nerv-host/bin/python -m pip install wheels/nerv_runtime_sdk-0.6.3-py3-none-any.whl 'wheels/nerv-0.6.3-py3-none-any.whl[platform]'
-.nerv-device/bin/python -m pip install wheels/nerv_runtime_sdk-0.6.3-py3-none-any.whl wheels/nerv_runtime_lerobot-0.6.3-py3-none-any.whl
-.nerv-host/bin/nerv serve
-```
+The calibration directory must contain `<robot-id>.json`. Missing calibration or disagreement with motor calibration blocks operation. NERV uses `connect(calibrate=False)` and does not overwrite calibration. Close other programs that own the serial port or cameras.
 
-Windows PowerShell:
-
-```powershell
-py -3.12 -m venv .nerv-host
-py -3.12 -m venv .nerv-device
-.\.nerv-host\Scripts\python.exe -m pip install wheels/nerv_runtime_sdk-0.6.3-py3-none-any.whl 'wheels/nerv-0.6.3-py3-none-any.whl[platform]'
-.\.nerv-device\Scripts\python.exe -m pip install wheels/nerv_runtime_sdk-0.6.3-py3-none-any.whl wheels/nerv_runtime_lerobot-0.6.3-py3-none-any.whl
-.\.nerv-host\Scripts\nerv.exe serve
-```
-
-The device package installs `lerobot[feetech]==0.6.1`. Select the PyTorch installation suitable for your OS and inference device using its official installation instructions. Do not upgrade the training environment to install NERV. The host wheel includes the web interface; students do not need Node.js or simulation submodules.
-
-Open the address printed by `nerv serve`. The default is `http://127.0.0.1:8170`. Candidate real bindings remain unverified: supervised acceptance requires setting `NERV_ALLOW_UNVERIFIED=1` before starting the host (`export` on POSIX, `$env:NERV_ALLOW_UNVERIFIED='1'` in PowerShell). This acknowledges an experimental route; it does not connect or arm the robot.
-
-## Configure the device
-
-Open **Device and policy setup**. Enter the absolute path to the device environment's Python executable and provider `lerobot0.6.1`, then read its setup options. Under **configure**, provide the serial port, robot ID, existing calibration directory, course `cameras.json`, and `cpu`, `cuda` or `mps` as the inference device. Only choose an inference device supported by your installed backend.
-
-The calibration directory must contain `<robot-id>.json`. Camera configuration must identify two different devices named `top` and `wrist`, with the standard dimensions and FPS. Keep each mount's actual rotation from the course camera setup. NERV cannot infer whether the physical camera mounts have been exchanged from the device names alone: inspect both live images before enabling motion.
-
-Configuration writes a user profile under `NERV_HOME` (default `~/.nerv`). It does not connect the arm. Close the current robot instance before changing its profile. Existing configurations and source checkpoints are not overwritten by a policy import.
+Profiles live under `~/.nerv`. Saved USB serial identities are resolved again on connection; ambiguous identities are refused. Devices without unique IDs still require operator confirmation. Return to the affected setup step if a camera or port changes. Reopening restores settings, not motor connection or motion authorization.
 
 ## Import your ACT checkpoint
 
@@ -57,20 +34,20 @@ The importer requires `config.json`, `model.safetensors`, the preprocessor/postp
 The equivalent CLI uses the same provider service:
 
 ```bash
-.nerv-host/bin/nerv policy import --python /absolute/path/to/.nerv-device/bin/python --provider lerobot0.6.1 --id pick-v1 --path /absolute/path/to/pretrained_model --conditions 'Task and camera setup used during training' --standard-declared
-.nerv-host/bin/nerv policy inspect --python /absolute/path/to/.nerv-device/bin/python --provider lerobot0.6.1 --id pick-v1
-.nerv-host/bin/nerv policy check --python /absolute/path/to/.nerv-device/bin/python --provider lerobot0.6.1 --id pick-v1 --device cpu
+nerv policy import --python /absolute/path/to/runtime/bin/python --provider lerobot0.6.1 --id pick-v1 --path /absolute/path/to/pretrained_model --conditions 'Task and camera setup used during training' --standard-declared
+nerv policy inspect --python /absolute/path/to/runtime/bin/python --provider lerobot0.6.1 --id pick-v1
+nerv policy check --python /absolute/path/to/runtime/bin/python --provider lerobot0.6.1 --id pick-v1 --device cpu
 ```
 
 On Windows, use the corresponding `Scripts` executables. Quote paths containing spaces. No weights are downloaded by these commands.
 
 ## Connect and run
 
-Create a real-hardware session for SO-101. Choose **Operator only** for manual operation without API credentials, or a configured visual model for Agent control. Review the runtime's capability manifest under **Device and access** before granting access.
+Create a real-hardware session for SO-101. Choose **Operator only** for fixed-policy operation without API credentials, or a configured visual model for Agent control. Review the runtime's capability manifest under **Device and access** before granting access.
 
 **Prepare device** connects LeRobot and may enable motor torque. A person must trigger it after checking the work area. NERV uses the selected calibration and refuses a mismatch instead of recalibrating. Inspect the two live views and confirm their mount identity, orientation and scene.
 
-Load an imported policy, leave control disarmed, and select **Check policy without motion**. This runs the native ACT processors and model on current observations, returns candidate positions, and performs no actuator write. Then enable control to run the policy from the Operator Toolbox. The manual mode needs the visible operator page to keep receiving observations; closing or hiding the page eventually expires supervision and stops dispatch. The user must continue observing the physical scene.
+Load an imported policy, leave control disarmed, and select **Check policy without motion**. This runs the native ACT processors and model on current observations, returns candidate positions, and performs no actuator write. Then enable control, create a **Fixed policy** scheme in **Control schemes**, select the imported skill, and click **Run selected policy** in the chat panel. A policy group selects a decision model and its allowed ACT skills; visual direct control selects bounded primitives. The fixed-policy mode needs the visible operator page to keep receiving observations; closing or hiding the page eventually expires supervision and stops dispatch. The user must continue observing the physical scene.
 
 For VLM direct control, use the bounded joint and gripper tools. Each decision refers to a recent observation and the current device instance. The runtime interpolates motion locally. Reobserve after execution; a command ending is not proof of a grasp. Cartesian placement, new robot structures and nonstandard units are outside this release.
 
@@ -93,6 +70,8 @@ Detailed action receipts are local under `NERV_HOME/runtime-events`. Session ima
 ## Platform status and extensions
 
 Linux is the primary physical-acceptance target. Windows native, WSL2 and macOS remain experimental until community hardware testing. WSL serial passthrough and camera passthrough are separate checks; consult [Microsoft's USB guide](https://learn.microsoft.com/en-us/windows/wsl/connect-usb). Apple Silicon and Intel macOS need separate dependency and hardware reports.
+
+Automatic camera candidates currently use Linux device paths. On Windows and macOS, enter the camera index and confirm its picture in the preview; automatic camera enumeration on those platforms remains pending. Directory selection currently uses a path field. Serial discovery does not establish that two otherwise identical devices are the same physical unit.
 
 The host uses the Runtime SDK and never imports LeRobot. The adapter owns one native device and dispatch authority. Model runners are discovered through `nerv.policy_backends`; a backend receives a validated artifact and device string, implements `reset()`, `action(observation)` and `close()`, and returns standard native position targets without opening hardware. ACT keeps its own chunk queue. A future backend may hide its own sequence or remote-inference mechanics behind this interface, but it must not bypass freshness or dispatch validation.
 

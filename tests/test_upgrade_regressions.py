@@ -130,8 +130,8 @@ def test_delayed_control_claim_cannot_replace_new_generation():
     from nerv_runtime_sdk.node import build_app
     node = BodyNode(FakeArm(), guidance="fixture", stop=StopFlag(), armed=True, require_control=True)
     with TestClient(build_app(node, [])) as client:
-        assert client.post("/control/claim", json={"owner":"controller", "generation":2, "token":"new"}).json()["ok"]
-        assert not client.post("/control/claim", json={"owner":"controller", "generation":1, "token":"old"}).json()["ok"]
+        assert client.post("/control/claim", json={"owner":"controller", "generation":2, "token":"new", "allowed_actions":["set_angle"], "max_runtime_s":60, "action_budget":1}).json()["ok"]
+        assert not client.post("/control/claim", json={"owner":"controller", "generation":1, "token":"old", "allowed_actions":["set_angle"], "max_runtime_s":60, "action_budget":1}).json()["ok"]
         assert node._control_token == "new"
 
 

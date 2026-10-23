@@ -38,13 +38,13 @@ def test_manual_dispatch_observes_before_motion(tmp_path, monkeypatch):
     hub = Nerv(store=SessionStore(str(tmp_path)))
     session, _ = hub.store.new("operator", "fixture", None)
     order = []
-    turn = SimpleNamespace(tools=lambda: None, _routes={"move": ("body", None, SimpleNamespace(kind="primitive"))},
+    turn = SimpleNamespace(tools=lambda: None, _routes={"move": ("body", None, SimpleNamespace(kind="primitive", name="move"))},
                            session=session, observe=lambda: order.append("observe"),
                            think=lambda _: order.append("think"), call_tool=lambda _: order.append("call"))
     monkeypatch.setattr(hub, "_turn", lambda *a, **k: turn)
     monkeypatch.setattr(hub, "_epoch_ok", lambda s: True)
     monkeypatch.setattr(hub.tasks, "cancel", lambda *a, **k: {"ok": True})
-    monkeypatch.setattr(hub, "claim_robot", lambda sid: "token")
+    monkeypatch.setattr(hub, "claim_robot", lambda sid, **kwargs: "token")
     list(hub.teleop_stream(session.id, "move", {}))
     assert order == ["observe", "think", "call"]
 
@@ -55,12 +55,12 @@ def test_manual_dispatch_never_calls_motion_without_observation(tmp_path, monkey
     def fail():
         raise RuntimeError("camera lost")
     call = Mock()
-    turn = SimpleNamespace(tools=lambda: None, _routes={"move": ("body", None, SimpleNamespace(kind="primitive"))},
+    turn = SimpleNamespace(tools=lambda: None, _routes={"move": ("body", None, SimpleNamespace(kind="primitive", name="move"))},
                            session=session, observe=fail, think=Mock(), call_tool=call)
     monkeypatch.setattr(hub, "_turn", lambda *a, **k: turn)
     monkeypatch.setattr(hub, "_epoch_ok", lambda s: True)
     monkeypatch.setattr(hub.tasks, "cancel", lambda *a, **k: {"ok": True})
-    monkeypatch.setattr(hub, "claim_robot", lambda sid: "token")
+    monkeypatch.setattr(hub, "claim_robot", lambda sid, **kwargs: "token")
     events = list(hub.teleop_stream(session.id, "move", {}))
     call.assert_not_called()
     assert any(e.get("ok") is False and "camera lost" in e.get("message", "") for e in events)

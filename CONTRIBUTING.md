@@ -25,8 +25,10 @@ npm --prefix frontend run check:locales
 
 For simulation regression, also install the host `sim` extra and initialize the required
 submodules. Headless Linux may need `MUJOCO_GL=egl LIBGL_ALWAYS_SOFTWARE=1`. Run the relevant
-tests and report their environment. Build candidate wheels with
-`python scripts/build_release.py`; students install the built wheels without Node.js.
+tests and report their environment. Build the complete candidate bundle with
+`python scripts/build_release.py` (uv is also required). Students use its prebuilt installer
+without Node.js. Dependency constraints live under `release/constraints`; changing those
+versions requires package installation and relevant runtime checks.
 
 From the repository root on Linux or macOS, the existing simulation setup is:
 

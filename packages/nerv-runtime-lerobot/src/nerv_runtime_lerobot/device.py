@@ -28,7 +28,8 @@ class DeviceSession:
             return self.preparation
         if version("lerobot") != LEROBOT_VERSION:
             raise RuntimeError(f"adapter requires LeRobot {LEROBOT_VERSION}")
-        settings = self.settings
+        from .discovery import resolve_port
+        settings = {**self.settings, "port": resolve_port(self.settings)}
         if not all(settings.get(k) for k in ("port", "id", "calibration_dir", "camera_config_file")):
             raise ValueError("configure port, robot ID, calibration directory and camera file")
         if not settings.get("use_degrees"):

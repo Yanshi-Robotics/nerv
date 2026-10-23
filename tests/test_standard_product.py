@@ -29,7 +29,7 @@ def cameras():
             for i, name in enumerate(("top", "wrist"))}
 
 
-def test_configure_import_inspect_never_connects_and_preserves_source(tmp_path):
+def test_configure_import_inspect_never_connects_and_preserves_source(tmp_path, monkeypatch):
     home = tmp_path / "home"
     calibration = tmp_path / "calibration"
     calibration.mkdir()
@@ -47,10 +47,17 @@ def test_configure_import_inspect_never_connects_and_preserves_source(tmp_path):
     assert result["manifest"]["position_units"] == UNITS
     assert len(result["manifest"]["sha256"]) == 6
     assert manage("inspect", {"id": "pick"}, home)["ok"]
+    monkeypatch.setattr("nerv_runtime_sdk.policies.backend", lambda _: lambda *args: SimpleNamespace(close=lambda: None))
+    assert manage("check", {"id": "pick", "device": "cpu"}, home)["loaded"]
+    assert manage("policies", {}, home)["policies"][0]["check"]["state"] == "loaded"
     assert before == {p.name: p.read_bytes() for p in model.iterdir()}
     with pytest.raises(ValueError, match="already exists"):
         manage("import", request, home)
     (model / "model.safetensors").write_bytes(b"changed")
+    assert manage("policies", {}, home)["policies"][0]["check"]["state"] == "changed"
+    with pytest.raises(ValueError, match="fingerprint"):
+        manage("check", {"id": "pick", "device": "cpu"}, home)
+    assert manage("policies", {}, home)["policies"][0]["check"]["state"] == "failed"
     with pytest.raises(ValueError, match="fingerprint"):
         manage("inspect", {"id": "pick"}, home)
 

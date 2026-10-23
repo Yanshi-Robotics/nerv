@@ -1,4 +1,5 @@
 "use client";
+import ControlSchemes from "./ControlSchemes";
 import { Fragment, useCallback, useEffect, useRef, useState } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
@@ -246,12 +247,14 @@ export default function ChatPanel({
   bodyNode,
   onSessionsChanged,
   onModels,
+  onSetup,
 }: {
   session: SessionSummary | null;
   brains: Brain[];
   bodyNode: NodeInfo | null;
   onSessionsChanged: () => void;
   onModels: () => void;
+  onSetup: () => void;
 }) {
   const { t } = useI18n();
   const [items, setItems] = useState<Item[]>([]);
@@ -395,8 +398,17 @@ export default function ChatPanel({
             {session.body ? `🤖 ${session.body} · ${session.world || t("Real hardware")}` : t("Conversation only")} · 🧠 {t(brainLabel(session.brain))}
           </div>
         )}
+        {session && <>
+          {/* ---- 一行三个控件：大脑 · 上膛 · 遥控 ---- */}
+          <div className="flex items-center gap-2 px-3 pt-2">
+            <BrainPicker brains={brains} current={session.brain} disabled={!active || busy} onPick={switchBrain} />
+            {!!curBrain?.efforts?.length && <select aria-label={t("Reasoning effort")} className="max-w-24 rounded border border-neutral-600 bg-neutral-800 text-[10px]" disabled={!active || busy} value={curBrain.effort ?? ""} onChange={event => selectVlm(session.brain, event.target.value || null).then(onSessionsChanged).catch(e => setArmErr(e.message))}><option value="">{t("Provider default")}</option>{curBrain.efforts.map(effort => <option key={effort} value={effort}>{effort}</option>)}</select>}
+            {hasBody && <button onClick={toolbox.open} className="nerv-control ml-auto rounded-full border px-3 py-1 text-xs">{t("Toolbox")}</button>}
+          </div>
+        </>}
       </header>
 
+      {session?.body && <ControlSchemes compact bodyNode={bodyNode} session={session} brains={brains} onSetup={onSetup} onModels={onModels} onChanged={onSessionsChanged} />}
       <Notebook session={session} />
 
       <div className="flex-1 space-y-4 overflow-y-auto p-4">
@@ -424,12 +436,6 @@ export default function ChatPanel({
 
       {session && (
         <div className="border-t border-neutral-800">
-          {/* ---- 一行三个控件：大脑 · 上膛 · 遥控 ---- */}
-          <div className="flex items-center gap-2 px-3 pt-2">
-            <BrainPicker brains={brains} current={session.brain} disabled={!active || busy} onPick={switchBrain} />
-            {!!curBrain?.efforts?.length && <select aria-label={t("Reasoning effort")} className="max-w-24 rounded border border-neutral-600 bg-neutral-800 text-[10px]" disabled={!active || busy} value={curBrain.effort ?? ""} onChange={event => selectVlm(session.brain, event.target.value || null).then(onSessionsChanged).catch(e => setArmErr(e.message))}><option value="">{t("Provider default")}</option>{curBrain.efforts.map(effort => <option key={effort} value={effort}>{effort}</option>)}</select>}
-            {hasBody && <button onClick={toolbox.open} className="nerv-control ml-auto rounded-full border px-3 py-1 text-xs">{t("Toolbox")}</button>}
-          </div>
           {armErr && <div className="px-3 pt-1 text-[11px] text-[var(--control-danger-text)]">{armErr}</div>}
 
           {!active ? (

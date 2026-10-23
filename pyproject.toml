@@ -12,7 +12,7 @@ license = "MIT"
 authors = [{ name = "Jeff Liu" }]
 keywords = ["robotics", "llm", "mcp", "mujoco", "lerobot", "embodied-ai"]
 dependencies = [
-  "nerv-runtime-sdk==0.6.3",
+  "nerv-runtime-sdk==0.7.0",
   "pydantic>=2.6",
   "pydantic-settings>=2.6",
   "python-dotenv>=1.0",
@@ -30,8 +30,8 @@ dependencies = [
 
 [project.optional-dependencies]
 platform = ["anthropic>=1.3", "openai>=3.7", "google-genai>=2.31,<3"]
-sim = ["mujoco>=3.12", "numpy>=1.26", "onnxruntime>=1.17", "pyzmq>=25"]
-all = ["anthropic>=1.3", "openai>=3.7", "google-genai>=2.31,<3", "mujoco>=3.12", "numpy>=1.26", "onnxruntime>=1.17", "pyzmq>=25"]
+sim = ["mujoco==3.12.0", "numpy>=1.26", "onnxruntime>=1.17", "pyzmq>=25"]
+all = ["anthropic>=1.3", "openai>=3.7", "google-genai>=2.31,<3", "mujoco==3.12.0", "numpy>=1.26", "onnxruntime>=1.17", "pyzmq>=25"]
 lerobot = ["lerobot>=0.6,<0.7", "pyzmq>=25"]
 dev = ["pytest>=8", "ruff>=0.15,<0.17", "pyzmq>=25", "numpy>=1.26"]
 

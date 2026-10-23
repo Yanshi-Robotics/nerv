@@ -209,8 +209,8 @@ class Launcher:
         ep = body.buses[mode]
         if not ep.enabled:
             raise ValueError("this environment binding is not configured for the current runtime")
-        if not ep.verified and os.environ.get("NERV_ALLOW_UNVERIFIED", "") not in ("1", "true"):
-            raise RuntimeError(f"{body.name} {mode} runtime is unverified; enable NERV_ALLOW_UNVERIFIED for supervised acceptance")
+        if not ep.verified and (body.name, mode) not in getattr(self, "supervised_acceptance", set()) and os.environ.get("NERV_ALLOW_UNVERIFIED", "") not in ("1", "true"):
+            raise RuntimeError(f"{body.name} {mode} runtime is unverified; enter supervised acceptance from device setup")
         endpoint = ep.url or body.url
         if endpoint:
             handle = NodeHandle(kind="body", name=key, url=endpoint.rstrip("/"), attached=True)
@@ -226,7 +226,7 @@ class Launcher:
                                      mode=mode, provider=ep.provider, world=world_name,
                                      configuration={**ep.settings, "bus_url": bus_url})
         profile = RobotProfile(id=body.name, family=body.family, label=body.label,
-                               configuration=body.model_dump())
+                               configuration={**body.model_dump(), "skills": {name: skill.model_dump() for name, skill in body.skills.items() if mode in skill.modes}})
         directory = Path(paths.CACHE_DIR) / "runtime-config"
         directory.mkdir(parents=True, exist_ok=True)
         filename = directory / f"{body.name}.json"

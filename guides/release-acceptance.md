@@ -1,6 +1,6 @@
 # Standard SO-101 release acceptance
 
-The 0.6.3 package is a development candidate. This checklist defines release evidence; it
+The 0.7.0 package is a development candidate. This checklist defines release evidence; it
 does not assert that physical acceptance has already passed. Run it with the installed
 wheels outside the source checkout and retain the exact versions and artifact fingerprints.
 
@@ -44,3 +44,24 @@ installed-package workflow and both physical routes have been reviewed. Keep Win
 WSL2 and macOS experimental until their USB, camera, torque and recovery behavior has been
 tested on the respective OS and architecture. A green software workflow alone does not
 change their hardware status.
+
+## Three-layer and student acceptance
+
+Verify a fixed ACT start/stop/timeout without any API key, with the visible operator page
+providing supervision. Closing or hiding that page must stop dispatch after the configured
+supervision deadline. Neither a chat-model change nor stopping a reply may alter the task.
+
+Attempt out-of-group ACT calls, ACT calls in visual-direct mode, old-generation actions,
+late model responses and incompatible Runtime protocols. Each must be rejected. Editing a
+scheme during execution must preserve the frozen running revision. Unverified transitions
+between different ACT skills must request operator intervention.
+
+Invite at least two students who did not develop NERV. Each should install from the actual
+candidate bundle, complete first setup, reopen it, repair a missing device and select a
+scheme using only the public guide. Record where they needed help. These trials are pending;
+a guided screen implementation is not evidence of novice usability.
+
+Test module download interruption, cancel/retry, invalid hashes, missing assets and failed
+updates. Confirm data retention and the previous host's rollback. Keep operating-system
+software results separate from USB/camera and accelerator results. Do not publish a support
+status based only on this checklist existing.

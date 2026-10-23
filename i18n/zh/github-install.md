@@ -1,12 +1,108 @@
-# 从 GitHub 安装与启动
+# 安装、更新与恢复
 
-[English](../../guides/github-install.md)
+[English](../../guides/github-install.md) · [NERV](README.md)
 
-启动器直接通过 GitHub 分发，不要求在 npm 注册表发布包。先安装 Node.js 22 及以上版本（包含 npm）和 [uv](https://docs.astral.sh/uv/getting-started/installation/)。uv 负责建立独立的 Python 3.12 环境，缺少 Python 时可自动下载。NERV 不向系统 Python 或课程训练环境安装依赖。
+0.7.0 是尚未公开发布的开发候选版。完整发布包包含主程序、Runtime SDK、LeRobot 适配器、依赖锁文件、SO-101 仿真资源、安装器和 release.json。上传发布资产是验收后的独立操作。
 
-## 从源码目录安装
+## 安装候选包
 
-在包含启动器的源码仓库根目录执行：
+解压维护者提供的完整候选包，在该目录执行。Linux/macOS：
+
+```bash
+sh ./install.sh --bundle .
+```
+
+Windows PowerShell：
+
+```powershell
+./install.ps1 -Bundle .
+```
+
+安装器按需从官方来源安装固定版本的 uv，获取 Python 3.12，校验发布资产与依赖哈希，并创建独立环境。下载 Python 和依赖仍需联网。不会向训练环境安装内容；失败的环境不会成为当前主程序。
+
+重新打开终端，使用户 PATH 生效：
+
+```bash
+nerv
+```
+
+默认地址为 http://127.0.0.1:8170。服务就绪后打开浏览器，远程或无桌面终端不强行打开。可使用 `nerv serve --no-browser`，或用 `nerv serve --port PORT` 指定端口。端口冲突时报告错误，不结束其他程序。
+
+安装器会显示检测到的旧 nerv 命令。POSIX 使用 `command -v nerv`，PowerShell 使用 `Get-Command nerv -All` 检查路径。托管入口在 `~/.nerv/bin`；修改源码并不意味着旧 npm 安装已经更新。
+
+## GitHub 一条命令安装
+
+以下命令只适用于已经包含新安装资产的 GitHub Release，无法取得尚未发布的本地候选版。使用前应确认发布说明中的版本。
+
+Linux/macOS：
+
+```bash
+curl -fsSL https://github.com/Yanshi-Robotics/nerv/releases/latest/download/install.sh | sh
+```
+
+Windows PowerShell：
+
+```powershell
+irm https://github.com/Yanshi-Robotics/nerv/releases/latest/download/install.ps1 | iex
+```
+
+下载来源是 GitHub Releases，不需要 npm 注册。Shell/PowerShell 脚本先启动安装器，随后按发布清单校验 wheel、组件与依赖。组织要求审查安装脚本时，应先下载并检查脚本。
+
+## 安装组件
+
+在“仿真与组件”中安装或重新安装 SO-101 / LeRobot、SO-101 Simulation。界面显示安装阶段、组件包大小与可获得的下载进度。Python 依赖另外下载，LeRobot 张量依赖体积较大。浏览器刷新后保留进度，中断后可以重试；同时安装会被拒绝。
+
+对应命令：
+
+```bash
+nerv runtime install lerobot0.6.1
+```
+
+```bash
+nerv runtime install so101-sim
+```
+
+```bash
+nerv runtime list
+```
+
+界面安装前需要关闭机器人实例。安装 LeRobot 组件不会连接机械臂。仿真通过 XML 加载、物理步进和双相机渲染检查后登记，这不代表任务成功。首版界面不开放任意仿真包导入。
+
+## 数据、更新与回滚
+
+`~/.nerv` 保存设备档案、方案及其版本、策略引用、模型配置、私有凭据、会话日志、安装任务、各版本环境和缓存。原模型与标定文件仍在用户选择的目录。设置 NERV_HOME 后，后续启动应继续使用同一个值。
+
+```bash
+nerv update --check
+```
+
+```bash
+nerv update
+```
+
+```bash
+nerv rollback
+```
+
+检查命令只获取发布信息。更新或回滚前先停止任务、断开设备、退出主程序。主程序仍在运行时，文件锁会阻止更新。更新先保存配置快照，在新环境安装并检查依赖和命令入口，通过后才切换 active.json；失败保留旧版本。回滚恢复上一主程序及其发布清单，不删除后来产生的日志或策略文件。
+
+Runtime 组件独立安装。协议升级后，应从新版本重新安装对应组件；不兼容的 worker 会被拒绝。本版不提供运行中热更新、任意配置降级迁移，也不自动回滚已单独升级的组件。
+
+POSIX 凭据采用私有文件权限，Windows 使用系统凭据服务。更新不把密钥搬进软件环境。包含私有数据的备份留在用户目录。
+
+## 构建候选包
+
+维护者需要 Python 3.12、uv、Node.js，以及已初始化的 world/policy 子模块。按 [CONTRIBUTING.md](../../CONTRIBUTING.md) 安装构建依赖后，在源码仓执行：
+
+```bash
+python scripts/build_release.py
+```
+
+构建结果位于 temp/release，包含网页、wheel、三个场景和依赖锁文件，不会自动发布。分发时应保留完整清单与安装脚本，不能只交付主程序 wheel。
+
+## npm 兼容入口
+
+安装了 Node.js 22+、npm 和 uv 的开发者仍可从源码安装：
 
 ```bash
 npm install --global --install-links .
@@ -16,71 +112,10 @@ npm install --global --install-links .
 nerv
 ```
 
-显式添加 --install-links 会安装程序副本，并执行包括网页构建在内的准备步骤。直接全局安装目录可能只创建源码链接，跳过干净源码所需的准备步骤。
+存在托管发布版时，npm 入口转交当前主程序。源码回退方式仍会构建网页并创建按源码指纹区分的环境，不作为学生推荐安装流程。
 
-如果维护者提供了本地候选包，在该文件所在目录安装，再用 nerv 启动：
+## 系统限制
 
-```bash
-npm install --global ./nerv-0.6.3-local.tgz
-```
+Linux 是首要验收平台。Windows 原生、WSL2、Apple Silicon macOS 和 Intel macOS 的依赖与硬件需要分别验证，当前均为实验性。WSL2 的 USB 透传和相机需要主机配置。Linux 自动发现持久相机路径，其他系统目前在预览步骤手动填写相机编号。检测到串口不代表标定或机械结构已经正确。
 
-## 从 GitHub 安装
-
-把以下命令中的 COMMIT 替换为发布说明提供的完整提交号。尚未推送的本地提交无法从 GitHub 安装。0.6.3 启动器仍是开发候选版，安装成功不等于通过实机验收。
-
-```bash
-npm install -g "https://github.com/Yanshi-Robotics/nerv/archive/COMMIT.tar.gz"
-```
-
-```bash
-nerv
-```
-
-首次启动自动安装主程序及配套 SDK，后续启动复用该环境。服务就绪后，NERV 自动在默认浏览器中打开终端显示的地址，默认是 `http://127.0.0.1:8170`。需要指定端口时执行 `nerv serve --port 8100`；按 Ctrl+C 结束本次服务。
-
-通过 SSH 或在无桌面环境中使用时，执行 `nerv serve --no-browser`，然后手动打开对应地址。浏览器打开失败时，服务仍会继续运行。
-
-也可不做全局安装，直接运行：
-
-```bash
-npx --yes --package="https://github.com/Yanshi-Robotics/nerv/archive/COMMIT.tar.gz" nerv
-```
-
-这里使用 GitHub 源码归档地址。npm 的 Git 克隆安装会同时初始化子模块，额外下载仿真与策略仓库。源码归档包含前端源码，安装时编译一次网页；打包好的 npm 候选文件已包含网页。两种方式仍需下载正常的软件依赖，并非离线安装包。
-
-## 按需安装设备环境
-
-标准 SO-101 使用：
-
-```bash
-nerv runtime install lerobot0.6.1
-nerv runtime list
-```
-
-这会在独立环境中安装 LeRobot 和 Feetech，下载量可能明显大于主程序。该命令不连接串口、不标定，也不使机械臂带电。PyTorch 和推理设备仍需在目标系统验证。
-
-打开“设备与策略接入”。检测到唯一一个已安装运行时时，界面自动填写适配器和 Python 路径。再填写自己的串口、机器人 ID、已有标定与相机配置，按[标准 SO-101 指南](standard-so101.md)导入策略。
-
-使用 npx 时，在命令末尾的 nerv 后追加 `runtime install lerobot0.6.1` 即可。之后启动主程序会从同一个用户目录发现该环境。
-
-## 数据目录与更新
-
-正常启动不需要设置 NERV_HOME。安装版和源码版均默认使用 `~/.nerv`；Windows 对应用户主目录下的 `.nerv`。
-
-| 内容 | `.nerv` 下的位置 |
-|---|---|
-| 会话、事件和图像 | memory/sessions |
-| 日志、动作回执 | logs、runtime-events |
-| 设备配置、策略清单 | bodies、artifacts |
-| 模型设置、能力授权 | vlm.json、trust.json |
-| 主程序和设备环境 | envs |
-| 已安装运行时记录 | runtimes |
-| 自动下载的 Python 与缓存 | python、.cache |
-
-Linux 和 macOS 的密钥保存在私有 credentials.json 中，Windows 继续使用系统凭据管理器。训练权重和标定文件保留原位置，由配置引用。npm 按自身规则存放程序代码和下载缓存，这些目录不承担 NERV 会话存储。
-
-更新时安装新的已发布归档包。启动器根据源码指纹创建对应环境，保留旧环境和用户数据。先停止机器人任务，再由操作者重新启动程序；启动器不会关闭现有服务或搬动日志。
-
-NERV_HOME 仅保留为显式的测试隔离选项。旧源码版曾把会话和日志写入仓库，这些文件仍留在原处，不会自动并入 `.nerv`。迁移前需要备份，不得覆盖已有会话或凭据。安装过程异常中断时，可能留下错误信息中指出的空 `.installing` 目录；确认安装进程结束后，再删除该目录并重试。
-
-维护者可用 `npm pack --pack-destination temp/launcher-distribution` 生成本地候选文件，先通过 npm 或 npx 验证该 tgz，再发布源码提交。不使用 Node.js 的机器仍可选择 wheel 安装方式。
+安装器采用 uv 的[非托管安装选项](https://docs.astral.sh/uv/reference/installer/)，避免由 uv 修改全局 Shell 配置，再由 NERV 注册自身入口。临时验证不希望修改 Shell 配置时，Shell 安装器可加 --no-path，随后使用打印出的绝对命令路径，并保持同一个 NERV_HOME。

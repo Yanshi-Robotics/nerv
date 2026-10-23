@@ -1,119 +1,151 @@
 # NERV
 
-[简体中文](i18n/zh/README.md) · [Quick install & start](#quick-install--start) · [SO-101 guide](guides/standard-so101.md) · [Architecture](guides/architecture.md) · [Runtime SDK](packages/nerv-runtime-sdk/README.md)
+[简体中文](i18n/zh/README.md) · [Quick install & start](#quick-install--start) · [SO-101 setup](guides/standard-so101.md) · [Architecture](guides/architecture.md) · [Runtime SDK](packages/nerv-runtime-sdk/README.md)
 
-NERV connects a visual language model, robot observations and locally executed skills. Use it to run a trained policy, control a robot through bounded tools, or let a visual model supervise a task while you continue the conversation.
+NERV connects conversation, task decisions and local robot execution. Choose a control scheme, give it a task, and see what the robot actually did. Use a trained ACT policy, let a visual model select and supervise allowed skills, or use visual decisions with bounded joint and gripper tools.
 
-Version 0.6.3 is a development candidate. Standard SO-101 with LeRobot is the first real-device product; physical acceptance is pending. NERV runs externally trained policies and uses existing calibration. Training is outside its scope.
+**0.7.0 is a local development candidate.** The installer and optional modules are implemented; this candidate has not been published to GitHub Releases. SO-101 physical acceptance and student onboarding trials are pending. NERV uses externally trained policies and existing calibration; it does not train or calibrate robots.
 
 ## Quick install & start
 
-Install [Node.js 22 or later](https://nodejs.org/en/download) with npm and [uv](https://docs.astral.sh/uv/getting-started/installation/). The launcher manages Python 3.12 and separate host/device environments. Your training environment is kept separate.
+The release installer manages uv, Python 3.12 and the prebuilt interface. Students do not need Node.js, Git or a frontend build. The default installation contains the host only; install SO-101 and simulation components from the interface when needed.
 
-From the root of a downloaded or cloned checkout containing this launcher, install once. These commands work in a POSIX shell or Windows PowerShell; hardware support is listed below.
+For a candidate bundle supplied by the maintainer, extract it and run from that directory. Linux/macOS:
 
 ```bash
-npm install --global --install-links .
+sh ./install.sh --bundle .
 ```
 
-The installation builds and includes the web interface. `--install-links` installs a copy instead of leaving the command linked to the checkout. Start NERV from any directory:
+Windows PowerShell (experimental; not yet hardware validated):
+
+```powershell
+./install.ps1 -Bundle .
+```
+
+Open a new terminal, then start:
 
 ```bash
 nerv
 ```
 
-NERV opens your default browser after the server is ready, normally at [http://127.0.0.1:8170](http://127.0.0.1:8170). The first launch installs the host's Python dependencies; later launches reuse them. The same process serves the interface and API. No separate frontend server is needed. Ctrl+C ends the server.
+The server opens your browser after becoming ready at [http://127.0.0.1:8170](http://127.0.0.1:8170). It serves the interface and API together. Ctrl+C exits. An occupied port produces an error; NERV does not kill another process or silently change ports.
 
-For SSH or a session without a desktop browser, use `nerv serve --no-browser`. You can also open the address printed in the terminal manually.
+```bash
+nerv serve --no-browser
+```
+
+```bash
+nerv serve --port 8171
+```
 
 ```bash
 nerv doctor
 ```
 
-The diagnostic command reports the version, data directory and configuration without connecting hardware. User data defaults to `~/.nerv` on every installation; normal use needs no `NERV_HOME` assignment. To choose another port:
+Normal use stores configuration, sessions, installation environments and caches in `~/.nerv`. `NERV_HOME` is an optional override for isolated tests. Starting NERV never connects motors, enables motion or resumes an old task.
 
-```bash
-nerv serve --port 8100
+Once a corresponding release is published, the [GitHub installation guide](guides/github-install.md) provides the one-command Shell and PowerShell entry points. **Do not use the latest-release URL to obtain this unpublished candidate.** The guide also covers building a candidate and the existing npm compatibility entry.
+
+## First use
+
+Choose **Connect a real SO-101** or **Use simulation**. API keys can be configured later. Without a key, you can install components, configure the device, view cameras, inspect a policy and run a fixed ACT inside NERV.
+
+Real-device setup guides you through the runtime installation, serial device, existing calibration, two camera roles and policy import. Configuration is remembered. Reopening a saved profile offers connection directly; the individual steps remain available to repair a missing or changed device. A connection can enable motor torque, so the operator connects and authorizes motion separately.
+
+For simulation, open **Simulation and components**, install **SO-101 Simulation**, then create a simulation session. The installer verifies scene loading and camera rendering before registering the module. The three presets are pick and place, snack sorting and Tower of Hanoi. They contain scenes and local controls, not trained task policies.
+
+<div align="center"><img src="assets/readme/images/onboarding-0.7.png" alt="NERV first launch offers real SO-101 setup or optional simulation without requiring an API key" width="960"></div>
+
+## Three-layer architecture
+
+The layers describe responsibilities, not three mandatory models. System 2 and System 1 are auxiliary terms for the optional decision layer and the execution layer.
+
+```mermaid
+flowchart TB
+  U[User selects a control scheme] --> I
+  subgraph I[Interaction layer]
+    UI[NERV interface] <--> AG[NERV Agent / chat model]
+  end
+  I --> T[Task entry / frozen scheme revision]
+  subgraph D[Decision layer / System 2 / optional]
+    V[Selected visual model]
+  end
+  subgraph E[Execution layer / System 1]
+    P[Allowed ACT skills / one at a time]
+    J[Local joint and gripper controller]
+  end
+  T -->|Fixed policy| P
+  T -->|Policy group or visual direct control| V
+  V -->|Allowed skills| P
+  V -->|Allowed tools| J
+  P --> R[Shared control authority, validation, stop and journal]
+  J --> R
+  R --> B[Runtime / real device or simulation]
+  B --> O[Observations and execution feedback]
+  O --> V
+  O --> UI
 ```
 
-For installation directly from a published GitHub archive, including the `npx --package` entry, follow the [GitHub installation guide](guides/github-install.md). No npm-registry publication is required. Use a published commit that contains the launcher; an unpushed local candidate cannot be downloaded from GitHub. The guide also covers local packages, updates and the wheel alternative.
+The host manages sessions, tasks and authorization. An independent worker owns the device and cameras. For SO-101 it uses one native LeRobot instance; all motion passes through `robot.send_action()`. ACT inference and bounded tool execution share the same scheduler. Neither the Agent nor the decision model can expand the selected action set.
 
-## Connect a standard SO-101
+## Choose a control scheme
 
-The supported product contract is one SO-101 follower, LeRobot 0.6.1, and two cameras named `top` and `wrist` at 640 × 480 and 30 FPS. Five arm joints use degrees and the gripper uses LeRobot's 0–100 positions. The leader is not needed for inference. Students supply connection details and existing artifacts; there is no custom joint-mapping step.
+| Scheme | Decision layer | Execution layer | Requirements |
+|---|---|---|---|
+| Fixed policy | Disabled | One selected ACT | Compatible imported policy; no API key for the Run button |
+| Policy group | Selected visual model | One or more allowed ACT skills, sequentially | Visual model credentials and compatible skills |
+| Visual direct control | Selected visual model | Bounded joint moves, increments and gripper commands | Visual model credentials; no ACT required |
 
-Install the separate device environment once:
+Fixed ACT runs entirely inside NERV. You do not launch a LeRobot policy in another terminal. One-skill policy groups provide visual supervision of that skill. Unverified transitions between different skills stop for operator intervention; listing several ACT policies does not establish that they compose reliably.
+
+The right chat panel shows the **chat model**, **control scheme**, its actual decision model and execution skills, **View structure**, and the current task. Fixed schemes expose **Run selected policy**. Chat replies and robot tasks have separate cancellation. Changing the chat model does not replace a running task's model or scheme. Editing a scheme creates a new revision; running tasks keep their original configuration.
+
+On first use, review and allow the runtime's capabilities from the scheme area. This makes its skills available for selection; motion still requires separate authorization. Missing credentials remain visible with a direct link to model settings.
+
+<div align="center"><img src="assets/readme/images/control-scheme-0.7.png" alt="Installed SO-101 simulation with top and wrist views and a visual control scheme awaiting model credentials" width="960"></div>
+
+**Stop reply**, **Stop task** and **Emergency stop** have separate purposes. Robot stop remains available outside the model conversation. Stop and confirm termination before switching schemes or between Sim and Real. Runtime protocol 3 requires an expiring action allowlist and control generation; older workers cannot silently execute unrestricted tasks.
+
+## Standard SO-101 and policy import
+
+The real-device product is one standard SO-101 follower with `lerobot[feetech]==0.6.1`. Five arm joints use degrees, the gripper uses LeRobot's 0–100 range, and cameras are `top` and `wrist` at 640 × 480 and 30 FPS. A leader is unnecessary for inference. Students supply connection details, calibration and their trained policy, without joint mappings.
+
+Import an ACT export through **Device and policy setup**. NERV checks weights, native processors and statistics, camera inputs, six-channel shapes and file fingerprints. A fixed standard declaration records units/order as user-declared when the training export cannot establish them. Load checks do not move hardware. After connecting, use **Check policy without motion** before enabling actions. Original exports remain read-only; changed files require another import/check.
+
+Ordinary disconnect retains torque. Explicit torque release requires supporting the arm. Software stop requests a hold; communication loss cannot confirm that it happened. Requested targets, targets actually sent by LeRobot, and measured positions are recorded separately. An execution ending or a model saying “done” is not independent proof of task success.
+
+See the [SO-101 guide](guides/standard-so101.md) for discovery, saved profiles, calibration, camera handoff and recovery. Unverified real bindings use an explicit operator acceptance checkbox; this does not certify the hardware integration.
+
+## Modules, updates and support
+
+**Models and API keys** uses a short select → key → test-and-save flow. The test sends one built-in image request and may be billed by the provider. It does not upload a live camera image. Keys are excluded from journals and diagnostics. Conversation and decision models are chosen independently.
+
+Module installation has persistent progress, cancellation, checksum verification and retry. Arbitrary simulator imports are not exposed in this release. The [module and scheme contract](guides/control-schemes.md) documents extension boundaries. SO-101 real and simulation bindings remain separate; a real ACT does not become simulation-compatible merely because its tensor dimensions match.
 
 ```bash
-nerv runtime install lerobot0.6.1
+nerv update --check
 ```
 
 ```bash
-nerv runtime list
+nerv update
 ```
 
-This installs LeRobot and Feetech without connecting the arm. Its tensor dependencies are larger than the host installation. Then follow the [SO-101 setup and policy guide](guides/standard-so101.md):
+```bash
+nerv rollback
+```
 
-1. Open **Device and policy setup**. With one installed runtime, its provider and Python path are filled in. Read its setup options and enter the serial port, robot ID, existing calibration directory, camera configuration and inference device.
-2. For ACT, import your local export with its original weights, native processors and statistics. NERV checks the fixed device contract and records file fingerprints. Missing semantic information requires the standard course declaration; tensor shape alone does not establish units or ordering.
-3. Inspect and check the policy before connecting. **check** loads the model without hardware; the later **Check policy without motion** operation performs inference on real observations while disarmed.
-4. Create a real-hardware session, review access, and have the operator prepare the device. Preparation can enable motor torque. Check both camera views, then enable motion separately.
+Stop tasks, disconnect devices and exit NERV before updating or rolling back. New host versions are installed and checked in separate environments before activation. User data and the previous host environment are retained. Components have separate environments; reinstall them from the component page when an SDK protocol upgrade requires it. The [installation guide](guides/github-install.md) explains this boundary and recovery.
 
-Candidate real bindings are unverified and require the explicit supervised-acceptance setting described in the guide. The default refusal is intentional. Neither installing a runtime nor starting the web server connects or enables a robot.
-
-| Control route | What runs | What you provide |
-|---|---|---|
-| Manual ACT | Native ACT preprocessing, inference and postprocessing in the worker | Your trained standard ACT export; choose **Operator only**, with no VLM key |
-| VLM direct control | A visual model chooses bounded joint and gripper tools; interpolation and feedback run locally | A configured visual model; no ACT checkpoint required |
-| VLM-supervised ACT | System 2 observes and supervises the worker's policy execution | A configured visual model and your trained ACT export |
-
-All routes use the same device connection and action scheduler. Stop the current execution before switching controllers. An action finishing is not evidence of a successful grasp. Requested targets, targets returned by LeRobot and measured positions are recorded separately.
-
-## Architecture
-
-One instance binds one robot and one environment, with one active control session. NERV Agent handles conversation and delegates goals to System 2. System 2 has its own model context, task state and cancellation. Ordinary chat does not cancel the task.
-
-<div align="center"><img src="assets/readme/images/layers.svg" alt="Agent conversation and System 2 task supervision use independent contexts; local execution and device ownership are separate from simulation world control" width="960"></div>
-
-The host owns sessions, control authorization, runtime lifecycle and event journals. A separate worker owns the robot, cameras and local execution. System 1 denotes that execution layer; it is not a third Python environment.
-
-For standard SO-101, the adapter creates one native LeRobot device instance. ACT produces candidate positions through its native processing pipeline; direct VLM tools produce bounded position targets. Both pass through freshness, authorization and motion checks before the same `robot.send_action()` call. The main process never imports LeRobot or loads policy tensors.
-
-The [architecture and control guide](guides/architecture.md) explains Agent/System 2 separation, observation flow, provider continuations, session memory, simulation controls and the Runtime SDK. The core coordinates interfaces; robot and model-specific implementation belongs in adapters and policy backends. SmolVLA and GR00T are future integrations, not delivered backends.
-
-## Operator controls and models
-
-The right sidebar switches between Agent chat and Operator Toolbox. **Stop reply** cancels the conversation response; **Stop task** cancels local execution; **Emergency stop** revokes motion and attempts to hold the measured pose. Releasing the stop returns to disarmed standby without resuming the previous task.
-
-Connecting, loading a policy, enabling motion and disconnecting are separate operations. Ordinary disconnection retains torque. Explicit torque release requires an operator to support the arm. A software hold is not a power cut, and a lost connection cannot confirm that the hold was executed.
-
-For visual control, open **Models and API keys**. NERV supports a curated catalogue across OpenAI, DeepSeek, Gemini, xAI and Anthropic. Submitting a new or replacement key triggers one billable image check before saving; opening settings and creating sessions do not request a model. Choose the conversation model and the task model in their respective controls. Existing registered keys remain usable without optional diagnostics.
-
-An **Operator only** session can run manual ACT without API credentials. A VLM session requires a registered key. Robot camera frames enter model observations; simulator ground truth and operator-only overview cameras do not. The complete [model catalogue and control behavior](guides/architecture.md#visual-models) is documented separately.
-
-## Data and installation layout
-
-Both installed and source launches use `~/.nerv` for sessions, logs, imported manifests, device profiles and model settings. The launcher stores host and device environments under `envs/` and runtime installation records under `runtimes/`. An explicit `NERV_HOME` overrides the location for isolated tests.
-
-Configuration values belong in `~/.nerv/.env`; see [.env.example](.env.example). API keys come from private credential storage, not project or shell API-key variables. POSIX uses a private credentials file; Windows uses Credential Manager. Training weights and calibration files remain in their original locations. npm manages installed launcher code and its own download cache.
-
-Updates select an environment by source fingerprint and retain existing data and older environments. They do not stop running servers. Older repository-local sessions are not automatically merged into the user directory. See [installation and updates](guides/github-install.md#user-data-and-updates).
-
-## Support and validation
-
-| Connection | Current scope |
+| Platform or route | Status |
 |---|---|
-| SO-101 / real | Standard LeRobot 0.6.1 product, native ACT, bounded direct control and shared observations. Linux physical acceptance is pending. |
-| G1 / simulation | Existing MuJoCo worlds and gait controller; CPU-rendered control regression retained. |
-| SO-101 / simulation | Three tabletop presets, rigid/deformable object configuration and joint/gripper tools. No deployed ACT or Hanoi task policy. |
-| G1 / real | Disabled legacy binding; no current execution support. |
-| Visual models | Curated models across five providers; key checks and robot task acceptance are separate. |
+| Linux host and SO-101 simulation | Software candidate; local installation and regression checks are separate from hardware acceptance |
+| SO-101 real / Linux | Adapter and guided setup implemented; physical grasping acceptance pending |
+| Windows native / WSL2 | Experimental; USB, camera backends and passthrough require hardware testing |
+| macOS Apple Silicon / Intel | Experimental; dependencies, camera permissions and CPU/MPS each require validation |
+| G1 simulation | Existing source workflow retained for regression; not a one-click student module |
+| GR00T / SmolVLA | Future policy backends; not delivered integrations |
 
-Linux is the primary hardware acceptance target. Windows native, WSL2, Apple Silicon macOS and Intel macOS require separate dependency and hardware verification; they remain experimental. Software CI does not establish USB serial, camera or accelerator compatibility.
-
-Simulation assets are optional and excluded from the student launcher installation. Source developers can initialize the world/policy submodules and install the host's simulation extra; see [development setup](CONTRIBUTING.md) and the [SO-101 workbench guide](worlds/scenes/so101_workbench/README.md). Changing between real and simulated environments requires ending the instance.
-
-The original 100,000-step `snack_into_box` ACT checkpoint has CPU/CUDA tensor-forward evidence, not completed physical acceptance. Its weights are not included. Software fixtures do not prove grasping. The [release acceptance guide](guides/release-acceptance.md) defines separate ACT-supervision and direct-VLM trials and fault checks. Version 1.0.0 remains gated on operator acceptance; **ultimate** names the future autonomy goal.
+The [release acceptance guide](guides/release-acceptance.md) separates software, simulation, real ACT, visual supervision, direct visual control and novice onboarding. No simulator task result or mock test substitutes for a physical grasp.
 
 ## Demo and interface
 
@@ -124,7 +156,7 @@ The G1 recording below is from an earlier simulation version. It demonstrates he
 <details>
 <summary>Earlier interface and world views</summary>
 
-The model, task and device setup controls have changed in 0.6. These preserved screenshots show earlier navigation, observation and operator views. The chase camera and World Explore views are operator-only.
+The model, task and device setup controls have changed in 0.7. These preserved screenshots show earlier navigation, observation and operator views. The chase camera and World Explore views are operator-only.
 
 <div align="center"><img src="assets/readme/images/web-session.png" alt="Earlier session view" width="960"></div>
 <div align="center"><img src="assets/readme/images/web-teleop.png" alt="Earlier operator controls" width="960"></div>
@@ -139,8 +171,6 @@ The [world-library tools](worlds/docs/explore/README.md) cover scene testing and
 
 ## Extend and contribute
 
-The independently installable [Runtime SDK](packages/nerv-runtime-sdk/README.md) defines provider discovery and protocol 2 lifecycle, actions and observations. An [inspection-only example](examples/inspection-runtime/) illustrates the boundary. Device SDKs stay in workers; policy backends produce standard targets without opening hardware.
+The [Runtime SDK](packages/nerv-runtime-sdk/README.md) provides versioned discovery, lifecycle and bounded dispatch. Device SDKs stay in workers; policy backends produce candidate targets without owning hardware. See [CONTRIBUTING.md](CONTRIBUTING.md), [AGENTS.md](AGENTS.md) and [CHANGELOG.md](CHANGELOG.md).
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for source environments and tests, [AGENTS.md](AGENTS.md) for module boundaries, and [CHANGELOG.md](CHANGELOG.md) for version history. Report errors with versions and sanitized reproduction steps, without keys, unreviewed camera frames or private configuration archives.
-
-NERV uses the [MIT license](LICENSE). Vendor SDKs, model weights, training data and external assets retain their own licenses.
+Report versions and sanitized reproduction steps. Do not include keys, unreviewed camera frames or private configuration archives. NERV uses the [MIT license](LICENSE); SDKs, models and external assets retain their own licenses.

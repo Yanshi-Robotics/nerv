@@ -84,6 +84,10 @@ class BodyNode:
         self._control_token = None
         self._control_owner = None
         self._control_generation = 0
+        self._allowed_actions = frozenset()
+        self._control_deadline = 0.0
+        self._action_budget = 0
+        self._stopping = False
         self.require_control = require_control
         self.impl = impl
         self.guidance = guidance
@@ -99,7 +103,7 @@ class BodyNode:
         if hasattr(self.impl, "actions"):
             return self.impl.actions()
         if self.require_control:
-            raise ValueError("Runtime protocol 2 requires actions()")
+            raise ValueError("Runtime protocol 3 requires actions()")
         return self.impl.tools()  # Explicit legacy standalone family adapter.
 
     # -- config (armed + family options) -------------------------------------------------
@@ -130,7 +134,10 @@ class BodyNode:
         kind = self._kinds.get(name, "primitive")
         if kind in MUTATING_KINDS or kind == "control":
             with self.control_guard(control):
-                pass
+                if self.require_control:
+                    if name not in self._allowed_actions or self._action_budget <= 0:
+                        raise InterruptedError("Action is outside the control scheme or its budget")
+                    self._action_budget -= 1
             if getattr(self.impl, "guarded_dispatch", False):
                 args["_control_guard"] = lambda: self.control_guard(control)
         if kind in MUTATING_KINDS and not self.armed:
@@ -146,13 +153,32 @@ class BodyNode:
     @contextlib.contextmanager
     def control_guard(self, token):
         with self._control_lock:
-            if self.require_control and (not token or token != self._control_token):
+            if self.require_control and (not token or token != self._control_token or time.monotonic() >= self._control_deadline):
                 raise InterruptedError("stale or missing control request")
             yield
 
     def invalidate_control(self):
         with self._control_lock:
             self._control_token = None
+
+    def cancel(self, reason="cancelled", expected=None):
+        with self._control_lock:
+            if expected and expected != self._control_token:
+                return {"ok": False, "message": "Stop belongs to an old execution"}
+            if self._stopping:
+                return {"ok": False, "message": "Stop is still pending"}
+            self._stopping = True
+            self.invalidate_control()
+            self.stop.request()
+        try:
+            # Do not hold the dispatch lock while waiting for an execution thread:
+            # it may need that lock to observe revoked authority and terminate.
+            if hasattr(self.impl, "cancel_current"):
+                return self.impl.cancel_current(reason)
+            return {"ok": True, "message": "stop requested"}
+        finally:
+            with self._control_lock:
+                self._stopping = False
 
     def hold(self, reason: str = "operator") -> dict:
         self.invalidate_control()
@@ -298,7 +324,15 @@ def build_app(node: BodyNode, cors_origins: list[str]) -> FastAPI:
         if not token or len(token) > 128:
             return {"ok": False, "message": "invalid control token"}
         owner, generation = body.get("owner"), body.get("generation")
+        allowed = body.get("allowed_actions")
+        duration, budget = body.get("max_runtime_s"), body.get("action_budget")
+        if (not isinstance(allowed, list) or not allowed or any(not isinstance(x, str) or x not in node._kinds for x in allowed)
+                or not isinstance(duration, (int, float)) or not math.isfinite(duration) or duration <= 0
+                or not isinstance(budget, int) or isinstance(budget, bool) or budget <= 0):
+            return {"ok": False, "message": "A bounded action grant is required"}
         with node._control_lock:
+            if node._stopping:
+                return {"ok": False, "message": "Wait for stop confirmation"}
             if not owner or not isinstance(generation, int) or generation <= node._control_generation:
                 return {"ok": False, "message": "stale control generation"}
             if node._control_owner is not None and node._control_owner != owner:
@@ -307,19 +341,18 @@ def build_app(node: BodyNode, cors_origins: list[str]) -> FastAPI:
                 return {"ok": False, "message": "Confirm the old execution stopped before claiming control"}
             node._control_owner, node._control_generation = owner, generation
             node._control_token = token
+            node._allowed_actions = frozenset(allowed)
+            node._control_deadline = time.monotonic() + duration
+            node._action_budget = budget
+        def expire():
+            time.sleep(duration)
+            node.cancel("control_grant_expired", expected=token)
+        threading.Thread(target=expire, daemon=True, name="control-expiry").start()
         return {"ok": True}
 
     @app.post("/stop")
     def stop(body: dict | None = None) -> dict:
-        with node._control_lock:
-            expected = (body or {}).get("expected_control")
-            if expected and expected != node._control_token:
-                return {"ok": False, "message": "Stop belongs to an old execution"}
-            node.invalidate_control()
-            node.stop.request()
-            if hasattr(impl, "cancel_current"):
-                return impl.cancel_current("cancelled")
-        return {"ok": True, "message": "stop requested"}
+        return node.cancel(expected=(body or {}).get("expected_control"))
 
     @app.post("/prepare")
     def prepare() -> dict:

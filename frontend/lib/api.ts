@@ -170,6 +170,7 @@ export async function getNodeStatus(key: string): Promise<Record<string, unknown
 // ---- sessions ---------------------------------------------------------------------------
 export type SessionStatus = "active" | "frozen" | "reconnect_required";
 export type SessionSummary = {
+  control_scheme?: string; control_scheme_revision?: number;
   task_model?: string; task_effort?: string | null;
   id: string;
   brain: string;
@@ -574,7 +575,7 @@ export type PropertyField = { type: string; title?: string; description?: string
 export type PropertySchema = { properties?: Record<string, PropertyField> };
 export type WorldDescriptor = { instance_id: string; revision: number; configuration: PropertySchema; state: {configuration?: Record<string, unknown>}; commands: { name: string; description: string; parameters: PropertySchema; effect: string }[] };
 export type RobotEvent = { seq: number; time: number; instance_id: string; task_id?: string; version?: number; source?: string; type?: string; text?: string; message?: string; status?: string; ok?: boolean };
-export type RobotTask = { task_id: string; instance_id: string; version: number; status: string; goal: string; model: string; effort?: string; message?: string };
+export type RobotTask = { task_id: string; instance_id: string; version: number; status: string; goal: string; model: string | null; effort?: string; message?: string; scheme?: ControlScheme };
 export type RobotSnapshot = { task: RobotTask | null; events: RobotEvent[]; cursor: number };
 export function robotEventUrl(sid: string, cursor = 0) { return `${BASE}/api/sessions/${encodeURIComponent(sid)}/robot-events?after=${cursor}`; }
 async function domainRequest(path: string, payload?: unknown) {
@@ -600,3 +601,23 @@ export async function runtimeInstallations(): Promise<Array<{provider: string; p
   if (!response.ok) throw new Error("Cannot read installed runtimes");
   return response.json();
 }
+
+export type ControlScheme = {
+  id: string; revision: number; name: string; robot: string; mode: "sim" | "real";
+  template: "fixed_policy" | "policy_group" | "visual_direct";
+  decision_model: string | null; effort: string | null; actions: string[];
+  max_runtime_s: number; action_budget: number; ready?: boolean; reason?: string; structure?: unknown;
+};
+export type SchemeOptions = {selected?: ControlScheme | null; schemes: ControlScheme[]; actions: {name: string; description: string; kind: string}[]};
+export const listControlSchemes = (sid?: string): Promise<SchemeOptions> => domainRequest(`/api/control-schemes${sid ? `?sid=${encodeURIComponent(sid)}` : ""}`);
+export const saveControlScheme = (scheme: Partial<ControlScheme>): Promise<ControlScheme> => domainRequest("/api/control-schemes", scheme);
+export const selectControlScheme = (sid: string, scheme: ControlScheme) => domainRequest(`/api/sessions/${sid}/control-scheme`, {id: scheme.id, revision: scheme.revision});
+export const getRobotTask = (sid: string): Promise<RobotSnapshot> => domainRequest(`/api/sessions/${sid}/robot-tasks`);
+export const setupDevice = (operation: string, payload: Record<string, unknown> = {}) => domainRequest(`/api/setup/lerobot0.6.1/${operation}`, payload);
+export const setupCamera = (operation: string, payload: Record<string, unknown> = {}) => domainRequest(`/api/setup-camera/lerobot0.6.1/${operation}`, payload);
+export const moduleCatalog = () => domainRequest("/api/modules");
+export const installModule = (id: string) => domainRequest(`/api/modules/${id}/install`, {});
+export const cancelModuleInstall = (id: string) => domainRequest(`/api/modules/${id}/cancel`, {});
+
+export const installationLog = (id: string): Promise<{log: string}> => domainRequest(`/api/modules/jobs/${id}/log`);
+export const checkRelease = (): Promise<{available_version: string; installed_version: string | null; update_available: boolean}> => domainRequest("/api/releases/check");

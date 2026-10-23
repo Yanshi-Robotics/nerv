@@ -2,47 +2,26 @@
 
 [English](../../guides/standard-so101.md)
 
-NERV 0.6.3 是开发候选版，真机验收尚未完成。本版接入一台使用 LeRobot 0.6.1 的标准 SO-101 从臂，两台 OpenCV 相机分别命名为 top 和 wrist，采用 640 × 480、30 FPS。五个臂关节使用角度，夹爪使用 LeRobot 原生的 0–100 表示。软件测试和模型加载不能证明真实抓取的可靠性。
+NERV 0.7.0 是开发候选版，真机验收尚未完成。本版接入一台使用 LeRobot 0.6.1 的标准 SO-101 从臂，两台 OpenCV 相机分别命名为 top 和 wrist，采用 640 × 480、30 FPS。五个臂关节使用角度，夹爪使用 LeRobot 原生的 0–100 表示。软件测试和模型加载不能证明真实抓取的可靠性。
 
 先在 LeRobot 中完成训练与标定，保留训练产物、标定文件和课程相机配置。推理时不需要连接主臂。使用 NERV 前退出占用同一串口或相机的遥操作程序。
 
-## 安装候选版
+## 设备引导
 
-也可使用 [GitHub 启动器](github-install.md)，安装后执行 `nerv`，或直接通过 npx 启动。启动器管理两个 Python 环境并发现已安装的设备运行时。下面的 wheel 方式作为无需 Node.js 的安装选项保留。
+安装[候选包](github-install.md)，运行 nerv，选择“连接真实 SO-101”。引导替代手动填写 Python 路径和编辑相机 JSON 的流程：
 
-采用 Python 3.12，主程序与设备运行时分别安装。三个 wheel 文件必须来自同一次构建；维护者通过 `python scripts/build_release.py` 在 `temp/release/wheels` 生成候选包，该命令不会发布文件。将这个目录复制到学生电脑，命名为 wheels。
+1. 安装独立的 SO-101 / LeRobot 组件。
+2. 扫描串口候选并选择从臂。扫描不会连接电机。
+3. 选择已有标定，或填写目录与机器人 ID。推理设备可选 CPU、CUDA、MPS，以当前后端实际支持为准。
+4. 预览两路相机，选择顶视、腕部和方向，并确认实际安装角色。Linux 提供持久设备路径，其他系统目前手动填写相机编号。
+5. 导入并检查 ACT；视觉直接控制可以跳过策略导入。
+6. 阅读监督验收提示后连接。连接可能启用扭矩，动作仍保持未启用状态。
 
-Linux 和 macOS：
+正常引导不需要设置隐藏环境变量。勾选只表示接受监督验收，不会提升产品的验证状态。相机预览进程先释放设备，再交给同一个 LeRobot 实例，避免两个进程同时占用相机。
 
-```bash
-python3.12 -m venv .nerv-host
-python3.12 -m venv .nerv-device
-.nerv-host/bin/python -m pip install wheels/nerv_runtime_sdk-0.6.3-py3-none-any.whl 'wheels/nerv-0.6.3-py3-none-any.whl[platform]'
-.nerv-device/bin/python -m pip install wheels/nerv_runtime_sdk-0.6.3-py3-none-any.whl wheels/nerv_runtime_lerobot-0.6.3-py3-none-any.whl
-.nerv-host/bin/nerv serve
-```
+标定目录必须包含与机器人 ID 同名的 JSON 文件。标定缺失，或文件与电机标定不一致时，NERV 阻止运行。连接使用 connect(calibrate=False)，不覆盖标定。请先退出占用串口或相机的其他程序。
 
-Windows PowerShell：
-
-```powershell
-py -3.12 -m venv .nerv-host
-py -3.12 -m venv .nerv-device
-.\.nerv-host\Scripts\python.exe -m pip install wheels/nerv_runtime_sdk-0.6.3-py3-none-any.whl 'wheels/nerv-0.6.3-py3-none-any.whl[platform]'
-.\.nerv-device\Scripts\python.exe -m pip install wheels/nerv_runtime_sdk-0.6.3-py3-none-any.whl wheels/nerv_runtime_lerobot-0.6.3-py3-none-any.whl
-.\.nerv-host\Scripts\nerv.exe serve
-```
-
-设备包会安装 `lerobot[feetech]==0.6.1`。根据自己的系统和推理设备，按 PyTorch 官方说明安装相应版本。不要为了安装 NERV 修改原有训练环境。主程序包已包含网页，学生不需要安装 Node.js 或下载其他机器人的仿真资产。
-
-打开启动命令显示的地址，默认是 `http://127.0.0.1:8170`。候选版真机通路仍标记为未验收；开展有人监督的验收时，需要在启动主程序前设置 `NERV_ALLOW_UNVERIFIED=1`。Linux、macOS 使用 export，PowerShell 使用 `$env:NERV_ALLOW_UNVERIFIED='1'`。该设置只允许使用实验通路，不会连接机械臂或启用动作。
-
-## 配置设备
-
-打开“设备与策略接入”，填写设备环境中 Python 可执行文件的绝对路径，适配器填 `lerobot0.6.1`，再点击“读取配置选项”。在“配置设备”中填写串口、机器人 ID、已有标定目录、课程 cameras.json 文件和推理设备。推理设备选择 cpu、cuda 或 mps，并确认当前后端支持所选设备。
-
-标定目录中必须包含与机器人 ID 同名的 JSON 文件。相机配置需要指定两个不同设备，名称固定为 top 和 wrist，分辨率和帧率符合标准。保留课程相机工具记录的实际旋转参数。设备名称无法证明相机安装位置正确，启用动作前仍需查看两个画面，确认顶视与腕部视角没有接反。
-
-配置保存在 NERV_HOME 指定的目录，默认是 ~/.nerv。保存配置不会连接机械臂。修改设备配置前先关闭当前机器人实例；导入策略不会覆盖原始训练产物。
+配置保存在 ~/.nerv。连接时重新查找保存的 USB 串口身份，存在歧义时拒绝继续。没有唯一 ID 的设备仍需操作者确认。设备改变时返回对应步骤修复；再次打开恢复设置，不恢复电机连接和动作授权。
 
 ## 导入 ACT 策略
 
@@ -55,9 +34,9 @@ py -3.12 -m venv .nerv-device
 命令行使用同一后端：
 
 ```bash
-.nerv-host/bin/nerv policy import --python /absolute/path/to/.nerv-device/bin/python --provider lerobot0.6.1 --id pick-v1 --path /absolute/path/to/pretrained_model --conditions 'Task and camera setup used during training' --standard-declared
-.nerv-host/bin/nerv policy inspect --python /absolute/path/to/.nerv-device/bin/python --provider lerobot0.6.1 --id pick-v1
-.nerv-host/bin/nerv policy check --python /absolute/path/to/.nerv-device/bin/python --provider lerobot0.6.1 --id pick-v1 --device cpu
+nerv policy import --python /absolute/path/to/runtime/bin/python --provider lerobot0.6.1 --id pick-v1 --path /absolute/path/to/pretrained_model --conditions 'Task and camera setup used during training' --standard-declared
+nerv policy inspect --python /absolute/path/to/runtime/bin/python --provider lerobot0.6.1 --id pick-v1
+nerv policy check --python /absolute/path/to/runtime/bin/python --provider lerobot0.6.1 --id pick-v1 --device cpu
 ```
 
 将示例路径替换为自己的绝对路径；Windows 使用 Scripts 目录中的可执行文件。路径包含空格时加引号。这些命令不会下载权重。
@@ -68,7 +47,7 @@ py -3.12 -m venv .nerv-device
 
 “准备设备”会连接 LeRobot，并可能启用电机扭矩。由操作者检查工作区域后点击。NERV 使用所选标定，发现不一致时拒绝继续，不自动重新标定。连接后查看两个画面，确认安装位置、方向与场景。
 
-加载策略，保持动作未启用，点击“检查策略，不下发动作”。这一步用当前观测运行 ACT 处理器与模型，返回候选位置，不向电机下发目标。检查完成后，再启用控制并从操作工具箱运行策略。人工模式依赖可见操作页面持续取得观测；关闭或隐藏页面后，监督超时会停止下发动作。操作者仍需持续观察真实场景。
+加载策略，保持动作未启用，点击“检查策略，不下发动作”。这一步用当前观测运行 ACT 处理器与模型，返回候选位置，不向电机下发目标。检查完成后，在“控制方案”中新建固定策略方案，选择该 ACT，启用控制并点击右侧“运行所选策略”。策略组另选决策模型与允许的技能，视觉直接控制选择有限动作工具。固定策略依赖可见操作页面持续取得观测；关闭或隐藏页面后，监督超时会停止下发动作。操作者仍需持续观察真实场景。
 
 VLM 直接控制使用有限的关节与夹爪工具。每次决策关联近期观测和当前设备实例，动作插值在本地完成。执行后重新观察，不能把命令完成当作抓取成功。本版不提供笛卡尔坐标控制、其他机器人结构或非标准单位接入。
 
@@ -89,6 +68,8 @@ VLM 直接控制使用有限的关节与夹爪工具。每次决策关联近期�
 动作回执保存在 NERV_HOME 下的 runtime-events 目录。会话图像和日志可能包含私人场景及路径，分享前逐项检查并脱敏。报告问题时提供主程序、SDK、适配器版本，系统与架构，LeRobot、PyTorch 版本，推理设备、原始错误和复现步骤。不要附上 API 密钥或未经检查的配置压缩包。
 
 ## 平台状态与扩展
+
+当前相机候选列表使用 Linux 设备路径。Windows 和 macOS 用户需要输入相机编号，并通过预览确认画面；这两个系统的自动相机枚举尚待补齐。目录选择目前使用路径输入框。串口枚举无法保证两个外观和型号相同的设备就是同一台设备。
 
 Linux 是主要真机验收平台。Windows 原生、WSL2 和 macOS 在社区完成硬件测试前保持实验性状态。WSL 的串口与摄像头透传需要分别验证，参考 [Microsoft USB 接入说明](https://learn.microsoft.com/en-us/windows/wsl/connect-usb)。Apple Silicon 与 Intel Mac 分别记录依赖和硬件结果。
 
