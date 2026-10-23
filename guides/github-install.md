@@ -7,7 +7,30 @@ Node.js 22 or later (including npm) and [uv](https://docs.astral.sh/uv/getting-s
 once. uv creates isolated Python 3.12 environments and can obtain Python when it is absent.
 NERV does not install into the user's training or system Python environment.
 
-## Install once
+## Install from a source checkout
+
+From the repository root of a checkout that contains this launcher:
+
+```bash
+npm install --global --install-links .
+```
+
+```bash
+nerv
+```
+
+The explicit `--install-links` option installs a copy and runs package preparation,
+including the web build. A bare global directory installation can leave a symlink
+to the checkout and skip the preparation needed by a clean source download.
+
+For a maintainer-supplied local candidate archive, run the following from the folder
+containing that file, then start with `nerv`:
+
+```bash
+npm install --global ./nerv-0.6.3-local.tgz
+```
+
+## Install from GitHub
 
 Replace `COMMIT` below with the published commit supplied in the release notes. A local
 commit that has not been pushed cannot be installed from GitHub. The 0.6.3 launcher is a
@@ -15,6 +38,9 @@ development candidate; software installation does not establish hardware accepta
 
 ```bash
 npm install -g "https://github.com/Yanshi-Robotics/nerv/archive/COMMIT.tar.gz"
+```
+
+```bash
 nerv
 ```
 

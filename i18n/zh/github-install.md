@@ -4,12 +4,35 @@
 
 启动器直接通过 GitHub 分发，不要求在 npm 注册表发布包。先安装 Node.js 22 及以上版本（包含 npm）和 [uv](https://docs.astral.sh/uv/getting-started/installation/)。uv 负责建立独立的 Python 3.12 环境，缺少 Python 时可自动下载。NERV 不向系统 Python 或课程训练环境安装依赖。
 
-## 首次安装
+## 从源码目录安装
+
+在包含启动器的源码仓库根目录执行：
+
+```bash
+npm install --global --install-links .
+```
+
+```bash
+nerv
+```
+
+显式添加 --install-links 会安装程序副本，并执行包括网页构建在内的准备步骤。直接全局安装目录可能只创建源码链接，跳过干净源码所需的准备步骤。
+
+如果维护者提供了本地候选包，在该文件所在目录安装，再用 nerv 启动：
+
+```bash
+npm install --global ./nerv-0.6.3-local.tgz
+```
+
+## 从 GitHub 安装
 
 把以下命令中的 COMMIT 替换为发布说明提供的完整提交号。尚未推送的本地提交无法从 GitHub 安装。0.6.3 启动器仍是开发候选版，安装成功不等于通过实机验收。
 
 ```bash
 npm install -g "https://github.com/Yanshi-Robotics/nerv/archive/COMMIT.tar.gz"
+```
+
+```bash
 nerv
 ```
 
