@@ -91,3 +91,42 @@ def test_unknown_installed_component_blocks_update(tmp_path, monkeypatch):
     i.write_json(root / 'runtimes/custom.json', {'python': 'external'})
     with pytest.raises(ValueError, match='installed components'):
         i.update(manifest=manifest)
+
+
+def test_legacy_migration_retains_usable_rollback_target(tmp_path, monkeypatch):
+    root, manifest = setup(tmp_path, monkeypatch)
+    old = json.loads((root / 'active.json').read_text())
+    (root / 'active.json').unlink()
+    monkeypatch.setattr(i.subprocess, 'check_output', lambda *a, **k: 'nerv 0.6.3\n')
+    def stage(product='host', **kwargs):
+        assert not (root / 'active.json').exists()
+        python = i.python_at(root / 'envs' / product / 'new')
+        python.parent.mkdir(parents=True, exist_ok=True)
+        python.touch()
+        return {'python': str(python), 'version': 'new', 'product': product}
+    monkeypatch.setattr(i, 'install', stage)
+    i.update(manifest=manifest, legacy_python=old['python'])
+    result = i.rollback()
+    assert result['version'] == '0.6.3'
+    assert json.loads((root / 'active.json').read_text())['legacy'] is True
+    assert json.loads((root / 'runtimes/device.json').read_text())['version'] == 'old'
+
+
+def test_latest_release_check_and_noop_do_not_replace_environment(tmp_path, monkeypatch):
+    root, manifest = setup(tmp_path, monkeypatch)
+    data = json.loads(manifest.read_text())
+    data['version'] = 'old'
+    monkeypatch.setattr(i, 'fetch', lambda url, path: i.write_json(path, data))
+    before = (root / 'active.json').read_bytes()
+    assert i.update(check=True)['update_available'] is False
+    assert i.update()['updated'] is False
+    assert (root / 'active.json').read_bytes() == before
+    assert not (root / 'backups').exists()
+
+
+def test_update_explains_running_server_without_downloading(tmp_path, monkeypatch):
+    from filelock import FileLock
+    monkeypatch.setenv('NERV_HOME', str(tmp_path))
+    with FileLock(tmp_path / 'host-running.lock'):
+        with pytest.raises(ValueError, match='Exit NERV'):
+            i.update()

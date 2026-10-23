@@ -4,22 +4,22 @@
 
 NERV 将交互、任务决策和本地动作执行连接起来。用户选择控制方案、提交目标，并查看机器人的实际执行反馈。你可以使用自己的 ACT 策略，让视觉模型选择和监督允许使用的技能，或通过视觉决策调用有限的关节与夹爪工具。
 
-**0.7.1 是本地开发候选版**。 安装器和可选组件已实现，但尚未发布到 GitHub Releases。SO-101 实机验收和学生首次使用测试尚未完成。NERV 使用外部训练好的策略和已有标定，不承担训练或自动标定。
+**0.7.1 是供测试的开发版**，可从 GitHub Releases 安装，已有发布版可通过 `nerv update` 更新。SO-101 实机验收和学生首次使用测试尚未完成。NERV 使用外部训练好的策略和已有标定，不承担训练或自动标定。
 
 ## 快速安装与启动
 
 发布包安装器管理 uv、Python 3.12 和预构建网页。学生不需要安装 Node.js、Git 或编译前端。默认只安装主程序，SO-101 和仿真组件由用户在界面中按需安装。
 
-拿到维护者提供的候选安装包后，解压并在该目录执行。Linux/macOS：
+Linux/macOS：
 
 ```bash
-sh ./install.sh --bundle .
+curl -fsSL https://github.com/Yanshi-Robotics/nerv/releases/latest/download/install.sh | sh
 ```
 
 Windows PowerShell（实验性，尚未完成硬件验收）：
 
 ```powershell
-./install.ps1 -Bundle .
+irm https://github.com/Yanshi-Robotics/nerv/releases/latest/download/install.ps1 | iex
 ```
 
 重新打开终端，然后启动：
@@ -44,7 +44,7 @@ nerv doctor
 
 配置、会话、安装环境和缓存默认统一保存在 `~/.nerv`。`NERV_HOME` 仅用于需要隔离数据的测试等情况。启动主程序不会连接电机、启用动作或恢复旧任务。
 
-对应版本发布后，可以使用 [GitHub 安装指南](github-install.md) 中的 Shell 或 PowerShell 一条命令安装。**尚未发布的候选版不能从 latest-release 地址获取**。 指南还说明如何构建候选包，以及现有 npm 兼容入口。
+更新前退出正在运行的服务，然后依次执行 `nerv update --check`、`nerv update` 和 `nerv`。[安装指南](github-install.md) 说明了回滚、解压安装包和旧 npm 启动器的迁移方法。
 
 ## 首次使用
 
