@@ -888,7 +888,8 @@ export const LOCALES: Record<string, Locale> = {
       "Install the simulation component first.": "Install the simulation component first.",
       "Confirm supervised acceptance before opening this unverified runtime.": "Confirm supervised acceptance before opening this unverified runtime.",
       "Top camera": "Top camera",
-      "Wrist camera": "Wrist camera"
+      "Wrist camera": "Wrist camera",
+      "Last device check": "Last device check"
     }
   },
   "zh": {
@@ -1760,7 +1761,8 @@ export const LOCALES: Record<string, Locale> = {
       "Install the simulation component first.": "请先安装仿真组件。",
       "Confirm supervised acceptance before opening this unverified runtime.": "打开未经实机验收的运行组件前，请确认由你监督测试。",
       "Top camera": "顶部相机",
-      "Wrist camera": "腕部相机"
+      "Wrist camera": "腕部相机",
+      "Last device check": "上次设备检查"
     }
   }
 };
