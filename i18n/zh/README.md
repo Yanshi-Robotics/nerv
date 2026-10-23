@@ -1,217 +1,144 @@
 # NERV
 
-[English](../../README.md) · [架构](#架构) · [Runtime SDK](#运行插件) · [视觉模型配置](#视觉模型)
+[English](../../README.md) · [快速安装与启动](#快速安装与启动) · [SO-101 指南](standard-so101.md) · [架构](architecture.md) · [Runtime SDK](../../packages/nerv-runtime-sdk/README.md)
 
-NERV 将视觉语言模型与机器人、传感器和技能连接起来。Agent 与用户交流并提交机器人任务，System 2 规划和监督执行，本地运行后端负责设备连接和动作下发。
+NERV 将视觉语言模型、机器人观测与本地技能执行连接起来。你可以运行已经训练好的策略，通过有限动作工具控制机器人，或让视觉模型监督任务，同时继续与 Agent 对话。
 
-## 概览
+0.6.3 是开发候选版，标准 SO-101 与 LeRobot 是首个真机产品，实机验收尚未完成。NERV 接入外部训练好的策略和已有标定，不承担训练。
 
-一个 NERV 实例绑定一台机器人和一个运行环境，仅一条当前对话拥有控制权。仿真与现实是启动前的并列选择，各自记录准备、校准和验收状态。更换运行环境需要结束当前实例；本版尚未实现运行中切换。
+## 快速安装与启动
 
-NERV Agent 持续与用户对话，独立的 System 2 负责观察、规划和监督机器人。普通消息不打断任务；明确的目标更新和取消通过任务接口执行。操作员负责准备设备、启用控制和急停。解除急停后，设备回到未使能的待命状态，之前的任务作废。
+先安装 [Node.js 22 及以上版本](https://nodejs.org/en/download)（包含 npm）和 [uv](https://docs.astral.sh/uv/getting-started/installation/)。启动器负责管理 Python 3.12，以及相互独立的主程序和设备环境。课程训练环境保持独立。
+
+下载或克隆包含启动器的源码后，在仓库根目录安装一次。以下命令可用于 POSIX shell 或 Windows PowerShell；硬件支持范围见后文。
+
+```bash
+npm install --global --install-links .
+```
+
+安装过程会构建并包含网页。`--install-links` 会安装程序副本，避免命令依赖原源码目录。之后可以在任意目录启动：
+
+```bash
+nerv
+```
+
+浏览器打开 [http://127.0.0.1:8000](http://127.0.0.1:8000)。首次启动安装主程序的 Python 依赖，后续复用该环境。同一个进程提供网页和 API，无需另起前端服务。按 Ctrl+C 结束服务。
+
+```bash
+nerv doctor
+```
+
+诊断命令显示版本、数据目录和配置，不连接硬件。用户数据统一默认保存在 `~/.nerv`，日常使用无需设置 NERV_HOME。如需指定其他端口：
+
+```bash
+nerv serve --port 8100
+```
+
+通过已发布的 GitHub 源码归档直接安装，或使用 npx 启动，详见 [GitHub 安装指南](github-install.md)。这两种方式均不需要在 npm 注册表发布包，但必须使用已包含启动器的远端提交；尚未推送的本地候选版无法从 GitHub 下载。指南也包含本地安装包、更新与 wheel 安装方式。
+
+## 接入标准 SO-101
+
+首版产品固定为单台 SO-101 follower、LeRobot 0.6.1，以及名为 top、wrist 的两个相机，预设为 640 × 480、30 FPS。五个臂关节使用角度，夹爪使用 LeRobot 的 0–100 位置表示。推理不需要 leader。学生填写连接信息并导入已有产物，无需配置关节映射。
+
+设备环境单独安装一次：
+
+```bash
+nerv runtime install lerobot0.6.1
+```
+
+```bash
+nerv runtime list
+```
+
+安装器会配置 LeRobot 与 Feetech，不连接机械臂。张量计算依赖的下载量大于主程序。随后按 [SO-101 配置与策略指南](standard-so101.md)完成接入：
+
+1. 打开“设备与策略接入”。只有一个已安装 Runtime 时，界面自动填写适配器和 Python 路径。读取配置选项，再填写串口、机器人 ID、已有标定目录、相机配置和推理设备。
+2. 使用 ACT 时，导入包含原始权重、原生处理器和统计量的本地导出目录。NERV 检查固定设备契约并记录文件指纹。模型缺少关键语义时，需要确认标准课程约定；张量形状不能证明单位和关节顺序。
+3. 连接前完成 inspect 和 check。check 只加载模型，不连接硬件；连接后的“无动作策略检查”才会在未使能状态下使用真实观测试推理。
+4. 创建真机会话，检查接入权限，由操作者准备设备。准备过程可能启用电机扭矩。核对两个相机画面后，再单独允许运动。
+
+候选版真机连接仍标记为未验收，需要按指南显式启用监督验收设置。默认拒绝启动该连接是预期行为。安装 Runtime 和打开网页都不会自动连接或使能机器人。
+
+| 控制方式 | 实际执行内容 | 用户提供的内容 |
+|---|---|---|
+| 人工运行 ACT | worker 中执行 ACT 原生预处理、推理与后处理 | 自己训练的标准 ACT 产物；选择“仅操作员”，无需 VLM 密钥 |
+| VLM 直接控制 | 视觉模型选择有限的关节与夹爪工具，本地完成插值和反馈 | 已配置的视觉模型；无需 ACT 检查点 |
+| VLM 监督 ACT | System 2 观察并监督 worker 内的策略执行 | 已配置的视觉模型，以及训练好的 ACT 产物 |
+
+三种方式共用设备连接和动作调度器，切换控制器前须停止当前执行。动作结束不代表抓取成功。请求目标、LeRobot 返回的实际下发目标和实测位置分别记录。
 
 ## 架构
 
-NERV Agent 将机器人目标交给 System 2；System 1 执行受限动作和策略，Robot Runtime 独占设备与传感器。World Control 管理仿真世界干预。宿主协调控制权、实例生命周期与事件记录。机器人驱动与策略推理运行在独立的 worker 环境中。
+每个实例绑定一台机器人和一种环境，由一个活动会话持有控制权。NERV Agent 负责对话，并将目标交给 System 2；System 2 独立管理模型上下文、任务状态和取消信号。普通聊天不会取消任务。
 
-<div align="center"><img src="../../assets/readme/images/layers.svg" alt="NERV Agent 对话、System 2 任务监督、System 1 执行与仿真世界控制的分层关系" width="960"></div>
+<div align="center"><img src="../../assets/readme/images/layers.svg" alt="Agent 对话与 System 2 任务监督使用独立上下文，本地执行和设备管理与仿真世界控制分开" width="960"></div>
 
-原有节点拓扑继续作为传输基础：
+主进程负责会话、控制授权、Runtime 生命周期与事件日志。独立 worker 持有机器人、相机和本地执行器。System 1 表示这一执行层，不是第三个 Python 环境。
 
-<div align="center"><img src="../../assets/readme/images/structure.svg" alt="NERV 连接 Agent harness、独立机器人运行后端、世界与工具服务，并区分观测和操作员控制路径" width="860"></div>
+标准 SO-101 适配器只创建一个 LeRobot 设备实例。ACT 通过原生处理链生成候选位置，VLM 直接工具生成有限的位置目标；两者都经过时效、授权与动作检查，最终调用同一个 `robot.send_action()`。主进程不导入 LeRobot，也不加载策略张量。
 
-Agent 与 System 2 分别使用独立的 harness、上下文、摘要、供应商续接状态和用量记录。两者共用追加式事件日志，通过任务视图区分各自记录。运行后端声明传感器与技能，界面读取这些能力。仿真与现实各有独立的环境绑定。操作员的场景控制和仿真真值不进入 Agent 观测。模块边界由[接口类型](../../src/nerv/nerve/)定义。
+[架构与控制指南](architecture.md)进一步说明 Agent 与 System 2 的分工、观测流、模型续接、会话记忆、仿真控制和 Runtime SDK。核心负责接口协调，机器人与模型的具体实现放在适配器和策略后端中。SmolVLA、GR00T 属于未来接入方向，当前尚未交付。
 
-## 当前状态
+## 操作与模型
 
-当前源码版本为 **0.6.3**。本地 `v0.5.0` 标签保留审计基线。1.0.0 发布前须由操作员完成冻结条件下的实机试验和故障检查。
+右侧栏可切换 Agent 对话和操作工具箱。“停止回复”取消当前对话响应，“停止任务”取消本地执行，“急停”撤销运动权限并尝试保持实测姿态。解除急停后回到未使能状态，不恢复旧任务。
 
-| 接入对象 | 当前范围 |
+连接、加载策略、允许运动和断开是不同操作。普通断开保留扭矩，显式卸力需要操作者支撑机械臂。软件保持不能代替断电；连接丢失时，系统无法确认保持命令已经执行。
+
+使用视觉控制时，打开“模型与密钥”。NERV 通过注册表提供 OpenAI、DeepSeek、Gemini、xAI 和 Anthropic 的视觉模型。提交新密钥或替换密钥时，保存前会发起一次付费识图检查；打开设置和创建会话不会请求模型。对话模型和任务模型分别在对应控件中选择。已有登记密钥无需通过可选诊断才能使用。
+
+“仅操作员”会话可以在没有 API 凭据的情况下人工运行 ACT；VLM 会话需要登记密钥。机器人相机画面进入模型观测，仿真真值和操作员专用全景不会进入。[完整模型目录与控制说明](architecture.md#视觉模型)另列于指南。
+
+## 数据与安装目录
+
+安装版和源码版均使用 `~/.nerv` 保存会话、日志、策略清单、设备配置和模型设置。启动器把主程序与设备环境放在 envs 下，把安装记录放在 runtimes 下。隔离测试可以显式设置 NERV_HOME。
+
+环境配置写入 `~/.nerv/.env`，格式见 [.env.example](../../.env.example)。API 密钥来自私有凭据存储，不读取项目或 shell 的 API 密钥变量。POSIX 系统使用私有凭据文件，Windows 使用系统凭据管理器。训练权重和标定文件保留原位置；npm 管理启动器代码和自身下载缓存。
+
+更新按源码指纹选择环境，保留已有数据和旧环境，不关闭正在运行的服务。旧版保存在仓库内的会话不会自动合并到用户目录，具体规则见[安装与更新](github-install.md#数据目录与更新)。
+
+## 支持范围与验证
+
+| 连接 | 当前范围 |
 |---|---|
-| SO-101／现实 | LeRobot 0.6.1 适配器、俯视与腕部相机、原生 ACT 加载、持续执行和本地监督。尚待实机验收。 |
-| G1／仿真 | 保留现有 MuJoCo 世界与步态控制器，CPU llvmpipe 渲染与控制回归已通过。 |
-| SO-101／仿真 | 三套 MuJoCo 桌面预设，可替换刚性与柔性物体，提供俯视／腕部相机和有限幅度的关节／夹爪控制。尚无任务策略或仿真 ACT 部署。 |
-| G1／现实 | 保留旧配置，当前绑定已禁用。 |
-| 视觉模型 | 预置 OpenAI、DeepSeek、Gemini、xAI 和 Anthropic 的视觉模型，按供应商管理密钥，按型号选择推理强度。接口检测与实机验收分别记录。 |
+| SO-101 真机 | 标准 LeRobot 0.6.1 产品、原生 ACT、有限直接控制与共享观测；Linux 实机验收待完成 |
+| G1 仿真 | 保留 MuJoCo 世界与步态控制器，以及 CPU 渲染的控制回归 |
+| SO-101 仿真 | 三套桌面场景、刚性与柔性物品配置、关节与夹爪工具；未部署 ACT 或汉诺塔任务策略 |
+| G1 真机 | 旧连接配置保持禁用，不提供当前执行支持 |
+| 视觉模型 | 五家供应商的预置模型；密钥检查与机器人任务验收分别进行 |
 
-ACT 技能使用原实验 100,000 步的 `snack_into_box` 检查点。仓库只保存文件哈希与输入契约，不包含模型权重。策略是否自行返回 Rest，仍须实机检验。
+Linux 是主要硬件验收目标。Windows 原生、WSL2、Apple Silicon macOS 和 Intel macOS 都需要分别验证依赖与硬件，目前仍为实验性支持。软件 CI 不能证明 USB 串口、相机或加速设备兼容。
 
-## 快速开始
+仿真资产属于可选内容，学生启动器安装不包含这些资产。源码开发者可以初始化世界与策略子模块，再安装主程序的仿真依赖，步骤见[开发说明](../../CONTRIBUTING.md)和 [SO-101 工作台指南](../../worlds/scenes/so101_workbench/README.md)。切换真实与仿真环境需要结束当前实例。
 
-从 GitHub 安装并使用 `nerv` 或 `npx` 启动，请先看[安装指南](github-install.md)。正常启动统一把用户数据保存在 `~/.nerv`，无需手动设置 NERV_HOME。启动器分别管理主程序和设备 Python 环境。远端归档安装命令需要使用已包含启动器的公开提交。
-
-以下源码开发方式仍然可用：
-
-需要 Python 3.11 及以上版本，以及 Node.js 和 npm。在本仓库执行：
-
-```bash
-python3 -m venv .venv
-.venv/bin/python -m pip install -e ./packages/nerv-runtime-sdk -e '.[platform,dev]'
-npm --prefix frontend ci
-npm --prefix frontend run build:static
-.venv/bin/nerv serve --port 8000
-```
-
-浏览器打开 `http://localhost:8000`。静态前端与后端使用同一来源。前端开发命令为 `npm --prefix frontend run dev`，使用已分配的 8100 端口。
-
-打开“模型与密钥”，选择供应商，输入密钥后点击“保存密钥”。NERV 先检查本地存储是否可写，再使用该供应商的一个已启用模型发送一次付费图像请求。只有回答与生成的测试图相符，才会保存密钥；界面仅显示保存结果，测试失败保留原密钥。模型和推理强度在会话中选择。创建会话要求已登记密钥，但不会请求供应商。也可建立不连接机器人的对话，现实会话不会自动准备设备。
-
-环境配置写入 `~/.nerv/.env`，格式可参考 [.env.example](../../.env.example)。模型设置和密钥保存在仓库外的 `NERV_HOME` 中，默认位置为 `~/.nerv`。密钥存放在 `credentials.json`，模型选择、强度和检测记录存放在 `vlm.json`。目录权限为 0700，文件权限为 0600。视觉模型注册表不读取 shell 或项目 `.env` 中的 API 密钥。请在面板中重新填写已有密钥；升级不会修改旧文件。
-
-## 机器人接入
-
-G1 仿真继续使用现有世界与策略子模块，并需要仿真依赖：
-
-```bash
-git submodule update --init --recursive
-.venv/bin/python -m pip install -e '.[sim]'
-```
-
-在界面选择 G1、仿真和兼容世界。原有世界生命周期、场景工具和操作员视图继续保留。场景真值与第三人称相机不进入 Agent 的观测。
-
-SO-101 仿真使用同一组仿真依赖，在界面选择 `so101-pick-place`、`so101-sort-snacks` 或 `so101-hanoi-five`。[桌面场景说明](../../worlds/scenes/so101_workbench/README.md)提供物品替换、弹性柔性体与布片、源配置和验证方式。重新生成三套标准场景：
-
-```bash
-.venv/bin/python worlds/tools/make_workbench.py --all
-```
-
-复位恢复指定的机械臂初始姿态和全部物体状态。场景验证覆盖物理、相机、电机指令和末端位置可达性；自主抓取与无碰撞路径仍需对应控制器和实验验证。
-
-SO-101 现实环境使用独立的适配器环境，其中只安装 SDK 与 LeRobot 适配器：
-
-```bash
-python3 -m venv .venv-lerobot
-.venv-lerobot/bin/python -m pip install -e ./packages/nerv-runtime-sdk -e ./packages/nerv-runtime-lerobot
-.venv-lerobot/bin/nerv-runtime discover
-.venv-lerobot/bin/nerv-runtime check --provider lerobot0.6.1
-```
-
-将 `NERV_LEROBOT_PYTHON` 指向该解释器，配置 `SO101_PORT`、校准时使用的 `SO101_ID`、原生相机 JSON 路径 `SO101_CAMERA_CONFIG`，以及冻结检查点目录 `SO101_ACT_CHECKPOINT`。相机、校准、场景和初始姿态须与训练条件匹配。现实配置继续标为 `verified: false`；`NERV_ALLOW_UNVERIFIED=1` 仅允许进入受监督的验收会话。
-
-由操作员选择现实环境、创建会话，点击“准备设备”，审阅 worker 的工具清单，加载策略后启用控制。工具清单审阅属于初始设置，Agent 的每次工具调用不需要人工批准。准备设备会建立连接，并可能启用电机力矩；加载模型不会发送动作。技能结束后设备保持连接。软件急停保持姿态，不等同于断电，也不能代替硬件急停。
-
-## 对话与世界控制
-
-右侧聊天区属于 NERV Agent，机器人执行和手动控制期间仍可交流。**停止回复**仅取消当前对话决定；**停止任务**等待本地执行确认；**急停**锁定动作，操作员解除后回到未授权待命。
-
-中间相机外框内显示 System 2 的公开决策摘要、执行反馈和宿主事件。动态气泡带有来源和时间，不进入相机原始帧或策略输入。独立事件流支持重连与去重，历史会话不显示实时画面。
-
-业务能力分为五类：`agent_tools` 提供计算和会话历史；`robot_actions` 提供机器人动作和技能；`robot_tasks` 管理任务；`world_control` 修改仿真配置与状态；`instance_control` 管理实例生命周期。供应商的函数调用和 MCP 只负责传输，不合并这些能力的权限。
-
-在**新建会话**中选择 SO-101、仿真和一个桌面场景，再配置该场景支持的物品槽位。物品类型、标称尺寸和质量来自世界目录，柔性材料参数尚未经过实物标定。每个实例独立生成 MJCF、配置与来源哈希。
-
-**工具箱 → 仿真世界**与 Agent 的世界命令使用同一服务。重置保留所选物品和世界进程，结束任务并撤销动作授权。改变物品拓扑时使用**结束并重建实例**；旧会话保留历史，不能控制新实例。天气、家具、风格等能力只有在世界声明并实现后才会出现；当前桌面场景提供物品替换与重置。现实环境拒绝修改世界属性。
-
-创建会话要求已登记模型密钥。创建、查看和手动操作仿真不会发起模型请求。语言控制需要配置 VLM，并产生调用费用。当前桌面仿真没有部署 ACT 或哈诺塔执行策略。长期自主目标命名为 **ultimate**；本版仍是由 Agent 协调操作的系统。
+原始 100,000 步 snack_into_box ACT 检查点已有 CPU／CUDA 张量前向证据，尚未完成实机验收，权重不随项目分发。软件替身测试不能证明抓取成功。[发布验收指南](../../guides/release-acceptance.md)分别规定 ACT 监督、VLM 直接控制的试验和故障检查。1.0.0 仍以操作者实机验收为发布条件，ultimate 表示未来自主运行目标。
 
 ## 演示与界面
 
-以下录像和截图来自早期 G1 仿真版本，展示原有的导航与操作员视图。0.6 版已调整模型设置和设备准备流程。
+下方 G1 录像来自早期仿真版本，展示头部相机观测与步态技能，不作为 SO-101 真机证据。指令为“Walk to the living room.”。完整回合未剪辑，以 2.5 倍速播放，另有[原速 MP4](../../assets/readme/media/walk-to-the-living-room.mp4)。
 
-<div align="center"><img src="../../assets/readme/images/walk-to-the-living-room.gif" alt="早期 G1 仿真：语言模型观察头部相机，并调用步态技能走向客厅" width="960"></div>
-
-收到“Walk to the living room.”后，Agent 根据头部相机画面调用步态技能。录像展示一轮完整指令，未剪辑，以 2.5 倍速播放，另有[原速 MP4](../../assets/readme/media/walk-to-the-living-room.mp4)。追拍相机仅供操作员查看。
-
-<div align="center"><img src="../../assets/readme/images/web-session.png" alt="早期仿真会话界面：机器人观测、操作员追拍画面与对话" width="960"></div>
-
-会话界面并列显示传感器画面与对话，并区分机器人观测和操作员专用视图。运行后端提供的传感器名称决定显示哪些相机。
-
-NERV Agent 每轮决策都会接收机器人相机的新鲜快照，普通聊天也可以看图。界面中显示或隐藏画面不会改变模型输入。仿真相机可以在准备动作执行器之前读取；真实相机仍需操作员准备设备。SO-101 桌面场景的俯视和腕部画面并排显示，全景放在下一行并标注“上帝视角”。全景不进入 Agent 输入，任务监督仍由 System 2 负责。
+<div align="center"><img src="../../assets/readme/images/walk-to-the-living-room.gif" alt="早期 G1 仿真：根据相机观测调用步态技能走向客厅" width="960"></div>
 
 <details>
-<summary>更多界面与仿真场景</summary>
+<summary>早期界面与世界视图</summary>
 
-右侧栏的**工具箱**集中提供设备接入、准备、运动授权、机器人动作、世界控制、相机与 System 2 设置，以及场景测试。工具箱关闭后，顶部操作栏仍显示**停止任务**和**急停**。右侧栏在 **Agent 对话**与**工具箱**之间切换，切换时保留聊天草稿和正在返回的回复，不停止机器人任务。中央保留相机与真实机器人动态。控制面板显示注册项、节点状态与会话。
+0.6 版已经调整模型、任务和设备接入控件。保留的截图展示早期导航、观测与操作员视图；追拍相机和 World Explore 仅供操作员使用。
 
-**允许接入**针对操作员已查看的能力与说明。能力变化后须重新确认；节点离线时无法允许接入。接入许可不会自动准备设备、授权运动或启动任务。
+<div align="center"><img src="../../assets/readme/images/web-session.png" alt="早期会话界面" width="960"></div>
+<div align="center"><img src="../../assets/readme/images/web-teleop.png" alt="早期操作员控件" width="960"></div>
+<div align="center"><img src="../../assets/readme/images/web-dashboard.png" alt="早期注册表与会话控制面板" width="960"></div>
+<div align="center"><img src="../../assets/readme/images/world-explore/apt-scene-test.png" alt="公寓中的操作员场景测试" width="960"></div>
+<div align="center"><img src="../../assets/readme/images/world-explore/apt-cutaway.png" alt="操作员查看的公寓布局" width="960"></div>
+<div align="center"><img src="../../assets/readme/images/world-explore/house-west_pool-night.png" alt="仿真住宅泳池露台夜景" width="960"></div>
 
-<div align="center"><img src="../../assets/readme/images/web-teleop.png" alt="早期遥控界面：急停与按工具生成的控制卡片" width="960"></div>
-
-<div align="center"><img src="../../assets/readme/images/web-dashboard.png" alt="早期控制面板：注册表、节点、信任状态与会话" width="960"></div>
-
-World Explore 展示公寓与住宅资产。场景测试由操作员进行，其任务状态和结果不进入 Agent 观测，也不证明机器人具有相应自主技能。G1 已发布的平地步态不提供家具操作、抓取、自主坐下或上下楼梯技能。
-
-<div align="center"><img src="../../assets/readme/images/world-explore/apt-scene-test.png" alt="操作员场景测试：罐子放在冰箱层板上，冰箱门已关闭" width="960"></div>
-
-<div align="center"><img src="../../assets/readme/images/world-explore/apt-cutaway.png" alt="World Explore 公寓剖面：房间与设施标记" width="960"></div>
-
-<div align="center"><img src="../../assets/readme/images/world-explore/house-west_pool-night.png" alt="MuJoCo 住宅夜景中的泳池露台与西侧步道" width="960"></div>
-
-场景测试、G1 路线和浏览器视图的说明见[世界库工具](../../worlds/docs/explore/README.md)。
+[世界库工具](../../worlds/docs/explore/README.md)介绍场景测试与浏览器视图。G1 的平地步态不提供抓取、家具操作、自主坐下或上下楼梯能力；场景检查不能证明自主任务成功。
 
 </details>
 
-## 视觉模型
+## 扩展与贡献
 
-面板按供应商管理密钥，只显示是否已保存，不向浏览器返回保存的值。面板列出支持的模型，不提供模型或推理强度选择。同一供应商的已注册模型共用密钥，实际使用权限取决于供应商账户。聊天区读取同一注册表。纯文字模型和 Mock 不进入正式运行目录，也不作为自动回退。
+独立安装的 [Runtime SDK](../../packages/nerv-runtime-sdk/README.md)定义插件发现，以及协议 2 的生命周期、动作与观测接口。[只读示例](../../examples/inspection-runtime/)展示插件边界。设备 SDK 留在 worker 中，策略后端只生成标准目标，不打开硬件。
 
-OpenAI、DeepSeek 和 xAI 分别使用对应的 Responses 协议参数。Gemini 使用无服务端会话存储的 Interactions API，Claude 使用原生 Messages 流式接口。带签名的思考内容和推理续接项只会传回匹配的供应商接口。界面按型号展示合法推理强度；未指定时省略参数，使用供应商默认值。系统分别记住上次模型和每个型号的强度。当前回合或机器人执行尚未结束时，修改会被拒绝。
+源码环境和测试见 [CONTRIBUTING.md](../../CONTRIBUTING.md)，模块边界见 [AGENTS.md](../../AGENTS.md)，版本历史见 [CHANGELOG.md](../../CHANGELOG.md)。报告问题时提供版本和脱敏后的复现步骤，不附带密钥、未经检查的相机画面或私有配置归档。
 
-| 供应商 | 预置视觉模型 | 原生推理强度 |
-|---|---|---|
-| OpenAI | GPT-6.1 Sol、GPT-6 Astra | low、medium、high、xhigh、max |
-| DeepSeek | V4.1 Flash | none、low、high、max |
-| Gemini | 3.8 Flash、3.5 Flash-Lite | Flash：low、medium、high；Lite 另支持 minimal |
-| xAI | Grok 4.7、Grok 4.3 | 4.7：low、medium、high、xhigh；4.3：none、low、medium、high |
-| Anthropic | Claude Opus 5.5、Claude Sonnet 5.5 | low、medium、high、xhigh、max |
-
-模型能力依据于 2026-10-20 核对的供应商文档：[OpenAI](https://developers.openai.com/api/docs/models/gpt-6.1-sol)、[DeepSeek](https://api-docs.deepseek.com/api/create-response/)、[Gemini](https://ai.google.dev/gemini-api/docs/thinking)、[xAI](https://docs.x.ai/developers/model-capabilities/text/reasoning)、[Anthropic](https://platform.claude.com/docs/en/build-with-claude/effort)。只有操作员提交密钥登记表单时才发送一次识图请求。打开设置、切换选项和创建会话均不会请求供应商。
-
-可选诊断 API 检查图像输入、工具调用和多轮续接。诊断结果不限制创建会话或使用模型；这两项只要求已登记非空密钥。已有密钥无需重新登记。密钥后来失效时仍可创建会话，调用时显示明确错误。失败回执保留用户输入，并提供重试和模型设置入口；重试不会重放旧机器人动作。
-
-地址、型号、强度或凭据变化后，原有诊断和实机记录不再适用。一次密钥登记通过，不代表其他型号、通用视觉能力或机器人能力已通过验收。Agent 回复失败不会取消独立任务；System 2 故障仍按本地停止与监督规则处理。
-
-## Agent harness
-
-<div align="center"><img src="../../assets/readme/images/flow.svg" alt="持续技能执行流程：观测、保存并检查工具调用、取得执行编号、监督本地策略并报告观测到的结果" width="860"></div>
-
-图中展示 ACT 这类持续运行的技能。启动后先返回执行编号，System 2 可以在 worker 运行本地策略时继续观察、查询执行状态。直接读取类工具和已有 G1 技能也可在工具调用中返回结果。等待模型响应时，本地停止和监督机制继续生效。
-
-默认的 `AgentHarness` 通过可替换接口获得宿主 Link、模型供应商、上下文管理器和摘要器，不持有机器人对象，也不加载 ACT。
-
-每个会话独立保存追加式事件日志、图片资产、任务和笔记。旧 JSON 会话执行一次性迁移，并保留 `.legacy` 源快照。JSON 快照可从日志重建；历史检索和分页阅读仅能访问当前会话。
-
-上下文预算覆盖指令、笔记、摘要、完整工具调用组、工具定义、当前图片、供应商续接项和输出预留。Token 与图片预算属于估算；供应商返回实际用量时另行记录。摘要使用不带工具、图片及主对话推理续接的独立请求。摘要失败时保留原文；无法满足请求预算则暂停。
-
-进程重启后，未结束的回合被记为中断、结果未知。系统恢复历史，不重放动作。新聊天消息仅使 Agent 的旧回复失效。明确更新任务时递增任务版本，停止旧执行后重新规划。任务启动时冻结 System 2 的模型配置和推理强度。
-
-## 运行插件
-
-`nerv-runtime-sdk` 可独立安装，不依赖 NERV 核心、厂商 SDK、PyTorch 或 MuJoCo。Python worker 在自己的环境内发现 `RuntimeProvider` 入口。非 Python 服务可实现相同 HTTP／MCP 协议，并登记服务 URL。
-
-模块导入和 `describe()` 不得操作设备或 GPU。准备、加载策略、使能、执行、取消、急停、解除和断连分别处理。机器人描述、环境绑定和策略资产各有独立契约。宿主不会向 worker 注入整仓源码或模型密钥。
-
-[Runtime SDK 指南](../../packages/nerv-runtime-sdk/README.md)与[只读插件示例](../../examples/inspection-runtime/)说明协议 2 的接入方式。插件须提供 `actions()`；不兼容的 worker 在准备前被拒绝。SDK 提供插件发现、协议接口和只读一致性检查。
-
-## 验证
-
-原始 ACT 检查点与原生处理器已通过 CPU 和排队执行的 CUDA 张量前向检查。这些检查只验证数值契约，不代表抓取表现。
-
-软件测试明确使用模型、相机和执行器替身，不构成实机演示。CPU 生命周期测试需要适配器源码，可在不向主环境安装原生驱动的情况下安装：
-
-```bash
-.venv/bin/python -m pip install --no-deps -e ./packages/nerv-runtime-lerobot
-.venv/bin/python -m ruff check src packages tests
-.venv/bin/python -m pytest tests --ignore=tests/test_humanoid_family.py --ignore=tests/test_world_bus.py --ignore=tests/test_e2e_apt.py -q
-npm --prefix frontend run typecheck
-npm --prefix frontend run check:locales
-npm --prefix frontend run build:static
-```
-
-完整仿真验证还须在可用的 MuJoCo 渲染环境中运行上述三份被排除的测试。本机 GPU 工作遵守队列规则；实机测试与付费接口检测由操作员明确触发。
-
-## 版本管理
-
-版本历史继续保留。核心包、CLI 和 HTTP 版本统一来自 `src/nerv/_version.py`。独立安装的 SDK 与适配器在各自包元数据中声明匹配的开发版本。
-
-发布顺序为 0.5.0 审计基线、0.6.x 开发，再于冻结配置的 10 次接入验收及故障测试通过后发布 1.0.0。单元测试通过或模型进入注册表不会自动触发发布。版本记录见 [CHANGELOG.md](../../CHANGELOG.md)。
-
-## 开发
-
-[AGENTS.md](../../AGENTS.md) 说明仓库分层。服务契约由[接口类型](../../src/nerv/nerve/)和 [Runtime SDK](../../packages/nerv-runtime-sdk/src/nerv_runtime_sdk/) 定义。场景和策略继续作为独立子模块维护。
-
-NERV 使用 [MIT 许可证](../../LICENSE)。厂商 SDK、模型权重、训练数据及外部资产遵守各自的许可证。
-
-## 标准 SO-101 候选版
-
-0.6.3 候选版增加标准设备配置、本地 ACT 导入、有限的关节与夹爪控制，以及无需模型密钥的人工操作会话。主程序安装包包含网页。真机验收尚未完成，Windows、WSL 和 macOS 的硬件支持仍为实验性状态。两环境安装、已有标定、策略检查与停止操作见 [学生指南](standard-so101.md)。NERV 不承担策略训练。
+NERV 使用 [MIT 许可证](../../LICENSE)。厂商 SDK、模型权重、训练数据和外部资产保留各自的许可证。

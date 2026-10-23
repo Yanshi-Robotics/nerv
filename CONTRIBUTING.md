@@ -28,6 +28,41 @@ submodules. Headless Linux may need `MUJOCO_GL=egl LIBGL_ALWAYS_SOFTWARE=1`. Run
 tests and report their environment. Build candidate wheels with
 `python scripts/build_release.py`; students install the built wheels without Node.js.
 
+From the repository root on Linux or macOS, the existing simulation setup is:
+
+```bash
+git submodule update --init --recursive
+```
+
+```bash
+.venv/bin/python -m pip install -e '.[sim]'
+```
+
+After building the static UI as described in the README installation guide, start
+the development Python host:
+
+```bash
+.venv/bin/nerv serve
+```
+
+The optional frontend development server uses port 8100:
+
+```bash
+npm --prefix frontend run dev
+```
+
+G1 worlds use their registered gait skills. The SO-101 worlds `so101-pick-place`,
+`so101-sort-snacks` and `so101-hanoi-five` use bounded joint/gripper control, not a
+deployed ACT policy. The standard workbench scene generator is:
+
+```bash
+.venv/bin/python worlds/tools/make_workbench.py --all
+```
+
+See the [workbench guide](worlds/scenes/so101_workbench/README.md) for scene configuration.
+On Windows, use the corresponding `.venv\Scripts` executables; hardware and rendering
+support still require platform-specific verification.
+
 ## Review and evidence
 
 Keep a pull request focused and describe the resulting behavior, tests and remaining
