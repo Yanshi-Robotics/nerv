@@ -22,7 +22,9 @@ The installation builds and includes the web interface. `--install-links` instal
 nerv
 ```
 
-Open [http://127.0.0.1:8000](http://127.0.0.1:8000). The first launch installs the host's Python dependencies; later launches reuse them. The same process serves the interface and API. No separate frontend server is needed. Ctrl+C ends the server.
+NERV opens your default browser after the server is ready, normally at [http://127.0.0.1:8000](http://127.0.0.1:8000). The first launch installs the host's Python dependencies; later launches reuse them. The same process serves the interface and API. No separate frontend server is needed. Ctrl+C ends the server.
+
+For SSH or a session without a desktop browser, use `nerv serve --no-browser`. You can also open the address printed in the terminal manually.
 
 ```bash
 nerv doctor
