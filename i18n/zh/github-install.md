@@ -2,7 +2,7 @@
 
 [English](../../guides/github-install.md) · [NERV](README.md)
 
-0.7.1 是供本地测试的开发版。完整发布包包含主程序、Runtime SDK、LeRobot 适配器、依赖锁文件、SO-101 仿真资源、安装器和 release.json。实机验收和学生首次使用测试尚未完成。
+0.7.2 是供本地测试的开发版。完整发布包包含主程序、Runtime SDK、LeRobot 适配器、依赖锁文件、SO-101 仿真资源、安装器和 release.json。实机验收和学生首次使用测试尚未完成。
 
 ## 安装候选包
 

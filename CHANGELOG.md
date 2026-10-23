@@ -5,6 +5,13 @@ The 0.1.x entries below are the pre-release trail.
 
 ## [Unreleased]
 
+## [0.7.2] — 2026-10-24
+
+- Fix the journal dispatch barrier on Windows by opening a writable, non-truncating
+  file handle before flushing. Preserve every event and the existing durability check.
+- Add a regression that checks writable access and unchanged journal bytes.
+- Keep 0.7.1 assets immutable; existing installations update through `nerv update`.
+
 ## [0.7.1] — 2026-10-24
 
 Development release for local testing; physical and student acceptance remain pending.
