@@ -1,0 +1,2 @@
+# The locale generator emits LF; preserve its exact output on Windows checkouts.
+frontend/lib/locales.generated.ts text eol=lf
