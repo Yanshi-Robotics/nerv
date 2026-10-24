@@ -25,10 +25,7 @@ def catalog():
             except Timeout:
                 pass
     jobs.sort(key=lambda job: job.get("created_at", 0))
-    try:
-        manifest, _ = installation.read_manifest()
-    except (ValueError, OSError):
-        manifest = {"products": {}}
+    manifest, _ = installation.read_manifest()
     return {"modules": [{"id": key, "label": product["label"], "installed": key in installed,
                          "needs_repair": _needs_repair(key, installed),
                          "download_bytes": sum(manifest.get("files", {}).get(n, {}).get("bytes", 0)

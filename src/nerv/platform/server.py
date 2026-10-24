@@ -135,7 +135,11 @@ def modules_catalog():
     if not nerv._bound_runtime:
         nerv.registry = Registry()
         nerv.launcher.registry = nerv.registry
-    return catalog()
+    try:
+        return catalog()
+    except (ValueError, OSError):
+        raise HTTPException(503, "Component catalogue unavailable. Restore the release bundle "
+                            "for this NERV installation, then retry.") from None
 
 
 @app.get("/api/modules/jobs/{job_id}/log")
