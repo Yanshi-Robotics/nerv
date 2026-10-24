@@ -17,9 +17,21 @@ Install the native LeRobot environment separately for model integration or hardw
 
 ```bash
 python -m pip install -e ./packages/nerv-runtime-sdk -e '.[platform,dev]'
+```
+
+```bash
 python -m pip install --no-deps -e ./packages/nerv-runtime-lerobot
+```
+
+```bash
 python -m pytest tests/test_standard_product.py tests/test_lerobot_adapter.py tests/test_runtime_sdk.py tests/test_runtime_management.py -q
+```
+
+```bash
 npm --prefix frontend ci
+```
+
+```bash
 npm --prefix frontend run check:locales
 ```
 
@@ -84,3 +96,11 @@ unrelated logs. Share a minimal configuration with device paths replaced by plac
 Do not upload trained weights or camera recordings unless you have permission to distribute
 them. A report can describe model feature shapes and processor filenames without uploading
 the model.
+
+## AI contributors
+
+DeepSeek Harness and Codex have contributed AI-assisted development to NERV.
+Maintainers review changes and remain responsible for merge and release decisions.
+AI-assisted contributions follow the same scope, testing and evidence requirements
+as other changes. Planned Harness and plugin integrations are described in the
+[roadmap](ROADMAP.md).
