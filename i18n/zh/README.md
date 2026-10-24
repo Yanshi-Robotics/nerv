@@ -28,7 +28,7 @@ irm https://github.com/Yanshi-Robotics/nerv/releases/latest/download/install.ps1
 nerv
 ```
 
-服务就绪后自动打开浏览器，默认地址为 [http://127.0.0.1:8170](http://127.0.0.1:8170)。同一进程提供网页和 API。按 Ctrl+C 退出。端口被占用时，NERV 会报告错误，不结束其他进程，也不静默换端口。
+服务就绪后自动打开浏览器，默认地址为 [http://127.0.0.1:8170](http://127.0.0.1:8170)。同一进程提供网页和 API。按一次 Ctrl+C，等待退出完成后再启动 NERV。端口被占用时，NERV 会报告错误，不结束其他进程，也不静默换端口。
 
 ```bash
 nerv serve --no-browser

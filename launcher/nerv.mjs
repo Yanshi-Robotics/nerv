@@ -5,7 +5,7 @@ import {existsSync, mkdirSync, readFileSync, readdirSync, realpathSync, statSync
 import {homedir} from "node:os";
 import {dirname, join, resolve} from "node:path";
 import {fileURLToPath, pathToFileURL} from "node:url";
-import {spawnSync} from "node:child_process";
+import {spawn, spawnSync} from "node:child_process";
 
 export const root = dirname(dirname(fileURLToPath(import.meta.url)));
 export function home(env = process.env) { return resolve(env.NERV_HOME || join(homedir(), ".nerv")); }
@@ -32,6 +32,31 @@ function run(command, args, options) {
   const result = spawnSync(command, args, {stdio: "inherit", ...options});
   if (result.error) throw result.error;
   if (result.status !== 0) throw new Error(`${command} exited ${result.status ?? result.signal}`);
+}
+
+// The long-lived host must own the terminal until its cleanup is complete.
+export async function runHost(command, args, options = {}) {
+  if (process.platform !== "win32" && typeof process.execve === "function") {
+    process.execve(command, [command, ...args], options.env ?? process.env);
+    return;
+  }
+  // Older Node: isolate POSIX terminal signals and forward them once. Windows
+  // console children receive Ctrl+C themselves; child.kill would terminate them.
+  const isolated = process.platform !== "win32";
+  const child = spawn(command, args, {...options, stdio: "inherit", detached: isolated});
+  const interrupt = () => { if (isolated) child.kill("SIGINT"); };
+  const terminate = () => { if (isolated) child.kill("SIGTERM"); };
+  process.on("SIGINT", interrupt);
+  process.on("SIGTERM", terminate);
+  try {
+    process.exitCode = await new Promise((resolve, reject) => {
+      child.once("error", reject);
+      child.once("close", (code, signal) => resolve(code ?? (signal === "SIGINT" ? 130 : 1)));
+    });
+  } finally {
+    process.removeListener("SIGINT", interrupt);
+    process.removeListener("SIGTERM", terminate);
+  }
 }
 
 export const releaseBase = "https://github.com/Yanshi-Robotics/nerv/releases/latest/download";
@@ -104,7 +129,7 @@ export async function main(args = process.argv.slice(2)) {
       return;
     }
     const sharedLauncher = join(dataHome, "bootstrap", "launch.py");
-    run(installed.python, existsSync(sharedLauncher) ? [sharedLauncher, ...args] : ["-m", "nerv.platform.cli", ...args], {env});
+    await runHost(installed.python, existsSync(sharedLauncher) ? [sharedLauncher, ...args] : ["-m", "nerv.platform.cli", ...args], {env});
     return;
   }
   if (args[0] === "update") {
@@ -155,9 +180,7 @@ export async function main(args = process.argv.slice(2)) {
     console.log(`Runtime installed without connecting hardware.\n${python}`);
     return;
   }
-  const result = spawnSync(python, ["-m", "nerv.platform.cli", ...(args.length ? args : ["serve"])], {stdio: "inherit", ...options});
-  if (result.error) throw result.error;
-  process.exitCode = result.status ?? 1;
+  await runHost(python, ["-m", "nerv.platform.cli", ...(args.length ? args : ["serve"])], options);
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(realpathSync(process.argv[1])).href) {

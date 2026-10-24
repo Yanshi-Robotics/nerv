@@ -4,7 +4,7 @@ from __future__ import annotations
 import base64
 import json
 import os
-import time
+import threading
 from typing import Optional
 
 import httpx
@@ -25,12 +25,15 @@ from .hub import Nerv
 from .session import log as slog
 
 nerv = Nerv()
+_shutdown_requested = threading.Event()
 app = FastAPI(title="NERV", version=__version__)
 app.add_middleware(CORSMiddleware, allow_origins=config.CORS_ORIGINS, allow_methods=["*"], allow_headers=["*"])
 
 
 @app.middleware("http")
 async def operator_origin(request: Request, call_next):
+    if _shutdown_requested.is_set():
+        return JSONResponse(status_code=503, content={"detail": "NERV is shutting down"})
     if request.method not in ("GET", "HEAD", "OPTIONS"):
         from urllib.parse import urlsplit
         origin = request.headers.get("origin")
@@ -46,6 +49,12 @@ async def private_validation_error(_request, error):
     return JSONResponse(status_code=422, content={"detail": [
         {key: value for key, value in item.items() if key in ("loc", "msg", "type")}
         for item in error.errors()]})
+
+
+def request_shutdown():
+    """End observers and invalidate model decisions before HTTP request draining."""
+    _shutdown_requested.set()
+    nerv.request_shutdown()
 
 
 @app.on_event("shutdown")
@@ -726,7 +735,7 @@ def robot_events(sid: str, request: Request, after: int = Query(0, ge=0)):
             cursor = max(after, int(request.headers.get("last-event-id", "0")))
         except ValueError:
             cursor = after
-        while nerv.store.exists(sid) and not await request.is_disconnected():
+        while not _shutdown_requested.is_set() and nerv.store.exists(sid) and not await request.is_disconnected():
             snapshot = await asyncio.to_thread(nerv.tasks.snapshot, sid, cursor)
             cursor = snapshot["cursor"]
             yield "id: " + str(cursor) + "\ndata: " + json.dumps(snapshot) + "\n\n"
@@ -1018,11 +1027,11 @@ def nerv_dashboard() -> dict:
 def nerv_events(since: int = 0) -> StreamingResponse:
     def gen():
         last = since
-        while True:
+        while not _shutdown_requested.is_set():
             for e in slog.recent_ring(last):
                 last = e["id"]
                 yield f"data: {json.dumps(e, ensure_ascii=False, default=str)}\n\n"
-            time.sleep(config.SIGNAL_POLL_INTERVAL_S)
+            _shutdown_requested.wait(config.SIGNAL_POLL_INTERVAL_S)
     return StreamingResponse(gen(), media_type="text/event-stream")
 
 

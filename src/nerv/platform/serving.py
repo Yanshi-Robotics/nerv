@@ -1,6 +1,8 @@
 """Open the local operator interface only after the HTTP server has started."""
 from __future__ import annotations
 
+from contextlib import contextmanager
+import signal
 import logging
 import threading
 import webbrowser
@@ -28,9 +30,42 @@ def _open_browser(url: str) -> None:
 
 
 class BrowserServer(uvicorn.Server):
-    def __init__(self, config: uvicorn.Config, *, open_browser: bool = True):
+    def __init__(self, config: uvicorn.Config, *, open_browser: bool = True, before_shutdown=None):
         super().__init__(config)
         self.open_browser = open_browser
+        self.before_shutdown = before_shutdown
+        self._repeat_notice = False
+
+    @contextmanager
+    def capture_signals(self):
+        # NERV owns orderly terminal shutdown. Do not replay handled signals after
+        # lifespan cleanup: asyncio would turn a normal Ctrl+C into a traceback.
+        if threading.current_thread() is not threading.main_thread():
+            yield
+            return
+        signals = [signal.SIGINT, signal.SIGTERM]
+        if hasattr(signal, "SIGBREAK"):
+            signals.append(signal.SIGBREAK)
+        previous = {sig: signal.signal(sig, self.handle_exit) for sig in signals}
+        try:
+            yield
+        finally:
+            for sig, handler in previous.items():
+                signal.signal(sig, handler)
+
+    def handle_exit(self, sig, frame):
+        if not self.should_exit:
+            logger.info("Stopping NERV. Closing requests and managed processes; please wait.")
+            self.should_exit = True
+        elif not self._repeat_notice:
+            self._repeat_notice = True
+            logger.info("NERV is still shutting down. Repeated Ctrl+C will not skip cleanup.")
+
+    async def shutdown(self, sockets=None):
+        if self.before_shutdown is not None:
+            self.before_shutdown()
+        await super().shutdown(sockets=sockets)
+
 
     async def startup(self, sockets=None) -> None:
         await super().startup(sockets=sockets)

@@ -92,6 +92,8 @@ class Settings(BaseSettings):
     cors_origins: str = Field("http://localhost:8100", validation_alias="NERV_CORS_ORIGINS")
     serve_host: str = Field("127.0.0.1", validation_alias="NERV_SERVE_HOST")
     serve_port: int = Field(8170, validation_alias="NERV_SERVE_PORT")
+    serve_shutdown_timeout_s: float = Field(10, gt=0, validation_alias="NERV_SERVE_SHUTDOWN_TIMEOUT_S",
+        description="Maximum seconds to drain HTTP requests before cancelling them; device cleanup still runs.")
     scene_entry_timeout_s: float = Field(6.0, gt=0, validation_alias="NERV_SCENE_ENTRY_TIMEOUT_S")
     scene_entry_poll_s: float = Field(0.1, gt=0, validation_alias="NERV_SCENE_ENTRY_POLL_S")
 
@@ -141,6 +143,7 @@ MODEL_OLLAMA = _settings.model_ollama
 CORS_ORIGINS = [o.strip() for o in _settings.cors_origins.split(",") if o.strip()]
 SERVE_HOST = _settings.serve_host
 SERVE_PORT = _settings.serve_port
+SERVE_SHUTDOWN_TIMEOUT_S = _settings.serve_shutdown_timeout_s
 SCENE_ENTRY_TIMEOUT_S = _settings.scene_entry_timeout_s
 SCENE_ENTRY_POLL_S = _settings.scene_entry_poll_s
 

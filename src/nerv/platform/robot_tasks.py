@@ -93,6 +93,8 @@ class RobotTasks:
 
     def start(self, sid, goal, constraints="", current=lambda: True):
         with self._operations:
+            if self.hub._shutting_down:
+                raise ValueError("NERV is shutting down")
             session = self.hub.store.get(sid)
             if not session.body or self.hub._control_error(session):
                 raise ValueError("An active robot binding is required")
@@ -123,7 +125,7 @@ class RobotTasks:
     def _launch(self, sid, state, brain, generation, current=lambda: True):
         token = threading.Event()
         with self._lock:
-            if not current() or generation != self._generation.get(sid, 0) or sid in self._stopping:
+            if self.hub._shutting_down or not current() or generation != self._generation.get(sid, 0) or sid in self._stopping:
                 self._save(sid, status="cancelled", outcome="cancelled", message="Launch cancelled")
                 return
             try:
