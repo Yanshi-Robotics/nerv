@@ -620,7 +620,24 @@ export const moduleCatalog = () => domainRequest("/api/modules");
 export const installModule = (id: string) => domainRequest(`/api/modules/${id}/install`, {});
 export const cancelModuleInstall = (id: string) => domainRequest(`/api/modules/${id}/cancel`, {});
 
-export const installationLog = (id: string): Promise<{log: string}> => domainRequest(`/api/modules/jobs/${id}/log`);
+// A hung request must not freeze the live installer log indefinitely.
+const INSTALL_LOG_TIMEOUT_MS = 15000;
+export type InstallationLog = {log: string; bytes?: number; modified_at?: number | null; truncated?: boolean};
+export async function installationLog(id: string, signal?: AbortSignal): Promise<InstallationLog> {
+  const request = new AbortController();
+  const abort = () => request.abort();
+  if (signal?.aborted) request.abort();
+  signal?.addEventListener("abort", abort, {once: true});
+  const timeout = setTimeout(abort, INSTALL_LOG_TIMEOUT_MS);
+  try {
+    const response = await fetch(`${BASE}/api/modules/jobs/${id}/log`, {signal: request.signal, cache: "no-store"});
+    if (!response.ok) throw new Error(`Installation log unavailable (${response.status})`);
+    return await response.json();
+  } finally {
+    clearTimeout(timeout);
+    signal?.removeEventListener("abort", abort);
+  }
+}
 export const checkRelease = (): Promise<{available_version: string; installed_version: string | null; update_available: boolean}> => domainRequest("/api/releases/check");
 
 // Operator settings and robot identity use the same local host as the workspace.

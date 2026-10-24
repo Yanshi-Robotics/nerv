@@ -890,6 +890,25 @@
     "Updates": "Updates",
     "Unable to read version.": "Unable to read version.",
     "Loading version…": "Loading version…",
-    "Select a session or start a new one.": "Select a session or start a new one."
+    "Select a session or start a new one.": "Select a session or start a new one.",
+    "Installation location": "Installation location",
+    "Component environment": "Component environment",
+    "Component environments folder": "Component environments folder",
+    "Managed by this NERV instance. Your training environment is unchanged.": "Managed by this NERV instance. Your training environment is unchanged.",
+    "Current file download": "Current file download",
+    "Working on this stage; total progress is not available.": "Working on this stage; total progress is not available.",
+    "Hide installation log": "Hide installation log",
+    "Live installation log": "Live installation log",
+    "Installation log": "Installation log",
+    "Following latest output": "Following latest output",
+    "Follow latest output": "Follow latest output",
+    "Waiting for installer output…": "Waiting for installer output…",
+    "Log connection interrupted. Retrying automatically; the last output is kept.": "Log connection interrupted. Retrying automatically; the last output is kept.",
+    "Could not read the log. Close and reopen it to retry.": "Could not read the log. Close and reopen it to retry.",
+    "Last checked": "Last checked",
+    "Time since last output": "Time since last output",
+    "seconds": "seconds",
+    "Downloads and dependency resolution can be quiet. No new log output does not confirm a stalled installation.": "Downloads and dependency resolution can be quiet. No new log output does not confirm a stalled installation.",
+    "Showing the latest output; the full log is retained locally.": "Showing the latest output; the full log is retained locally."
   }
 }

@@ -114,8 +114,67 @@ def test_component_catalog_comes_from_release_manifest(tmp_path, monkeypatch):
     i.write_json(tmp_path / 'release.json', {'schema': 1, 'version': 'test', 'products': {
         'host': {'label': 'Host'}, 'fixture-simulator': {'label': 'Fixture simulation', 'files': []}}})
     assert module_jobs.catalog()['modules'] == [{'id': 'fixture-simulator', 'label': 'Fixture simulation',
-        'installed': False, 'needs_repair': False, 'download_bytes': 0}]
+        'installed': False, 'needs_repair': False, 'download_bytes': 0,
+        'installation_root': str(tmp_path / 'envs/fixture-simulator'), 'installation_path': None}]
     with pytest.raises(ValueError, match='Unknown official module'):
         module_jobs.start('arbitrary-command')
     with pytest.raises(ValueError, match='Unknown official module'):
         module_jobs.start('host')
+
+
+def test_install_reports_actual_environment_before_commands(tmp_path, monkeypatch):
+    monkeypatch.setenv('NERV_HOME', str(tmp_path / 'isolated preview'))
+    manifest, _ = bundle(tmp_path)
+    monkeypatch.setattr(i, 'uv_executable', lambda: 'uv')
+    events = []
+    def run(*args):
+        assert events[0]['installation_path'].startswith(str(i.home() / 'envs/host'))
+    monkeypatch.setattr(i, 'run', run)
+    result = i.install(manifest=manifest, progress=lambda **fields: events.append(fields))
+    assert i.python_at(events[0]['installation_path']) == __import__('pathlib').Path(result['python'])
+    assert events[-1] == {'phase': 'complete', 'state': 'complete'}
+
+
+def test_job_phase_clears_previous_file_progress(tmp_path, monkeypatch):
+    from nerv.platform import module_jobs
+    monkeypatch.setenv('NERV_HOME', str(tmp_path))
+    path = tmp_path / 'install-jobs/abc.json'
+    i.write_json(path, {'id': 'abc', 'module': 'fixture', 'phase': 'queued', 'state': 'queued'})
+    def install(module, *, cancelled, progress):
+        progress(phase='download', asset='bundle', downloaded=100, download_total=100)
+        progress(phase='dependencies')
+        state = json.loads(path.read_text())
+        assert state['downloaded'] is None and state['download_total'] is None
+        assert state['asset'] is None
+        assert state['phase_started_at'] <= state['updated_at']
+        progress(state='complete', phase='complete')
+    monkeypatch.setattr(i, 'install', install)
+    module_jobs._work('abc')
+    assert json.loads(path.read_text())['state'] == 'complete'
+
+
+def test_live_log_reads_appended_output_and_bounded_tail(tmp_path, monkeypatch):
+    from nerv.platform import module_jobs
+    monkeypatch.setenv('NERV_HOME', str(tmp_path))
+    path = tmp_path / 'install-jobs/abc.log'
+    path.parent.mkdir()
+    path.write_text('')
+    assert module_jobs.log_tail('abc')['modified_at'] is None
+    path.write_text('Downloading package\n')
+    first = module_jobs.log_tail('abc')
+    with path.open('a') as f:
+        f.write('Installed package\n')
+    second = module_jobs.log_tail('abc')
+    assert second['bytes'] > first['bytes']
+    assert second['log'].endswith('Installed package')
+    assert second['modified_at'] >= first['modified_at']
+    path.write_text('old\n' * module_jobs.LOG_TAIL_BYTES + '最后一行\n', encoding='utf-8')
+    tail = module_jobs.log_tail('abc')
+    assert tail['truncated'] is True
+    assert tail['log'].endswith('最后一行')
+    assert len(tail['log'].splitlines()) <= module_jobs.LOG_TAIL_LINES
+    assert len(tail['log'].encode()) <= module_jobs.LOG_TAIL_BYTES
+    with pytest.raises(ValueError):
+        module_jobs.log_tail('../credentials')
+    with pytest.raises(FileNotFoundError):
+        module_jobs.log_tail('def')
