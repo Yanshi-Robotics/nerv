@@ -1,3 +1,3 @@
 """Single source of truth for the version number (read statically by pyproject)."""
 
-__version__ = "0.8.1"
+__version__ = "0.8.2"

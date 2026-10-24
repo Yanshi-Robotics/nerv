@@ -4,6 +4,7 @@ import json
 from pathlib import Path
 import shutil
 import zipfile
+import tomllib
 
 import yaml
 
@@ -11,12 +12,22 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "temp/release"
 
 
-def bundle():
+def bundle(output=None):
+    OUT = Path(output) if output is not None else ROOT / "temp/release"
     import sys
     sys.path.insert(0, str(ROOT / "src"))
     from nerv._version import __version__
     OUT.mkdir(parents=True, exist_ok=True)
-    wheels = sorted((OUT / "wheels").glob(f"*-{__version__}-*.whl"))
+    versions = {"nerv": __version__}
+    for package in ("nerv-runtime-sdk", "nerv-runtime-lerobot"):
+        metadata = tomllib.loads((ROOT / "packages" / package / "pyproject.toml").read_text())
+        versions[package.replace("-", "_")] = metadata["project"]["version"]
+    wheels = []
+    for package, version in versions.items():
+        matches = list((OUT / "wheels").glob(f"{package}-{version}-*.whl"))
+        if len(matches) != 1:
+            raise ValueError(f"Expected one {package} {version} wheel, found {len(matches)}")
+        wheels.extend(matches)
     names = {}
     for path in wheels:
         shutil.copy2(path, OUT / path.name)
@@ -50,11 +61,11 @@ def bundle():
     import subprocess
     for product, lockname, requirement in (("host", "host", f"nerv[platform]=={__version__}"),
             ("so101-sim", "sim", f"nerv[sim]=={__version__}"),
-            ("lerobot0.6.1", "real", f"nerv-runtime-lerobot=={__version__}")):
+            ("lerobot0.6.1", "real", f"nerv-runtime-lerobot=={versions['nerv_runtime_lerobot']}")):
         source = OUT / f"{lockname}.in"
         source.write_text(requirement + "\n")
         import os
-        env = dict(os.environ, UV_CACHE_DIR=str(OUT / "uv-cache"), UV_CREDENTIALS_DIR=str(OUT / "uv-credentials"))
+        env = dict(os.environ, UV_CACHE_DIR=os.environ.get("UV_CACHE_DIR", str(OUT / "uv-cache")), UV_CREDENTIALS_DIR=str(OUT / "uv-credentials"))
         subprocess.run(["uv", "pip", "compile", str(source), "--universal", "--python-version", "3.12",
                        "--constraint", str(ROOT / "release/constraints" / f"{lockname}.txt"),
                        "--generate-hashes", "--no-header", "--no-annotate", "--find-links", str(OUT),
@@ -93,4 +104,7 @@ def bundle():
 
 
 if __name__ == "__main__":
-    bundle()
+    import argparse
+    parser = argparse.ArgumentParser(description=__doc__)
+    parser.add_argument("--output", type=Path, default=OUT)
+    bundle(parser.parse_args().output)
