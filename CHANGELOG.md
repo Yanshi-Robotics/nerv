@@ -5,6 +5,15 @@ The 0.1.x entries below are the pre-release trail.
 
 ## [Unreleased]
 
+- Treat Ctrl+C as an orderly server shutdown without replaying signals into asyncio.
+  Repeated interrupts retain application cleanup instead of skipping it.
+- End idle event streams, cancel active decision tokens and reject new work before
+  draining requests. Bound HTTP draining with `NERV_SERVE_SHUTDOWN_TIMEOUT_S`.
+- Hand the npm launcher process to the Python host on supported POSIX systems;
+  otherwise wait for the host to finish before returning control to the shell.
+- Add real process regressions for SIGINT, repeated SIGINT, SIGTERM, open event streams
+  and owned-child cleanup. Native Windows console behavior remains unverified.
+
 ## [0.8.1] — 2026-10-24
 
 - Add home scene navigation with previous/next buttons and a shared card/form selection.

@@ -35,6 +35,8 @@ def _node_lifecycle(method):
     @wraps(method)
     def locked(self, *args, **kwargs):
         with self._node_lock:
+            if self._shutting_down:
+                raise ValueError("NERV is shutting down")
             return method(self, *args, **kwargs)
     return locked
 
@@ -54,6 +56,7 @@ class Nerv:
         self._arm_locks: dict[str, threading.RLock] = {}
         self._arm_locks_guard = threading.Lock()
         self.scene_tests = SceneTests(self)
+        self._shutting_down = False
         self._runs: dict[str, threading.Event] = {}
         self._runs_lock = threading.RLock()
         self._bound_runtime: tuple | None = None
@@ -517,6 +520,8 @@ class Nerv:
 
     def _claim_run(self, sid, session, robot=True):
         with self._runs_lock:
+            if self._shutting_down:
+                raise ValueError("NERV is shutting down")
             if old := self._runs.get(sid):
                 old.set()
             token = threading.Event()
@@ -682,7 +687,15 @@ class Nerv:
         # A stopped/rebound session must not receive an in-flight observation.
         return None if self._control_error(self.store.get(sid)) else observation
 
+    def request_shutdown(self) -> None:
+        self._shutting_down = True
+        with self._runs_lock:
+            for token in self._runs.values():
+                token.set()
+        with self.tasks._lock:
+            for token in self.tasks._tokens.values():
+                token.set()
+
     def shutdown(self) -> None:
-        for token in self.tasks._tokens.values():
-            token.set()
+        self.request_shutdown()
         self.launcher.stop_all()

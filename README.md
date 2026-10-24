@@ -28,7 +28,7 @@ Open a new terminal, then start:
 nerv
 ```
 
-The server opens your browser after becoming ready at [http://127.0.0.1:8170](http://127.0.0.1:8170). It serves the interface and API together. Ctrl+C exits. An occupied port produces an error; NERV does not kill another process or silently change ports.
+The server opens your browser after becoming ready at [http://127.0.0.1:8170](http://127.0.0.1:8170). It serves the interface and API together. Press Ctrl+C once and wait for shutdown to finish before starting NERV again. An occupied port produces an error; NERV does not kill another process or silently change ports.
 
 ```bash
 nerv serve --no-browser

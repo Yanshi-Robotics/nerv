@@ -162,9 +162,14 @@ def cmd_run(a) -> int:
 def cmd_serve(a) -> int:
     import uvicorn
     from .serving import BrowserServer
+    def request_shutdown():
+        from .server import request_shutdown as begin
+        begin()
     server = BrowserServer(uvicorn.Config(
         "nerv.platform.server:app", host=a.host or config.SERVE_HOST,
-        port=a.port or config.SERVE_PORT, log_level="info"), open_browser=not a.no_browser)
+        port=a.port or config.SERVE_PORT, log_level="info",
+        timeout_graceful_shutdown=config.SERVE_SHUTDOWN_TIMEOUT_S),
+        open_browser=not a.no_browser, before_shutdown=request_shutdown)
     from filelock import FileLock
     from pathlib import Path
     Path(paths.NERV_HOME).mkdir(parents=True, exist_ok=True)
