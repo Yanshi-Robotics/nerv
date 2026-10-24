@@ -5,8 +5,13 @@ import sys
 import uuid
 import time
 import os
+from pathlib import Path
 
 from .. import installation
+
+# Bound each live-log response even when package managers produce very long lines.
+LOG_TAIL_BYTES = 64 * 1024
+LOG_TAIL_LINES = 200
 
 def catalog():
     from .runtime_management import installations
@@ -28,6 +33,8 @@ def catalog():
     manifest, _ = installation.read_manifest()
     return {"modules": [{"id": key, "label": product["label"], "installed": key in installed,
                          "needs_repair": _needs_repair(key, installed),
+                         "installation_root": str((installation.home() / "envs" / key).resolve()),
+                         "installation_path": str(Path(installed[key]["python"]).parent.parent) if key in installed else None,
                          "download_bytes": sum(manifest.get("files", {}).get(n, {}).get("bytes", 0)
                                                for n in manifest["products"].get(key, {}).get("files", []))}
                         for key, product in manifest["products"].items() if key != "host"], "jobs": jobs}
@@ -76,6 +83,26 @@ def start(module):
     return {"ok": True, "id": job_id, "pid": proc.pid}
 
 
+def log_tail(job_id):
+    """Read only the bounded tail; mtime denotes output, not a poll heartbeat."""
+    if not job_id or any(c not in "0123456789abcdef" for c in job_id):
+        raise ValueError("Invalid installation job ID")
+    path = installation.home() / "install-jobs" / f"{job_id}.log"
+    with path.open("rb") as stream:
+        size = os.fstat(stream.fileno()).st_size
+        offset = max(0, size - LOG_TAIL_BYTES)
+        stream.seek(offset)
+        data = stream.read(LOG_TAIL_BYTES)
+        modified = os.fstat(stream.fileno()).st_mtime
+    # A tail may start inside a UTF-8 character or a partial line.
+    lines = data.decode("utf-8", errors="replace").splitlines()
+    if offset and len(lines) > 1:
+        lines = lines[1:]
+    return {"log": "\n".join(lines[-LOG_TAIL_LINES:]), "bytes": size,
+            "modified_at": modified if size else None,
+            "truncated": offset > 0 or len(lines) > LOG_TAIL_LINES}
+
+
 def cancel(job_id):
     if not job_id or any(c not in "0123456789abcdef" for c in job_id):
         raise ValueError("Invalid job ID")
@@ -91,6 +118,10 @@ def _work(job_id):
     path = root / f"{job_id}.json"
     state = json.loads(path.read_text(encoding="utf-8"))
     def progress(**fields):
+        now = time.time()
+        if fields.get("phase", state["phase"]) != state["phase"]:
+            state.update(phase_started_at=now, downloaded=None, download_total=None, asset=None)
+        state.update(updated_at=now)
         state.update(fields)
         installation.write_json(path, state)
     try:

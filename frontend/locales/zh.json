@@ -890,6 +890,25 @@
     "Updates": "更新",
     "Unable to read version.": "无法读取版本号。",
     "Loading version…": "正在读取版本号……",
-    "Select a session or start a new one.": "选择已有会话，或新建会话。"
+    "Select a session or start a new one.": "选择已有会话，或新建会话。",
+    "Installation location": "安装位置",
+    "Component environment": "组件虚拟环境",
+    "Component environments folder": "组件环境目录",
+    "Managed by this NERV instance. Your training environment is unchanged.": "由当前 NERV 实例管理，不改变已有训练环境。",
+    "Current file download": "当前文件下载",
+    "Working on this stage; total progress is not available.": "正在处理当前阶段，暂时无法计算总进度。",
+    "Hide installation log": "收起安装日志",
+    "Live installation log": "实时安装日志",
+    "Installation log": "安装日志",
+    "Following latest output": "正在跟随最新输出",
+    "Follow latest output": "跟随最新输出",
+    "Waiting for installer output…": "等待安装程序输出……",
+    "Log connection interrupted. Retrying automatically; the last output is kept.": "日志连接中断，正在自动重试；已保留上次内容。",
+    "Could not read the log. Close and reopen it to retry.": "无法读取日志，请收起后重新展开重试。",
+    "Last checked": "最近检查",
+    "Time since last output": "距上次输出",
+    "seconds": "秒",
+    "Downloads and dependency resolution can be quiet. No new log output does not confirm a stalled installation.": "下载和解析依赖时可能暂时没有输出，不能据此判断安装已停滞。",
+    "Showing the latest output; the full log is retained locally.": "当前显示最近的输出，完整日志保留在本机。"
   }
 }

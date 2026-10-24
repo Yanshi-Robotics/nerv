@@ -138,6 +138,7 @@ def install(product="host", *, manifest=None, cancelled=lambda: False, progress=
     try:
         spec = value["products"][product]
         stage = root / "envs" / product / (value["version"] + "-" + uuid.uuid4().hex[:8])
+        progress(installation_path=str(stage.resolve()))
         cache = root / ".cache/releases" / value["version"]
         cache.mkdir(parents=True, exist_ok=True)
         assets = {}
@@ -153,7 +154,7 @@ def install(product="host", *, manifest=None, cancelled=lambda: False, progress=
             receipt = value["files"][name]
             target = cache / name
             local = source / name
-            progress(phase="download", asset=name)
+            progress(phase="download", asset=name, downloaded=0, download_total=None)
             if local.exists():
                 if local.resolve() != target.resolve():
                     shutil.copyfile(local, target)

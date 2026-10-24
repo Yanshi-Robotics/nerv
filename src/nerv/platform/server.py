@@ -144,14 +144,13 @@ def modules_catalog():
 
 @app.get("/api/modules/jobs/{job_id}/log")
 def module_log(job_id: str):
-    from pathlib import Path
-    from .. import paths
-    if not job_id or any(c not in "0123456789abcdef" for c in job_id):
-        raise HTTPException(400, "Invalid installation job ID")
-    path = Path(paths.NERV_HOME) / "install-jobs" / f"{job_id}.log"
-    if not path.is_file():
-        raise HTTPException(404, "Installation log not found")
-    return {"log": "\n".join(path.read_text(encoding="utf-8", errors="replace").splitlines()[-80:])}
+    from .module_jobs import log_tail
+    try:
+        return log_tail(job_id)
+    except ValueError as error:
+        raise HTTPException(400, str(error)) from None
+    except FileNotFoundError:
+        raise HTTPException(404, "Installation log not found") from None
 
 
 @app.get("/api/releases/check")
