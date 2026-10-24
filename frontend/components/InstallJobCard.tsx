@@ -53,6 +53,9 @@ export default function InstallJobCard({job, label, root, onCancel, onRetry, ret
       {job.phase === "download" && job.asset && <p className="text-xs break-all">{job.asset}</p>}
     </>}
     <InstallationLocation path={job.installation_path} root={root} />
+    {job.error_code && <p className="error-text text-sm">{t(job.error_code === "download_dns"
+      ? "Download failed because the package server name could not be resolved. Check your network or proxy, then retry. Verified cached packages are kept."
+      : "A dependency download failed. Check the log and your network, then retry. Verified cached packages are kept.")}</p>}
     {job.message && <p className="break-words text-sm">{job.message}</p>}
     <div className="flex flex-wrap gap-3">
       <button className="nerv-control underline text-xs" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>

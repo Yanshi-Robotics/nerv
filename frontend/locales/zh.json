@@ -909,6 +909,8 @@
     "Time since last output": "距上次输出",
     "seconds": "秒",
     "Downloads and dependency resolution can be quiet. No new log output does not confirm a stalled installation.": "下载和解析依赖时可能暂时没有输出，不能据此判断安装已停滞。",
-    "Showing the latest output; the full log is retained locally.": "当前显示最近的输出，完整日志保留在本机。"
+    "Showing the latest output; the full log is retained locally.": "当前显示最近的输出，完整日志保留在本机。",
+    "Download failed because the package server name could not be resolved. Check your network or proxy, then retry. Verified cached packages are kept.": "无法解析软件包服务器地址，下载失败。请检查网络或代理后重试；已验证的缓存包会保留。",
+    "A dependency download failed. Check the log and your network, then retry. Verified cached packages are kept.": "依赖下载失败。请查看日志并检查网络后重试；已验证的缓存包会保留。"
   }
 }

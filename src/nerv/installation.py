@@ -24,6 +24,14 @@ import zipfile
 RELEASE_BASE = "https://github.com/Yanshi-Robotics/nerv/releases/latest/download"
 PYTHON_VERSION = "3.12"
 NETWORK_TIMEOUT_S = 60
+# Keep large ML downloads from competing in dozens of simultaneous connections.
+INSTALL_DOWNLOAD_CONCURRENCY = 4
+INSTALL_READ_TIMEOUT_S = 180
+INSTALL_HTTP_RETRIES = 5
+# Installer-only network settings; never forward model credentials or arbitrary uv flags.
+INSTALL_NETWORK_ENV = ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY", "SSL_CERT_FILE",
+                       "UV_CONCURRENT_DOWNLOADS", "UV_HTTP_CONNECT_TIMEOUT", "UV_HTTP_TIMEOUT",
+                       "UV_HTTP_RETRIES", "UV_OFFLINE", "UV_NO_INDEX")
 POLL_S = 0.2
 CONFIG_SCHEMA = 1  # Current on-disk configuration format; unknown formats fail before activation.
 # Credentials and append-only histories survive a downgrade. These versioned
@@ -87,6 +95,25 @@ def uv_executable():
     if not result:
         raise ValueError("Run the NERV installer to install managed uv")
     return result
+
+
+def installer_environment(base=None):
+    """Share network configuration between web jobs and CLI without passing model credentials."""
+    source = os.environ if base is None else base
+    allowed = {"PATH", "HOME", "USERPROFILE", "SYSTEMROOT", "WINDIR", "TEMP", "TMP", "LANG"}
+    allowed.update(INSTALL_NETWORK_ENV)
+    env = {key: value for key, value in source.items() if key.upper() in allowed}
+    defaults = {"UV_CONCURRENT_DOWNLOADS": INSTALL_DOWNLOAD_CONCURRENCY,
+                "UV_HTTP_CONNECT_TIMEOUT": NETWORK_TIMEOUT_S,
+                "UV_HTTP_TIMEOUT": INSTALL_READ_TIMEOUT_S, "UV_HTTP_RETRIES": INSTALL_HTTP_RETRIES}
+    for key, value in defaults.items():
+        env.setdefault(key, str(value))
+    root = home()
+    env.update(NERV_HOME=str(root), PYTHONUTF8="1", PYTHONUNBUFFERED="1",
+               UV_CACHE_DIR=str(root / ".cache/uv"),
+               UV_CREDENTIALS_DIR=str(root / ".cache/uv-credentials"),
+               UV_PYTHON_INSTALL_DIR=str(root / "python"))
+    return env
 
 
 def run(command, env, cancelled, progress):
@@ -170,11 +197,7 @@ def install(product="host", *, manifest=None, cancelled=lambda: False, progress=
             assets[name] = target
         if cancelled():
             raise InterruptedError("Installation cancelled")
-        env = {k: v for k, v in os.environ.items() if k.upper() in {
-            "PATH", "HOME", "USERPROFILE", "SYSTEMROOT", "WINDIR", "TEMP", "TMP", "LANG", "SSL_CERT_FILE", "HTTPS_PROXY", "HTTP_PROXY",
-            "UV_OFFLINE", "UV_NO_INDEX"}}
-        env.update(UV_HTTP_CONNECT_TIMEOUT=str(NETWORK_TIMEOUT_S), UV_HTTP_TIMEOUT=str(NETWORK_TIMEOUT_S),
-                   NERV_HOME=str(root), PYTHONUTF8="1", UV_CACHE_DIR=str(root / ".cache/uv"), UV_CREDENTIALS_DIR=str(root / ".cache/uv-credentials"), UV_PYTHON_INSTALL_DIR=str(root / "python"))
+        env = installer_environment()
         uv = uv_executable()
         progress(phase="environment")
         run([uv, "venv", "--managed-python", "--python", PYTHON_VERSION, str(stage)], env, cancelled, progress)

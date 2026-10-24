@@ -4,6 +4,7 @@ export type InstallJob = {
   state: string;
   phase: string;
   message?: string;
+  error_code?: string | null;
   asset?: string | null;
   downloaded?: number | null;
   download_total?: number | null;
