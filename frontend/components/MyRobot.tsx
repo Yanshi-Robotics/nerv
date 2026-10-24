@@ -130,7 +130,7 @@ export default function MyRobot({
         ) : (
           <>
             <div className="robot-detail-grid">
-              <RobotPreview image={robot?.image} />
+              <RobotPreview image={robot?.image} autoOpen />
               <div className="space-y-5">
                 <h2 className="text-2xl">{robot?.name || "SO-101"}</h2>
                 <p className="muted">

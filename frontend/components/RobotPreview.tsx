@@ -2,9 +2,9 @@
 import { useEffect, useRef, useState } from "react";
 import { assetUrl } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
-export default function RobotPreview({ image }: { image?: string | null }) {
+export default function RobotPreview({ image, autoOpen = false }: { image?: string | null; autoOpen?: boolean }) {
   const { t } = useI18n();
-  const [open, setOpen] = useState(false),
+  const [open, setOpen] = useState(autoOpen),
     [error, setError] = useState(false);
   const mount = useRef<HTMLDivElement>(null);
   const reset = useRef<() => void>(() => {});
@@ -37,12 +37,24 @@ export default function RobotPreview({ image }: { image?: string | null }) {
       const camera = new THREE.PerspectiveCamera(35, 1, 0.01, 100);
       camera.up.fromArray(view.up);
       renderer.toneMapping = THREE.ACESFilmicToneMapping;
+      renderer.shadowMap.enabled = true;
+      renderer.shadowMap.type = THREE.PCFSoftShadowMap;
       const controls = new OrbitControls(camera, renderer.domElement);
       controls.enablePan = false;
-      scene.add(new THREE.HemisphereLight(0xffffff, 0x60747b, 1.6));
-      const light = new THREE.DirectionalLight(0xffffff, 2);
-      light.position.set(2, -3, 4);
-      scene.add(light);
+      // Normalized display units keep framing and lighting independent of GLB scale.
+      const stage = view.stage;
+      scene.add(new THREE.HemisphereLight(0xffffff, 0x60747b, stage.fillIntensity));
+      const light = new THREE.SpotLight(0xffffff, stage.keyIntensity);
+      light.position.fromArray(stage.keyPosition);
+      light.angle = stage.keyAngle;
+      light.penumbra = stage.keyPenumbra;
+      light.castShadow = true;
+      light.shadow.mapSize.set(stage.shadowResolution, stage.shadowResolution);
+      light.shadow.normalBias = stage.shadowNormalBias;
+      scene.add(light, light.target);
+      const rim = new THREE.DirectionalLight(0xc9e3ed, stage.rimIntensity);
+      rim.position.fromArray(stage.rimPosition);
+      scene.add(rim);
       const draco = new DRACOLoader().setDecoderPath("/robots/draco/");
       const render = () => {
         if (!disposed) renderer.render(scene, camera);
@@ -70,6 +82,7 @@ export default function RobotPreview({ image }: { image?: string | null }) {
         resize.disconnect();
         controls.dispose();
         draco.dispose();
+        light.dispose();
         disposeModel(scene);
         renderer.dispose();
         renderer.domElement.remove();
@@ -95,9 +108,48 @@ export default function RobotPreview({ image }: { image?: string | null }) {
         if (pivot) pivot.rotation.z = THREE.MathUtils.degToRad(Number(degrees));
       }
       scene.add(model.scene);
-      const box = new THREE.Box3().setFromObject(model.scene);
-      const center = box.getCenter(new THREE.Vector3());
-      const extent = box.getSize(new THREE.Vector3()).length();
+      const sourceBox = new THREE.Box3().setFromObject(model.scene);
+      const sourceCenter = sourceBox.getCenter(new THREE.Vector3());
+      const sourceSize = sourceBox.getSize(new THREE.Vector3());
+      const scale = 1 / sourceSize.length();
+      model.scene.scale.multiplyScalar(scale);
+      model.scene.position.set(-sourceCenter.x * scale, -sourceCenter.y * scale, -sourceBox.min.z * scale);
+      model.scene.traverse((node) => {
+        if (node instanceof THREE.Mesh) {
+          node.castShadow = true;
+          node.receiveShadow = true;
+        }
+      });
+      // This asset uses Z-up. Its lowest geometry rests on the platform top at Z=0.
+      const radius = Math.hypot(sourceSize.x, sourceSize.y) * scale * stage.radiusRatio;
+      const pedestalMaterial = new THREE.MeshStandardMaterial({
+        roughness: stage.roughness, metalness: stage.metalness,
+      });
+      const pedestal = new THREE.Mesh(
+        new THREE.CylinderGeometry(radius, radius, stage.height, stage.segments),
+        pedestalMaterial,
+      );
+      pedestal.rotation.x = Math.PI / 2;
+      pedestal.position.z = -stage.height / 2;
+      pedestal.castShadow = true;
+      pedestal.receiveShadow = true;
+      scene.add(pedestal);
+      const center = new THREE.Vector3(0, 0, sourceSize.z * scale * stage.targetHeightRatio);
+      light.target.position.copy(center);
+      const applyTheme = () => {
+        pedestalMaterial.color.set(document.documentElement.dataset.theme === "light"
+          ? stage.lightColor : stage.darkColor);
+        render();
+      };
+      const theme = new MutationObserver(applyTheme);
+      theme.observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
+      const disposeScene = cleanup;
+      cleanup = () => { theme.disconnect(); reset.current = () => {}; disposeScene(); };
+      applyTheme();
+      const extent = stage.cameraDistance;
+      controls.minDistance = stage.minDistance;
+      controls.maxDistance = stage.maxDistance;
+      controls.maxPolarAngle = Math.PI / 2;
       reset.current = () => {
         camera.position
           .copy(center)
@@ -111,7 +163,8 @@ export default function RobotPreview({ image }: { image?: string | null }) {
         render();
       };
       reset.current();
-    })().catch(() => {
+    })().catch((cause) => {
+      console.warn("Robot preview unavailable", cause);
       cleanup();
       if (!disposed) {
         setError(true);
