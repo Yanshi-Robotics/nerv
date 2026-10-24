@@ -122,3 +122,18 @@ The bootstrap uses uv's [unmanaged installation option](https://docs.astral.sh/u
 so uv itself does not modify global shell configuration. NERV registers its own command.
 For a temporary install that must not edit your shell profile, the Shell installer accepts
 `--no-path`; launch the printed absolute command and retain the same `NERV_HOME`.
+
+### Interrupted dependency downloads
+
+The installer keeps verified downloads in the current NERV home's cache. A failed
+network request leaves the existing active environment unchanged. Retry from the
+component card after connectivity recovers; incomplete downloads may need to restart.
+
+Web jobs and CLI installations use the same network configuration. Dependency downloads
+use up to four concurrent requests, a 60-second connection timeout, a 180-second read
+timeout and five HTTP retries. Existing `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`,
+`NO_PROXY` and `SSL_CERT_FILE` settings are preserved for the installer only. Operators
+can override the limits with `UV_CONCURRENT_DOWNLOADS`, `UV_HTTP_CONNECT_TIMEOUT`,
+`UV_HTTP_TIMEOUT` and `UV_HTTP_RETRIES` before starting NERV. Model credentials are not
+forwarded. These settings cannot repair a persistent DNS outage; check the network or
+proxy when the installation log reports name-resolution failure.

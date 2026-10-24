@@ -178,3 +178,56 @@ def test_live_log_reads_appended_output_and_bounded_tail(tmp_path, monkeypatch):
         module_jobs.log_tail('../credentials')
     with pytest.raises(FileNotFoundError):
         module_jobs.log_tail('def')
+
+
+def test_installer_network_environment_is_shared_and_allowlisted(tmp_path, monkeypatch):
+    monkeypatch.setenv('NERV_HOME', str(tmp_path))
+    env = i.installer_environment({'PATH': '/fixture', 'https_proxy': 'http://proxy.invalid',
+        'NO_PROXY': 'localhost', 'UV_CONCURRENT_DOWNLOADS': '2', 'OPENAI_API_KEY': 'private',
+        'PYTHONPATH': '/untrusted', 'UV_INDEX_URL': 'https://untrusted.invalid'})
+    assert env['https_proxy'] == 'http://proxy.invalid'
+    assert env['NO_PROXY'] == 'localhost'
+    assert env['UV_CONCURRENT_DOWNLOADS'] == '2'
+    assert env['UV_HTTP_TIMEOUT'] == str(i.INSTALL_READ_TIMEOUT_S)
+    assert env['UV_HTTP_RETRIES'] == str(i.INSTALL_HTTP_RETRIES)
+    assert env['UV_CACHE_DIR'] == str(tmp_path / '.cache/uv')
+    assert not {'OPENAI_API_KEY', 'PYTHONPATH', 'UV_INDEX_URL'} & env.keys()
+
+
+def test_install_job_uses_installer_network_environment(tmp_path, monkeypatch):
+    from nerv.platform import module_jobs
+    monkeypatch.setenv('NERV_HOME', str(tmp_path))
+    monkeypatch.setenv('HTTPS_PROXY', 'http://proxy.invalid')
+    monkeypatch.setenv('OPENAI_API_KEY', 'private')
+    manifest = {'products': {'host': {}, 'fixture': {}}}
+    monkeypatch.setattr(i, 'read_manifest', lambda: (manifest, tmp_path))
+    monkeypatch.setattr(module_jobs, 'catalog', lambda: {'jobs': []})
+    calls = []
+    def popen(*args, **kwargs):
+        calls.append(kwargs)
+        return type('Process', (), {'pid': 1})()
+    monkeypatch.setattr(module_jobs.subprocess, 'Popen', popen)
+    module_jobs.start('fixture')
+    assert calls[0]['env']['HTTPS_PROXY'] == 'http://proxy.invalid'
+    assert calls[0]['env']['UV_CONCURRENT_DOWNLOADS'] == str(i.INSTALL_DOWNLOAD_CONCURRENCY)
+    assert 'OPENAI_API_KEY' not in calls[0]['env']
+
+
+def test_install_failure_reports_dns_and_keeps_original_log(tmp_path, monkeypatch):
+    from nerv.platform import module_jobs
+    monkeypatch.setenv('NERV_HOME', str(tmp_path))
+    path = tmp_path / 'install-jobs/abc.json'
+    i.write_json(path, {'id': 'abc', 'module': 'fixture', 'phase': 'dependencies', 'state': 'running'})
+    log = path.with_suffix('.log')
+    output = 'Failed to download package\n dns error\n Temporary failure in name resolution\n'
+    log.write_text(output)
+    monkeypatch.setattr(i, 'install', lambda *a, **k: (_ for _ in ()).throw(RuntimeError('command failed')))
+    module_jobs._work('abc')
+    state = json.loads(path.read_text())
+    assert state['error_code'] == 'download_dns'
+    assert state['state'] == 'failed'
+    assert log.read_text() == output
+    log.write_text('Failed to fetch: timed out')
+    assert module_jobs.failure_code('abc') == 'download_failed'
+    log.write_text('An incompatible package version')
+    assert module_jobs.failure_code('abc') is None

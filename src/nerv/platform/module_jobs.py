@@ -20,6 +20,8 @@ def catalog():
     jobs = []
     for path in sorted(root.glob("*.json")):
         job = json.loads(path.read_text(encoding="utf-8"))
+        if job["state"] == "failed" and not job.get("error_code"):
+            job["error_code"] = failure_code(job["id"])
         jobs.append(job)
         if job["state"] in ("queued", "running") and time.time() - job.get("created_at", 0) > 30:
             from filelock import FileLock, Timeout
@@ -76,10 +78,9 @@ def start(module):
     job_id = uuid.uuid4().hex
     path = root / f"{job_id}.json"
     installation.write_json(path, {"id": job_id, "module": module, "state": "queued", "phase": "queued", "created_at": time.time()})
-    from .runtime_management import environment
     with (root / f"{job_id}.log").open("w", encoding="utf-8") as log:
         proc = subprocess.Popen([sys.executable, "-m", "nerv.platform.module_jobs", job_id],
-            stdout=log, stderr=log, env=environment())
+            stdout=log, stderr=log, env=installation.installer_environment())
     return {"ok": True, "id": job_id, "pid": proc.pid}
 
 
@@ -113,6 +114,19 @@ def cancel(job_id):
     return {"ok": True}
 
 
+def failure_code(job_id):
+    """Classify a recorded network failure without replacing the underlying log."""
+    try:
+        output = log_tail(job_id)["log"].lower()
+    except OSError:
+        return None
+    if "dns error" in output or "temporary failure in name resolution" in output:
+        return "download_dns"
+    if "failed to download" in output or "failed to fetch" in output:
+        return "download_failed"
+    return None
+
+
 def _work(job_id):
     root = installation.home() / "install-jobs"
     path = root / f"{job_id}.json"
@@ -128,7 +142,10 @@ def _work(job_id):
         progress(state="running", pid=os.getpid())
         installation.install(state["module"], cancelled=lambda: (root / f"{job_id}.cancel").exists(), progress=progress)
     except Exception as error:
-        progress(state="cancelled" if isinstance(error, InterruptedError) else "failed", message=str(error))
+        fields = {"state": "cancelled" if isinstance(error, InterruptedError) else "failed", "message": str(error)}
+        if not isinstance(error, InterruptedError):
+            fields["error_code"] = failure_code(job_id)
+        progress(**fields)
 
 
 def work(job_id):
