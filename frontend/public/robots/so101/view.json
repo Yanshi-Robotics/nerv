@@ -22,5 +22,36 @@
     "opt_cam_yanshi",
     "opt_plate_yanshi"
   ],
-  "source": "Website SO101_REST_POSE_DEG and so101.model.json; display pose only, never a device target."
+  "source": "Website SO101_REST_POSE_DEG and so101.model.json; display pose only, never a device target.",
+  "stage": {
+    "description": "Display-only normalized scene. Z=0 is the platform top; distances scale with the robot bounding diagonal.",
+    "fillIntensity": 1.1,
+    "keyIntensity": 24,
+    "keyPosition": [
+      1,
+      -1.5,
+      2.5
+    ],
+    "keyAngle": 0.55,
+    "keyPenumbra": 0.75,
+    "shadowResolution": 1024,
+    "shadowNormalBias": 0.002,
+    "rimIntensity": 1.3,
+    "rimPosition": [
+      -2,
+      1,
+      2
+    ],
+    "radiusRatio": 0.55,
+    "height": 0.04,
+    "segments": 96,
+    "roughness": 0.6,
+    "metalness": 0.25,
+    "lightColor": "#9baeb4",
+    "darkColor": "#34464d",
+    "targetHeightRatio": 0.36,
+    "cameraDistance": 1.25,
+    "minDistance": 0.8,
+    "maxDistance": 3
+  }
 }
