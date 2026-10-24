@@ -10,6 +10,8 @@ NERV is a local workspace for running robot tasks with trained policies and visu
 
 Version 0.8.2 is an unreleased local candidate. The installer below uses the published release, currently 0.8.1; it does not install this candidate. Real SO-101 acceptance and student onboarding trials remain pending.
 
+<div align="center"><img src="assets/readme/diagrams/en/overview.svg" alt="NERV connects task setup, a user-selected control scheme and Runtime execution with shared observations and history" width="960"></div>
+
 ## Quick install & start
 
 The GitHub installer manages uv, Python 3.12 and the prebuilt interface. No Node.js, Git or frontend build is needed. It installs the host first; robot and simulation components are installed separately from Settings.
@@ -48,6 +50,14 @@ nerv serve --no-browser
 
 Use `--port` to choose another port; NERV reports occupied ports without stopping other processes. See the [installation guide](guides/github-install.md) for diagnostics, extracted bundles and migration from older npm launchers.
 
+## What you can do
+
+- **Connect a robot or simulation.** Save a standard SO-101's serial device, existing calibration and two cameras through guided setup. Install simulation as an optional module.
+- **Bring your own policies.** Import an externally trained ACT, check compatibility, and load and run it inside NERV.
+- **Choose the control route.** Use a fixed policy, let a visual model supervise allowed skills, or let it select bounded motion tools.
+- **Keep chat and tasks separate.** The chat model handles interaction; the selected scheme controls the task. Stop reply and Stop task are independent actions.
+- **Keep a local record.** Sessions, task events, settings and environments stay on your computer. Restart restores history without resuming motion.
+
 ## First use
 
 New Session is the default page and the destination of the NERV logo. Your Robots manages the saved SO-101 profile; Sessions holds conversation history; Settings contains models, policies, components and preferences.
@@ -67,35 +77,13 @@ The robot detail page opens a local 3D model; its display pose is an illustratio
 
 The layers describe responsibilities, not three mandatory models. System 2 labels the optional decision layer; System 1 labels local execution.
 
-```mermaid
-flowchart TB
-  U[User selects a control scheme] --> I
-  subgraph I[Interaction layer]
-    UI[NERV interface] <--> AG[NERV Agent / chat model]
-  end
-  I --> T[Task entry / frozen scheme revision]
-  subgraph D[Decision layer / System 2 / optional]
-    V[Selected visual model]
-  end
-  subgraph E[Execution layer / System 1]
-    P[Allowed ACT skills / one at a time]
-    J[Local joint and gripper controller]
-  end
-  T -->|Fixed policy| P
-  T -->|Policy group or visual direct control| V
-  V -->|Allowed skills| P
-  V -->|Allowed tools| J
-  P --> R[Shared control authority, validation, stop and journal]
-  J --> R
-  R --> B[Runtime / real device or simulation]
-  B --> O[Observations and execution feedback]
-  O --> V
-  O --> UI
-```
+<div align="center"><img src="assets/readme/diagrams/en/architecture.svg" alt="Interaction, optional decision and execution layers; fixed ACT bypasses the decision model, with shared Host and Runtime controls" width="960"></div>
 
 The host manages sessions, tasks and authorization. An independent Runtime owns the robot and cameras. SO-101 uses one native LeRobot instance, with all motion passing through `robot.send_action()`. ACT and bounded tool execution share the scheduler. Models cannot expand a scheme's allowed action set. See the [architecture guide](guides/architecture.md) for lifecycle and protocol details.
 
 ## Choose a control scheme
+
+<div align="center"><img src="assets/readme/diagrams/en/control-schemes.svg" alt="Fixed policy, policy group and visual direct control routes, with observation feedback" width="960"></div>
 
 | Scheme | Decision layer | Execution layer | Requirements |
 |---|---|---|---|
@@ -106,8 +94,6 @@ The host manages sessions, tasks and authorization. An independent Runtime owns 
 Fixed ACT runs inside NERV without a separate LeRobot terminal. A one-skill group adds visual supervision. Combining skills requires validated transitions; an unverified transition stops for operator intervention.
 
 The chat panel keeps the chat model and control scheme separate, shows the scheme's decision model and skills, and provides View structure and current-task controls. Running tasks retain their scheme revision and model settings. Stop reply, Stop task and Emergency stop have separate purposes. Stop the task before changing schemes or moving between Sim and Real.
-
-<div align="center"><img src="assets/readme/images/control-scheme-0.7.png" alt="SO-101 simulation with top and wrist views and a visual control scheme awaiting credentials" width="960"></div>
 
 ## Standard SO-101 and policy import
 
@@ -160,6 +146,10 @@ The G1 recording below is from an earlier simulation version. It demonstrates he
 
 <details>
 <summary>Earlier interface and world views</summary>
+
+Control-scheme workspace from version 0.7:
+
+<div align="center"><img src="assets/readme/images/control-scheme-0.7.png" alt="SO-101 simulation with top and wrist views and a visual control scheme awaiting credentials" width="960"></div>
 
 These preserved screenshots show earlier navigation, observation and operator views. Model, task and device setup controls have since changed. The chase camera and World Explore views are operator-only.
 

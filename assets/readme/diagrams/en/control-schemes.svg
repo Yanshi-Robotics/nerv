@@ -1,0 +1,57 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" role="img" aria-labelledby="title desc">
+<title id="title">Three control schemes, chosen by the user</title><desc id="desc">All routes share authorization and stop controls. Execution ending is not task success.</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1 L8 5 L1 9" fill="none" stroke="#5c7078" stroke-width="1.6"/></marker></defs>
+<style>text {font-family:"Noto Sans CJK SC",Arial,sans-serif;fill:#23343b;} .muted{fill:#5c7078;} .mono{font-family:"DejaVu Sans Mono",monospace;}</style>
+<rect width="1200" height="800" rx="24" fill="#f6f8f8"/>
+<path d="M40 104H1160" stroke="#ccd8dc"/>
+
+<text x="40" y="38" font-size="13" style="fill:#356a85" font-weight="700" text-anchor="start">NERV   /   03</text>
+<text x="40" y="73" font-size="28" style="fill:#23343b" font-weight="700" text-anchor="start">Three control schemes, chosen by the user</text>
+<text x="1160" y="38" font-size="12" style="fill:#5c7078" font-weight="400" text-anchor="end">PRODUCT &amp; ARCHITECTURE</text>
+<text x="40" y="774" font-size="16" style="fill:#5c7078" font-weight="400" text-anchor="start">All routes share authorization and stop controls. Execution ending is not task success.</text>
+<rect x="40" y="140" width="1120" height="180" rx="14" fill="white" stroke="#ccd8dc" stroke-width="1.3"/>
+<text x="64" y="181" font-size="23" style="fill:#356a85" font-weight="600" text-anchor="start">Fixed policy</text>
+<text x="64" y="211" font-size="16" style="fill:#5c7078" font-weight="400" text-anchor="start">No decision model</text>
+<rect x="310" y="162" width="244" height="60" rx="14" fill="#f4f7f7" stroke="#ccd8dc" stroke-width="1.3"/>
+<text x="432" y="199" font-size="19" style="fill:#23343b" font-weight="600" text-anchor="middle">Run in NERV</text>
+<path d="M556,192 L586,192" fill="none" stroke="#356a85" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="590" y="162" width="244" height="60" rx="14" fill="#f4f7f7" stroke="#ccd8dc" stroke-width="1.3"/>
+<text x="712" y="199" font-size="19" style="fill:#23343b" font-weight="600" text-anchor="middle">Selected ACT</text>
+<path d="M836,192 L866,192" fill="none" stroke="#356a85" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="870" y="162" width="244" height="60" rx="14" fill="#f4f7f7" stroke="#ccd8dc" stroke-width="1.3"/>
+<text x="992" y="199" font-size="19" style="fill:#23343b" font-weight="600" text-anchor="middle">Runtime + device</text>
+<path d="M991,223 L991,248 L712,248 L712,223" fill="none" stroke="#5c7078" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="6 6" marker-end="url(#arrow)"/>
+<rect x="750" y="234" width="200" height="28" rx="4" fill="white" stroke="white" stroke-width="1.3"/>
+<text x="850" y="254" font-size="15" style="fill:#5c7078" font-weight="400" text-anchor="middle">Policy observations</text>
+<text x="64" y="295" font-size="17" style="fill:#5c7078" font-weight="400" text-anchor="start">Run button needs no API key. Starting through chat still needs a chat model.</text>
+<rect x="40" y="340" width="1120" height="180" rx="14" fill="white" stroke="#ccd8dc" stroke-width="1.3"/>
+<text x="64" y="381" font-size="23" style="fill:#9a703c" font-weight="600" text-anchor="start">Policy group</text>
+<text x="64" y="411" font-size="16" style="fill:#5c7078" font-weight="400" text-anchor="start">Visual supervision</text>
+<rect x="310" y="362" width="244" height="60" rx="14" fill="#f4f7f7" stroke="#ccd8dc" stroke-width="1.3"/>
+<text x="432" y="399" font-size="19" style="fill:#23343b" font-weight="600" text-anchor="middle">Visual decision</text>
+<path d="M556,392 L586,392" fill="none" stroke="#9a703c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="590" y="362" width="244" height="60" rx="14" fill="#f4f7f7" stroke="#ccd8dc" stroke-width="1.3"/>
+<text x="712" y="399" font-size="19" style="fill:#23343b" font-weight="600" text-anchor="middle">Allowed ACT skills</text>
+<path d="M836,392 L866,392" fill="none" stroke="#9a703c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="870" y="362" width="244" height="60" rx="14" fill="#f4f7f7" stroke="#ccd8dc" stroke-width="1.3"/>
+<text x="992" y="399" font-size="19" style="fill:#23343b" font-weight="600" text-anchor="middle">Runtime + device</text>
+<path d="M991,423 L991,448 L432,448 L432,423" fill="none" stroke="#5c7078" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="6 6" marker-end="url(#arrow)"/>
+<rect x="578" y="434" width="280" height="28" rx="4" fill="white" stroke="white" stroke-width="1.3"/>
+<text x="718" y="454" font-size="15" style="fill:#5c7078" font-weight="400" text-anchor="middle">Observations + feedback</text>
+<text x="64" y="495" font-size="17" style="fill:#5c7078" font-weight="400" text-anchor="start">One skill runs at a time. Skill transitions need verified starting conditions.</text>
+<rect x="40" y="540" width="1120" height="180" rx="14" fill="white" stroke="#ccd8dc" stroke-width="1.3"/>
+<text x="64" y="581" font-size="23" style="fill:#247a71" font-weight="600" text-anchor="start">Visual direct</text>
+<text x="64" y="611" font-size="16" style="fill:#5c7078" font-weight="400" text-anchor="start">No ACT required</text>
+<rect x="310" y="562" width="244" height="60" rx="14" fill="#f4f7f7" stroke="#ccd8dc" stroke-width="1.3"/>
+<text x="432" y="599" font-size="19" style="fill:#23343b" font-weight="600" text-anchor="middle">Visual decision</text>
+<path d="M556,592 L586,592" fill="none" stroke="#247a71" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="590" y="562" width="244" height="60" rx="14" fill="#f4f7f7" stroke="#ccd8dc" stroke-width="1.3"/>
+<text x="712" y="599" font-size="19" style="fill:#23343b" font-weight="600" text-anchor="middle">Bounded tools</text>
+<path d="M836,592 L866,592" fill="none" stroke="#247a71" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="870" y="562" width="244" height="60" rx="14" fill="#f4f7f7" stroke="#ccd8dc" stroke-width="1.3"/>
+<text x="992" y="599" font-size="19" style="fill:#23343b" font-weight="600" text-anchor="middle">Runtime + device</text>
+<path d="M991,623 L991,648 L432,648 L432,623" fill="none" stroke="#5c7078" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="6 6" marker-end="url(#arrow)"/>
+<rect x="578" y="634" width="280" height="28" rx="4" fill="white" stroke="white" stroke-width="1.3"/>
+<text x="718" y="654" font-size="15" style="fill:#5c7078" font-weight="400" text-anchor="middle">Observations + feedback</text>
+<text x="64" y="695" font-size="17" style="fill:#5c7078" font-weight="400" text-anchor="start">Joint moves and gripper commands execute locally; observe again after execution.</text>
+</svg>

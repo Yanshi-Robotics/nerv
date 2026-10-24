@@ -2,46 +2,24 @@
 
 [中文](../i18n/zh/architecture.md) · [NERV](../README.md)
 
-NERV 0.7.1 separates conversation, task supervision and local execution. System 1 is the execution layer inside a runtime; it is not an additional Python environment.
+NERV 0.8.2 separates conversation, task supervision and local execution. System 1 is the execution layer inside a runtime; it is not an additional Python environment.
 
 The standard SO-101 worker owns one LeRobot device instance. ACT inference and bounded direct joint control both produce candidate targets for its shared scheduler. The host does not import LeRobot or load policy tensors.
 
 ## Architecture
+
 The interaction layer handles conversation and task submissions. The optional decision layer selects and supervises allowed actions. The execution layer runs ACT or bounded local controllers; Robot Runtime owns devices and sensors. Fixed-policy tasks bypass the decision model and need no API key. World Control owns simulation interventions. The host coordinates control ownership, lifecycle and event records. Robot drivers and policy inference run in a separate worker environment.
 
-```mermaid
-flowchart TB
-  U[User selects a control scheme] --> I
-  subgraph I[Interaction layer]
-    UI[NERV interface] <--> AG[NERV Agent / chat model]
-  end
-  I --> T[Task entry / frozen scheme revision]
-  subgraph D[Decision layer / System 2 / optional]
-    V[Selected visual model]
-  end
-  subgraph E[Execution layer / System 1]
-    P[Allowed ACT skills / one at a time]
-    J[Local joint and gripper controller]
-  end
-  T -->|Fixed policy| P
-  T -->|Policy group or visual direct control| V
-  V -->|Allowed skills| P
-  V -->|Allowed tools| J
-  P --> R[Shared control authority, validation, stop and journal]
-  J --> R
-  R --> B[Runtime / real device or simulation]
-  B --> O[Observations and execution feedback]
-  O --> V
-  O --> UI
-```
+<div align="center"><img src="../assets/readme/diagrams/en/architecture.svg" alt="Three layers, the fixed-policy bypass and the shared runtime foundation" width="960"></div>
 
-The following node topology remains the transport foundation:
+### Process and device boundaries
 
-<div align="center"><img src="../assets/readme/images/structure.svg" alt="NERV connects the agent harness, independent robot runtime, world and tool services, with separate observation and operator control paths" width="860"></div>
+<div align="center"><img src="../assets/readme/diagrams/en/runtime.svg" alt="Separate Host and SO-101 Runtime environments; one LeRobot instance owns the follower and cameras" width="960"></div>
 
 Agent and System 2 use separate harness instances, context, summaries, provider continuation and usage records. Their events share an append-only journal with isolated task views. A runtime declares its sensors and skills; the frontend reads those capabilities. Simulation and real hardware have separate environment bindings. Operator scene controls and simulator ground truth stay outside the agent's observation. The [interface types](../src/nerv/nerve/) define the module boundaries.
 
 ## Conversation and world control
+
 The right column belongs to NERV Agent. Chat stays available during robot execution and manual control. **Stop reply** cancels only the current conversation decision. **Stop task** waits for local execution acknowledgement; **Emergency stop** locks motion until an operator releases it into disarmed standby.
 
 The middle camera frame contains robot activity from System 2, execution feedback and host events. Bubbles show public decision summaries and timestamps; they never become camera pixels or policy input. The independent event stream reconnects and deduplicates records. Historical sessions do not show live cameras.
@@ -52,9 +30,10 @@ Choose SO-101, Simulation and a workbench world in **New session**. Select the s
 
 **Toolbox → Simulation world** uses the same service as Agent world commands. Reset preserves the current objects and world process, invalidates the task, and disarms control. Changing object topology uses **End and rebuild instance**. Old sessions stay readable but cannot control the replacement. Weather, furniture and style changes appear only when a world declares and implements them; the tabletop worlds currently declare object replacement and reset. Real bindings reject world modification.
 
-Viewing, creating and manually controlling a simulation requires no model request. Language-driven operations need a configured VLM and are billable. SO-101 ACT and Hanoi execution policies are not deployed to these simulations. The long-term autonomous target is named **ultimate**; this release remains an Agent-operated system.
+Creating a chat session requires a registered model key and a valid scene. Session creation, viewing and operator controls make no model request; the separate operator workspace remains available without a key. Language-driven operations call the selected provider and are billable. SO-101 ACT and Hanoi execution policies are not deployed to these simulations. The long-term autonomous target is named **ultimate**; this release remains an Agent-operated system.
 
 ## Visual models
+
 The panel groups keys by provider. It displays whether a key is saved without returning the saved value to the browser. The panel lists supported models without a model or effort selector. One saved key serves the provider’s registered models, subject to account access. Chat reads the same registry. Pure text models and Mock do not appear in the running catalogue or act as fallbacks.
 
 OpenAI, DeepSeek and xAI use provider-specific Responses dialects. Gemini uses the stateless Interactions API; Claude uses native Messages streaming. Signed thought blocks and opaque reasoning items are replayed only within the matching provider identity. Effort options are model specific; an unspecified effort leaves the parameter out so the supplier applies its default. The last model and each model's effort are remembered. Chat changes are refused during an active reply. A running robot task keeps its frozen model configuration independently.
@@ -74,9 +53,10 @@ The optional API diagnostics endpoint checks image input, tool calls and continu
 Changing endpoint, model, effort or credentials invalidates matching diagnostic and physical records. One successful key registration does not certify other models, general visual performance or robot performance. Agent errors do not cancel independent robot tasks; System 2 failures retain local stopping and supervision rules.
 
 ## Agent harness
-<div align="center"><img src="../assets/readme/images/flow.svg" alt="Managed skill execution: observe, persist and check the tool call, receive an execution ID, supervise the local policy and report the observed outcome" width="860"></div>
 
-The diagram follows a managed skill such as ACT. Starting it returns an execution ID; System 2 continues observing and checking execution state while the worker runs its local policy. Direct read tools and existing G1 skills can return their result within the tool call. Local stop and supervision checks remain active while a model request is pending.
+<div align="center"><img src="../assets/readme/diagrams/en/control-schemes.svg" alt="Separate fixed ACT, supervised skills and visual direct control paths" width="960"></div>
+
+In a policy group, starting an ACT skill returns an execution ID. The independent decision context continues observing and checking execution state while the worker runs the policy. Fixed-policy tasks use Host supervision without creating that decision context. Direct read tools and existing G1 skills can return their result within the tool call. Local stop and supervision checks remain active while a model request is pending.
 
 The default `AgentHarness` receives its host Link, model provider, context manager and compactor through replaceable boundaries. It never owns a robot object or loads ACT.
 
@@ -87,6 +67,7 @@ The context budget covers instructions, notes, summary, complete tool groups, to
 Restart marks unfinished runs as interrupted with unknown results. It restores history without replaying actions. A new chat message invalidates only the previous Agent reply. An explicit task update advances its version and stops the old execution before replanning. Task model configuration and effort are frozen at task start.
 
 ## Runtime plugins
+
 `nerv-runtime-sdk` is an independently installable package with no NERV core, vendor SDK, PyTorch or MuJoCo dependency. A Python worker discovers `RuntimeProvider` entry points in its own environment. Non-Python services can implement the same HTTP/MCP protocol and register a URL.
 
 `describe()` and imports must have no device or GPU side effects. Preparation, policy loading, enabling, execution, cancellation, emergency stop, release and disconnect are separate operations. Profiles, environment bindings and policy artifacts are separate contracts. The host does not inject its source tree or model credentials into workers.
@@ -96,14 +77,18 @@ The [runtime SDK guide](../packages/nerv-runtime-sdk/README.md) and [inspection-
 
 ## Selected control schemes
 
-[Control schemes and module contracts](control-schemes.md) describe immutable revisions, fixed-policy tasks, independent decision contexts and protocol 3 grants. The right panel shows only the selected path. The old all-path illustration above documents transport relationships; it does not grant access to every action.
+[Control schemes and module contracts](control-schemes.md) describe immutable revisions, fixed-policy tasks, independent decision contexts and protocol 3 grants. The right panel shows only the selected path. The figures compare the available templates; a task is authorized only for its selected path.
 
 Interaction, decision and execution are the primary terms. System 2 and System 1 remain auxiliary labels in diagrams and existing journal role IDs. A fixed-policy task does not instantiate a model. A visual-direct task still uses a local controller; model output never writes motor registers.
 
 ## Application navigation and preferences
 
-Home, My robot, Settings and conversation views use hash navigation in the static package. The application owns the active-task toolbar and visible-operator supervision; changing pages does not transfer control or cancel execution. Robot workspaces share the existing task service. Display names and portraits do not modify calibration identity.
+New Session, Your Robots, Settings and conversation views use hash navigation in the static package. The application owns the active-task toolbar and visible-operator supervision; changing pages does not transfer control or cancel execution. Robot workspaces share the existing task service. Display names and portraits do not modify calibration identity.
 
 Four allowlisted conversation settings are persisted with a file lock and atomic replacement. Each Agent turn reads a snapshot: environment configuration, then web preferences, then defaults. A task keeps its scheme revision and authority. Runtime protocol remains version 3.
 
-Home scene navigation derives its entries from registered real devices and compatible installed simulation worlds. The card and creation form share one selection. Public HTTP and CLI creation reject a missing robot or simulation scene before credentials, node startup or session writes; real workspaces require a robot and no simulation world. Internal history readers retain support for older bodyless sessions.
+New Session scene navigation derives its entries from registered real devices and compatible installed simulation worlds. The card and creation form share one selection. Public HTTP and CLI creation reject a missing robot or simulation scene before credentials, node startup or session writes; real workspaces require a robot and no simulation world. Internal history readers retain support for older bodyless sessions.
+
+## Earlier diagrams
+
+The earlier [node topology](../assets/readme/images/structure.svg) and [skill execution sequence](../assets/readme/images/flow.svg) remain available for version comparison. They use earlier role names; the figures above describe the current layers and control routes.

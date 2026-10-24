@@ -1,0 +1,53 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="840" viewBox="0 0 1200 840" role="img" aria-labelledby="title desc">
+<title id="title">三层职责，共用运行基础</title><desc id="desc">层表示职责，不要求三个模型；固定策略跳过决策层。</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1 L8 5 L1 9" fill="none" stroke="#5c7078" stroke-width="1.6"/></marker></defs>
+<style>text {font-family:"Noto Sans CJK SC",Arial,sans-serif;fill:#23343b;} .muted{fill:#5c7078;} .mono{font-family:"DejaVu Sans Mono",monospace;}</style>
+<rect width="1200" height="840" rx="24" fill="#f6f8f8"/>
+<path d="M40 104H1160" stroke="#ccd8dc"/>
+
+<text x="40" y="38" font-size="13" style="fill:#356a85" font-weight="700" text-anchor="start">NERV   /   02</text>
+<text x="40" y="73" font-size="28" style="fill:#23343b" font-weight="700" text-anchor="start">三层职责，共用运行基础</text>
+<text x="1160" y="38" font-size="12" style="fill:#5c7078" font-weight="400" text-anchor="end">架构与产品</text>
+<text x="40" y="814" font-size="16" style="fill:#5c7078" font-weight="400" text-anchor="start">层表示职责，不要求三个模型；固定策略跳过决策层。</text>
+<rect x="40" y="142" width="350" height="335" rx="14" fill="white" stroke="#ccd8dc" stroke-width="1.3"/>
+<text x="64" y="178" font-size="15" style="fill:#356a85" font-weight="700" text-anchor="start">01</text>
+<text x="64" y="217" font-size="24" style="fill:#23343b" font-weight="600" text-anchor="start">交互层</text>
+<text x="64" y="247" font-size="17" style="fill:#356a85" font-weight="400" text-anchor="start">界面与 NERV Agent</text>
+<g transform="translate(320,166) scale(1)" fill="none" stroke="#356a85" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="2" y="3" width="36" height="28" rx="7"/><path d="M10 31v7l9-7M10 13h20M10 21h13"/></g>
+<path d="M64 272H366" stroke="#ccd8dc"/>
+<text x="64" y="309" font-size="18" style="fill:#5c7078" font-weight="400" text-anchor="start">接收目标，解释状态</text>
+<text x="64" y="350" font-size="18" style="fill:#5c7078" font-weight="400" text-anchor="start">使用选定的聊天模型</text>
+<text x="64" y="391" font-size="18" style="fill:#5c7078" font-weight="400" text-anchor="start">向选定控制方案提交任务</text>
+<rect x="425" y="142" width="350" height="335" rx="14" fill="white" stroke="#ccd8dc" stroke-width="1.3"/>
+<text x="449" y="178" font-size="15" style="fill:#9a703c" font-weight="700" text-anchor="start">02</text>
+<text x="449" y="217" font-size="24" style="fill:#23343b" font-weight="600" text-anchor="start">决策层 · 可选</text>
+<text x="449" y="247" font-size="17" style="fill:#9a703c" font-weight="400" text-anchor="start">System 2</text>
+<g transform="translate(705,166) scale(1)" fill="none" stroke="#9a703c" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M1 20Q20-4 39 20Q20 44 1 20Z"/><circle cx="20" cy="20" r="7"/></g>
+<path d="M449 272H751" stroke="#ccd8dc"/>
+<text x="449" y="309" font-size="18" style="fill:#5c7078" font-weight="400" text-anchor="start">观测并选择下一步</text>
+<text x="449" y="350" font-size="18" style="fill:#5c7078" font-weight="400" text-anchor="start">仅调用允许的技能或工具</text>
+<text x="449" y="391" font-size="18" style="fill:#5c7078" font-weight="400" text-anchor="start">检查进展与结束条件</text>
+<rect x="810" y="142" width="350" height="335" rx="14" fill="white" stroke="#ccd8dc" stroke-width="1.3"/>
+<text x="834" y="178" font-size="15" style="fill:#247a71" font-weight="700" text-anchor="start">03</text>
+<text x="834" y="217" font-size="24" style="fill:#23343b" font-weight="600" text-anchor="start">执行层</text>
+<text x="834" y="247" font-size="17" style="fill:#247a71" font-weight="400" text-anchor="start">System 1</text>
+<g transform="translate(1090,166) scale(1)" fill="none" stroke="#247a71" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l8-6h26l-8 6ZM29 9l8-6v27l-8 7Z"/><rect x="3" y="9" width="26" height="28"/><path d="M11 9v28M20 9v28M3 18h26M3 27h26"/></g>
+<path d="M834 272H1136" stroke="#ccd8dc"/>
+<text x="834" y="309" font-size="18" style="fill:#5c7078" font-weight="400" text-anchor="start">ACT 或本地有限动作控制</text>
+<text x="834" y="350" font-size="18" style="fill:#5c7078" font-weight="400" text-anchor="start">推理、插值与跟踪</text>
+<text x="834" y="391" font-size="18" style="fill:#5c7078" font-weight="400" text-anchor="start">返回执行反馈</text>
+<path d="M390,335 L421,335" fill="none" stroke="#9a703c" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<path d="M775,335 L806,335" fill="none" stroke="#247a71" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<text x="600" y="514" font-size="16" style="fill:#5c7078" font-weight="600" text-anchor="middle">用户选定控制方案 · 启动任务时锁定</text>
+<path d="M215,478 L215,554 L985,554 L985,478" fill="none" stroke="#356a85" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="420" y="536" width="360" height="35" rx="8" fill="#f6f8f8" stroke="#f6f8f8" stroke-width="1.3"/>
+<text x="600" y="560" font-size="18" style="fill:#356a85" font-weight="600" text-anchor="middle">固定 ACT：不创建决策模型</text>
+<rect x="40" y="600" width="1120" height="152" rx="14" fill="#eaf1f2" stroke="#ccd8dc" stroke-width="1.3"/>
+<g transform="translate(66,623) scale(1)" fill="none" stroke="#247a71" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><path d="M20 2l16 6v13q-1 11-16 18Q5 32 4 21V8Z"/><path d="M11 20l6 6 13-14"/></g>
+<text x="120" y="647" font-size="22" style="fill:#23343b" font-weight="600" text-anchor="start">共用运行基础 · Host 与 Runtime</text>
+<text x="66" y="688" font-size="20" style="fill:#23343b" font-weight="400" text-anchor="start">控制授权   /   动作校验   /   调度   /   停止   /   事件记录</text>
+<text x="66" y="723" font-size="17" style="fill:#5c7078" font-weight="400" text-anchor="start">Runtime 向界面与控制器提供带时间信息的观测和实测反馈。</text>
+<path d="M215,569 L215,597" fill="none" stroke="#5c7078" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="6 6" marker-end="url(#arrow)"/>
+<path d="M600,569 L600,597" fill="none" stroke="#5c7078" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="6 6" marker-end="url(#arrow)"/>
+<path d="M985,569 L985,597" fill="none" stroke="#5c7078" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="6 6" marker-end="url(#arrow)"/>
+</svg>

@@ -10,6 +10,8 @@ NERV 是使用已训练策略和视觉 AI 执行机器人任务的本地工作�
 
 0.8.2 是尚未发布的本地候选版。下方安装器使用公开发布版，当前为 0.8.1，不会安装此候选版。SO-101 实机验收和学生首次使用测试尚未完成。
 
+<div align="center"><img src="../../assets/readme/diagrams/zh/overview.svg" alt="NERV 从任务配置、控制方案到 Runtime 执行，统一观测、控制与记录" width="960"></div>
+
 ## 快速安装与启动
 
 GitHub 安装器管理 uv、Python 3.12 和预构建界面，无需 Node.js、Git 或自行编译前端。默认先安装主程序，机器人与仿真组件在设置中按需安装。
@@ -48,6 +50,14 @@ nerv serve --no-browser
 
 通过 `--port` 可选择其他端口；端口被占用时，NERV 报错而不会关闭其他进程。[安装指南](github-install.md) 介绍诊断、解压安装包及旧版 npm 启动器的迁移方法。
 
+## 可以用 NERV 做什么
+
+- **连接设备与仿真**。 用分步引导保存标准 SO-101 的串口、已有标定和双相机配置；仿真作为可选组件安装。
+- **使用自己的策略**。 导入外部训练的 ACT，检查兼容性，在 NERV 内加载和运行。
+- **自己决定控制方式**。 选择固定策略、视觉模型监督策略组，或视觉模型调用有限动作工具。
+- **分开对话与机器人任务**。 聊天模型负责交互，任务使用选定的方案；停止回复和停止任务是独立操作。
+- **保留本地工作记录**。 会话、任务事件、配置与环境保存在本机；重启恢复历史，不自动恢复动作。
+
 ## 首次使用
 
 “新建会话”是默认页面，点击 NERV 标志也会进入该页。“我的机器人”管理已保存的 SO-101 档案，“会话”保存对话历史，“设置”集中管理模型、策略、组件和偏好。
@@ -67,35 +77,13 @@ nerv serve --no-browser
 
 三层表示职责划分，不要求每次任务都经过三个模型。System 2 是可选决策层的辅助标注，System 1 表示本地执行层。
 
-```mermaid
-flowchart TB
-  U[用户选择控制方案] --> I
-  subgraph I[交互层]
-    UI[NERV 界面] <--> AG[NERV Agent / 聊天模型]
-  end
-  I --> T[任务入口 / 锁定方案版本]
-  subgraph D[决策层 / System 2 / 可选]
-    V[用户选定的视觉模型]
-  end
-  subgraph E[执行层 / System 1]
-    P[允许使用的 ACT 技能 / 每次一个]
-    J[本地关节与夹爪控制器]
-  end
-  T -->|固定策略| P
-  T -->|策略组或视觉直接控制| V
-  V -->|允许的技能| P
-  V -->|允许的工具| J
-  P --> R[共用控制权、校验、停止与记录]
-  J --> R
-  R --> B[Runtime / 真机或仿真]
-  B --> O[观测与执行反馈]
-  O --> V
-  O --> UI
-```
+<div align="center"><img src="../../assets/readme/diagrams/zh/architecture.svg" alt="交互层、可选决策层和执行层；固定 ACT 跳过决策模型，各层共用 Host 与 Runtime 基础" width="960"></div>
 
 主进程管理会话、任务和授权，独立 Runtime 持有机器人与相机。SO-101 使用同一个原生 LeRobot 实例，所有动作统一经过 `robot.send_action()`。ACT 与有限动作工具共用调度器，模型不能扩大方案允许的动作集合。生命周期和协议说明见[架构指南](architecture.md)。
 
 ## 选择控制方案
+
+<div align="center"><img src="../../assets/readme/diagrams/zh/control-schemes.svg" alt="固定策略、策略组和视觉直接控制的三条路径及观测反馈" width="960"></div>
 
 | 方案 | 决策层 | 执行层 | 所需条件 |
 |---|---|---|---|
@@ -106,8 +94,6 @@ flowchart TB
 固定 ACT 完全在 NERV 中运行，无需另开 LeRobot 终端。只有一个技能的策略组为该技能增加视觉监督。技能组合需要验证衔接条件；未经验证的衔接会停止并交由操作者处理。
 
 右侧对话框分别选择聊天模型和控制方案，显示方案的决策模型、技能、结构查看入口及当前任务。运行中的任务保留原方案版本和模型设置。“停止回复”“停止任务”和“紧急停止”用途不同；更换方案或切换 Sim／Real 前须停止任务。
-
-<div align="center"><img src="../../assets/readme/images/control-scheme-0.7.png" alt="SO-101 仿真的顶部与腕部视角，以及等待模型凭据的视觉控制方案" width="960"></div>
 
 ## 标准 SO-101 与策略导入
 
@@ -160,6 +146,10 @@ nerv rollback
 
 <details>
 <summary>早期界面与世界视图</summary>
+
+0.7 版本的控制方案工作区：
+
+<div align="center"><img src="../../assets/readme/images/control-scheme-0.7.png" alt="SO-101 仿真的顶部与腕部视角，以及等待模型凭据的视觉控制方案" width="960"></div>
 
 保留的截图展示早期导航、观测与操作员视图，模型、任务和设备接入控件此后已有调整。追拍相机和 World Explore 仅供操作员使用。
 
