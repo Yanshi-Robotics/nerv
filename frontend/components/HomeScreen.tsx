@@ -35,7 +35,7 @@ export default function HomeScreen({
   setDraft,
   navigate,
   onCreated,
-  focus,
+  focusRequest,
 }: {
   registry: Registry | null;
   robot: RobotDisplay | null;
@@ -44,7 +44,7 @@ export default function HomeScreen({
   setDraft: (v: SessionDraft) => void;
   navigate: (route: string) => void;
   onCreated: (id: string, text: string) => void;
-  focus: boolean;
+  focusRequest: number;
 }) {
   const { t } = useI18n();
   const input = useRef<HTMLTextAreaElement>(null);
@@ -57,8 +57,8 @@ export default function HomeScreen({
       .catch(() => {});
   }, []);
   useEffect(() => {
-    if (focus) input.current?.focus();
-  }, [focus]);
+    if (focusRequest > 0) input.current?.focus();
+  }, [focusRequest]);
   const configured = (registry?.brains || []).filter(
     (b) => b.available && b.name !== "operator",
   );

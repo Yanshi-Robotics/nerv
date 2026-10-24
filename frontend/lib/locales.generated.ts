@@ -904,7 +904,14 @@ export const LOCALES: Record<string, Locale> = {
       "Session scene": "Session scene",
       "Previous scene": "Previous scene",
       "Next scene": "Next scene",
-      "No scene available": "No scene available"
+      "No scene available": "No scene available",
+      "New Session": "New Session",
+      "Your Robots": "Your Robots",
+      "About": "About",
+      "Updates": "Updates",
+      "Unable to read version.": "Unable to read version.",
+      "Loading version…": "Loading version…",
+      "Select a session or start a new one.": "Select a session or start a new one."
     }
   },
   "zh": {
@@ -1792,7 +1799,14 @@ export const LOCALES: Record<string, Locale> = {
       "Session scene": "会话场景",
       "Previous scene": "上一个场景",
       "Next scene": "下一个场景",
-      "No scene available": "暂无可用场景"
+      "No scene available": "暂无可用场景",
+      "New Session": "新建会话",
+      "Your Robots": "我的机器人",
+      "About": "关于",
+      "Updates": "更新",
+      "Unable to read version.": "无法读取版本号。",
+      "Loading version…": "正在读取版本号……",
+      "Select a session or start a new one.": "选择已有会话，或新建会话。"
     }
   }
 };
