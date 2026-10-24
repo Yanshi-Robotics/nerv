@@ -4,7 +4,7 @@
 
 NERV connects conversation, task decisions and local robot execution. Choose a control scheme, give it a task, and see what the robot actually did. Use a trained ACT policy, let a visual model select and supervise allowed skills, or use visual decisions with bounded joint and gripper tools.
 
-**0.8.1 is a development release for testing.** Install it from GitHub Releases or use `nerv update` from an existing release installation. SO-101 physical acceptance and student onboarding trials are pending. NERV uses externally trained policies and existing calibration; it does not train or calibrate robots.
+**0.8.2 is a local development candidate and has not been released.** The installation commands below use the published release; they do not install this candidate. The latest published version is 0.8.1. SO-101 physical acceptance and student onboarding trials are pending. NERV uses externally trained policies and existing calibration; it does not train or calibrate robots.
 
 ## Quick install & start
 
@@ -48,21 +48,23 @@ To update, exit the running server, then run `nerv update --check`, `nerv update
 
 ## First use
 
-Every new Agent session requires a **configured chat model and a robot scene**. Use the left and right arrows on the home card, or its scene selector, to choose a registered real robot or an installed simulation scene. The card and task input share the same selection; the displayed robot and scene are used when you start the session. Conversation-only creation is no longer available, including through the API and CLI. Existing conversation history remains readable. Opening the home page or Settings makes no model request. Registering a new key requires an explicit image test; the interface explains the request before sending it.
+Every new Agent session requires a **configured chat model and a robot scene**. Use the left and right arrows on the New Session card, or its scene selector, to choose a registered real robot or an installed simulation scene. The card and task input share the same selection; the displayed robot and scene are used when you start the session. Conversation-only creation is no longer available, including through the API and CLI. Existing conversation history remains readable. Opening New Session or Settings makes no model request. Registering a new key requires an explicit image test; the interface explains the request before sending it.
 
-Home appears above New session in the sidebar. If a model or real robot profile is missing, the home checklist links directly to the relevant setup page. An installed simulation can be used without registering real hardware. Choosing a scene never connects motors or grants motion authority.
+New Session is the default page and the destination of the NERV logo. The sidebar groups New Session, Your Robots, Sessions and Settings; there is no separate Home button. If a model or real robot profile is missing, the setup checklist links directly to the relevant settings. An installed simulation can be used without registering real hardware. Choosing a scene never connects motors or grants motion authority.
 
-**My robot** manages one standard SO-101 follower. Give it a name and optional picture, then follow runtime installation, serial device selection, existing calibration and camera confirmation. Save the configuration and connect separately. Changing the display name does not change its LeRobot calibration ID. Existing saved profiles appear without repeating registration. A connection can enable motor torque; motion authorization remains a separate operator action.
+**Your Robots** manages one standard SO-101 follower. Give it a name and optional picture, then follow runtime installation, serial device selection, existing calibration and camera confirmation. Save the configuration and connect separately. Changing the display name does not change its LeRobot calibration ID. Existing saved profiles appear without repeating registration. A connection can enable motor torque; motion authorization remains a separate operator action.
 
 Without a key, you can still install components, register the robot, view cameras and run a fixed ACT from **My robot → Device and fixed policy workspace**. Import policies in **Settings → Policy library**; policy import is not part of registration. Fixed ACT runs inside NERV, using the same task records and stop controls as model-driven tasks.
 
 For simulation, open **Settings → Components and simulation**. Installed components appear first, followed by installation progress and available modules. Install **SO-101 Simulation** and open its scene explorer, or choose a simulation scene when creating a chat session. The three presets are pick and place, snack sorting and Tower of Hanoi; they include local controllers, not trained task policies.
 
-<div align="center"><img src="assets/readme/images/home-0.8.1.png" alt="NERV home with scene navigation, setup checklist and SO-101 preview" width="960"></div>
+<div align="center"><img src="assets/readme/images/new-session-0.8.2.png" alt="NERV 0.8.2 new-session page with a unified sidebar and setup checklist" width="960"></div>
+
+About shows the running backend version. Updates contains the explicit update check, CLI instructions and license links. The collapsed Sessions icon expands the history list without switching the current task.
 
 ### Settings and saved preferences
 
-Settings groups general preferences, models, control schemes, policies, components, runtime parameters, diagnostics and updates. Device ports, calibration and cameras remain in My robot. Home and Settings share the same state; navigating between them does not cancel a robot task. Return, stop and emergency-stop controls remain visible while a robot workspace is active.
+Settings groups general preferences, models, control schemes, policies, components, runtime parameters, diagnostics and updates. Device ports, calibration and cameras remain in Your Robots. New Session and Settings share the same state; navigating between them does not cancel a robot task. Return, stop and emergency-stop controls remain visible while a robot workspace is active.
 
 The four runtime parameters apply to **new Agent turns**. Environment configuration takes precedence and locks the affected field. Running turns and robot tasks retain their limits. Robot names, processed pictures and preferences are stored under `~/.nerv/devices`; update snapshots include them. Rollback preserves newer configuration in the recovery directory reported by the command.
 
@@ -182,6 +184,8 @@ The [world-library tools](worlds/docs/explore/README.md) cover scene testing and
 </details>
 
 ## Extend and contribute
+
+The [public roadmap](ROADMAP.md) describes planned Harness extensions, plugin management and Yanshifu integration. These are future directions, not capabilities delivered in 0.8.2.
 
 The [Runtime SDK](packages/nerv-runtime-sdk/README.md) provides versioned discovery, lifecycle and bounded dispatch. Device SDKs stay in workers; policy backends produce candidate targets without owning hardware. See [CONTRIBUTING.md](CONTRIBUTING.md), [AGENTS.md](AGENTS.md) and [CHANGELOG.md](CHANGELOG.md).
 

@@ -3,7 +3,14 @@
 Versions are managed from 0.2.0 on: every release gets an entry here and a `v<version>` tag.
 The 0.1.x entries below are the pre-release trail.
 
-## [Unreleased]
+## [0.8.2] — Unreleased local candidate
+
+- Merge Home into New Session, preserve old bookmarks, and keep drafts across settings and robot pages.
+- Use consistent SVG sidebar icons and one collapsed Sessions entry; keep Settings accessible below the scrolling history.
+- Split About (backend version only) from Updates and add an English and Chinese public roadmap.
+- Keep the home task input visible before focus and open robot details directly in a lit 3D pedestal view.
+- Keep Runtime packages at 0.8.1; candidate packaging reads their independent versions.
+- This candidate is not published; installed releases and the public update manifest are unchanged.
 
 - Treat Ctrl+C as an orderly server shutdown without replaying signals into asyncio.
   Repeated interrupts retain application cleanup instead of skipping it.
