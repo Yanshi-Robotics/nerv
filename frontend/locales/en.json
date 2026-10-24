@@ -883,6 +883,13 @@
     "Session scene": "Session scene",
     "Previous scene": "Previous scene",
     "Next scene": "Next scene",
-    "No scene available": "No scene available"
+    "No scene available": "No scene available",
+    "New Session": "New Session",
+    "Your Robots": "Your Robots",
+    "About": "About",
+    "Updates": "Updates",
+    "Unable to read version.": "Unable to read version.",
+    "Loading version…": "Loading version…",
+    "Select a session or start a new one.": "Select a session or start a new one."
   }
 }

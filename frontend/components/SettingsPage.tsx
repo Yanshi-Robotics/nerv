@@ -26,7 +26,8 @@ const sections = [
   ["components", "Components and simulation"],
   ["runtime", "Runtime parameters"],
   ["diagnostics", "Diagnostics and logs"],
-  ["about", "About and updates"],
+  ["updates", "Updates"],
+  ["about", "About"],
 ] as const;
 function SchemeSettings({
   registry,
@@ -177,6 +178,7 @@ export default function SettingsPage({
   session,
   bodyNode,
   version,
+  versionError,
   navigate,
   onChanged,
 }: {
@@ -185,6 +187,7 @@ export default function SettingsPage({
   session: SessionSummary | null;
   bodyNode: NodeInfo | null;
   version: string;
+  versionError: boolean;
   navigate: (r: string) => void;
   onChanged: () => void;
 }) {
@@ -298,8 +301,13 @@ export default function SettingsPage({
         {section === "explore" && <SimulationLibrary registry={registry} />}
         {section === "about" && (
           <div className="settings-content space-y-5">
-            <h1>{t("About and updates")}</h1>
-            <p className="text-3xl">NERV {version}</p>
+            <h1>{t("About")}</h1>
+            {version ? <p className="text-3xl">NERV {version}</p> : <p role="status">{t(versionError ? "Unable to read version." : "Loading version…")}</p>}
+          </div>
+        )}
+        {section === "updates" && (
+          <div className="settings-content space-y-5">
+            <h1>{t("Updates")}</h1>
             <p className="muted">
               {t("Development release. Hardware acceptance remains separate.")}
             </p>

@@ -369,7 +369,7 @@ export default function MyRobot({
               </div>
               <button
                 className="nerv-control action"
-                onClick={() => navigate("home/new")}
+                onClick={() => navigate("new")}
               >
                 {t("New session")}
               </button>

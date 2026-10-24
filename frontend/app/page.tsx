@@ -11,6 +11,7 @@ import {
   type SessionSummary,
   type RobotDisplay,
 } from "@/lib/api";
+import { canonicalRoute } from "@/lib/navigation";
 import AppSidebar from "@/components/AppSidebar";
 import HomeScreen, { type SessionDraft } from "@/components/HomeScreen";
 import MyRobot from "@/components/MyRobot";
@@ -23,13 +24,15 @@ import ControlSchemes from "@/components/ControlSchemes";
 import { useI18n } from "@/lib/i18n";
 export default function Home() {
   const { t } = useI18n();
-  const [route, setRoute] = useState("home"),
+  const [route, setRoute] = useState("new"),
     [collapsed, setCollapsed] = useState(false),
     [registry, setRegistry] = useState<Registry | null>(null),
     [nodes, setNodes] = useState<NodeInfo[]>([]),
     [sessions, setSessions] = useState<SessionSummary[]>([]),
     [robot, setRobot] = useState<RobotDisplay | null>(null),
     [version, setVersion] = useState(""),
+    [versionError, setVersionError] = useState(false),
+    [focusRequest, setFocusRequest] = useState(0),
     [currentId, setCurrentId] = useState(""),
     [error, setError] = useState("");
   const [draft, setDraft] = useState<SessionDraft>({
@@ -44,6 +47,8 @@ export default function Home() {
     { id: string; text: string } | undefined
   >();
   const navigate = useCallback((value: string) => {
+    value = canonicalRoute(value);
+    if (value === "new") setFocusRequest((n) => n + 1);
     window.location.hash = value;
     setRoute(value);
     if (value.startsWith("session/")) setCurrentId(value.slice(8));
@@ -67,21 +72,26 @@ export default function Home() {
   }, []);
   useEffect(() => {
     const restore = () => {
-      const value = decodeURIComponent(window.location.hash.slice(1)) || "home";
+      const value = canonicalRoute(window.location.hash);
+      if (window.location.hash !== `#${value}`) window.history.replaceState(null, "", `#${value}`);
       setRoute(value);
       if (value.startsWith("session/")) setCurrentId(value.slice(8));
     };
     restore();
     try {
-      setCollapsed(localStorage.getItem("nerv-sidebar") === "1");
+      setCollapsed(window.matchMedia("(max-width: 800px)").matches || localStorage.getItem("nerv-sidebar") === "1");
     } catch {}
+    const narrow = window.matchMedia("(max-width: 800px)");
+    const adaptSidebar = () => { if (narrow.matches) setCollapsed(true); };
+    narrow.addEventListener("change", adaptSidebar);
     window.addEventListener("hashchange", restore);
     refresh();
     userApi("status")
-      .then((v) => setVersion(v.version))
-      .catch(() => {});
+      .then((v) => { if (v.version) setVersion(v.version); else setVersionError(true); })
+      .catch(() => setVersionError(true));
     const timer = setInterval(refresh, POLL_NODES_MS);
     return () => {
+      narrow.removeEventListener("change", adaptSidebar);
       window.removeEventListener("hashchange", restore);
       clearInterval(timer);
     };
@@ -116,7 +126,6 @@ export default function Home() {
         current={currentId}
         collapsed={collapsed}
         route={route}
-        version={version}
         navigate={navigate}
         toggle={() =>
           setCollapsed((v) => {
@@ -134,7 +143,7 @@ export default function Home() {
             {error}
           </p>
         )}
-        {route.startsWith("home") && (
+        {route === "new" && (
           <HomeScreen
             registry={registry}
             robot={robot}
@@ -142,7 +151,7 @@ export default function Home() {
             draft={draft}
             setDraft={setDraft}
             navigate={navigate}
-            focus={route === "home/new"}
+            focusRequest={focusRequest}
             onCreated={async (id, text) => {
               setInitial({ id, text });
               setDraft({ ...draft, text: "" });
@@ -172,6 +181,7 @@ export default function Home() {
             session={schemeSession}
             bodyNode={bodyNode(schemeSession)}
             version={version}
+            versionError={versionError}
             navigate={navigate}
             onChanged={refresh}
           />
@@ -197,7 +207,7 @@ export default function Home() {
                     </p>
                     <button
                       className="nerv-control action"
-                      onClick={() => navigate("home/new")}
+                      onClick={() => navigate("new")}
                     >
                       {t("Start an Agent session")}
                     </button>
@@ -238,12 +248,12 @@ export default function Home() {
               />
             ) : (
               <div className="p-8">
-                {t("Select a session or return home.")}
+                {t("Select a session or start a new one.")}
                 <button
                   className="nerv-control action"
-                  onClick={() => navigate("home")}
+                  onClick={() => navigate("new")}
                 >
-                  {t("Home")}
+                  {t("New Session")}
                 </button>
               </div>
             )}
