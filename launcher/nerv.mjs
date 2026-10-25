@@ -142,6 +142,33 @@ export async function main(args = process.argv.slice(2)) {
     console.log(JSON.stringify(records.map(n => JSON.parse(readFileSync(join(directory, n), "utf8"))), null, 2));
     return;
   }
+  if (args[0] === "runtime" && args[1] === "install" && !products.runtimes[args[2]]) {
+    throw new Error(`Use nerv runtime install <provider>. Available: ${Object.keys(products.runtimes).join(", ")}`);
+  }
+  // Fresh user installations use the same platform plans and recoverable transport
+  // as the Shell/PowerShell entry. Source bootstrapping is contributor-only.
+  if (env.NERV_SOURCE_INSTALL !== "1") {
+    const response = await fetch(`${releaseBase}/release.json`, {signal: AbortSignal.timeout(60000)});
+    if (!response.ok) throw new Error(`Release check failed: HTTP ${response.status}`);
+    const manifest = await response.json();
+    const name = process.platform === "win32" ? "install.ps1" : "install.sh";
+    const origin = new URL(manifest.base_url);
+    if (origin.origin !== "https://github.com" || !origin.pathname.startsWith("/Yanshi-Robotics/nerv/releases/download/")) throw new Error("Invalid official release origin");
+    const script = await fetch(`${origin.href}/${name}`, {signal: AbortSignal.timeout(60000)});
+    if (!script.ok) throw new Error(`Installer download failed: HTTP ${script.status}`);
+    const bytes = Buffer.from(await script.arrayBuffer());
+    verifyReleaseAsset(bytes, manifest.files[name]);
+    const directory = join(dataHome, "bootstrap");
+    mkdirSync(directory, {recursive: true});
+    const entry = join(directory, name);
+    writeFileSync(entry, bytes);
+    const options = {env: {...env, NERV_RELEASE_BASE: origin.href}};
+    if (process.platform === "win32") run("powershell.exe", ["-NoProfile", "-File", entry, "-NoPath"], options);
+    else run("sh", [entry, "--no-path"], options);
+    const installed = JSON.parse(readFileSync(join(dataHome, "active.json"), "utf8"));
+    await runHost(installed.python, ["-m", "nerv.platform.cli", ...args], {env});
+    return;
+  }
   const device = args[0] === "runtime";
   const provider = device ? args[2] : "host";
   if (device && (args[1] !== "install" || args.length !== 3 || !products.runtimes[provider])) {

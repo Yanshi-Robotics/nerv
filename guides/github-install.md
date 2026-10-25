@@ -4,6 +4,9 @@
 
 0.8.1 is a development release for local testing. A release bundle contains the host, Runtime SDK and LeRobot adapter wheels, dependency locks, the optional SO-101 simulation archive, installers and `release.json`. Physical acceptance and student onboarding trials are still pending.
 
+
+The 0.8.3 local candidate uses complete platform download plans and an explicit CPU/NVIDIA selection. See [recoverable installation](recoverable-installation.md). The older published release uses the legacy dependency installer described below.
+
 ## Install a supplied candidate
 
 Extract the complete bundle. From its directory, Linux/macOS users run:
