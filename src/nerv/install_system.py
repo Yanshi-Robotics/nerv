@@ -81,7 +81,7 @@ def settings(root, public=False):
 
 
 def validate_target(target, facts):
-    if target not in TARGETS:
+    if not isinstance(target, str) or target not in TARGETS:
         raise ValueError('Unsupported platform. Select a published target in System and installation.')
     system, arch = TARGETS[target]
     if facts['os'] not in ('unknown', system) or facts['arch'] not in ('unknown', arch):

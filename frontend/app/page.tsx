@@ -48,6 +48,8 @@ export default function Home() {
   >();
   const navigate = useCallback((value: string) => {
     value = canonicalRoute(value);
+    // The narrow sidebar overlays content; dismiss it after choosing a destination.
+    if (window.matchMedia("(max-width: 800px)").matches) setCollapsed(true);
     if (value === "new") setFocusRequest((n) => n + 1);
     window.location.hash = value;
     setRoute(value);
