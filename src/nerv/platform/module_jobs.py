@@ -51,7 +51,8 @@ def catalog():
         if job["state"] == "failed" and not job.get("error_code"):
             job["error_code"] = failure_code(job["id"])
         jobs.append(job)
-        if job["state"] in ("queued", "running") and time.time() - job.get("created_at", 0) > 30:
+        if (job["state"] in ("queued", "running") and job['id'] not in WORKERS
+                and time.time() - job.get("created_at", 0) > 30):
             from filelock import FileLock, Timeout
             try:
                 with FileLock(str(path.with_suffix(".running")), timeout=0):

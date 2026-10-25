@@ -142,17 +142,22 @@ def watch():
 threading.Thread(target=watch, daemon=True).start()
 for sig in (signal.SIGINT, signal.SIGTERM):
     signal.signal(sig, lambda *_: stop.set())
-child = subprocess.Popen(sys.argv[2:], stdin=subprocess.DEVNULL)
-while child.poll() is None and not stop.wait(.1):
-    pass
-if child.poll() is None:
-    child.terminate()
-    try: child.wait(timeout=3)
-    except subprocess.TimeoutExpired:
-        child.kill()
-        child.wait()
-marker.unlink(missing_ok=True)
-sys.exit(child.returncode if child.returncode >= 0 else 128 - child.returncode)
+try:
+    child = subprocess.Popen(sys.argv[2:], stdin=subprocess.DEVNULL)
+    while child.poll() is None and not stop.wait(.1):
+        pass
+    if child.poll() is None:
+        child.terminate()
+        try: child.wait(timeout=3)
+        except subprocess.TimeoutExpired:
+            child.kill()
+            child.wait()
+    code = child.returncode if child.returncode >= 0 else 128 - child.returncode
+except OSError:
+    code = 126
+finally:
+    marker.unlink(missing_ok=True)
+sys.exit(code)
 """
 
 
@@ -229,7 +234,11 @@ def transfer(root, item, *, env=None, stopped=lambda: None, report=lambda **_: N
             with head.open('wb'), chunk.open('wb'):
                 pass
             target.with_suffix('.alive').touch()
-            proc = subprocess.Popen([sys.executable, '-c', CURL_GUARDIAN, str(target.with_suffix('.alive')), *command], env=env, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            try:
+                proc = subprocess.Popen([sys.executable, '-c', CURL_GUARDIAN, str(target.with_suffix('.alive')), *command], env=env, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except OSError:
+                target.with_suffix('.alive').unlink(missing_ok=True)
+                raise
             last_size, last_data, last_emit = 0, time.monotonic(), 0.0
             timed_out = False
             try:
@@ -298,7 +307,7 @@ def transfer(root, item, *, env=None, stopped=lambda: None, report=lambda **_: N
             if status == 416:
                 partial.unlink(missing_ok=True)
                 metadata.unlink(missing_ok=True)
-            elif (400 <= status < 500 and status not in (408, 429)) or proc.returncode in (23, 26, 60, 77):
+            elif (400 <= status < 500 and status not in (408, 429)) or proc.returncode in (23, 26, 60, 77, 126):
                 raise ValueError(f'Download cannot continue (HTTP {status}, transport {proc.returncode}); check access, disk space or certificates')
             delay = retry_delay(fields.get('retry-after'), attempt)
             if attempt == RETRIES or waited + delay > WAIT_BUDGET:
@@ -342,6 +351,8 @@ def download_all(root, items, *, env, preferences, stopped=lambda: None, progres
 
     def emit(key, **fields):
         with guard:
+            if fields.get('state') == 'verified':
+                fields.update(reason=None, next_retry_at=None)
             state[key].update(fields)
             if fields.get('state') == 'retrying':
                 degraded.set()
