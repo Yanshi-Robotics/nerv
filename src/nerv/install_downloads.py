@@ -10,6 +10,7 @@ from pathlib import Path
 import random
 import shutil
 import subprocess
+import sys
 import threading
 import time
 from urllib.parse import urlsplit
@@ -128,6 +129,33 @@ def recover_response(target, partial, metadata, item):
     attempt.unlink(missing_ok=True)
 
 
+# A pipe guardian owns curl. If the install worker crashes, stdin closes and
+# the guardian stops its child before a replacement worker can resume the file.
+CURL_GUARDIAN = r"""
+import subprocess, sys, threading, time, signal
+from pathlib import Path
+marker = Path(sys.argv[1])
+stop = threading.Event()
+def watch():
+    sys.stdin.buffer.read()
+    stop.set()
+threading.Thread(target=watch, daemon=True).start()
+for sig in (signal.SIGINT, signal.SIGTERM):
+    signal.signal(sig, lambda *_: stop.set())
+child = subprocess.Popen(sys.argv[2:], stdin=subprocess.DEVNULL)
+while child.poll() is None and not stop.wait(.1):
+    pass
+if child.poll() is None:
+    child.terminate()
+    try: child.wait(timeout=3)
+    except subprocess.TimeoutExpired:
+        child.kill()
+        child.wait()
+marker.unlink(missing_ok=True)
+sys.exit(child.returncode if child.returncode >= 0 else 128 - child.returncode)
+"""
+
+
 def transfer(root, item, *, env=None, stopped=lambda: None, report=lambda **_: None,
              bandwidth=0, allow_http=False):
     from filelock import FileLock, Timeout
@@ -153,6 +181,13 @@ def transfer(root, item, *, env=None, stopped=lambda: None, report=lambda **_: N
         if checked_file(root, item):
             report(received=item['bytes'], cached=True, state='verified')
             return target
+        deadline = time.monotonic() + 5
+        while target.with_suffix('.alive').exists() and time.monotonic() < deadline:
+            if state := stopped():
+                raise DownloadStopped(state)
+            time.sleep(POLL_SECONDS)
+        if target.with_suffix('.alive').exists():
+            raise ValueError('Previous transfer is still stopping; wait before continuing')
         recover_response(target, partial, metadata, item)
         if str((env or os.environ).get('UV_OFFLINE', '')).lower() in ('1', 'true'):
             if not (partial.exists() and partial.stat().st_size == item['bytes'] and digest(partial) == item['sha256']):
@@ -193,7 +228,8 @@ def transfer(root, item, *, env=None, stopped=lambda: None, report=lambda **_: N
             # Never log curl stderr: it can contain proxy credentials or private endpoint details.
             with head.open('wb'), chunk.open('wb'):
                 pass
-            proc = subprocess.Popen(command, env=env, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            target.with_suffix('.alive').touch()
+            proc = subprocess.Popen([sys.executable, '-c', CURL_GUARDIAN, str(target.with_suffix('.alive')), *command], env=env, stdin=subprocess.PIPE, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
             last_size, last_data, last_emit = 0, time.monotonic(), 0.0
             timed_out = False
             try:
@@ -210,7 +246,7 @@ def transfer(root, item, *, env=None, stopped=lambda: None, report=lambda **_: N
                         last_emit = now
                     if state or now - last_data > IDLE_TIMEOUT or size > item['bytes']:
                         timed_out = not state
-                        proc.terminate()
+                        proc.stdin.close()
                         break
                     time.sleep(POLL_SECONDS)
                 try:
@@ -219,9 +255,14 @@ def transfer(root, item, *, env=None, stopped=lambda: None, report=lambda **_: N
                     proc.kill()
                     proc.wait()
             finally:
+                if proc.stdin and not proc.stdin.closed:
+                    proc.stdin.close()
                 if proc.poll() is None:
-                    proc.kill()
-                    proc.wait()
+                    try:
+                        proc.wait(timeout=5)
+                    except subprocess.TimeoutExpired:
+                        proc.kill()
+                        proc.wait()
             status, fields = headers(head)
             size = chunk.stat().st_size
             valid_response = status == 200

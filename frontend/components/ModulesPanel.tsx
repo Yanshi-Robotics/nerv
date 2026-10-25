@@ -58,6 +58,7 @@ export default function ModulesPanel({
     (j, i) => !jobs.slice(i + 1).some((v) => v.module === j.module),
   );
   const active = latest.filter((j) => ["queued", "running"].includes(j.state));
+  const pending = latest.filter((j) => ["queued", "running", "paused", "waiting"].includes(j.state));
   const card = (m: Module) => (
     <article
       className="rounded-xl border border-neutral-700 p-4 space-y-3"
@@ -148,10 +149,10 @@ export default function ModulesPanel({
           <p className="muted">{t("No components installed yet.")}</p>
         )}
       </div>
-      {active.length > 0 && (
+      {pending.length > 0 && (
         <div className="space-y-3">
           <h2>{t("Installation progress")}</h2>
-          {active.map(jobCard)}
+          {pending.map(jobCard)}
         </div>
       )}
       <div className="space-y-3">
@@ -161,18 +162,18 @@ export default function ModulesPanel({
             (m) =>
               !m.installed &&
               !m.needs_repair &&
-              !active.some((j) => j.module === m.id),
+              !pending.some((j) => j.module === m.id),
           )
           .map(card)}
       </div>
-      {latest.some((j) => !["queued", "running"].includes(j.state)) && (
+      {latest.some((j) => !pending.includes(j)) && (
         <details>
           <summary className="cursor-pointer">
             {t("Installation history")}
           </summary>
           <div className="space-y-3 py-3">
             {latest
-              .filter((j) => !["queued", "running"].includes(j.state))
+              .filter((j) => !pending.includes(j))
               .map(jobCard)}
           </div>
         </details>
