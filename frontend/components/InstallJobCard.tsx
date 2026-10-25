@@ -18,9 +18,9 @@ export function InstallationLocation({ path, root }: {path?: string | null; root
   </details>;
 }
 
-export default function InstallJobCard({job, label, root, onCancel, onRetry, retryDisabled}: {
+export default function InstallJobCard({job, label, root, onCancel, onPause, onRetry, retryDisabled}: {
   job: InstallJob; label: string; root?: string; onCancel: () => void;
-  onRetry: () => void; retryDisabled: boolean;
+  onPause: () => void; onRetry: () => void; retryDisabled: boolean;
 }) {
   const { t } = useI18n();
   const running = isInstalling(job);
@@ -45,12 +45,23 @@ export default function InstallJobCard({job, label, root, onCancel, onRetry, ret
   return <article className="install-job rounded-xl border border-neutral-700 p-4 space-y-3">
     <h3 className="font-medium">{label}</h3>
     <p className="text-sm" role="status">{t(job.state)} · {t(job.phase)}</p>
-    {running && <>
+    {(running || ["paused", "waiting"].includes(job.state)) && <>
       <progress className="install-progress" max={100} value={percent} aria-label={t("Installation progress")} />
       <p className="muted text-xs">{percent !== undefined
-        ? `${t("Current file download")}: ${percent}% · ${((job.downloaded || 0) / 1048576).toFixed(1)} / ${((job.download_total || 0) / 1048576).toFixed(1)} MiB`
+        ? `${t("Dependency downloads")}: ${percent}% · ${((job.downloaded || 0) / 1048576).toFixed(1)} / ${((job.download_total || 0) / 1048576).toFixed(1)} MiB`
         : t("Working on this stage; total progress is not available.")}</p>
       {job.phase === "download" && job.asset && <p className="text-xs break-all">{job.asset}</p>}
+    </>}
+    {job.files && <>
+      <p className="muted text-xs">{t("Cached")}: {((job.cached_bytes || 0) / 1048576).toFixed(1)} MiB · {((running && job.phase === 'download' ? job.speed_bytes_s || 0 : 0) / 1048576).toFixed(2)} MiB/s{running && job.phase === 'download' && job.eta_seconds != null ? ` · ${t("Estimated seconds remaining")}: ${job.eta_seconds}` : ""}</p>
+      <p className="muted text-xs">{t("Concurrent downloads")}: {job.concurrency} · {t("Bandwidth limit")}: {job.bandwidth_bytes_s ? `${job.bandwidth_bytes_s} B/s` : t("Unlimited")}</p>
+      <details><summary className="nerv-control cursor-pointer text-sm">{t("Download files")}</summary><div className="max-h-64 overflow-auto space-y-3 py-3">{job.files.map(file => <div key={file.name}>
+        <p className="text-xs break-all">{file.name} · {t(file.state)}</p>
+        <progress className="install-progress" max={file.bytes} value={file.received} aria-label={file.name}/>
+        <p className="muted text-xs">{(file.received / 1048576).toFixed(1)} / {(file.bytes / 1048576).toFixed(1)} MiB{file.attempt ? ` · ${t("Retry")}: ${file.attempt}` : ""}</p>
+        {file.next_retry_at && <p className="text-xs">{t("Next retry")}: {new Date(file.next_retry_at * 1000).toLocaleTimeString()}</p>}
+        {file.reason && <p className="text-xs">{file.reason}</p>}
+      </div>)}</div></details>
     </>}
     <InstallationLocation path={job.installation_path} root={root} />
     {job.error_code && <p className="error-text text-sm">{t(job.error_code === "download_dns"
@@ -61,8 +72,9 @@ export default function InstallJobCard({job, label, root, onCancel, onRetry, ret
       <button className="nerv-control underline text-xs" aria-expanded={expanded} onClick={() => setExpanded(!expanded)}>
         {t(expanded ? "Hide installation log" : "Show installation log")}
       </button>
+      {running && <button className="nerv-control underline text-xs" onClick={onPause}>{t("Pause download")}</button>}
       {running ? <button className="nerv-control underline text-xs" onClick={onCancel}>{t("Cancel installation")}</button>
-        : ["failed", "cancelled"].includes(job.state) && <button className="nerv-control underline text-xs" disabled={retryDisabled} onClick={onRetry}>{t("Retry")}</button>}
+        : ["failed", "cancelled", "paused", "waiting"].includes(job.state) && <button className="nerv-control underline text-xs" disabled={retryDisabled} onClick={onRetry}>{t("Continue installation")}</button>}
     </div>
     {expanded && <div className="install-log-panel">
       <div className="install-log-heading">

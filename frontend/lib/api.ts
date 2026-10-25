@@ -618,6 +618,8 @@ export const browseDirectories = (path?: string, offset = 0) => domainRequest("/
 export const setupCamera = (operation: string, payload: Record<string, unknown> = {}) => domainRequest(`/api/setup-camera/lerobot0.6.1/${operation}`, payload);
 export const moduleCatalog = () => domainRequest("/api/modules");
 export const installModule = (id: string) => domainRequest(`/api/modules/${id}/install`, {});
+export const pauseModuleInstall = (id: string) => domainRequest(`/api/modules/${id}/pause`, {});
+export const resumeModuleInstall = (id: string) => domainRequest(`/api/modules/${id}/resume`, {});
 export const cancelModuleInstall = (id: string) => domainRequest(`/api/modules/${id}/cancel`, {});
 
 // A hung request must not freeze the live installer log indefinitely.

@@ -4,17 +4,22 @@ import {
   moduleCatalog,
   installModule,
   cancelModuleInstall,
-  POLL_NODES_MS,
+  pauseModuleInstall,
+  resumeModuleInstall,
 } from "@/lib/api";
 import InstallJobCard, { InstallationLocation } from "./InstallJobCard";
-import type { InstallJob } from "@/lib/install-progress";
+import { watchInstallLog, type InstallJob } from "@/lib/install-progress";
 import { useI18n } from "@/lib/i18n";
 type Module = {
   id: string;
   label: string;
   installed: boolean;
   needs_repair?: boolean;
-  download_bytes: number;
+  download_bytes: number | null;
+  compatible?: boolean;
+  reason?: string;
+  backend?: string;
+  cached_bytes?: number;
   installation_root?: string;
   installation_path?: string | null;
 };
@@ -34,13 +39,8 @@ export default function ModulesPanel({
     }),
     [error, setError] = useState("");
   useEffect(() => {
-    const read = () =>
-      moduleCatalog()
-        .then(value => { setData(value); setError(""); })
-        .catch((e) => setError(e.message));
-    read();
-    const timer = setInterval(read, POLL_NODES_MS);
-    return () => clearInterval(timer);
+    return watchInstallLog(() => moduleCatalog(), value => {setData(value); setError("");},
+      e => setError((e as Error).message), 1000);
   }, []);
   async function install(id: string) {
     try {
@@ -80,6 +80,7 @@ export default function ModulesPanel({
               : "Not installed",
         )}
       </p>
+      {m.compatible === false && <p role="status" className="error-text text-sm">{m.reason} <a className="underline" href="#settings/system">{t("System and installation")}</a></p>}
       <InstallationLocation path={m.installation_path} root={m.installation_root} />
       {m.installed && !m.needs_repair ? (
         <>
@@ -96,7 +97,7 @@ export default function ModulesPanel({
             </summary>
             <button
               className="nerv-control action"
-              disabled={!!active.length}
+              disabled={!!active.length || m.compatible === false}
               onClick={() => install(m.id)}
             >
               {t("Reinstall component")}
@@ -106,12 +107,12 @@ export default function ModulesPanel({
       ) : (
         <>
           <p className="text-xs text-neutral-400">
-            {(m.download_bytes / 1048576).toFixed(1)} MB ·{" "}
-            {t("Bundle only; Python dependencies download separately")}
+            {m.download_bytes != null ? `${(m.download_bytes / 1048576).toFixed(1)} MiB · ${m.backend || ""}` : t("Download plan unavailable")}
+            {m.cached_bytes != null && ` · ${t("Cached")}: ${(m.cached_bytes / 1048576).toFixed(1)} MiB`}
           </p>
           <button
             className="nerv-control nerv-primary action"
-            disabled={!!active.length}
+            disabled={!!active.length || m.compatible === false}
             onClick={() => install(m.id)}
           >
             {t(m.needs_repair ? "Repair component" : "Install component")}
@@ -125,7 +126,8 @@ export default function ModulesPanel({
       label={data.modules.find(m => m.id === job.module)?.label || job.module}
       root={data.modules.find(m => m.id === job.module)?.installation_root}
       onCancel={() => { cancelModuleInstall(job.id).catch(e => setError(e.message)); }}
-      onRetry={() => install(job.module)} retryDisabled={!!active.length} />
+      onPause={() => { pauseModuleInstall(job.id).catch(e => setError(e.message)); }}
+      onRetry={() => {resumeModuleInstall(job.id).then(() => moduleCatalog()).then(setData).catch(e => setError(e.message));}} retryDisabled={!!active.length} />
   );
   return (
     <section className={only ? "space-y-4" : "settings-content space-y-6"}>

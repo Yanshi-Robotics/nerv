@@ -17,6 +17,7 @@ import ThemeToggle from "./ThemeToggle";
 import LangToggle from "./LangToggle";
 import NervDashboard from "./NervDashboard";
 import SessionLogsView from "./SessionLogsView";
+import SystemInstallation from "./SystemInstallation";
 import SimulationLibrary from "./SimulationLibrary";
 const sections = [
   ["general", "General"],
@@ -24,6 +25,7 @@ const sections = [
   ["schemes", "Control schemes"],
   ["policies", "Policy library"],
   ["components", "Components and simulation"],
+  ["system", "System and installation"],
   ["runtime", "Runtime parameters"],
   ["diagnostics", "Diagnostics and logs"],
   ["updates", "Updates"],
@@ -276,6 +278,7 @@ export default function SettingsPage({
             }
           />
         )}
+        {section === "system" && <SystemInstallation />}
         {section === "runtime" && <RuntimeSettings />}
         {section === "diagnostics" && (
           <>
