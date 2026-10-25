@@ -238,6 +238,52 @@ def cmd_policy(a):
         return 1
 
 
+def cmd_install_system(args):
+    from .. import installation, install_system
+    from .module_jobs import system_description
+    values = {key: getattr(args, key) for key in ('target', 'compute') if getattr(args, key) is not None}
+    if values:
+        from filelock import FileLock
+        with FileLock(installation.home() / 'host-running.lock', timeout=0), FileLock(installation.home() / 'installation-process.lock', timeout=0):
+            install_system.save_settings(installation.home(), values)
+    print(json.dumps(system_description(True), indent=2))
+    return 0
+
+
+def cmd_install_runtime(args):
+    from . import module_jobs
+    from .. import installation, install_plan
+    action = args.action
+    if action == 'list':
+        result = module_jobs.catalog()
+    elif action == 'plan':
+        manifest, _ = installation.read_manifest()
+        result = install_plan.describe(installation.home(), manifest, args.provider)
+    elif action == 'install':
+        result = module_jobs.start(args.provider)
+    else:
+        result = getattr(module_jobs, action)(args.provider)
+    print(json.dumps(result, indent=2))
+    if action in ('install', 'resume'):
+        import time
+        try:
+            previous = None
+            while True:
+                job = next(j for j in module_jobs.catalog()['jobs'] if j['id'] == result['id'])
+                status = (job['state'], job['phase'], job.get('downloaded'), job.get('download_total'))
+                if status != previous:
+                    print(json.dumps(dict(zip(('state', 'phase', 'downloaded', 'total'), status))), flush=True)
+                    previous = status
+                if job['state'] not in ('queued', 'running'):
+                    return 0 if job['state'] == 'complete' else 1
+                time.sleep(1)
+        except KeyboardInterrupt:
+            module_jobs.pause(result['id'])
+            module_jobs.shutdown()
+            return 130
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     load_dotenv(paths.ENV_FILE)
     ap = argparse.ArgumentParser(prog="nerv", description="NERV — a nervous system for robots")
@@ -259,10 +305,14 @@ def main(argv: list[str] | None = None) -> int:
     p.set_defaults(fn=lambda a: print(json.dumps(installation.update(a.check, manifest=a.manifest), indent=2)) or 0)
     p = sub.add_parser("rollback", help="restore the previous working installation")
     p.set_defaults(fn=lambda a: print(json.dumps(installation.rollback(), indent=2)) or 0)
+    p = sub.add_parser('system', help='inspect or select the installation platform')
+    p.add_argument('--target', choices=['auto', *installation.install_system.TARGETS])
+    p.add_argument('--compute', choices=['auto', 'cpu', 'cu130'])
+    p.set_defaults(fn=cmd_install_system)
     p = sub.add_parser("runtime", help="install an official isolated module")
-    p.add_argument("action", choices=["install", "list"])
+    p.add_argument("action", choices=["install", "list", "plan", "pause", "resume", "cancel"])
     p.add_argument("provider", nargs="?")
-    p.set_defaults(fn=lambda a: print(json.dumps(installation.install(a.provider) if a.action == "install" else __import__("nerv.platform.module_jobs", fromlist=["catalog"]).catalog(), indent=2)) or 0)
+    p.set_defaults(fn=cmd_install_runtime)
 
     p = sub.add_parser("policy", help="manage a provider's local device and policy configuration")
     p.add_argument("action", choices=["describe", "configure", "import", "inspect", "check"])

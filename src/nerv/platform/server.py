@@ -55,6 +55,8 @@ def request_shutdown():
     """End observers and invalidate model decisions before HTTP request draining."""
     _shutdown_requested.set()
     nerv.request_shutdown()
+    from .module_jobs import shutdown as stop_installers
+    stop_installers()
 
 
 @app.on_event("shutdown")
@@ -126,6 +128,67 @@ def _models_idle():
 def runtime_installations():
     from .runtime_management import installations
     return installations()
+
+
+@app.get('/api/system')
+def system_profile():
+    from .module_jobs import system_description
+    return system_description()
+
+
+@app.post('/api/system/detect')
+def detect_system():
+    from .module_jobs import system_description
+    return system_description(True)
+
+
+@app.put('/api/system/settings')
+def save_system_settings(payload: dict):
+    from .module_jobs import catalog, system_description, system_facts
+    from .. import installation, install_system
+    if nerv._bound_runtime or any(j['state'] in ('queued', 'running') for j in catalog()['jobs']):
+        raise HTTPException(409, 'Close the robot instance and pause installation before changing system settings')
+    try:
+        install_system.save_settings(installation.home(), payload, system_facts())
+        return system_description()
+    except ValueError as error:
+        raise HTTPException(400, str(error)) from None
+
+
+@app.post('/api/system/settings/reset')
+def reset_system_settings():
+    from ..install_system import DEFAULTS
+    return save_system_settings(DEFAULTS)
+
+
+@app.get('/api/modules/{module}/plan')
+def module_plan(module: str):
+    from .. import installation, install_plan
+    from .module_jobs import system_facts
+    manifest, _ = installation.read_manifest()
+    if module not in manifest['products']:
+        raise HTTPException(404, 'Unknown module')
+    return install_plan.describe(installation.home(), manifest, module, system_facts())
+
+
+@app.post('/api/modules/{job_id}/pause')
+def module_pause(job_id: str):
+    from .module_jobs import pause
+    try:
+        return pause(job_id)
+    except ValueError as error:
+        raise HTTPException(400, str(error)) from None
+
+
+@app.post('/api/modules/{job_id}/resume')
+def module_resume(job_id: str):
+    from .module_jobs import resume
+    if nerv._bound_runtime:
+        raise HTTPException(409, 'Close the robot instance before continuing installation')
+    try:
+        return resume(job_id)
+    except (ValueError, OSError, TimeoutError) as error:
+        raise HTTPException(409, str(error)) from None
 
 
 @app.get("/api/modules")

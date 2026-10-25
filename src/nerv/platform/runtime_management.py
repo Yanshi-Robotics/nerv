@@ -18,9 +18,23 @@ def installations():
             if (isinstance(value, dict)
                     and all(isinstance(value.get(key), str) for key in ("provider", "python", "label"))
                     and Path(value["python"]).is_file()):
-                result.append({key: value[key] for key in ("provider", "python", "label")})
+                result.append({**{key: value[key] for key in ("provider", "python", "label")},
+                               **{key: value[key] for key in ('platform', 'version') if key in value}})
         except (ValueError, OSError, KeyError, TypeError):
             continue
+    return result
+
+
+def check_interpreter(python):
+    from .. import install_system, install_plan
+    executable = Path(python).expanduser().absolute()
+    receipt = executable.parent.parent / 'nerv-install.json'
+    record = json.loads(receipt.read_text()) if receipt.exists() else {}
+    result = install_system.receipt_compatible(record, install_system.detect())
+    if result['compatible'] is False:
+        raise ValueError(result['reason'])
+    if record.get('platform'):
+        install_plan.runtime_check(executable, record)
     return result
 
 
@@ -29,6 +43,7 @@ def manage(python: str, provider: str, operation: str, payload: dict):
     # Preserve a venv executable symlink: resolving it selects the system Python.
     if not executable.is_file():
         raise ValueError("select the runtime Python executable")
+    check_interpreter(executable)
     env = environment()
     result = subprocess.run([str(executable), "-m", "nerv_runtime_sdk.worker", "manage", "--provider", provider,
         "--operation", operation, "--home", paths.NERV_HOME], input=json.dumps(payload),

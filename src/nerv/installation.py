@@ -21,6 +21,13 @@ import urllib.request
 import uuid
 import zipfile
 
+try:
+    from . import install_system, install_plan, install_downloads
+except ImportError:  # Self-contained release bootstrap embeds the same helpers.
+    import nerv_install_system as install_system
+    import nerv_install_plan as install_plan
+    import nerv_install_downloads as install_downloads
+
 RELEASE_BASE = "https://github.com/Yanshi-Robotics/nerv/releases/latest/download"
 PYTHON_VERSION = "3.12"
 NETWORK_TIMEOUT_S = 60
@@ -109,6 +116,9 @@ def installer_environment(base=None):
     for key, value in defaults.items():
         env.setdefault(key, str(value))
     root = home()
+    preferences = install_system.settings(root)
+    if preferences['proxy']:
+        env.update(HTTPS_PROXY=preferences['proxy'], HTTP_PROXY=preferences['proxy'], ALL_PROXY=preferences['proxy'])
     env.update(NERV_HOME=str(root), PYTHONUTF8="1", PYTHONUNBUFFERED="1",
                UV_CACHE_DIR=str(root / ".cache/uv"),
                UV_CREDENTIALS_DIR=str(root / ".cache/uv-credentials"),
@@ -148,11 +158,20 @@ def unpack(archive, destination):
 
 
 def install(product="host", *, manifest=None, cancelled=lambda: False, progress=lambda **_: None,
-            activate=True, _lock=None):
+            activate=True, _lock=None, stopped=None, plan_snapshot=None):
     value, source = read_manifest(manifest)
     if product not in value["products"]:
         raise ValueError("Unknown official installation module")
     root = home()
+    stopped = stopped or (lambda: 'cancelled' if cancelled() else None)
+    preferences = install_system.settings(root)
+    selected_plan = None
+    if value.get('download_plans'):
+        facts = install_system.detect()
+        install_system.atomic_json(root / 'system-profile.json', facts)
+        selected_plan = plan_snapshot or install_plan.select(value, product, preferences, facts)
+        if not install_system.receipt_compatible({'platform': selected_plan}, facts)['compatible']:
+            raise ValueError('The saved installation target no longer matches this system')
     root.mkdir(parents=True, exist_ok=True)
     from filelock import FileLock, Timeout
     lock = _lock or FileLock(root / "installation-process.lock")
@@ -175,7 +194,16 @@ def install(product="host", *, manifest=None, cancelled=lambda: False, progress=
             # is moved. Cache their optional assets without installing modules.
             selected_files += [name for name in value["files"]
                                if name not in selected_files and (source / name).is_file()]
-        for name in selected_files:
+        if selected_plan and product == "host":
+            # Retain bundled optional resources when the extracted candidate is moved.
+            for name in selected_files:
+                local = source / name
+                if local.is_file() and Path(name).name == name:
+                    if install_downloads.digest(local) != value['files'][name]['sha256']:
+                        raise ValueError('Release checksum mismatch: ' + name)
+                    if local.resolve() != (cache / name).resolve():
+                        shutil.copyfile(local, cache / name)
+        for name in ([] if selected_plan else selected_files):
             if Path(name).name != name:
                 raise ValueError("Invalid release asset name")
             receipt = value["files"][name]
@@ -199,19 +227,27 @@ def install(product="host", *, manifest=None, cancelled=lambda: False, progress=
             raise InterruptedError("Installation cancelled")
         env = installer_environment()
         uv = uv_executable()
-        progress(phase="environment")
-        run([uv, "venv", "--managed-python", "--python", PYTHON_VERSION, str(stage)], env, cancelled, progress)
-        python = str(python_at(stage))
-        progress(phase="dependencies")
-        requirements = [str(assets[n]) + spec.get("extras", {}).get(n, "") for n in spec["packages"]]
-        command = [uv, "pip", "install", "--python", python, *requirements]
-        if spec.get("lock"):
-            command = [uv, "pip", "install", "--python", python, "--require-hashes", "--only-binary=:all:",
-                       "--find-links", str(cache), "-r", str(assets[spec["lock"]])]
-        run(command, env, cancelled, progress)
+        if selected_plan:
+            assets = install_plan.install_plan(root, selected_plan, source, stage, env=env, preferences=preferences,
+                stopped=stopped, progress=progress, run=run, uv=uv)
+            python = str(python_at(stage))
+        else:
+            progress(phase="environment")
+            run([uv, "venv", "--managed-python", "--python", PYTHON_VERSION, str(stage)], env, cancelled, progress)
+            python = str(python_at(stage))
+            progress(phase="dependencies")
+            requirements = [str(assets[n]) + spec.get("extras", {}).get(n, "") for n in spec["packages"]]
+            command = [uv, "pip", "install", "--python", python, *requirements]
+            if spec.get("lock"):
+                command = [uv, "pip", "install", "--python", python, "--require-hashes", "--only-binary=:all:",
+                           "--find-links", str(cache), "-r", str(assets[spec["lock"]])]
+            run(command, env, cancelled, progress)
         run([uv, "pip", "check", "--python", python], env, cancelled, progress)
         record = {"provider": spec.get("provider", product), "python": python, "label": spec["label"],
                   "version": value["version"], "product": product}
+        if selected_plan:
+            record['platform'] = {k: selected_plan[k] for k in ('target', 'backend', 'libc_min', 'macos_min', 'minimum_driver_major', 'minimum_compute_capability') if k in selected_plan}
+            record['runtime_facts'] = install_plan.runtime_check(python, record)
         if spec.get("archive"):
             progress(phase="assets")
             module_root = stage / "module"
@@ -238,6 +274,8 @@ def install(product="host", *, manifest=None, cancelled=lambda: False, progress=
             raise InterruptedError("Installation cancelled")
         write_json(stage / "release.json", value)
         write_json(stage / "nerv-install.json", record)
+        if state := stopped():
+            raise install_downloads.DownloadStopped(state)
         if not activate:
             return record
         if product == "host":
@@ -299,6 +337,11 @@ def _verify_record(record):
     python = Path(record["python"])
     if not python.is_file():
         raise ValueError("Previous installation is unavailable")
+    if record.get('platform'):
+        compatibility = install_system.receipt_compatible(record, install_system.detect())
+        if compatibility['compatible'] is False:
+            raise ValueError(compatibility['reason'])
+        install_plan.runtime_check(python, record)
     module = "nerv.platform.cli" if record.get("product", "host") == "host" else "nerv_runtime_sdk.worker"
     subprocess.run([str(python), "-m", module, "--version" if module.endswith("cli") else "discover"], check=True)
 
@@ -372,8 +415,14 @@ def _update(check=False, *, manifest=None, lock=None, legacy_python=None):
     pending = root / "update-pending.json"
     write_json(pending, {"snapshot": str(snapshot), "phase": "staging"})
     try:
-        records = {product: install(product, manifest=target, activate=False, _lock=lock)
-                   for product in [*sorted(previous), "host"]}
+        records = {}
+        for product in [*sorted(previous), "host"]:
+            plan = None
+            profile = previous.get(product, {}).get('platform')
+            if profile and value.get('download_plans'):
+                prefs = {**install_system.settings(root), 'target': profile['target'], 'compute': profile['backend']}
+                plan = install_plan.select(value, product, prefs, install_system.detect())
+            records[product] = install(product, manifest=target, activate=False, _lock=lock, plan_snapshot=plan)
         write_json(pending, {"snapshot": str(snapshot), "phase": "activating"})
         _rebind(previous, records)
         for product, record in records.items():
@@ -426,7 +475,12 @@ def main():
     parser.add_argument("--rollback", action="store_true")
     parser.add_argument("--update", action="store_true")
     parser.add_argument("--legacy-python")
+    parser.add_argument('--target', choices=['auto', *install_system.TARGETS])
+    parser.add_argument('--compute', choices=['auto', 'cpu', 'cu130'])
     args = parser.parse_args()
+    selection = {key: getattr(args, key) for key in ('target', 'compute') if getattr(args, key) is not None}
+    if selection:
+        install_system.save_settings(home(), selection)
     if args.rollback:
         print(json.dumps(rollback()))
         return
