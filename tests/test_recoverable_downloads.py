@@ -234,3 +234,20 @@ def test_resuming_job_keeps_plan_and_rejects_duplicate(tmp_path, monkeypatch):
     with pytest.raises(ValueError,match='active'):
         jobs.resume('abc')
     assert calls==['abc']
+
+
+def test_transfer_guardian_stops_child_when_owner_pipe_closes(tmp_path):
+    import subprocess
+    import sys
+    marker=tmp_path/'owned.alive'
+    marker.touch()
+    guardian=subprocess.Popen([sys.executable,'-c',d.CURL_GUARDIAN,str(marker),sys.executable,'-c','import time; time.sleep(60)'],stdin=subprocess.PIPE)
+    try:
+        # Closing the pipe also happens in the kernel when an installation worker crashes.
+        guardian.stdin.close()
+        guardian.wait(timeout=5)
+        assert not marker.exists()
+    finally:
+        if guardian.poll() is None:
+            guardian.kill()
+            guardian.wait()
