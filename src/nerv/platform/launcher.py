@@ -79,6 +79,8 @@ class Launcher:
 
     def _spawn(self, key: str, kind: str, python: str, args: list[str], url: str,
                extra_env: dict | None = None, bus_url: str = "") -> NodeHandle:
+        from .runtime_management import check_interpreter
+        check_interpreter(python)
         log_path = os.path.join(self.log_dir, re.sub(r'[^A-Za-z0-9_.-]', "_", key) + ".log")
         safe = ("PATH", "HOME", "USER", "LOGNAME", "LANG", "SYSTEMROOT", "SystemRoot", "WINDIR", "TEMP", "TMP", "USERPROFILE", "APPDATA", "LOCALAPPDATA", "NERV_HOME", "LD_LIBRARY_PATH",
                 "CUDA_VISIBLE_DEVICES", "MUJOCO_GL", "DISPLAY", "XAUTHORITY",

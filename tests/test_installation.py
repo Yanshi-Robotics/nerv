@@ -140,7 +140,7 @@ def test_job_phase_clears_previous_file_progress(tmp_path, monkeypatch):
     monkeypatch.setenv('NERV_HOME', str(tmp_path))
     path = tmp_path / 'install-jobs/abc.json'
     i.write_json(path, {'id': 'abc', 'module': 'fixture', 'phase': 'queued', 'state': 'queued'})
-    def install(module, *, cancelled, progress):
+    def install(module, *, cancelled, progress, **kwargs):
         progress(phase='download', asset='bundle', downloaded=100, download_total=100)
         progress(phase='dependencies')
         state = json.loads(path.read_text())
@@ -196,6 +196,7 @@ def test_installer_network_environment_is_shared_and_allowlisted(tmp_path, monke
 
 def test_install_job_uses_installer_network_environment(tmp_path, monkeypatch):
     from nerv.platform import module_jobs
+    monkeypatch.setattr(module_jobs, 'WORKERS', {})
     monkeypatch.setenv('NERV_HOME', str(tmp_path))
     monkeypatch.setenv('HTTPS_PROXY', 'http://proxy.invalid')
     monkeypatch.setenv('OPENAI_API_KEY', 'private')
