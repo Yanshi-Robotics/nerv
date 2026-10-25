@@ -3,6 +3,16 @@
 Versions are managed from 0.2.0 on: every release gets an entry here and a `v<version>` tag.
 The 0.1.x entries below are the pre-release trail.
 
+## [0.8.3] — Unreleased local candidate
+
+- Resolve exact platform and CPU/CUDA dependency artifacts during candidate builds, including Python and resource checksums.
+- Add persistent curl download records, validated HTTP range recovery, bounded retries, pause/resume and per-content locks.
+- Install verified local wheels offline into staged environments before activation; preserve backend selection on updates.
+- Add System and installation settings, host facts, compatibility checks, aggregate download progress and live file states.
+- Share installation plans with CLI and fresh npm installations; retain the legacy upgrade bridge.
+- Preserve user data and the published installation. Runtime packages and wire protocol remain unchanged.
+- Cross-platform hardware and CUDA inference acceptance remain separate from software and dependency-resolution checks.
+
 ## [0.8.2] — Unreleased local candidate
 
 - Merge Home into New Session, preserve old bookmarks, and keep drafts across settings and robot pages.

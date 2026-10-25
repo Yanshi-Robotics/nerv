@@ -89,7 +89,18 @@ def bundle(output=None):
                          (ROOT / "scripts/install/launch.py", "launch.py"),
                          (ROOT / "scripts/install/install.sh", "install.sh"),
                          (ROOT / "scripts/install/install.ps1", "install.ps1")):
-        shutil.copy2(source, OUT / name)
+        if name == 'bootstrap.py':
+            import base64
+            embedded = "import sys, types, base64\nfrom pathlib import Path\nsys.path[:0] = [str(p) for p in (Path(__file__).parent / 'seed').glob('*.whl')]\n"
+            for module_name in ('install_system', 'install_downloads', 'install_plan'):
+                code = (ROOT / 'src/nerv' / f'{module_name}.py').read_bytes()
+                encoded = base64.b64encode(code).decode()
+                embedded += f"_m = types.ModuleType('nerv_{module_name}'); sys.modules[_m.__name__] = _m; exec(compile(base64.b64decode({encoded!r}), {module_name!r}, 'exec'), _m.__dict__)\n"
+            # Future imports must precede generated module initialization.
+            body = source.read_text().replace('from __future__ import annotations', '')
+            (OUT / name).write_text(embedded + body)
+        else:
+            shutil.copy2(source, OUT / name)
     published = {filename for spec in products.values() for filename in spec["files"]}
     published.update({"bootstrap.py", "launch.py", "install.sh", "install.ps1"})
     files = {p.name: {"sha256": hashlib.sha256(p.read_bytes()).hexdigest(), "bytes": p.stat().st_size}
@@ -97,6 +108,11 @@ def bundle(output=None):
     value = {"schema": 1, "version": __version__, "protocol_major": 3, "config_schema": 1,
              "base_url": f"https://github.com/Yanshi-Robotics/nerv/releases/download/v{__version__}", "products": products, "files": files}
     (OUT / "release.json").write_text(json.dumps(value, indent=2))
+    from build_download_plans import build as build_plans
+    build_plans(OUT)
+    from build_bootstrap_seeds import build as build_seeds
+    build_seeds(OUT)
+    published = set(json.loads((OUT / 'release.json').read_text())['files'])
     with zipfile.ZipFile(OUT / f"nerv-{__version__}-bundle.zip", "w", zipfile.ZIP_DEFLATED) as bundle_zip:
         for name in sorted(published | {"release.json"}):
             bundle_zip.write(OUT / name, name)
