@@ -27,6 +27,8 @@ def describe():
              "required": list(fields), "additionalProperties": False} for op, fields in FIELDS.items()}}
     for operation, key in (("configure", "policy_device"), ("check", "device")):
         descriptor["operations"][operation]["properties"][key].update(enum=["cpu", "cuda", "mps"], default="cpu")
+    from .prerequisites import CAPABILITY
+    descriptor["prerequisites"] = CAPABILITY
     descriptor["camera_preview_module"] = "nerv_runtime_lerobot.setup_camera"
     return descriptor
 
@@ -109,6 +111,15 @@ def _manage(operation, payload, home):
     import jsonschema
     if operation == "describe":
         return describe()
+    if operation == "invalidate_prerequisites":
+        _write(Path(home) / "devices/prerequisites.json", {"state": "unknown", "code": "check_required"})
+        return {"ok": True}
+    if operation == "prerequisite_status":
+        from .prerequisites import status
+        return status(payload, home)
+    if operation == "environment":
+        from .prerequisites import inference_device
+        return {"policy_device": inference_device()}
     if operation == "scheme_options":
         from .action_catalog import primitive_actions
         profile = json.loads(Path(__file__).with_name("product.json").read_text())
@@ -139,6 +150,9 @@ def _manage(operation, payload, home):
         validate_calibration(value)
         return {"ok": True, "id": robot_id, "connected": False}
     if operation == "configure_standard":
+        from .prerequisites import require_current, inference_device
+        require_current(payload, home)
+        payload = {**payload, "policy_device": inference_device()}
         from .discovery import discover
         root = Path(home)
         cameras = payload["cameras"]
@@ -189,6 +203,10 @@ def _manage(operation, payload, home):
     root = Path(home).expanduser().resolve()
     body_file = root / "bodies" / "arm-lerobot-so101" / "body.yaml"
     if operation == "configure":
+        from .prerequisites import require_current, inference_device
+        require_current(payload, home)
+        if payload["policy_device"] != inference_device():
+            raise ValueError("Inference device does not match the verified runtime environment")
         import yaml
         from importlib.resources import files
         camera_path = Path(payload["camera_config_file"]).expanduser().resolve(strict=True)

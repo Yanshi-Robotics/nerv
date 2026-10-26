@@ -38,6 +38,13 @@ def test_configure_import_inspect_never_connects_and_preserves_source(tmp_path, 
     camera.write_text(json.dumps(cameras()))
     payload = {"port": "COM5", "id": "student", "calibration_dir": str(calibration),
                "camera_config_file": str(camera), "policy_device": "cpu"}
+    # This import test starts with previously checked synthetic device evidence.
+    # Read-only probing and stale evidence rejection are exercised separately.
+    from nerv_runtime_lerobot import prerequisites
+    monkeypatch.setattr(prerequisites, "context", lambda payload: {"fixture": "checked"})
+    monkeypatch.setattr(prerequisites, "inference_device", lambda: "cpu")
+    (home / "devices").mkdir(parents=True)
+    (home / "devices/prerequisites.json").write_text(json.dumps({"state": "passed", "context": {"fixture": "checked"}}))
     assert manage("configure", payload, home)["connected"] is False
     model = checkpoint(tmp_path / "model with spaces")
     before = {p.name: p.read_bytes() for p in model.iterdir()}

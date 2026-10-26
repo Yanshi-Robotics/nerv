@@ -54,6 +54,8 @@ async def private_validation_error(_request, error):
 def request_shutdown():
     """End observers and invalidate model decisions before HTTP request draining."""
     _shutdown_requested.set()
+    from .setup_checks import checks
+    checks.cancel()
     nerv.request_shutdown()
     from .module_jobs import shutdown as stop_installers
     stop_installers()
@@ -63,6 +65,8 @@ def request_shutdown():
 def _shutdown() -> None:
     from .setup_preview import preview
     preview.close()
+    from .setup_checks import checks
+    checks.cancel()
     nerv.shutdown()
 
 
@@ -261,7 +265,10 @@ def manage_runtime(body: RuntimeManagementIn, request: Request):
     from .runtime_management import manage
     from .registry import Registry
     with nerv._node_lock:
-        if body.operation in ("configure", "import") and nerv._bound_runtime:
+        from .setup_checks import checks
+        if checks.active():
+            raise HTTPException(409, "Wait for or cancel the device check")
+        if body.operation in ("configure", "configure_standard", "import") and nerv._bound_runtime:
             raise HTTPException(409, "Close the current robot instance before changing its configuration")
         try:
             result = manage(body.python, body.provider, body.operation, body.payload)
@@ -290,6 +297,38 @@ def operator_directories(payload: dict):
         raise HTTPException(400, str(error))
 
 
+@app.get("/api/setup-health/{product}")
+def setup_health(product: str, refresh: bool = False):
+    from .computer_check import report
+    return report(product, refresh)
+
+
+@app.post("/api/setup-checks/{provider}/start")
+def setup_check_start(provider: str, payload: dict):
+    from .setup_checks import checks
+    from .setup_preview import preview
+    with nerv._node_lock:
+        if nerv._bound_runtime or preview.process is not None:
+            raise HTTPException(409, "Close the robot instance and camera preview before checking")
+        try:
+            return checks.start(_setup_installation(provider), payload)
+        except (ValueError, OSError) as error:
+            raise HTTPException(409, str(error))
+
+
+@app.post("/api/setup-checks/jobs/{identifier}/{operation}")
+def setup_check_job(identifier: str, operation: str):
+    from .setup_checks import checks
+    try:
+        if operation == "cancel":
+            return checks.cancel(identifier)
+        if operation == "status":
+            return checks.get(identifier, renew=True)
+        raise HTTPException(404, "Unknown check operation")
+    except (ValueError, OSError) as error:
+        raise HTTPException(404, str(error))
+
+
 @app.post("/api/setup/{provider}/{operation}")
 def adapter_setup(provider: str, operation: str, payload: dict):
     installation = _setup_installation(provider)
@@ -301,10 +340,13 @@ def adapter_setup(provider: str, operation: str, payload: dict):
             raise HTTPException(400, "Select a device registered by this provider")
         nerv.launcher.supervised_acceptance = {(body.name, "real")}
         return {"ok": True, "verified": False}
-    if operation not in ("scheme_options", "discover", "calibrations", "validate_calibration", "configure_standard", "policies", "import", "inspect", "check"):
+    if operation not in ("environment", "prerequisite_status", "scheme_options", "discover", "calibrations", "validate_calibration", "configure_standard", "policies", "import", "inspect", "check"):
         raise HTTPException(404, "Unknown setup operation")
     from .runtime_management import manage
     with nerv._node_lock:
+        from .setup_checks import checks
+        if checks.active() and operation != "prerequisite_status":
+            raise HTTPException(409, "Wait for or cancel the device check")
         if operation in ("configure_standard", "import") and nerv._bound_runtime:
             raise HTTPException(409, "Close the robot instance before changing its configuration")
         try:
@@ -324,8 +366,9 @@ def setup_camera(provider: str, operation: str, payload: dict):
     with nerv._node_lock:
         if operation == "close":
             return preview.close()
-        if nerv._bound_runtime:
-            raise HTTPException(409, "Close the robot instance before opening setup preview")
+        from .setup_checks import checks
+        if nerv._bound_runtime or checks.active():
+            raise HTTPException(409, "Close the robot instance or device check before opening setup preview")
         if operation not in ("open", "frames"):
             raise HTTPException(404, "Unknown preview operation")
         try:
@@ -474,6 +517,9 @@ def runtime_operation(sid: str, operation: str, payload: dict):
     if operation in ("device/close", "device/torque-off"):
         nerv.arm(sid, False)
     if operation == "prepare":
+        from .setup_checks import checks
+        if checks.active():
+            raise HTTPException(409, "Wait for or cancel the device check")
         from .setup_preview import preview
         preview.close()
     result = client.post("/" + operation, payload)
