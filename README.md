@@ -8,7 +8,7 @@ NERV is a local workspace for running robot tasks with trained policies and visu
 
 [SO-101 setup](guides/standard-so101.md) · [Architecture](guides/architecture.md) · [Roadmap](ROADMAP.md) · [Changelog](CHANGELOG.md)
 
-Version 0.8.3 is an unreleased local candidate. The installer below uses the published release, currently 0.8.1; it does not install this candidate. Real SO-101 acceptance and student onboarding trials remain pending.
+Version 0.8.4 is an unreleased local candidate. The installer below uses the published release, currently 0.8.1; it does not install this candidate. Real SO-101 acceptance and student onboarding trials remain pending.
 
 <div align="center"><img src="assets/readme/diagrams/en/overview.svg" alt="NERV connects task setup, a user-selected control scheme and Runtime execution with shared observations and history" width="960"></div>
 
@@ -50,7 +50,9 @@ nerv serve --no-browser
 
 Use `--port` to choose another port; NERV reports occupied ports without stopping other processes. See the [installation guide](guides/github-install.md) for diagnostics, extracted bundles and migration from older npm launchers.
 
-The 0.8.3 candidate adds **Settings → System and installation**, CPU/NVIDIA installation plans, complete dependency download totals and persistent pause/resume. See [recoverable installation](guides/recoverable-installation.md) for the candidate workflow and platform limits.
+The 0.8.4 candidate adds a six-step **Your Robots → SO-101 setup** flow: computer checks, runtime installation, arm discovery, prerequisite checks, camera confirmation and saving. Motor setup and calibration remain external; NERV only reads their current values after you click **Check device**. See [SO-101 setup](guides/so101-setup.md).
+
+The 0.8.3 installation foundation provides **Settings → System and installation**, CPU/NVIDIA installation plans, complete dependency download totals and persistent pause/resume. See [recoverable installation](guides/recoverable-installation.md) for the candidate workflow and platform limits.
 
 ## What you can do
 

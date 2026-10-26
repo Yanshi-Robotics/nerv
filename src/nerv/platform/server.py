@@ -66,7 +66,7 @@ def _shutdown() -> None:
     from .setup_preview import preview
     preview.close()
     from .setup_checks import checks
-    checks.cancel()
+    checks.close()
     nerv.shutdown()
 
 
