@@ -651,3 +651,7 @@ export async function userApi<T = any>(path: string, method = "GET", body?: unkn
 }
 export const assetUrl = (path: string) => `${BASE}${path}`;
 export type RobotDisplay = {name: string; registered: boolean; image: string | null; last_check?: {at: number; repair_step?: number | null} | null; device: {id?: string; port?: string; calibration_dir?: string; cameras?: Record<string, unknown>}};
+
+export const setupHealth = (refresh = false) => domainRequest(`/api/setup-health/lerobot0.6.1?refresh=${refresh}`);
+export const startSetupCheck = (payload: unknown) => domainRequest('/api/setup-checks/lerobot0.6.1/start', payload);
+export const setupCheckJob = (id: string, operation: 'status' | 'cancel') => domainRequest(`/api/setup-checks/jobs/${encodeURIComponent(id)}/${operation}`, {});

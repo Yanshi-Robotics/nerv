@@ -3,6 +3,18 @@
 Versions are managed from 0.2.0 on: every release gets an entry here and a `v<version>` tag.
 The 0.1.x entries below are the pre-release trail.
 
+## [0.8.4] — Unreleased local candidate
+
+- Add computer readiness checks and a six-step SO-101 setup flow with passive discovery.
+- Introduce versioned, operator-only prerequisite checks in a bounded adapter process.
+  Checks read existing motor settings and calibration; setup and calibration remain external.
+- Bind prerequisite evidence to device identity, calibration contents and runtime receipts.
+  Missing evidence requires a check, including for existing profiles.
+- Use the installed CPU/NVIDIA environment for inference selection and share serial ownership
+  across local NERV homes. The action protocol and Runtime SDK remain unchanged.
+- LeRobot adapter advances to 0.8.2. Physical device checks and camera acceptance remain
+  operator-run; local software fixtures do not establish hardware support.
+
 ## [0.8.3] — Unreleased local candidate
 
 - Resolve exact platform and CPU/CUDA dependency artifacts during candidate builds, including Python and resource checksums.

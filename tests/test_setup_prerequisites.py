@@ -134,7 +134,8 @@ def test_check_process_cancel_duplicate_and_restart(tmp_path, monkeypatch):
     job = manager.start({'provider': 'fixture', 'python': sys.executable}, {})
     with pytest.raises(ValueError, match='already'):
         manager.start({}, {})
-    manager.cancel(job['id'])
+    manager.close()
+    assert manager.process is None
     result = wait_finished(manager, job['id'])
     assert result['code'] == 'cancelled'
     assert c.Checks().get(job['id'])['state'] == 'unknown'
@@ -182,3 +183,22 @@ def test_api_refuses_busy_device_check(monkeypatch):
     assert result.status_code == 409
     result = client.post('/api/runtime/manage', json={'python': '/fixture', 'provider': 'fixture', 'operation': 'configure', 'payload': {}})
     assert result.status_code == 409
+
+
+def test_missing_device_invalidates_saved_proof(device, monkeypatch):
+    payload, values, home, _ = device
+    monkeypatch.setattr(p, 'context', lambda _: {'identity': None})
+    result = p.check(payload, home, factory=lambda *args: ReadOnlyBus(values))
+    assert result['state'] == 'unknown'
+    assert p.status(payload, home)['code'] == 'device_changed'
+
+
+def test_health_insufficient_disk_blocks_install(tmp_path, monkeypatch):
+    from nerv.platform import computer_check as c
+    monkeypatch.setattr(c.installation, 'home', lambda: tmp_path)
+    monkeypatch.setattr(c.module_jobs, 'system_description', lambda refresh: {'facts': {}, 'plans': {'fixture': {'compatible': True, 'free_bytes': 1, 'required_free_bytes': 10}}})
+    monkeypatch.setattr(c.runtime_management, 'installations', lambda: [])
+    monkeypatch.setattr(c.shutil, 'which', lambda _: '/tools/curl')
+    result = c.report('fixture')
+    assert not result['can_install']
+    assert next(v for v in result['checks'] if v['key'] == 'disk')['state'] == 'unmet'

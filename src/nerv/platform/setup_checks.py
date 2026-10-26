@@ -19,6 +19,7 @@ class Checks:
         self.current = None
         self.process = None
         self.deadline = 0
+        self.watcher = None
         self.cancelled = threading.Event()
 
     def active(self):
@@ -49,7 +50,8 @@ class Checks:
             self.process.stdin.close()
             self.process.stdin = None
             self._save()
-            threading.Thread(target=self._watch, daemon=True).start()
+            self.watcher = threading.Thread(target=self._watch, daemon=True)
+            self.watcher.start()
             return dict(self.current)
 
     def _watch(self):
@@ -107,6 +109,12 @@ class Checks:
             if self.active() and (identifier is None or identifier == self.current['id']):
                 self.cancelled.set()
             return {'ok': True}
+
+    def close(self):
+        """Wait for the owned child to release its serial handle during shutdown."""
+        self.cancel()
+        if self.watcher is not None:
+            self.watcher.join(timeout=5)
 
 
 checks = Checks()

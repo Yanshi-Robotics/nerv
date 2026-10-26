@@ -33,7 +33,8 @@ def context(payload):
     path, _ = calibration(payload)
     port = payload['port']
     identity = next(({'serial': p.serial_number, 'vid': p.vid, 'pid': p.pid, 'location': p.location}
-                     for p in list_ports.comports() if p.device == port), None)
+                     for p in list_ports.comports() if (p.device.upper() == port.upper() if sys.platform == 'win32'
+                         else Path(p.device).resolve() == Path(port).resolve())), None)
     receipt = Path(sys.executable).parent.parent / 'nerv-install.json'
     value = {'port': str(Path(port).resolve()) if sys.platform != 'win32' else port.upper(),
              'identity': identity, 'id': payload['id'], 'calibration_path': str(path),
@@ -48,6 +49,8 @@ def status(payload, home):
         current = context(payload)
         target = Path(home) / 'devices/prerequisites.json'
         previous = json.loads(target.read_text()) if target.exists() else {}
+        if current.get('identity', True) is None:
+            return {'state': 'unknown', 'code': 'device_changed', 'context': current}
         if previous.get('context') == current and previous.get('state') == 'passed':
             return previous
         return {'state': 'unknown', 'code': 'check_required', 'context': current}
@@ -126,7 +129,7 @@ def check(payload, home, *, factory=native_bus):
                     # Close the serial handle directly even after a partial open.
                     # Native disconnect() defaults to a torque write; never call it.
                     bus.port_handler.closePort()
-        if context(payload) != result['context']:
+        if context(payload) != result['context'] or result['context'].get('identity', True) is None:
             checks['device_calibration'] = item('unknown', 'device_changed')
     except FileNotFoundError:
         if checks['calibration_file']['state'] == 'passed':
