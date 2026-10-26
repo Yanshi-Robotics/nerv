@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "nerv-runtime-lerobot"
-version = "0.8.1"
+version = "0.8.2"
 description = "LeRobot 0.6.1 device and native ACT adapter for NERV"
 requires-python = ">=3.11"
 license = "MIT"

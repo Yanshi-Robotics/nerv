@@ -1,13 +1,12 @@
 """The sole owner of a native LeRobot device and its camera threads."""
 import hashlib
 import json
-import os
 from pathlib import Path
 import threading
 import time
 from importlib.metadata import version
 
-from filelock import FileLock, Timeout
+from filelock import Timeout
 
 from .standard import LEROBOT_VERSION, WIDTH, HEIGHT, validate_action, validate_cameras, validate_calibration
 
@@ -53,10 +52,11 @@ class DeviceSession:
         robot = make_robot_from_config(config)
         if not robot.calibration:
             raise ValueError("existing LeRobot calibration is required; calibrate outside NERV")
-        device_key = os.path.normcase(os.path.realpath(settings["port"]))
-        root = Path(os.environ.get("NERV_HOME", str(Path.home() / ".nerv"))) / "device-locks"
-        root.mkdir(parents=True, exist_ok=True)
-        lock = FileLock(root / (hashlib.sha256(device_key.encode()).hexdigest() + ".lock"))
+        from .device_lock import device_lock
+        from .prerequisites import require_current
+        import os
+        require_current(settings, os.environ.get("NERV_HOME", str(Path.home() / ".nerv")))
+        lock = device_lock(settings["port"])
         try:
             lock.acquire(timeout=0)
         except Timeout as error:
