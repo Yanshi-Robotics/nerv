@@ -29,6 +29,12 @@ class HubCredential(BaseModel):
     token: str | None = None
 
 
+class AssetInstall(BaseModel):
+    model_config = ConfigDict(extra='forbid')
+    id: str
+    version: str
+
+
 @router.get('/hub/credential')
 def hub_credential_status():
     from ..vlm.store import CredentialStore
@@ -67,6 +73,26 @@ def environments():
 @router.get('/assets')
 def assets():
     return {'assets': store().list()}
+
+
+@router.get('/asset-catalog')
+def asset_catalog():
+    from ..asset_catalog import entries
+    from ..installation import read_manifest
+    try:
+        manifest, _ = read_manifest()
+        return {'assets': entries(manifest)}
+    except (ValueError, OSError) as error:
+        raise HTTPException(400, str(error)) from error
+
+
+@router.post('/asset-catalog/install')
+def install_asset(body: AssetInstall):
+    from .module_jobs import start_asset
+    try:
+        return start_asset(body.id, body.version)
+    except (ValueError, OSError) as error:
+        raise HTTPException(400, str(error)) from error
 
 
 @router.post('/assets/import')
