@@ -73,7 +73,7 @@ nerv serve --no-browser
 
 没有 API key 仍可安装组件、配置机器人、查看相机，并从“我的机器人 → 设备与固定策略工作区”运行固定 ACT。策略通过“设置 → 策略库”单独导入。
 
-<div align="center"><img src="../../assets/readme/images/new-session-0.8.2.png" alt="NERV 0.8.2 候选版的新会话页、配置待办和统一侧栏" width="960"></div>
+<div align="center"><img src="../../assets/readme/images/new-session-0.8.5.png" alt="NERV 0.8.5 候选版的新会话页、配置待办和统一侧栏" width="960"></div>
 
 机器人详情默认展示本地三维模型，展示姿态不代表实测位置。名称、图片和连接配置会保存，运动授权不会随重启恢复。“关于”显示运行版本，“更新”提供主动检查入口。切换页面保留当前工作区及停止控件；运行参数修改对新的 Agent 回合生效，不改变已开始的工作。
 
@@ -146,6 +146,11 @@ nerv rollback
 [验收指南](../../guides/release-acceptance.md) 分别说明软件、仿真、真实任务和新用户测试。[路线图](ROADMAP.md) 介绍后续 Harness 扩展、插件管理和 Yanshifu 集成，均不属于 0.8.2 的实现范围。
 
 ## 演示与界面
+
+0.8.5 在设置中分别管理运行组件和资产版本。下图来自本地候选版；文件检查和软件推理检查不代表已经完成实机任务。
+
+<div align="center"><img src="../../assets/readme/images/components-0.8.5.png" alt="NERV 0.8.5：已安装的 LeRobot 与仿真环境" width="960"></div>
+<div align="center"><img src="../../assets/readme/images/assets-0.8.5.png" alt="NERV 0.8.5：个人资产副本及已保存版本" width="960"></div>
 
 下方 G1 录像来自早期仿真版本，展示头部相机观测与步态技能，不作为 SO-101 真机证据。指令为“Walk to the living room.”。完整回合未剪辑，以 2.5 倍速播放，另有[原速 MP4](../../assets/readme/media/walk-to-the-living-room.mp4)。
 
