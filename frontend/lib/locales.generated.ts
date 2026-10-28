@@ -745,7 +745,6 @@ export const LOCALES: Record<string, Locale> = {
       "Not installed": "Not installed",
       "Installing…": "Installing…",
       "Install component": "Install component",
-      "Pick and place, snack sorting and Tower of Hanoi. No trained policy included.": "Pick and place, snack sorting and Tower of Hanoi. No trained policy included.",
       "LeRobot 0.6.1 and Feetech driver. Connecting the arm is a separate step.": "LeRobot 0.6.1 and Feetech driver. Connecting the arm is a separate step.",
       "queued": "queued",
       "download": "download",
@@ -794,7 +793,6 @@ export const LOCALES: Record<string, Locale> = {
       "Imported policies": "Imported policies",
       "Import local policy": "Import local policy",
       "No policies imported yet.": "No policies imported yet.",
-      "Import externally trained ACT policies. NERV does not train models.": "Import externally trained ACT policies. NERV does not train models.",
       "Task and starting conditions": "Task and starting conditions",
       "Inference checks use synthetic inputs and do not prove a real grasp.": "Inference checks use synthetic inputs and do not prove a real grasp.",
       "Open components": "Open components",
@@ -1060,7 +1058,14 @@ export const LOCALES: Record<string, Locale> = {
       "Install asset": "Install asset",
       "Simulation load check passed. Rendering and task performance have not been checked.": "Simulation load check passed. Rendering and task performance have not been checked.",
       "Check simulation loading": "Check simulation loading",
-      "Compatible saved scenes appear in New Session. A running session keeps its original revision.": "Compatible saved scenes appear in New Session. A running session keeps its original revision."
+      "Compatible saved scenes appear in New Session. A running session keeps its original revision.": "Compatible saved scenes appear in New Session. A running session keeps its original revision.",
+      "Simulation engine. Install scenes separately from My assets; no trained policy is included.": "Simulation engine. Install scenes separately from My assets; no trained policy is included.",
+      "Import externally trained policies. NERV does not train models.": "Import externally trained policies. NERV does not train models.",
+      "ONNX motion policies require policy.onnx, contract.json and release.yaml. Importing files does not enable motion.": "ONNX motion policies require policy.onnx, contract.json and release.yaml. Importing files does not enable motion.",
+      "Policy format": "Policy format",
+      "Policy directory": "Policy directory",
+      "Selected policy revision": "Selected policy revision",
+      "Use this policy revision": "Use this policy revision"
     }
   },
   "zh": {
@@ -1789,7 +1794,6 @@ export const LOCALES: Record<string, Locale> = {
       "Not installed": "未安装",
       "Installing…": "正在安装…",
       "Install component": "安装组件",
-      "Pick and place, snack sorting and Tower of Hanoi. No trained policy included.": "包含抓取放置、零食分拣和汉诺塔场景，不附带训练策略。",
       "LeRobot 0.6.1 and Feetech driver. Connecting the arm is a separate step.": "安装 LeRobot 0.6.1 和 Feetech 驱动，机械臂连接在后续步骤中单独进行。",
       "queued": "等待安装",
       "download": "下载文件",
@@ -1838,7 +1842,6 @@ export const LOCALES: Record<string, Locale> = {
       "Imported policies": "已导入策略",
       "Import local policy": "导入本地策略",
       "No policies imported yet.": "尚未导入策略。",
-      "Import externally trained ACT policies. NERV does not train models.": "导入已在外部训练完成的 ACT 策略。NERV 不负责训练。",
       "Task and starting conditions": "任务与起始条件",
       "Inference checks use synthetic inputs and do not prove a real grasp.": "推理检查使用合成输入，不代表已完成真实抓取。",
       "Open components": "打开组件管理",
@@ -2104,7 +2107,14 @@ export const LOCALES: Record<string, Locale> = {
       "Install asset": "安装资产",
       "Simulation load check passed. Rendering and task performance have not been checked.": "仿真加载检查通过。尚未检查渲染和任务表现。",
       "Check simulation loading": "检查仿真加载",
-      "Compatible saved scenes appear in New Session. A running session keeps its original revision.": "兼容的已保存场景会出现在新建会话中。运行中的会话继续使用原版本。"
+      "Compatible saved scenes appear in New Session. A running session keeps its original revision.": "兼容的已保存场景会出现在新建会话中。运行中的会话继续使用原版本。",
+      "Simulation engine. Install scenes separately from My assets; no trained policy is included.": "仿真运行环境。场景从“我的资产”单独安装，不包含训练好的策略。",
+      "Import externally trained policies. NERV does not train models.": "导入已经训练好的策略。NERV 不负责训练模型。",
+      "ONNX motion policies require policy.onnx, contract.json and release.yaml. Importing files does not enable motion.": "ONNX 运动策略需要 policy.onnx、contract.json 和 release.yaml。导入文件不会启用动作。",
+      "Policy format": "策略格式",
+      "Policy directory": "策略目录",
+      "Selected policy revision": "已选择此策略版本",
+      "Use this policy revision": "使用此策略版本"
     }
   }
 };

@@ -141,20 +141,33 @@ def check(home, key, revision, bodies):
         return result
 
 
-def inspect_scene(directory):
-    """Load and step data without opening cameras, networks or a real robot."""
+def prepare_scene(directory, checked=None):
+    """Load the declared pose for checks/previews without starting a controller."""
+    import math
     import mujoco
-    import numpy as np
     from .asset_store import validate
     from .world.mujoco_node import WorldSim
-    checked = validate(directory)
+    checked = checked or validate(directory)
     spec = binding(checked['manifest'])
     if spec is None:
         raise ValueError('The asset has no simulation binding')
     sim = WorldSim(str(Path(directory) / checked['manifest']['entry']),
                    physics=spec.physics.model_dump(), spawn=spec.spawn.model_dump())
-    sim.data.qpos[:] = sim._initial_qpos
+    sim._reset_data()
+    if sim.has_free_base:
+        # Match the data-only x/y/yaw spawn contract. Root height stays in MJCF.
+        a = sim.free_qadr
+        sim.data.qpos[a:a + 2] = [spec.spawn.x, spec.spawn.y]
+        sim.data.qpos[a + 3:a + 7] = [math.cos(spec.spawn.yaw / 2), 0, 0, math.sin(spec.spawn.yaw / 2)]
     mujoco.mj_forward(sim.model, sim.data)
+    return sim
+
+
+def inspect_scene(directory):
+    """Load and step data without opening cameras, networks or a real robot."""
+    import mujoco
+    import numpy as np
+    sim = prepare_scene(directory)
     mujoco.mj_step(sim.model, sim.data, nstep=10)
     if not all(np.isfinite(value).all() for value in (sim.data.qpos, sim.data.qvel, sim.data.qacc)):
         raise ValueError('Scene produced non-finite physics state')

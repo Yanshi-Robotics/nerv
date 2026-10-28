@@ -1,0 +1,89 @@
+{
+  "schema": 1,
+  "assets": [
+    {
+      "schema": 1,
+      "id": "house-g1",
+      "version": "0.1.0",
+      "name": "Hillside residence with G1",
+      "license": "MIT AND BSD-3-Clause AND CC0-1.0 AND CC-BY-4.0",
+      "source_commit": "3eb648296275b1491fd7826106857379bf3b4b17",
+      "validation": {
+        "files": "passed",
+        "model_load": "passed",
+        "compiled_physics": "passed",
+        "rendering": "not_checked",
+        "task": "not_checked"
+      },
+      "archive": {
+        "name": "house-g1.zip",
+        "bytes": 38369007,
+        "sha256": "c9ccb52499309f0d844330146aa54918ff6de2fc3595f98c41064e6e489524ad",
+        "url": "https://github.com/Yanshi-Robotics/nerv-assets/releases/download/assets-v0.1.0/house-g1.zip"
+      }
+    },
+    {
+      "schema": 1,
+      "id": "so101-hanoi-five",
+      "version": "0.1.0",
+      "name": "SO-101: Five-disk Tower of Hanoi",
+      "license": "MIT AND Apache-2.0",
+      "source_commit": "3eb648296275b1491fd7826106857379bf3b4b17",
+      "validation": {
+        "files": "passed",
+        "model_load": "passed",
+        "compiled_physics": "passed",
+        "rendering": "not_checked",
+        "task": "not_checked"
+      },
+      "archive": {
+        "name": "so101-hanoi-five.zip",
+        "bytes": 6510038,
+        "sha256": "efcb6f3b647ba2448beb90a339a8f9b6441a846117c554f0271fe8145aff3aab",
+        "url": "https://github.com/Yanshi-Robotics/nerv-assets/releases/download/assets-v0.1.0/so101-hanoi-five.zip"
+      }
+    },
+    {
+      "schema": 1,
+      "id": "so101-pick-place",
+      "version": "0.1.0",
+      "name": "SO-101: Single snack into basket",
+      "license": "MIT AND Apache-2.0",
+      "source_commit": "3eb648296275b1491fd7826106857379bf3b4b17",
+      "validation": {
+        "files": "passed",
+        "model_load": "passed",
+        "compiled_physics": "passed",
+        "rendering": "not_checked",
+        "task": "not_checked"
+      },
+      "archive": {
+        "name": "so101-pick-place.zip",
+        "bytes": 6506280,
+        "sha256": "041b985ce93953a8656237a0e3fe6bead098b4e12e83eab26600b4a154b3b18e",
+        "url": "https://github.com/Yanshi-Robotics/nerv-assets/releases/download/assets-v0.1.0/so101-pick-place.zip"
+      }
+    },
+    {
+      "schema": 1,
+      "id": "so101-sort-snacks",
+      "version": "0.1.0",
+      "name": "SO-101: Three snacks into matching baskets",
+      "license": "MIT AND Apache-2.0",
+      "source_commit": "3eb648296275b1491fd7826106857379bf3b4b17",
+      "validation": {
+        "files": "passed",
+        "model_load": "passed",
+        "compiled_physics": "passed",
+        "rendering": "not_checked",
+        "task": "not_checked"
+      },
+      "archive": {
+        "name": "so101-sort-snacks.zip",
+        "bytes": 6506476,
+        "sha256": "e6df8bdd96aa545cbe56ac53ed4bde0038ed8e5c8400c9f86218029c01ef15f6",
+        "url": "https://github.com/Yanshi-Robotics/nerv-assets/releases/download/assets-v0.1.0/so101-sort-snacks.zip"
+      }
+    }
+  ]
+}

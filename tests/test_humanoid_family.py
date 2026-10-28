@@ -53,7 +53,7 @@ def _skip_reason() -> str:
 
 
 @pytest.fixture(scope="module")
-def humanoid():
+def humanoid(tmp_path_factory):
     reason = _skip_reason()
     if reason:
         pytest.skip(f"humanoid smoke needs the real assets: {reason}")
@@ -61,6 +61,10 @@ def humanoid():
     from nerv.body.bus_zmq import ZmqBus
     from nerv.body.skills import SkillRunner, StopFlag
     from nerv.platform.registry import Registry
+    from nerv.motion_policies import import_policy, check
+    policy_home = tmp_path_factory.mktemp('motion-policy-home')
+    policy_record = import_policy(policy_home, 'g1-29dof-turn', os.path.join(REPO, 'policies/g1-29dof-turn'))
+    check(policy_home, policy_record['id'])
 
     http_port, bus_port = _free_port(), _free_port()
     env = dict(os.environ, PYTHONPATH=os.path.join(REPO, "src") + os.pathsep + os.environ.get("PYTHONPATH", ""))
@@ -84,20 +88,29 @@ def humanoid():
     if not ok:
         out = proc.stdout.read() if proc.poll() is not None else "(still running, no /health)"
         proc.kill()
+        proc.wait(timeout=5)
         pytest.fail(f"world node did not come up: {out}")
 
     spec = Registry().body(BODY).model_dump()
+    spec['policy_error'] = ''
+    for skill in spec['skills'].values():
+        skill.update(policy=policy_record['path'], policy_record=policy_record)
     bus = ZmqBus(f"tcp://127.0.0.1:{bus_port}")
-    body = families.load("humanoid").build(spec, bus, SkillRunner(StopFlag()))
+    body = None
     try:
+        body = families.load("humanoid").build(spec, bus, SkillRunner(StopFlag()))
         yield {"body": body, "http": base}
     finally:
-        body.close()
+        if body is not None:
+            body.close()
+        else:
+            bus.close()
         proc.terminate()
         try:
             proc.wait(timeout=5)
         except subprocess.TimeoutExpired:
             proc.kill()
+            proc.wait(timeout=5)
 
 
 def _god(base: str) -> dict:

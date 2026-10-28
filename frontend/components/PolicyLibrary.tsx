@@ -4,12 +4,14 @@ import { setupDevice } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import DirectoryPicker from "./DirectoryPicker";
 import HubPolicies from "./HubPolicies";
+import MotionPolicies from "./MotionPolicies";
 export default function PolicyLibrary({
   onComponents,
 }: {
   onComponents: () => void;
 }) {
   const { t } = useI18n();
+  const [format, setFormat] = useState('act');
   const [policies, setPolicies] = useState<any[]>([]);
   const [draft, setDraft] = useState({
     id: "",
@@ -42,9 +44,16 @@ export default function PolicyLibrary({
       <h1>{t("Policy library")}</h1>
       <p className="muted">
         {t(
-          "Import externally trained ACT policies. NERV does not train models.",
+          "Import externally trained policies. NERV does not train models.",
         )}
       </p>
+      <label className="form-label">{t('Policy format')}
+        <select className="form-field" value={format} onChange={e => setFormat(e.target.value)}>
+          <option value="act">LeRobot ACT</option><option value="onnx">ONNX</option>
+        </select>
+      </label>
+      <HubPolicies onChoose={path => setDraft(value => ({...value, path}))}/>
+      {format === 'onnx' ? <MotionPolicies source={draft.path}/> : <>
       <h2>{t("Imported policies")}</h2>
       {!policies.length && (
         <p className="muted">{t("No policies imported yet.")}</p>
@@ -73,7 +82,6 @@ export default function PolicyLibrary({
           </button>
         </article>
       ))}
-      <HubPolicies onChoose={path => setDraft(value => ({...value, path}))}/>
       <details open={!policies.length || !!draft.path}>
         <summary className="cursor-pointer py-3 font-medium">
           {t("Import local policy")}
@@ -150,6 +158,7 @@ export default function PolicyLibrary({
           </button>
         </div>
       )}
+      </>}
     </div>
   );
 }

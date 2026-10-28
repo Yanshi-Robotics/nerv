@@ -16,6 +16,8 @@ def check(world: WorldSpec, body: BodySpec) -> tuple[bool, str]:
         return False, "this environment binding is not configured for the current runtime"
     if world.kind == KIND_SIM and not (world.supports[body.name] or "").strip():
         return False, f"world `{world.name}` lists `{body.name}` but names no arena file"
+    if body.policy_error:
+        return False, body.policy_error
     return True, ""
 
 

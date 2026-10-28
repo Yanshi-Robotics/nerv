@@ -40,6 +40,9 @@ class ScriptedBrain:
 def test_scripted_brain_walks_one_metre(tmp_path, monkeypatch):
     monkeypatch.setenv("NERV_TRUST_ALL", "1")
     monkeypatch.setattr(config, "NODE_PORTS", "8112-8131")
+    from nerv.motion_policies import import_policy, check
+    import_policy(paths.NERV_HOME, "g1-29dof-turn", os.path.dirname(NEEDS[1]))
+    check(paths.NERV_HOME, "g1-29dof-turn")
     hub = Nerv(store=SessionStore(str(tmp_path / "s")))
     brain = ScriptedBrain()
     hub._brains["scripted"] = brain

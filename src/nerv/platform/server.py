@@ -363,6 +363,38 @@ def adapter_setup(provider: str, operation: str, payload: dict):
             raise HTTPException(400, str(error))
 
 
+@app.post('/api/motion-policies/{operation}')
+def motion_policy_operation(operation: str, payload: dict):
+    from ..motion_policies import manage, inspect
+    from .. import paths
+    if operation not in ('policies', 'import', 'inspect', 'check', 'select'):
+        raise HTTPException(404, 'Unknown motion policy operation')
+    allowed = {'id', 'path', 'conditions', 'revision'}
+    if set(payload) - allowed or any(not isinstance(value, str) for value in payload.values()):
+        raise HTTPException(400, 'Invalid motion policy request')
+    with nerv._node_lock:
+        if operation in ('import', 'check', 'select') and nerv._bound_runtime:
+            raise HTTPException(409, 'Close the robot instance before changing its policies')
+        try:
+            python = ''
+            if operation == 'check':
+                record = inspect(paths.NERV_HOME, payload['id'], payload.get('revision'))
+                choices = {body.buses['sim'].python for body in nerv.registry.bodies.values()
+                           if body.policy_robot == record['robot'] and body.family == record['family']
+                           and 'sim' in body.buses and body.buses['sim'].enabled and body.buses['sim'].python}
+                if len(choices) != 1:
+                    raise ValueError('Install a compatible simulation component before checking this policy')
+                python = choices.pop()
+            result = manage(paths.NERV_HOME, operation, payload, python)
+            if operation in ('import', 'check', 'select'):
+                from .registry import Registry
+                nerv.registry = Registry()
+                nerv.launcher.registry = nerv.registry
+            return result
+        except (OSError, ValueError, KeyError) as error:
+            raise HTTPException(400, str(error)) from error
+
+
 @app.post("/api/setup-camera/{provider}/{operation}")
 def setup_camera(provider: str, operation: str, payload: dict):
     from .setup_preview import preview

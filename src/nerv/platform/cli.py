@@ -224,7 +224,7 @@ def cmd_session(a) -> int:
 
 def cmd_policy(a):
     from .runtime_management import manage
-    payload = {"id": a.id} if a.action in ("inspect", "check") else {}
+    payload = {"id": a.id} if a.action in ("inspect", "check", "select") else {}
     if a.action == "import":
         payload = {"id": a.id, "path": a.path, "conditions": a.conditions,
                    "standard_declared": a.standard_declared}
@@ -491,7 +491,7 @@ def main(argv: list[str] | None = None) -> int:
     p.set_defaults(fn=cmd_install_runtime)
 
     p = sub.add_parser("policy", help="manage a provider's local device and policy configuration")
-    p.add_argument("action", choices=["describe", "configure", "import", "inspect", "check"])
+    p.add_argument("action", choices=["describe", "configure", "import", "inspect", "check", "select"])
     p.add_argument("--python", required=True)
     p.add_argument("--provider", required=True)
     for field in ("id", "path", "conditions", "port", "calibration-dir", "camera-config-file"):

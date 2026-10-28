@@ -13,8 +13,10 @@ def test_repo_registry_loads():
 
 def test_apt_supports_only_g1():
     reg = Registry()
-    ok, _ = check(reg.worlds["apt"], reg.bodies["humanoid-unitree-g1"])
-    assert ok
+    ok, reason = check(reg.worlds["apt"], reg.bodies["humanoid-unitree-g1"])
+    assert not ok and 'Import and check policy' in reason
+    # Geometry compatibility is independent of whether this user imported a policy.
+    assert check(reg.worlds['apt'], reg.bodies['humanoid-unitree-g1'].model_copy(update={'policy_error': ''}))[0]
     ok, reason = check(reg.worlds["apt"], reg.bodies["arm-lerobot-so101"])
     assert not ok and "no arena" in reason
     rows = matrix(reg)

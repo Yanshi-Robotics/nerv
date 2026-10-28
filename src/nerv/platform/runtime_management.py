@@ -39,6 +39,9 @@ def check_interpreter(python):
 
 
 def manage(python: str, provider: str, operation: str, payload: dict):
+    if provider == 'onnx-motion':
+        from ..motion_policies import manage as manage_motion
+        return manage_motion(paths.NERV_HOME, operation, payload, python)
     executable = Path(python).expanduser().absolute()
     # Preserve a venv executable symlink: resolving it selects the system Python.
     if not executable.is_file():

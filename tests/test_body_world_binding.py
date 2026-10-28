@@ -13,6 +13,8 @@ from nerv.platform.session import SessionStore
 def hub(tmp_path, monkeypatch):
     value = Nerv(store=SessionStore(str(tmp_path / "sessions")))
     value._brains["mock"] = SimpleNamespace(model="offline-fixture")
+    # Policy admission is covered separately; this fixture exercises world reuse.
+    value.registry.body("humanoid-unitree-g1").policy_error = ""
     # These tests never start processes or connect to a resident service.
     monkeypatch.setattr(value.launcher, "_spawn", Mock(side_effect=AssertionError("unexpected launch")))
     return value

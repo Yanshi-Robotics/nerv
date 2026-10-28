@@ -1,0 +1,6 @@
+{
+  "schema": 2,
+  "engine": "mujoco",
+  "bodies": ["arm-lerobot-so101", "humanoid-unitree-g1"],
+  "assets": "separate"
+}
