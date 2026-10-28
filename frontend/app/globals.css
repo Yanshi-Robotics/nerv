@@ -6,7 +6,7 @@ button:not(:disabled) {
 }
 
 /* ============================================================
-   主题：深色（默认）/ 浅色。
+   主题：浅色（默认）、深色与跟随系统。
    全站颜色都走 Tailwind 的 neutral 色阶（bg-neutral-950、text-neutral-100…），
    而 v4 里这些工具类用的是 CSS 变量 var(--color-neutral-*)。
    所以浅色主题不必改任何组件——只在 [data-theme="light"] 作用域里把整条
