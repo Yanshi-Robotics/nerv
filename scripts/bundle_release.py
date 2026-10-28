@@ -20,6 +20,15 @@ def write_member(archive, name, content):
     archive.writestr(info, content)
 
 
+def canonical_wheel(source, target):
+    """Ignore build-host timestamps, modes and cached source-wheel metadata."""
+    with zipfile.ZipFile(source) as wheel:
+        contents = [(name, wheel.read(name)) for name in sorted(wheel.namelist())]
+    with zipfile.ZipFile(target, 'w') as wheel:
+        for name, content in contents:
+            write_member(wheel, name, content)
+
+
 def bundle(output=None):
     OUT = Path(output) if output is not None else ROOT / "temp/release"
     import sys
@@ -38,7 +47,7 @@ def bundle(output=None):
         wheels.extend(matches)
     names = {}
     for path in wheels:
-        shutil.copy2(path, OUT / path.name)
+        canonical_wheel(path, OUT / path.name)
         names[path.name.split("-", 1)[0]] = path.name
     archive = OUT / "so101-sim.zip"
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as z:
@@ -54,6 +63,7 @@ def bundle(output=None):
         write_member(z, 'module.json', json.dumps(simulation))
     sdk, host, device = (names[k] for k in ("nerv_runtime_sdk", "nerv", "nerv_runtime_lerobot"))
     motor_driver = next(OUT.glob("feetech_servo_sdk-1.0.0-*.whl")).name
+    canonical_wheel(OUT / motor_driver, OUT / motor_driver)
     names["feetech_servo_sdk"] = motor_driver
     products = {
         "host": {"label": "NERV", "packages": [sdk, host], "extras": {host: "[platform]"}, "files": [sdk, host]},
