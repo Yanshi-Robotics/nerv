@@ -98,7 +98,7 @@ def test_rollback_restores_release_and_keeps_user_data(tmp_path, monkeypatch):
     i.write_json(tmp_path / 'previous.json', old)
     i.write_json(environment / 'release.json', {'schema': 1, 'version': 'old', 'products': {'host': {}}})
     (tmp_path / 'credentials.json').write_text('kept')
-    monkeypatch.setattr(i.subprocess, 'run', lambda *args, **kwargs: None)
+    monkeypatch.setattr(i.managed, 'run', lambda *args, **kwargs: None)
     assert i.rollback() == old
     assert json.loads((tmp_path / 'release.json').read_text())['version'] == 'old'
     assert (tmp_path / 'credentials.json').read_text() == 'kept'

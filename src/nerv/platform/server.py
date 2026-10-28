@@ -23,11 +23,12 @@ from . import messages, trust
 from . import explore
 from .hub import Nerv
 from .session import log as slog
+from .storage_api import router as storage_router
 
 nerv = Nerv()
+
 _shutdown_requested = threading.Event()
 app = FastAPI(title="NERV", version=__version__)
-from .storage_api import router as storage_router
 app.include_router(storage_router)
 app.add_middleware(CORSMiddleware, allow_origins=config.CORS_ORIGINS, allow_methods=["*"], allow_headers=["*"])
 
@@ -547,6 +548,10 @@ def runtime_status(sid: str):
 # ---- registry / brains ---------------------------------------------------------------------
 @app.get("/api/registry")
 def registry() -> dict:
+    if not nerv._bound_runtime:
+        from .registry import Registry
+        nerv.registry = Registry()
+        nerv.launcher.registry = nerv.registry
     out = nerv.registry.summary()
     out["brains"] = list_brains()
     out["default_brain"] = _default_brain()

@@ -74,6 +74,9 @@ class Registry:
             self._scan(os.path.join(root, "bodies"), "body.yaml", BodySpec, self.bodies)
             self._scan(os.path.join(root, "worlds"), "world.yaml", WorldSpec, self.worlds)
             self._scan(os.path.join(root, "tools"), "tool.yaml", ToolNodeSpec, self.tools)
+        from ...asset_runtime import worlds
+        installed, self.asset_errors = worlds(paths.NERV_HOME, self.bodies)
+        self.worlds.update(installed)
 
     def _scan(self, d: str, fname: str, model, out: dict) -> None:
         if not os.path.isdir(d):
@@ -111,6 +114,8 @@ class Registry:
     def summary(self) -> dict:
         from .compat import matrix
         return {"bodies": [b.model_dump(exclude={"guidance"}) for b in self.bodies.values()],
-                "worlds": [w.model_dump(exclude={"guidance"}) for w in self.worlds.values()],
+                "worlds": [w.model_dump(exclude={"guidance"}) for w in self.worlds.values()
+                           if w.asset.get('current', True)],
                 "agent_tools": [t.model_dump(exclude={"guidance"}) for t in self.tools.values()],
+                "asset_errors": self.asset_errors,
                 "matrix": matrix(self)}

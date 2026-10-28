@@ -1036,6 +1036,9 @@
     "Use downloaded files for import": "Use downloaded files for import",
     "Official assets": "Official assets",
     "This release has no published asset packages.": "This release has no published asset packages.",
-    "Install asset": "Install asset"
+    "Install asset": "Install asset",
+    "Simulation load check passed. Rendering and task performance have not been checked.": "Simulation load check passed. Rendering and task performance have not been checked.",
+    "Check simulation loading": "Check simulation loading",
+    "Compatible saved scenes appear in New Session. A running session keeps its original revision.": "Compatible saved scenes appear in New Session. A running session keeps its original revision."
   }
 }

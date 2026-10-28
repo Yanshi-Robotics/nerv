@@ -114,3 +114,20 @@ The managed build command is `nerv preview build --source <checkout>`. It copies
 source files into a build workspace, excluding credentials, runtime data and existing
 dependency directories. It builds a candidate without activating it. Retiring legacy
 development environments requires a separate inventory and recovery check.
+
+## Review unused environments
+
+`nerv env list` shows receipts and references. `nerv env doctor` runs bounded interpreter
+and module checks without connecting devices. `nerv env prune` only previews unused,
+receipted environments and reports the space they occupy. It excludes current and
+rollback references, running processes, user data, assets, caches and build tools.
+
+To apply a reviewed preview, exit both hosts and pass its fingerprint with
+`nerv env prune --confirmation <fingerprint>`. Any changed reference invalidates that
+confirmation. An incomplete installation record blocks cleanup. Legacy environments
+without a managed identity need a separate migration review and are retained.
+
+Interrupted removals appear in the maintenance section, even if their installation
+receipt was already removed. Review the linked journal and restore or repair the affected
+environment before another removal. Cleanup does not infer permission to remove other
+folders or environments belonging to another project.

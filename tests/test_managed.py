@@ -108,3 +108,44 @@ with lease(sys.argv[1], [sys.argv[2]], child=True) as reservation:
         time.sleep(.05)
     assert not process_alive(pid)
     assert active_leases(tmp_path) == []
+
+
+def test_managed_runner_child_remains_protected_after_parent_exit(tmp_path):
+    import json
+    import os
+    import subprocess
+    import sys
+    import time
+    from pathlib import Path
+    from nerv.managed import process_alive
+    code = '''
+import sys
+from nerv.managed import run
+run(sys.argv[1], [sys.argv[2]], [sys.executable, '-c', 'import time; time.sleep(3)'])
+'''
+    env = dict(os.environ, PYTHONPATH=str(Path(__file__).parents[1] / 'src'), PYTHONDONTWRITEBYTECODE='1')
+    parent = subprocess.Popen([sys.executable, '-c', code, str(tmp_path), str(tmp_path / 'env')], env=env)
+    pid = None
+    try:
+        deadline = time.monotonic() + 5
+        while time.monotonic() < deadline:
+            for marker in (tmp_path / 'leases').glob('*.json'):
+                pid = json.loads(marker.read_text()).get('child_pid')
+                if pid:
+                    break
+            if pid:
+                break
+            time.sleep(.02)
+        assert pid, 'worker did not start'
+        parent.kill()
+        parent.wait(timeout=5)
+        assert active_leases(tmp_path) == [str(tmp_path / 'env')]
+        deadline = time.monotonic() + 8
+        while process_alive(pid) and time.monotonic() < deadline:
+            time.sleep(.05)
+        assert not process_alive(pid)
+        assert not active_leases(tmp_path)
+    finally:
+        if parent.poll() is None:
+            parent.kill()
+            parent.wait(timeout=5)

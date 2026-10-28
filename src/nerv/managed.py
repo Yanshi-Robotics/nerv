@@ -10,6 +10,11 @@ import platform
 import re
 import uuid
 
+try:
+    from .install_system import atomic_json
+except ImportError:  # The release bootstrap embeds this module too.
+    from nerv_install_system import atomic_json
+
 
 def storage_root(data_home=None):
     data = Path(data_home or os.environ.get('NERV_HOME', Path.home() / '.nerv')).expanduser().resolve()
@@ -95,14 +100,12 @@ class ProcessReservation:
         self.marker, self.record = marker, record
 
     def started(self, pid):
-        from .install_system import atomic_json
         if type(pid) is not int or pid <= 0:
             raise ValueError('Invalid managed process identity')
         self.record.update(child_pid=pid, process_state='running')
         atomic_json(self.marker, self.record)
 
     def failed_to_start(self):
-        from .install_system import atomic_json
         self.record['process_state'] = 'not_started'
         atomic_json(self.marker, self.record)
 
@@ -111,7 +114,6 @@ class ProcessReservation:
 def lease(root, paths, *, child=False):
     """A held OS lock is the source of truth, not a potentially recycled PID."""
     from filelock import FileLock
-    from .install_system import atomic_json
     directory = Path(root) / 'leases'
     directory.mkdir(parents=True, exist_ok=True)
     marker = directory / (uuid.uuid4().hex + '.json')
@@ -119,7 +121,8 @@ def lease(root, paths, *, child=False):
         record = {'pid': os.getpid(), 'paths': [str(Path(p).resolve()) for p in paths]}
         if child:
             record['process_state'] = 'starting'
-        atomic_json(marker, record)
+        with FileLock(str(Path(root) / 'lifecycle.lock')):
+            atomic_json(marker, record)
         try:
             yield ProcessReservation(marker, record)
         finally:
@@ -128,7 +131,8 @@ def lease(root, paths, *, child=False):
             retained = record.get('process_state') == 'starting' or (
                 record.get('child_pid') and process_alive(record['child_pid']))
             if not retained:
-                marker.unlink(missing_ok=True)
+                with FileLock(str(Path(root) / 'lifecycle.lock')):
+                    marker.unlink(missing_ok=True)
     marker.with_suffix('.json.lock').unlink(missing_ok=True)
 
 
@@ -144,6 +148,8 @@ def active_leases(root):
                 if record.get('child_pid') and process_alive(record['child_pid']):
                     result.extend(record['paths'])
                 continue
+        except FileNotFoundError:
+            continue  # A completed owner removed its marker while we enumerated it.
         except Timeout:
             try:
                 result.extend(json.loads(marker.read_text())['paths'])
@@ -152,40 +158,128 @@ def active_leases(root):
     return result
 
 
+def run(root, paths, command, *, timeout=None, check=False, capture_output=False, **kwargs):
+    """Run a foreground child and retain its environment if the parent crashes.
+
+    Commands must not daemonize. Descendant process trees are not inferred from a PID.
+    """
+    import subprocess
+    if capture_output:
+        kwargs.update(stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+    with lease(root, paths, child=True) as reservation:
+        try:
+            process = subprocess.Popen(command, **kwargs)
+        except BaseException:
+            reservation.failed_to_start()
+            raise
+        reservation.started(process.pid)
+        try:
+            stdout, stderr = process.communicate(timeout=timeout)
+        except BaseException:
+            process.kill()
+            process.communicate()
+            raise
+    result = subprocess.CompletedProcess(command, process.returncode, stdout, stderr)
+    if check:
+        result.check_returncode()
+    return result
+
+
 def environments(root=None):
     base = Path(root) if root else storage_root()
     used = set(active_leases(base))
     references = {}
-    for channel in ('stable', 'preview'):
-        home = channel_home(channel, base)
-        pointers = [home / 'active.json', home / 'previous.json', home / 'update-pending.json',
-                    *(home / 'runtimes').glob('*.json')]
-        for pointer in pointers:
+    visited = set()
+    unresolved = False
+    import yaml
+
+    def collect(value, reason, field=''):
+        nonlocal unresolved
+        if isinstance(value, dict):
+            for key, child in value.items():
+                collect(child, reason, key)
+        elif isinstance(value, list):
+            for child in value:
+                collect(child, reason, field)
+        elif isinstance(value, str):
+            expanded = os.path.expandvars(os.path.expanduser(value))
+            if ('$' in expanded and field in ('python', 'command', 'registry_root', 'snapshot')
+                    and reason != 'application-registry'):
+                unresolved = True
+            if os.path.isabs(expanded):
+                # Keep a venv's executable symlink as a reference to that venv.
+                path = Path(expanded)
+                resolved = path.parent.resolve() / path.name
+                references.setdefault(resolved, set()).add(reason)
+
+    def registry(directory, reason):
+        key = ('registry', str(Path(directory).resolve()), reason)
+        if key in visited:
+            return
+        visited.add(key)
+        for category, filename in (('bodies', 'body.yaml'), ('worlds', 'world.yaml'), ('tools', 'tool.yaml')):
+            for config in (Path(directory) / category).glob('*/' + filename):
+                collect(yaml.safe_load(config.read_text()) or {}, reason)
+
+    def pointers(home, channel, recovery=False):
+        home = Path(home)
+        if recovery and not home.is_dir():
+            raise ValueError('A referenced recovery snapshot is missing; repair recovery before cleanup')
+        key = ('pointers', str(home.resolve()), channel)
+        if key in visited:
+            return
+        visited.add(key)
+        registry(home, channel + (':rollback' if recovery else ':configuration'))
+        for pointer in [home / 'active.json', home / 'previous.json', home / 'update-pending.json',
+                        *(home / 'runtimes').glob('*.json')]:
             if not pointer.is_file():
                 continue
             record = json.loads(pointer.read_text())
-            if record.get('python'):
-                directory = str(Path(record['python']).parent.parent.resolve())
-                references.setdefault(directory, []).append(channel + ':' + pointer.stem)
-            snapshot = record.get('snapshot')
-            if snapshot:
-                recovery = Path(snapshot)
-                for receipt in [recovery / 'active.json', recovery / 'previous.json',
-                                *(recovery / 'runtimes').glob('*.json')]:
-                    if not receipt.is_file():
-                        continue
-                    old = json.loads(receipt.read_text())
-                    if old.get('python'):
-                        directory = str(Path(old['python']).parent.parent.resolve())
-                        references.setdefault(directory, []).append(channel + ':rollback')
+            reference = 'snapshot' if pointer.name == 'update-pending.json' else 'python'
+            valid = isinstance(record, dict) and isinstance(record.get(reference), str) and bool(record[reference])
+            # Older recovery descriptions can explicitly point only to a snapshot.
+            if pointer.name == 'previous.json' and isinstance(record, dict) and record.get('snapshot'):
+                valid = isinstance(record['snapshot'], str)
+            if not valid:
+                raise ValueError('Incomplete installation reference; repair it before cleanup: ' + pointer.name)
+            reason = channel + (':rollback' if recovery else ':' + pointer.stem)
+            collect(record, reason)
+            if record.get('registry_root'):
+                registry(record['registry_root'], reason)
+            if record.get('snapshot'):
+                pointers(record['snapshot'], channel, True)
+
+    for channel in ('stable', 'preview'):
+        pointers(channel_home(channel, base), channel)
+    for extra in os.environ.get('NERV_REGISTRY_PATHS', '').split(os.pathsep):
+        if extra.strip():
+            registry(extra, 'external-registry')
+    from . import paths as application_paths
+    registry(application_paths.REGISTRY_ROOT, 'application-registry')
+    for receipt in (base / 'toolchains/build').glob('*/receipt.json'):
+        collect(json.loads(receipt.read_text()), 'build-toolchain')
+    for cfg in (base / 'toolchains/build').glob('*/python/pyvenv.cfg'):
+        for line in cfg.read_text().splitlines():
+            key, _, value = line.partition('=')
+            if key.strip() in ('home', 'executable', 'base-executable'):
+                collect(value.strip(), 'build-python-dependency')
     rows = []
     receipts = set((base / 'envs').glob('*/*/nerv-install.json'))
     # Pre-unification preview environments remain visible until explicitly migrated.
     receipts.update((channel_home('preview', base) / 'envs').glob('*/*/nerv-install.json'))
+    linked = {receipt.parent.resolve() for receipt in receipts
+              if receipt.is_symlink() or receipt.parent.absolute() != receipt.parent.resolve()}
+    seen_directories = set()
     for receipt in sorted(receipts):
         record = json.loads(receipt.read_text())
         directory = str(receipt.parent.resolve())
-        rows.append({**record, 'path': directory, 'references': references.get(directory, []),
+        if directory in seen_directories:
+            continue
+        seen_directories.add(directory)
+        rows.append({**record, 'path': directory, 'references': sorted({reason for path, reasons in references.items()
+                         if path.is_relative_to(directory) for reason in reasons}
+                         | ({'unresolved-config-reference'} if unresolved else set())
+                         | ({'linked-environment-needs-review'} if Path(directory) in linked else set())),
                      'leased': any(Path(p).is_relative_to(directory) or Path(directory).is_relative_to(p) for p in used),
                      'healthy': None if Path(record.get('python', '')).is_file() else False,
                      'health': 'needs_check' if Path(record.get('python', '')).is_file() else 'missing'})

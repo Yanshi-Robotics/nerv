@@ -80,6 +80,7 @@ class WorldSpec(BaseModel):
     guidance: str = ""
     url: str = ""
     dir: str = ""
+    asset: dict = Field(default_factory=dict)  # immutable managed asset identity, set by loader
 
     @model_validator(mode="after")
     def _kind(self):

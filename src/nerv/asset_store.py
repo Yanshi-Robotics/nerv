@@ -88,6 +88,8 @@ def validate(root):
     entry = str(relative(data.get('entry')))
     if entry not in files or Path(entry).suffix not in ('.xml', '.mjcf'):
         raise ValueError('The declared MJCF entry is missing')
+    from .asset_runtime import binding
+    binding(data)
     # Reject external references and native plugin loading in every XML include.
     trees = {}
     for name in files:

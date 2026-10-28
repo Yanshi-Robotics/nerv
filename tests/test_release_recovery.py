@@ -32,7 +32,7 @@ def setup(tmp_path, monkeypatch):
         python.touch()
         return {'python': str(python), 'version': 'new', 'product': product}
     monkeypatch.setattr(i, 'install', install)
-    monkeypatch.setattr(i.subprocess, 'run', lambda *args, **kwargs: None)
+    monkeypatch.setattr(i.managed, 'run', lambda *args, **kwargs: None)
     return root, manifest
 
 

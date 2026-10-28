@@ -289,6 +289,10 @@ def cmd_assets(a):
             result = library.import_asset(a.path)
         elif a.action == 'inspect':
             result = library.read(a.id)
+        elif a.action == 'check':
+            from ..asset_runtime import check
+            from .registry import Registry
+            result = check(paths.NERV_HOME, a.id, a.revision, Registry().bodies)
         elif a.action == 'save':
             result = library.save(a.id)
         elif a.action == 'clone':
@@ -306,8 +310,15 @@ def cmd_assets(a):
 
 def cmd_environments(a):
     import subprocess
+    from filelock import Timeout
     from ..managed import environments
     try:
+        if a.action == 'prune':
+            from ..environment_cleanup import prune
+            from ..managed import storage_root
+            result = prune(storage_root(), a.confirmation)
+            print(json.dumps(result, indent=2))
+            return int(bool(result.get('failed')))
         records = environments()
         if a.id:
             records = [r for r in records if r.get('environment_id') == a.id]
@@ -325,6 +336,9 @@ def cmd_environments(a):
                     record.update(healthy=False, health='failed', reason=str(error))
         print(json.dumps(records, indent=2))
         return int(a.action == 'doctor' and any(not r['healthy'] for r in records))
+    except Timeout:
+        print('An installation, cleanup, or NERV host is running. Wait for it to finish before cleanup.', file=sys.stderr)
+        return 1
     except (OSError, ValueError) as error:
         print(str(error), file=sys.stderr)
         return 1
@@ -427,15 +441,16 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--version", action="version", version=f"nerv {__version__}")
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser('assets', help='manage local data-only asset revisions')
-    p.add_argument('action', choices=['list', 'catalog', 'install', 'update', 'import', 'inspect', 'clone', 'save', 'export', 'verify'])
+    p.add_argument('action', choices=['list', 'catalog', 'install', 'update', 'import', 'inspect', 'clone', 'save', 'export', 'verify', 'check'])
     p.add_argument('--id', default='')
     p.add_argument('--path', default='')
     p.add_argument('--name')
     p.add_argument('--revision')
     p.set_defaults(fn=cmd_assets)
     p = sub.add_parser('env', help='inspect managed environments and references')
-    p.add_argument('action', choices=['list', 'inspect', 'doctor'])
+    p.add_argument('action', choices=['list', 'inspect', 'doctor', 'prune'])
     p.add_argument('--id')
+    p.add_argument('--confirmation', help='apply the exact reviewed prune plan fingerprint')
     p.set_defaults(fn=cmd_environments)
     p = sub.add_parser('preview', help='use the isolated preview channel')
     p.add_argument('arguments', nargs=argparse.REMAINDER)
@@ -511,7 +526,9 @@ def main(argv: list[str] | None = None) -> int:
     a = ap.parse_args(arguments or ["serve"])
     if a.cmd == "node" and a.rest[:1] == ["--"]:
         a.rest = a.rest[1:]
-    return a.fn(a)
+    from ..managed import lease, storage_root
+    with lease(storage_root(paths.NERV_HOME), [sys.prefix]):
+        return a.fn(a)
 
 
 if __name__ == "__main__":
