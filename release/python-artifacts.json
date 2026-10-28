@@ -1,0 +1,34 @@
+{
+  "schema": 1,
+  "python_version": "3.12.13",
+  "targets": {
+    "linux-x86_64": {
+      "name": "cpython-3.12.13+20260805-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz",
+      "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20260805/cpython-3.12.13%2B20260805-x86_64-unknown-linux-gnu-install_only_stripped.tar.gz",
+      "bytes": 34184519,
+      "sha256": "f04a55ae95e8bd352cdff8da11c344fe609ec84795d106fa91b6620366d786fe",
+      "kind": "python"
+    },
+    "windows-x86_64": {
+      "name": "cpython-3.12.13+20260805-x86_64-pc-windows-msvc-install_only_stripped.tar.gz",
+      "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20260805/cpython-3.12.13%2B20260805-x86_64-pc-windows-msvc-install_only_stripped.tar.gz",
+      "bytes": 21959746,
+      "sha256": "b304536477587bbb729322b77ac1c59bdb95706651ab2ef38cae0fec77ede00f",
+      "kind": "python"
+    },
+    "macos-aarch64": {
+      "name": "cpython-3.12.13+20260805-aarch64-apple-darwin-install_only_stripped.tar.gz",
+      "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20260805/cpython-3.12.13%2B20260805-aarch64-apple-darwin-install_only_stripped.tar.gz",
+      "bytes": 25001534,
+      "sha256": "a4b36035915038104aabee94d6f02827161da444296881fe4493cb98f70304b2",
+      "kind": "python"
+    },
+    "macos-x86_64": {
+      "name": "cpython-3.12.13+20260805-x86_64-apple-darwin-install_only_stripped.tar.gz",
+      "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20260805/cpython-3.12.13%2B20260805-x86_64-apple-darwin-install_only_stripped.tar.gz",
+      "bytes": 24690326,
+      "sha256": "0d232711501680a619ea6113046603567d93be3218e326e4357557e771d1aec7",
+      "kind": "python"
+    }
+  }
+}

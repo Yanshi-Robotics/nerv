@@ -142,3 +142,19 @@ def test_release_plan_local_file_url_preserves_native_drive_and_unicode(tmp_path
     assert result['name'] == wheel.name
     with pytest.raises(ValueError, match='another host'):
         module.artifact({'url': 'file://remote/share/wheel.whl'}, tmp_path, 'https://example.invalid')
+
+
+def test_python_release_artifacts_are_pinned_without_network(tmp_path, monkeypatch):
+    import importlib.util
+    from pathlib import Path
+    spec = importlib.util.spec_from_file_location('pinned_plan_builder',
+        Path(__file__).parents[1] / 'scripts/build_download_plans.py')
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    monkeypatch.setattr(module.urllib.request, 'urlopen', lambda *a, **k: pytest.fail('No discovery requests'))
+    artifacts = module.python_artifacts(tmp_path)
+    assert set(artifacts) == set(module.TARGETS)
+    assert json.loads((tmp_path / 'python-artifacts.json').read_text()) == artifacts
+    monkeypatch.setattr(module, 'PYTHON', '0.0.0')
+    with pytest.raises(ValueError, match='release targets'):
+        module.python_artifacts(tmp_path)
