@@ -27,3 +27,24 @@ def test_lease_is_released_after_exception(tmp_path):
     except RuntimeError:
         pass
     assert active_leases(tmp_path) == []
+
+
+def test_inventory_preserves_legacy_preview_and_interrupted_update(tmp_path):
+    import json
+    from nerv.managed import environments
+    from nerv.install_system import atomic_json
+    preview = tmp_path / 'profiles/preview'
+    directory = preview / 'envs/host/old'
+    python = directory / 'bin/python'
+    python.parent.mkdir(parents=True)
+    python.touch()
+    record = {'python': str(python), 'version': 'old'}
+    atomic_json(directory / 'nerv-install.json', record)
+    snapshot = tmp_path / 'snapshots/recovery'
+    atomic_json(snapshot / 'runtimes/example.json', record)
+    atomic_json(preview / 'update-pending.json', {'snapshot': str(snapshot)})
+    rows = environments(tmp_path)
+    assert len(rows) == 1
+    assert rows[0]['references'] == ['preview:rollback']
+    assert rows[0]['health'] == 'needs_check'
+    assert json.loads((directory / 'nerv-install.json').read_text()) == record

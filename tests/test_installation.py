@@ -76,6 +76,18 @@ def test_rollback_refuses_active_server(tmp_path, monkeypatch):
             i.rollback()
 
 
+def test_preview_rollback_refuses_shared_install_transaction(tmp_path, monkeypatch):
+    from filelock import FileLock, Timeout
+    preview = tmp_path / 'profiles/preview'
+    preview.mkdir(parents=True)
+    monkeypatch.setenv('NERV_HOME', str(preview))
+    monkeypatch.delenv('NERV_STORAGE_HOME', raising=False)
+    with FileLock(tmp_path / 'installation-process.lock'):
+        with pytest.raises(Timeout):
+            i.rollback()
+    assert not (preview / 'installation-process.lock').exists()
+
+
 def test_rollback_restores_release_and_keeps_user_data(tmp_path, monkeypatch):
     monkeypatch.setenv('NERV_HOME', str(tmp_path))
     environment = tmp_path / 'envs/old'

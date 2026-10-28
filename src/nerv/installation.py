@@ -498,7 +498,7 @@ def _update(check=False, *, manifest=None, lock=None, legacy_python=None):
 def rollback():
     from filelock import FileLock
     root = home()
-    with FileLock(str(root / "host-running.lock"), timeout=0), FileLock(str(root / "installation-process.lock"), timeout=0):
+    with FileLock(str(root / "host-running.lock"), timeout=0), FileLock(str(managed.storage_root(root) / "installation-process.lock"), timeout=0):
         pending = root / "update-pending.json"
         if pending.exists():
             recovery = json.loads(pending.read_text(encoding="utf-8"))
