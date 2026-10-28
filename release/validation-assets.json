@@ -1,0 +1,4 @@
+{
+  "schema": 1,
+  "fixtures": [{"asset": "apt-g1", "destination": "worlds"}]
+}

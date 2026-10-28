@@ -259,8 +259,8 @@ class Nerv:
             for previous in self.store.all():
                 if previous.body == body and (self.tasks.snapshot(previous.id).get("task") or {}).get("status") in ACTIVE:
                     raise ValueError("Return to the running task before creating another robot session")
-            from .module_jobs import catalog
-            if any(job["state"] in ("queued", "running") for job in catalog()["jobs"]):
+            from .module_jobs import jobs
+            if any(job["state"] in ("queued", "running") for job in jobs()):
                 raise ValueError("Wait for component installation before creating a robot instance")
         # Explicit injected test brains are not part of the production catalogue.
         from ..harness.agent import AgentHarness

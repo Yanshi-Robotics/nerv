@@ -18,6 +18,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.12'
+      - name: Install CPU rendering libraries for Linux simulation checks
+        if: runner.os == 'Linux'
+        run: sudo apt-get update && sudo apt-get install -y libegl1 libgl1-mesa-dri
       - name: Build and verify in managed storage
         id: candidate
         run: python scripts/ci_managed.py

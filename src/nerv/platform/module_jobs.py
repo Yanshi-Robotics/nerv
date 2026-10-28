@@ -37,13 +37,11 @@ def system_description(refresh=False):
                       for key in manifest['products']}}
 
 
-def catalog():
+def jobs():
     for key, process in list(WORKERS.items()):
         if process.poll() is not None:
             process.wait()
             WORKERS.pop(key, None)
-    from .runtime_management import installations
-    installed = {r["provider"]: r for r in installations()}
     root = installation.home() / "install-jobs"
     jobs = []
     for path in sorted(root.glob("*.json")):
@@ -61,6 +59,13 @@ def catalog():
             except Timeout:
                 pass
     jobs.sort(key=lambda job: job.get("created_at", 0))
+    return [{k: v for k, v in job.items() if k not in ("plan_snapshot", "release_snapshot")} for job in jobs]
+
+
+def catalog():
+    from .runtime_management import installations
+    installed = {r["provider"]: r for r in installations()}
+    current_jobs = jobs()
     manifest, _ = installation.read_manifest()
     plans = {key: install_plan.describe(installation.home(), manifest, key, system_facts())
              for key in manifest['products']} if manifest.get('download_plans') else {}
@@ -70,7 +75,7 @@ def catalog():
                          "installation_path": str(Path(installed[key]["python"]).parent.parent) if key in installed else None,
                          "download_bytes": plans.get(key, {}).get('download_bytes') if plans else sum(manifest.get("files", {}).get(n, {}).get("bytes", 0)
                                                for n in manifest["products"].get(key, {}).get("files", []))}
-                        for key, product in manifest["products"].items() if key != "host"], "jobs": [{k: v for k, v in job.items() if k not in ("plan_snapshot", "release_snapshot")} for job in jobs]}
+                        for key, product in manifest["products"].items() if key != "host"], "jobs": current_jobs}
 
 
 def _needs_repair(key, installed):

@@ -84,6 +84,27 @@
         "sha256": "e6df8bdd96aa545cbe56ac53ed4bde0038ed8e5c8400c9f86218029c01ef15f6",
         "url": "https://github.com/Yanshi-Robotics/nerv-assets/releases/download/assets-v0.1.0/so101-sort-snacks.zip"
       }
+    },
+    {
+      "schema": 1,
+      "id": "apt-g1",
+      "version": "0.1.0",
+      "name": "Manhattan duplex with G1",
+      "license": "MIT AND BSD-3-Clause AND CC0-1.0 AND CC-BY-4.0 AND LicenseRef-USGS-NAIP-Public-Domain AND LicenseRef-NYC-Open-Data",
+      "source_commit": "3eb648296275b1491fd7826106857379bf3b4b17",
+      "validation": {
+        "files": "passed",
+        "model_load": "passed",
+        "compiled_physics": "passed",
+        "rendering": "passed",
+        "task": "not_checked"
+      },
+      "archive": {
+        "name": "apt-g1.zip",
+        "bytes": 85964383,
+        "sha256": "2f904b6b0a6e73704be8e3c3da48b9ebb53dd316c4bcc506afbbcbf8eee8693f",
+        "url": "https://github.com/Yanshi-Robotics/nerv-assets/releases/download/assets-v0.1.1/apt-g1.zip"
+      }
     }
   ]
 }
