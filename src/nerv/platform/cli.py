@@ -172,8 +172,10 @@ def cmd_serve(a) -> int:
         open_browser=not a.no_browser, before_shutdown=request_shutdown)
     from filelock import FileLock
     from pathlib import Path
+    from ..managed import lease, storage_root
     Path(paths.NERV_HOME).mkdir(parents=True, exist_ok=True)
-    with FileLock(str(Path(paths.NERV_HOME) / "host-running.lock"), timeout=0):
+    with FileLock(str(Path(paths.NERV_HOME) / "host-running.lock"), timeout=0), \
+            lease(storage_root(paths.NERV_HOME), [sys.prefix]):
         if (Path(paths.NERV_HOME) / "update-pending.json").exists():
             raise ValueError("An update was interrupted. Run nerv rollback before starting NERV.")
         server.run()

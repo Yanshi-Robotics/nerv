@@ -90,7 +90,8 @@ def environments(root=None):
     references = {}
     for channel in ('stable', 'preview'):
         home = channel_home(channel, base)
-        pointers = [home / 'active.json', home / 'previous.json', *(home / 'runtimes').glob('*.json')]
+        pointers = [home / 'active.json', home / 'previous.json', home / 'update-pending.json',
+                    *(home / 'runtimes').glob('*.json')]
         for pointer in pointers:
             if not pointer.is_file():
                 continue
@@ -105,7 +106,10 @@ def environments(root=None):
                     directory = str(Path(old['python']).parent.parent.resolve())
                     references.setdefault(directory, []).append(channel + ':rollback')
     rows = []
-    for receipt in (base / 'envs').glob('*/*/nerv-install.json'):
+    receipts = set((base / 'envs').glob('*/*/nerv-install.json'))
+    # Pre-unification preview environments remain visible until explicitly migrated.
+    receipts.update((channel_home('preview', base) / 'envs').glob('*/*/nerv-install.json'))
+    for receipt in sorted(receipts):
         record = json.loads(receipt.read_text())
         directory = str(receipt.parent.resolve())
         rows.append({**record, 'path': directory, 'references': references.get(directory, []),
