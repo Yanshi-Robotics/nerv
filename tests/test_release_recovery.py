@@ -139,3 +139,44 @@ def test_update_explains_running_server_without_downloading(tmp_path, monkeypatc
     with FileLock(tmp_path / 'host-running.lock'):
         with pytest.raises(ValueError, match='Exit NERV'):
             i.update()
+
+
+def test_new_rollback_keeps_one_combination_but_failed_update_keeps_old_recovery(tmp_path, monkeypatch):
+    root, manifest = setup(tmp_path, monkeypatch)
+    older = {'python': str(i.python_at(root / 'envs/host/older')), 'version': 'older', 'product': 'host'}
+    i.write_json(root / 'previous.json', older)
+    snapshot = i._snapshot()
+    i._restore(snapshot)
+    assert json.loads((root / 'previous.json').read_text()) == older
+    i.update(manifest=manifest)
+    result = i.rollback()
+    assert json.loads((root / 'active.json').read_text())['version'] == 'old'
+    assert not (root / 'previous.json').exists()
+    assert (Path(result['preserved_newer_configuration']) / 'previous.json').exists()
+
+
+def test_interrupted_rollback_keeps_snapshot_referenced_until_retry(tmp_path, monkeypatch):
+    root, manifest = setup(tmp_path, monkeypatch)
+    i.update(manifest=manifest)
+    original = i.shutil.copytree
+    def fail(source, destination, *args, **kwargs):
+        if Path(destination) == root / 'runtimes':
+            raise OSError('injected rollback copy failure')
+        return original(source, destination, *args, **kwargs)
+    monkeypatch.setattr(i.shutil, 'copytree', fail)
+    with pytest.raises(OSError, match='rollback copy failure'):
+        i.rollback()
+    pending = json.loads((root / 'update-pending.json').read_text())
+    assert pending['operation'] == 'rollback'
+    snapshot = Path(pending['snapshot'])
+    assert (snapshot / 'runtimes/device.json').exists()
+    i.write_json(root / 'envs/device/old/nerv-install.json', {'product': 'device', 'version': 'old'})
+    protected = next(row for row in i.managed.environments(root) if row['path'] == str(root / 'envs/device/old'))
+    assert protected['references']
+    with pytest.raises(ValueError, match='interrupted'):
+        i.update(manifest=manifest)
+    monkeypatch.setattr(i.shutil, 'copytree', original)
+    assert i.rollback()['recovered']
+    assert not (root / 'update-pending.json').exists()
+    assert not (root / 'previous.json').exists()
+    assert json.loads((root / 'runtimes/device.json').read_text())['version'] == 'old'

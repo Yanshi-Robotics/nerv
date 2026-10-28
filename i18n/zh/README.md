@@ -8,7 +8,7 @@ NERV 是使用已训练策略和视觉 AI 执行机器人任务的本地工作�
 
 [SO-101 接入](standard-so101.md) · [架构](architecture.md) · [路线图](ROADMAP.md) · [变更记录](../../CHANGELOG.md)
 
-0.8.4 是尚未发布的本地候选版。下方安装器使用公开发布版，当前为 0.8.1，不会安装此候选版。SO-101 实机验收和学生首次使用测试尚未完成。
+0.8.5 是尚未发布的本地候选版。下方安装器使用公开发布版，当前为 0.8.1，不会安装此候选版。SO-101 实机验收和学生首次使用测试尚未完成。
 
 <div align="center"><img src="../../assets/readme/diagrams/zh/overview.svg" alt="NERV 从任务配置、控制方案到 Runtime 执行，统一观测、控制与记录" width="960"></div>
 

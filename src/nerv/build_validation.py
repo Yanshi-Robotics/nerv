@@ -16,7 +16,7 @@ CONTRACT_TESTS = [
     'test_harness_memory.py', 'test_environment_cleanup.py', 'test_managed.py',
     'test_asset_store.py', 'test_asset_catalog.py', 'test_asset_runtime.py',
     'test_policy_sources.py', 'test_build_workspace.py', 'test_managed_preview.py', 'test_recoverable_downloads.py',
-    'test_scene_package.py', 'test_simulation_module.py', 'test_motion_policies.py',
+    'test_scene_package.py', 'test_simulation_module.py', 'test_motion_policies.py', 'test_motion_policy_api.py',
 ]
 
 

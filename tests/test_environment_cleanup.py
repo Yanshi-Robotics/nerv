@@ -188,3 +188,22 @@ def test_interrupted_removal_is_protected(tmp_path):
     assert not report['candidates']
     assert report['maintenance'][0]['state'] == 'removing'
     assert 'incomplete-cleanup-needs-review' in report['retained'][0]['reasons']
+
+
+def test_completed_new_snapshot_has_one_rollback_but_pending_preserves_the_chain(tmp_path):
+    from nerv import managed
+    from nerv.install_system import atomic_json
+    # Receipted old environments exist solely to observe the reference graph.
+    for name in ('one', 'two'):
+        path = tmp_path / 'envs/host' / name
+        atomic_json(path / 'nerv-install.json', {'python': str(path / 'bin/python'), 'environment_id': name})
+    snapshot = tmp_path / 'backups/latest'
+    atomic_json(snapshot / 'snapshot.json', {'rollback_depth': 1})
+    atomic_json(snapshot / 'active.json', {'python': str(tmp_path / 'envs/host/one/bin/python')})
+    atomic_json(snapshot / 'previous.json', {'python': str(tmp_path / 'envs/host/two/bin/python')})
+    atomic_json(tmp_path / 'previous.json', {'snapshot': str(snapshot)})
+    rows = {r['environment_id']: r for r in managed.environments(tmp_path)}
+    assert rows['one']['references'] and not rows['two']['references']
+    atomic_json(tmp_path / 'update-pending.json', {'snapshot': str(snapshot)})
+    rows = {r['environment_id']: r for r in managed.environments(tmp_path)}
+    assert rows['one']['references'] and rows['two']['references']

@@ -221,18 +221,20 @@ def environments(root=None):
             for config in (Path(directory) / category).glob('*/' + filename):
                 collect(yaml.safe_load(config.read_text()) or {}, reason)
 
-    def pointers(home, channel, recovery=False):
+    def pointers(home, channel, recovery=False, interrupted=False):
         home = Path(home)
         if recovery and not home.is_dir():
             raise ValueError('A referenced recovery snapshot is missing; repair recovery before cleanup')
-        key = ('pointers', str(home.resolve()), channel)
+        key = ('pointers', str(home.resolve()), channel, interrupted)
         if key in visited:
             return
         visited.add(key)
         registry(home, channel + (':rollback' if recovery else ':configuration'))
+        metadata = home / 'snapshot.json'
+        bounded = recovery and not interrupted and metadata.is_file() and json.loads(metadata.read_text()).get('rollback_depth') == 1
         for pointer in [home / 'active.json', home / 'previous.json', home / 'update-pending.json',
                         *(home / 'runtimes').glob('*.json')]:
-            if not pointer.is_file():
+            if not pointer.is_file() or (bounded and pointer.name == 'previous.json'):
                 continue
             record = json.loads(pointer.read_text())
             reference = 'snapshot' if pointer.name == 'update-pending.json' else 'python'
@@ -247,7 +249,7 @@ def environments(root=None):
             if record.get('registry_root'):
                 registry(record['registry_root'], reason)
             if record.get('snapshot'):
-                pointers(record['snapshot'], channel, True)
+                pointers(record['snapshot'], channel, True, interrupted or pointer.name == 'update-pending.json')
 
     for channel in ('stable', 'preview'):
         pointers(channel_home(channel, base), channel)

@@ -360,11 +360,11 @@ def _snapshot():
             shutil.copytree(source, destination / name)
         elif source.is_file():
             shutil.copy2(source, destination / name)
-    write_json(destination / "snapshot.json", {"paths": list(RESTORE_PATHS), "schema": CONFIG_SCHEMA})
+    write_json(destination / "snapshot.json", {"paths": list(RESTORE_PATHS), "schema": CONFIG_SCHEMA, "rollback_depth": 1})
     return destination
 
 
-def _restore(snapshot):
+def _restore(snapshot, *, interrupted=True):
     root = home()
     snapshot = Path(snapshot).resolve(strict=True)
     if not snapshot.is_relative_to((root / "backups").resolve()):
@@ -380,6 +380,8 @@ def _restore(snapshot):
         target, source = root / name, snapshot / name
         if target.exists():
             shutil.move(str(target), str(saved / name))
+        if name == "previous.json" and not interrupted and metadata.get("rollback_depth") == 1:
+            continue
         if source.is_dir():
             shutil.copytree(source, target)
         elif source.is_file():
@@ -505,7 +507,7 @@ def rollback():
         pending = root / "update-pending.json"
         if pending.exists():
             recovery = json.loads(pending.read_text(encoding="utf-8"))
-            _restore(recovery["snapshot"])
+            _restore(recovery["snapshot"], interrupted=recovery.get("operation") != "rollback")
             pending.unlink()
             return {"recovered": True}
         record = json.loads((root / "previous.json").read_text(encoding="utf-8"))
@@ -514,7 +516,9 @@ def rollback():
             snapshot = Path(record["snapshot"])
             for path in (snapshot / "runtimes").glob("*.json"):
                 _verify_record(json.loads(path.read_text(encoding="utf-8")))
-            saved = _restore(snapshot)
+            write_json(pending, {"snapshot": str(snapshot), "phase": "restoring", "operation": "rollback"})
+            saved = _restore(snapshot, interrupted=False)
+            pending.unlink()
             return {**record, "preserved_newer_configuration": saved}
         # Initial bootstrap installations from older candidates have no snapshot.
         python = Path(record["python"])
