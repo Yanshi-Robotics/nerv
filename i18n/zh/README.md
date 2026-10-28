@@ -8,7 +8,7 @@ NERV 是使用已训练策略和视觉 AI 执行机器人任务的本地工作�
 
 [SO-101 接入](standard-so101.md) · [架构](architecture.md) · [路线图](ROADMAP.md) · [变更记录](../../CHANGELOG.md)
 
-0.8.5 是尚未发布的本地候选版。下方安装器使用公开发布版，当前为 0.8.1，不会安装此候选版。SO-101 实机验收和学生首次使用测试尚未完成。
+NERV 0.8.5 是供软件与仿真测试使用的开发版本。SO-101 实机验收和学生首次使用测试尚未完成；安装命令对应的具体包版本见发布说明。
 
 <div align="center"><img src="../../assets/readme/diagrams/zh/overview.svg" alt="NERV 从任务配置、控制方案到 Runtime 执行，统一观测、控制与记录" width="960"></div>
 
@@ -73,7 +73,7 @@ nerv serve --no-browser
 
 没有 API key 仍可安装组件、配置机器人、查看相机，并从“我的机器人 → 设备与固定策略工作区”运行固定 ACT。策略通过“设置 → 策略库”单独导入。
 
-<div align="center"><img src="../../assets/readme/images/new-session-0.8.5.png" alt="NERV 0.8.5 候选版的新会话页、配置待办和统一侧栏" width="960"></div>
+<div align="center"><img src="../../assets/readme/images/new-session-0.8.5.png" alt="NERV 0.8.5的新会话页、配置待办和统一侧栏" width="960"></div>
 
 机器人详情默认展示本地三维模型，展示姿态不代表实测位置。名称、图片和连接配置会保存，运动授权不会随重启恢复。“关于”显示运行版本，“更新”提供主动检查入口。切换页面保留当前工作区及停止控件；运行参数修改对新的 Agent 回合生效，不改变已开始的工作。
 
@@ -111,7 +111,7 @@ nerv serve --no-browser
 
 NERV 使用 uv 管理的 Python 虚拟环境，默认保存于 `~/.nerv`，与系统 Python 和训练环境分开。目录归属、测试版隔离、更新方式及硬件共享边界见[环境管理与隔离说明](environments.md)。
 
-0.8.5 候选版将仿真引擎和场景资源分开安装：先在“组件与仿真”安装引擎，再到“我的资产”安装抓取放置、零食分拣、汉诺塔、G1 公寓或山坡住宅场景。场景包不附带已训练策略。设置中已安装组件置顶，安装支持持久进度、取消、完整性检查和重试。0.8.5 候选版增加了 [MJCF 数据资产导入、个人副本与版本保存](assets.md)，不执行第三方仿真代码。Real 与 Sim 分别绑定，张量维度相同不代表真机 ACT 可用于仿真。扩展边界见[组件与方案约定](../../guides/control-schemes.md)。
+0.8.5将仿真引擎和场景资源分开安装：先在“组件与仿真”安装引擎，再到“我的资产”安装抓取放置、零食分拣、汉诺塔、G1 公寓或山坡住宅场景。场景包不附带已训练策略。设置中已安装组件置顶，安装支持持久进度、取消、完整性检查和重试。0.8.5增加了 [MJCF 数据资产导入、个人副本与版本保存](assets.md)，不执行第三方仿真代码。Real 与 Sim 分别绑定，张量维度相同不代表真机 ACT 可用于仿真。扩展边界见[组件与方案约定](../../guides/control-schemes.md)。
 
 更新或回滚前，先停止任务、断开设备并退出 NERV。检查公开更新：
 
@@ -147,7 +147,7 @@ nerv rollback
 
 ## 演示与界面
 
-0.8.5 在设置中分别管理运行组件和资产版本。下图来自本地候选版；文件检查和软件推理检查不代表已经完成实机任务。
+0.8.5 在设置中分别管理运行组件和资产版本。下图来自经过测试的 0.8.5 界面；文件检查和软件推理检查不代表已经完成实机任务。
 
 <div align="center"><img src="../../assets/readme/images/components-0.8.5.png" alt="NERV 0.8.5：已安装的 LeRobot 与仿真环境" width="960"></div>
 <div align="center"><img src="../../assets/readme/images/assets-0.8.5.png" alt="NERV 0.8.5：个人资产副本及已保存版本" width="960"></div>

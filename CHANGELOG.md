@@ -3,7 +3,7 @@
 Versions are managed from 0.2.0 on: every release gets an entry here and a `v<version>` tag.
 The 0.1.x entries below are the pre-release trail.
 
-## [0.8.5] — Unreleased local candidate
+## [0.8.5] — 2026-10-28
 
 - Manage stable and preview environments, tools, downloads and builds under NERV_HOME,
   with immutable environment identities, usage leases and reference-aware cleanup.
@@ -15,8 +15,12 @@ The 0.1.x entries below are the pre-release trail.
   imports. Explicit motion-policy selection fixes a checked revision for new instances.
 - Preserve source files, third-party notices and existing deployment contracts. Unknown-origin
   legacy policies are excluded from new official publication pending provenance review.
-- This candidate has not been released. Public download, final installation acceptance and
-  reviewed legacy cleanup remain pending; physical operations remain operator-run.
+- Include the previously unreleased 0.8.2–0.8.4 navigation, recoverable installation and
+  SO-101 setup work described below. This is a development release; physical operations
+  and hardware acceptance remain operator-run.
+- Publish the verified G1 turn policy on Hugging Face and five independently versioned
+  scene packages. Keep two unknown-origin legacy policies out of new public distribution.
+- Canonicalize runtime wheel metadata so equivalent dependency builds reuse environments.
 
 ## [0.8.4] — Unreleased local candidate
 

@@ -2,7 +2,7 @@
 
 [English](../../guides/github-install.md) · [NERV](README.md)
 
-这份指南对应 `0.8.5` 候选版。公开安装器安装最新已发布版本，具体版本请查看[发布说明](https://github.com/Yanshi-Robotics/nerv/releases)。软件测试与真机验收、学生首次使用测试分别记录。
+这份指南对应 NERV `0.8.5`。公开安装器安装最新已发布版本，具体版本请查看[发布说明](https://github.com/Yanshi-Robotics/nerv/releases)。软件测试与真机验收、学生首次使用测试分别记录。
 
 ## 安装 NERV
 
