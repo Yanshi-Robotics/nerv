@@ -74,11 +74,17 @@ def read_metadata(path, token=None):
     raise ValueError('Too many model metadata redirects')
 
 
-def resolve(repo, revision='main', token=None):
+def resolve(repo, revision='main', token=None, *, progress=None, stopped=None):
     """Resolve a moving name once; the returned plan contains immutable URLs only."""
     repo = repository(repo)
     if not revision or len(revision) > 200:
         raise ValueError('Invalid model revision')
+    def report(message):
+        if stopped and stopped():
+            raise InterruptedError('Model metadata resolution stopped')
+        if progress:
+            progress(message)
+    report('Reading model inventory')
     info = json.loads(read_metadata(f'/api/models/{repo}/revision/{quote(revision, safe="")}?blobs=true', token))
     commit = info.get('sha', '')
     if not re.fullmatch(r'[0-9a-f]{40}', commit):
@@ -87,7 +93,8 @@ def resolve(repo, revision='main', token=None):
     if not siblings or len(siblings) > MAX_FILES:
         raise ValueError('Invalid model file inventory')
     files, seen = [], set()
-    for row in siblings:
+    for index, row in enumerate(siblings, 1):
+        report(f'Checking model file {index}/{len(siblings)}')
         name = file_name(row['rfilename'])
         if name.casefold() in seen:
             raise ValueError('Model paths collide on case-insensitive filesystems')

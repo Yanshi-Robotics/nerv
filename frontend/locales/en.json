@@ -725,6 +725,7 @@
     "Installing…": "Installing…",
     "Install component": "Install component",
     "LeRobot 0.6.1 and Feetech driver. Connecting the arm is a separate step.": "LeRobot 0.6.1 and Feetech driver. Connecting the arm is a separate step.",
+    "resolving": "Reading model inventory",
     "queued": "queued",
     "download": "download",
     "environment": "environment",
