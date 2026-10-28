@@ -109,8 +109,11 @@ def build(source, root=None, progress=print, *, validate=True, smoke=False):
     storage.mkdir(parents=True, exist_ok=True)
     with FileLock(str(storage / 'build-process.lock'), timeout=0):
         from .build_retention import plan
-        obsolete = plan(storage)['candidates']
-        if any(row['bytes'] for row in obsolete):
+        retention = plan(storage)
+        # Allow a bounded retry window while an installed preview is still
+        # running. Compaction requires both hosts to be stopped deliberately.
+        generated = [row for row in retention['candidates'] + retention['retained'] if row['bytes']]
+        if len(generated) >= 6 and any(row['bytes'] for row in retention['candidates']):
             raise ValueError('Review obsolete build dependencies with nerv preview builds before building again')
         return _build(source, storage, progress, validate=validate, smoke=smoke)
 

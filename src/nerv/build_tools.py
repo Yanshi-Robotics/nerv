@@ -35,7 +35,10 @@ def build_environment(storage):
                PIP_DISABLE_PIP_VERSION_CHECK='1', TMPDIR=str(temporary), TEMP=str(temporary), TMP=str(temporary),
                NPM_CONFIG_CACHE=str(storage / '.cache/npm'), NPM_CONFIG_USERCONFIG=str(npm_configs[0]),
                NPM_CONFIG_GLOBALCONFIG=str(npm_configs[1]), NEXT_TELEMETRY_DISABLED='1',
-               NERV_STATIC_EXPORT='1', NEXT_PUBLIC_API='')
+               NERV_STATIC_EXPORT='1', NEXT_PUBLIC_API='',
+               # ZIP's earliest timestamp: metadata must not change a dependency
+               # identity when unchanged sources are rebuilt on another day.
+               SOURCE_DATE_EPOCH='315532800')
     return env
 
 
