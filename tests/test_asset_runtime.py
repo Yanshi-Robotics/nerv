@@ -111,3 +111,18 @@ def test_runtime_check_loads_steps_and_rejects_wrong_joint(tmp_path):
     (source / MANIFEST).write_text(json.dumps(manifest))
     with pytest.raises(ValueError, match='scalar joint'):
         inspect_scene(source)
+
+
+def test_preview_uses_declared_free_base_pose_without_controller(tmp_path):
+    import math
+    from nerv.asset_runtime import prepare_scene
+    source = scene(tmp_path / 'source', {'bodies': ['test-arm'],
+        'spawn': {'x': 3, 'y': -2, 'yaw': math.pi}})
+    (source / 'scene.xml').write_text('''<mujoco><worldbody><body pos="0 0 1">
+        <freejoint/><geom type="sphere" size=".1"/>
+        <body pos="0 0 .2"><joint name="hinge"/><geom type="sphere" size=".1"/></body>
+        </body></worldbody><actuator><motor joint="hinge"/></actuator></mujoco>''')
+    sim = prepare_scene(source)
+    assert sim.data.qpos[:3] == pytest.approx([3, -2, 1])
+    assert sim.data.qpos[3:7] == pytest.approx([0, 0, 0, 1])
+    assert not sim.spawned

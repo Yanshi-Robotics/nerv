@@ -623,6 +623,7 @@ export const saveControlScheme = (scheme: Partial<ControlScheme>): Promise<Contr
 export const selectControlScheme = (sid: string, scheme: ControlScheme) => domainRequest(`/api/sessions/${sid}/control-scheme`, {id: scheme.id, revision: scheme.revision});
 export const getRobotTask = (sid: string): Promise<RobotSnapshot> => domainRequest(`/api/sessions/${sid}/robot-tasks`);
 export const setupDevice = (operation: string, payload: Record<string, unknown> = {}) => domainRequest(`/api/setup/lerobot0.6.1/${operation}`, payload);
+export const motionPolicy = (operation: string, payload: Record<string, unknown> = {}) => domainRequest(`/api/motion-policies/${operation}`, payload);
 export const browseDirectories = (path?: string, offset = 0) => domainRequest("/api/operator/directories", {path, offset});
 export const setupCamera = (operation: string, payload: Record<string, unknown> = {}) => domainRequest(`/api/setup-camera/lerobot0.6.1/${operation}`, payload);
 export const moduleCatalog = () => domainRequest("/api/modules");

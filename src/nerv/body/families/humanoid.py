@@ -33,6 +33,7 @@ import threading
 import time
 from collections import deque
 from dataclasses import dataclass, field
+from pathlib import Path
 
 import numpy as np
 
@@ -159,7 +160,8 @@ class PolicyRelease:
         self.lin_deadband = float(rel.get("lin_cmd_deadband", 0.0) or 0.0)
         self.turn_vx = float(rel.get("turn_vx", 0.0) or 0.0)
         import onnxruntime as ort
-        self._sess = ort.InferenceSession(os.path.join(path, "policy.onnx"), providers=["CPUExecutionProvider"])
+        ort.disable_telemetry_events()
+        self._sess = ort.InferenceSession(Path(path, "policy.onnx").read_bytes(), providers=["CPUExecutionProvider"])
         self._in = self._sess.get_inputs()[0].name
 
     @staticmethod
@@ -213,11 +215,20 @@ class HumanoidBody:
                          (s.get("camera", "") if isinstance(s, dict) else "") for s in spec.get("sensors", [])}
 
         skills = spec.get("skills") or {}
+        records = [v['policy_record'] for v in skills.values() if v.get('policy_record')]
+        if records:
+            from ...motion_policies import inventory
+            for record in records:
+                if inventory(record['path'])[1] != record['files']:
+                    raise ValueError('Policy files changed after task preparation')
         dirs = {str((v or {}).get("policy", "")) for v in skills.values()}
         dirs.discard("")
         if len(dirs) != 1:
             raise ValueError(f"the humanoid skills must share one policy release; body.yaml names {sorted(dirs)}")
         self.policy = PolicyRelease(dirs.pop())
+        for record in records:
+            if inventory(record['path'])[1] != record['files']:
+                raise ValueError('Policy files changed during loading')
         act = spec.get("actuators") or {}
         self._clearance_query = dict(self.loco.get("clearance") or {})
         self._clearance_period = float(self._clearance_query.pop("scan_period_s", 0))

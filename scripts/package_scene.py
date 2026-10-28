@@ -44,6 +44,8 @@ def pack(root, recipe, destination):
         if not isinstance(declaration.get('license'), str) or not declaration['license']:
             raise ValueError('Missing source license: ' + name)
         sources[name] = {'sha256': digest(path), 'license': declaration['license']}
+        if declaration.get('source'):
+            sources[name]['source'] = declaration['source']
         return path
 
     seen = set()
@@ -98,9 +100,11 @@ def pack(root, recipe, destination):
             notice = root / str(relative(declaration['notice']))
             if not notice.resolve(strict=True).is_relative_to(root):
                 raise ValueError('License notice escapes the source root')
-            target = stage / 'licenses' / (hashlib.sha256(declaration['license'].encode()).hexdigest()[:12] + '.txt')
-            target.parent.mkdir(exist_ok=True)
             content = notice.read_bytes()
+            # Different authors can use the same license. Preserve each notice.
+            identity = hashlib.sha256(declaration['license'].encode() + b'\0' + content).hexdigest()
+            target = stage / 'licenses' / (identity + '.txt')
+            target.parent.mkdir(exist_ok=True)
             if target.exists() and target.read_bytes() != content:
                 raise ValueError('Conflicting license notices')
             target.write_bytes(content)

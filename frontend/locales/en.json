@@ -724,7 +724,6 @@
     "Not installed": "Not installed",
     "Installing…": "Installing…",
     "Install component": "Install component",
-    "Pick and place, snack sorting and Tower of Hanoi. No trained policy included.": "Pick and place, snack sorting and Tower of Hanoi. No trained policy included.",
     "LeRobot 0.6.1 and Feetech driver. Connecting the arm is a separate step.": "LeRobot 0.6.1 and Feetech driver. Connecting the arm is a separate step.",
     "queued": "queued",
     "download": "download",
@@ -773,7 +772,6 @@
     "Imported policies": "Imported policies",
     "Import local policy": "Import local policy",
     "No policies imported yet.": "No policies imported yet.",
-    "Import externally trained ACT policies. NERV does not train models.": "Import externally trained ACT policies. NERV does not train models.",
     "Task and starting conditions": "Task and starting conditions",
     "Inference checks use synthetic inputs and do not prove a real grasp.": "Inference checks use synthetic inputs and do not prove a real grasp.",
     "Open components": "Open components",
@@ -1039,6 +1037,13 @@
     "Install asset": "Install asset",
     "Simulation load check passed. Rendering and task performance have not been checked.": "Simulation load check passed. Rendering and task performance have not been checked.",
     "Check simulation loading": "Check simulation loading",
-    "Compatible saved scenes appear in New Session. A running session keeps its original revision.": "Compatible saved scenes appear in New Session. A running session keeps its original revision."
+    "Compatible saved scenes appear in New Session. A running session keeps its original revision.": "Compatible saved scenes appear in New Session. A running session keeps its original revision.",
+    "Simulation engine. Install scenes separately from My assets; no trained policy is included.": "Simulation engine. Install scenes separately from My assets; no trained policy is included.",
+    "Import externally trained policies. NERV does not train models.": "Import externally trained policies. NERV does not train models.",
+    "ONNX motion policies require policy.onnx, contract.json and release.yaml. Importing files does not enable motion.": "ONNX motion policies require policy.onnx, contract.json and release.yaml. Importing files does not enable motion.",
+    "Policy format": "Policy format",
+    "Policy directory": "Policy directory",
+    "Selected policy revision": "Selected policy revision",
+    "Use this policy revision": "Use this policy revision"
   }
 }

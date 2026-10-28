@@ -26,4 +26,4 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: candidate-${{ matrix.os }}
-          path: ${{ steps.candidate.outputs.bundle }}/*
+          path: ${{ steps.candidate.outputs.bundle }}/nerv-*-bundle.zip

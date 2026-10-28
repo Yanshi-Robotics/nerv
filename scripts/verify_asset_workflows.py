@@ -64,14 +64,9 @@ def verify(packages, output, render=False):
             import mujoco
             import numpy as np
             from PIL import Image
-            from nerv.asset_runtime import binding
-            from nerv.world.mujoco_node import WorldSim
-            spec = binding(original_checked['manifest'])
-            sim = WorldSim(str(original / original_checked['manifest']['entry']),
-                           physics=spec.physics.model_dump(), spawn=spec.spawn.model_dump())
+            from nerv.asset_runtime import prepare_scene
+            sim = prepare_scene(original, original_checked)
             model, data = sim.model, sim.data
-            data.qpos[:] = sim._initial_qpos
-            mujoco.mj_forward(model, data)
             frames = []
             with mujoco.Renderer(model, height=480, width=640) as renderer:
                 cameras = list(range(model.ncam)) if model.ncam else [-1]

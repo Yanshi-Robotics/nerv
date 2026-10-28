@@ -68,10 +68,11 @@ export default function ModulesPanel({
       <p className="muted">
         {t(
           m.id === "so101-sim"
-            ? "Pick and place, snack sorting and Tower of Hanoi. No trained policy included."
+            ? "Simulation engine. Install scenes separately from My assets; no trained policy is included."
             : "LeRobot 0.6.1 and Feetech driver. Connecting the arm is a separate step.",
         )}
       </p>
+      {m.id === "so101-sim" && <a className="underline" href="#settings/assets">{t("My assets")}</a>}
       <p className={m.needs_repair ? "error-text" : "text-xs"}>
         {t(
           m.needs_repair

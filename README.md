@@ -66,7 +66,7 @@ The 0.8.3 installation foundation provides **Settings → System and installatio
 
 New Session is the default page and the destination of the NERV logo. Your Robots manages the saved SO-101 profile; Sessions holds conversation history; Settings contains models, policies, components and preferences.
 
-1. Choose a scene: register a standard SO-101 in Your Robots, or install SO-101 Simulation from Settings → Components and simulation.
+1. Choose a scene: register a standard SO-101 in Your Robots, or install the simulation component from Settings → Components and simulation, then choose a scene in My assets.
 2. Configure a chat model in Settings → Models and API keys. Saving a new key requires an explicit test with a built-in image, which may incur a provider charge. It does not send a camera frame.
 3. Select the robot or scene on New Session, describe the task, and start. A configured model and valid scene are required; missing items have direct setup links.
 4. Choose a compatible control scheme and separately authorize motion before running a robot task.
@@ -103,7 +103,7 @@ The chat panel keeps the chat model and control scheme separate, shows the schem
 
 The real-device contract is one standard SO-101 follower with `lerobot[feetech]==0.6.1`: five arm joints in degrees, a gripper in LeRobot's 0–100 range, and `top`/`wrist` cameras at 640 × 480 and 30 FPS. Supply the serial device, robot ID, existing calibration and camera identities. A leader and custom joint mappings are unnecessary for inference.
 
-Import an externally trained ACT directory in Settings → Policy library. NERV checks weights, native processors, statistics, camera inputs, six-channel shapes and fingerprints. Missing unit/order metadata requires a fixed standard declaration recorded as user-provided. Original exports remain read-only; changed files require rechecking. Use the no-motion policy check before enabling actions. The [SO-101 guide](guides/standard-so101.md) covers registration, camera confirmation and recovery.
+Import an externally trained ACT directory in Settings → Policy library. NERV checks weights, native processors, statistics, camera inputs, six-channel shapes and fingerprints. Missing unit/order metadata requires a fixed standard declaration recorded as user-provided. Original exports remain read-only; changed files require rechecking. Use the no-motion policy check before enabling actions. [ONNX motion policy imports](guides/motion-policies.md) use a separate deployment contract and a selected, fixed revision. The [SO-101 guide](guides/standard-so101.md) covers registration, camera confirmation and recovery.
 
 Connecting can enable motor torque. Ordinary disconnect retains torque; explicit release requires supporting the arm. Software stop requests a hold, which cannot be confirmed after communication loss. Requested targets, sent targets and measured positions are separate records. Neither an execution ending nor a model saying “done” proves task success. Operator acceptance of an unverified binding does not certify the hardware integration.
 
@@ -111,7 +111,7 @@ Connecting can enable motor torque. Ordinary disconnect retains torque; explicit
 
 NERV uses uv-managed Python virtual environments under `~/.nerv`, separate from system Python and training environments. See [environment management and isolation](guides/environments.md) for directory ownership, preview profiles, updates and shared hardware limits.
 
-SO-101 Simulation includes pick-and-place, snack-sorting and Tower of Hanoi scenes with local controllers. It does not include trained task policies. Installed modules appear first in Settings; installation supports persistent progress, cancellation, integrity checks and retry. The 0.8.5 candidate adds [data-only MJCF asset import, personal copies and saved revisions](guides/assets.md); it does not execute third-party simulator code. Real and Sim bindings remain separate; matching tensor dimensions do not make a real ACT usable in simulation. See the [module and scheme contract](guides/control-schemes.md).
+The 0.8.5 candidate separates the simulation engine from scene packages. Install the engine in Components and simulation, then install pick-and-place, snack-sorting, Tower of Hanoi or the G1 residence from My assets. Scene packages do not include trained policies. Installed modules appear first in Settings; installation supports persistent progress, cancellation, integrity checks and retry. The 0.8.5 candidate adds [data-only MJCF asset import, personal copies and saved revisions](guides/assets.md); it does not execute third-party simulator code. Real and Sim bindings remain separate; matching tensor dimensions do not make a real ACT usable in simulation. See the [module and scheme contract](guides/control-schemes.md).
 
 Stop tasks, disconnect devices and exit NERV before updating or rolling back. Check for a published update:
 
@@ -139,7 +139,7 @@ Updates stage the host and installed official modules before activation. Failed 
 | SO-101 real / Linux | Adapter and guided setup implemented; physical grasping acceptance pending |
 | Windows native / WSL2 | Experimental; USB, camera backends and passthrough need hardware testing |
 | macOS Apple Silicon / Intel | Experimental; dependencies, camera permissions and CPU/MPS require validation |
-| G1 simulation | Existing source workflow; not a one-click student module |
+| G1 simulation | Managed scene and local ONNX imports in the candidate; a compatible, checked motion policy is required |
 | GR00T / SmolVLA | Planned policy backends; not delivered integrations |
 
 The [acceptance guide](guides/release-acceptance.md) separates software, simulation, physical tasks and novice onboarding. The [roadmap](ROADMAP.md) describes future Harness extensions, plugin management and Yanshifu integration; these are outside 0.8.2.

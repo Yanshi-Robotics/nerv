@@ -34,20 +34,16 @@ def bundle(output=None):
         names[path.name.split("-", 1)[0]] = path.name
     archive = OUT / "so101-sim.zip"
     with zipfile.ZipFile(archive, "w", zipfile.ZIP_DEFLATED) as z:
-        body = yaml.safe_load((ROOT / "bodies/arm-lerobot-so101/body.yaml").read_text())
-        body["buses"] = {"sim": body["buses"]["sim"]}
-        body["skills"] = {}
-        z.writestr("bodies/arm-lerobot-so101/body.yaml", json.dumps(body))
-        for directory in ("robots/so101", "scenes/so101_workbench"):
-            for path in sorted((ROOT / "worlds" / directory).rglob("*")):
-                if path.is_file() and "__pycache__" not in path.parts and path.suffix != ".pyc":
-                    z.write(path, "assets/" + str(path.relative_to(ROOT / "worlds")))
-        for path in sorted((ROOT / "worlds/build").glob("so101-*")):
-            z.write(path, "assets/build/" + path.name)
-        for path in sorted((ROOT / "worlds").glob("so101-*/world.yaml")):
-            descriptor = yaml.safe_load(path.read_text())
-            descriptor["assets_root"] = "assets"
-            z.writestr("worlds/" + path.parent.name + "/world.yaml", json.dumps(descriptor))
+        # Environments contain capabilities, not versioned scene content. Assets
+        # can update independently without reinstalling MuJoCo or Python.
+        simulation = json.loads((ROOT / 'release/simulation.json').read_text())
+        body_ids = simulation['bodies']
+        for body_id in body_ids:
+            body = yaml.safe_load((ROOT / "bodies" / body_id / "body.yaml").read_text())
+            body["buses"] = {"sim": body["buses"]["sim"]}
+            body["skills"] = {}
+            z.writestr(f"bodies/{body_id}/body.yaml", json.dumps(body))
+        z.writestr('module.json', json.dumps(simulation))
     sdk, host, device = (names[k] for k in ("nerv_runtime_sdk", "nerv", "nerv_runtime_lerobot"))
     motor_driver = next(OUT.glob("feetech_servo_sdk-1.0.0-*.whl")).name
     names["feetech_servo_sdk"] = motor_driver
@@ -107,6 +103,11 @@ def bundle(output=None):
              for p in (OUT / name for name in sorted(published))}
     value = {"schema": 1, "version": __version__, "protocol_major": 3, "config_schema": 1,
              "base_url": f"https://github.com/Yanshi-Robotics/nerv/releases/download/v{__version__}", "products": products, "files": files}
+    catalog_path = ROOT / 'release/asset-catalog.json'
+    if catalog_path.exists():
+        from nerv.asset_catalog import entries
+        value['asset_catalog'] = json.loads(catalog_path.read_text())
+        entries(value)
     (OUT / "release.json").write_text(json.dumps(value, indent=2))
     from build_download_plans import build as build_plans
     build_plans(OUT)

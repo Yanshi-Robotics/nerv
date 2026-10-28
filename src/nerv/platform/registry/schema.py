@@ -30,6 +30,7 @@ class SkillDecl(BaseModel):
     description: str = ""
     artifact: str = ""
     manifest: str = ""
+    policy_record: dict = Field(default_factory=dict)
 
 
 class SensorDecl(BaseModel):
@@ -43,6 +44,8 @@ class SensorDecl(BaseModel):
 class BodySpec(BaseModel):
     name: str
     family: str                       # humanoid | arm
+    policy_robot: str = ""           # deployment identity declared by the robot adapter
+    policy_error: str = ""           # managed policy readiness, populated by the registry
     label: str = ""
     version: str = "0"
     sensors: list[SensorDecl] = Field(default_factory=list)

@@ -50,7 +50,8 @@ def _resolve_paths(data: dict) -> dict:
         _resolve(data, k)
     for sk in (data.get("skills") or {}).values():
         if isinstance(sk, dict):
-            _resolve(sk, "policy")
+            if not str(sk.get('policy', '')).startswith('managed:'):
+                _resolve(sk, "policy")
             _resolve(sk, "manifest")
     return data
 
@@ -74,6 +75,19 @@ class Registry:
             self._scan(os.path.join(root, "bodies"), "body.yaml", BodySpec, self.bodies)
             self._scan(os.path.join(root, "worlds"), "world.yaml", WorldSpec, self.worlds)
             self._scan(os.path.join(root, "tools"), "tool.yaml", ToolNodeSpec, self.tools)
+        from ...motion_policies import selected_binding
+        for spec in self.bodies.values():
+            for skill in spec.skills.values():
+                if not skill.policy.startswith('managed:'):
+                    continue
+                key = skill.policy.removeprefix('managed:')
+                try:
+                    record = selected_binding(paths.NERV_HOME, key, spec.family, spec.policy_robot)
+                    skill.policy = record['path']
+                    skill.policy_record = record
+                except (OSError, ValueError, KeyError) as error:
+                    skill.policy = ''
+                    spec.policy_error = f'Import and check policy {key}: {error}'
         from ...asset_runtime import worlds
         installed, self.asset_errors = worlds(paths.NERV_HOME, self.bodies)
         self.worlds.update(installed)

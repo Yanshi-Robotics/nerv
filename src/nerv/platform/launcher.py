@@ -227,6 +227,8 @@ class Launcher:
         if handle and handle.alive():
             return handle
         ep = body.buses[mode]
+        if body.policy_error:
+            raise ValueError(body.policy_error)
         if not ep.enabled:
             raise ValueError("this environment binding is not configured for the current runtime")
         if not ep.verified and (body.name, mode) not in getattr(self, "supervised_acceptance", set()) and os.environ.get("NERV_ALLOW_UNVERIFIED", "") not in ("1", "true"):
@@ -272,7 +274,8 @@ class Launcher:
                 if ref and ref in os.environ:
                     declared_env[ref] = os.environ[ref]
         handle = self._spawn(key, "body", py, args, f"http://{config.NODE_BIND_HOST}:{port}",
-                             bus_url=bus_url, extra_env=declared_env)
+                             bus_url=bus_url, extra_env=declared_env,
+                             resource_paths=[skill.policy for skill in body.skills.values() if skill.policy_record])
         self._runtime_protocol(handle)
         if mode == KIND_SIM:
             response = httpx.post(handle.url + "/prepare", timeout=config.NODE_HEALTH_WAIT_S)

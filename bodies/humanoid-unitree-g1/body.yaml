@@ -1,14 +1,15 @@
 # NERV body · Unitree G1 (29 DoF). Family `humanoid`: skills driven by a released gait policy.
 name: humanoid-unitree-g1
 family: humanoid
+policy_robot: unitree/g1/dof29
 label: Unitree G1 humanoid (29 DoF)
 version: "1"
 sensors:
   - {name: "camera:head", camera: "head_front", description: "forward camera on the head"}
 skills:
-  move_forward: {policy: policies/g1-29dof-turn, description: "walk forward a distance"}
-  turn_left:    {policy: policies/g1-29dof-turn, description: "turn left on the spot"}
-  turn_right:   {policy: policies/g1-29dof-turn, description: "turn right on the spot"}
+  move_forward: {policy: "managed:g1-29dof-turn", description: "walk forward a distance"}
+  turn_left:    {policy: "managed:g1-29dof-turn", description: "turn left on the spot"}
+  turn_right:   {policy: "managed:g1-29dof-turn", description: "turn right on the spot"}
 actuators:
   source: contract                 # joint order, kp/kd, torque limits come from the policy contract.json
   pd_mode: release                 # taken from release.yaml (implicit for this policy)

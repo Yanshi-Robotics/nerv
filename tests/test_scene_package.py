@@ -57,3 +57,24 @@ def test_native_plugin_rejected_before_loading(tmp_path):
     (root / 'body.xml').write_text('<mujocoinclude><extension><plugin plugin="unknown"/></extension></mujocoinclude>')
     with pytest.raises(ValueError, match='Native plugins'):
         module.pack(root, recipe(), tmp_path / 'package.zip')
+
+
+def test_distinct_notices_with_same_license_are_preserved(tmp_path):
+    spec = importlib.util.spec_from_file_location('package_scene', Path(__file__).parents[1] / 'scripts/package_scene.py')
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    root = tmp_path / 'source'
+    root.mkdir()
+    (root / 'scene.xml').write_text('<mujoco><include file="body.xml"/></mujoco>')
+    (root / 'body.xml').write_text('<mujocoinclude><worldbody><geom type="sphere" size=".1"/></worldbody></mujocoinclude>')
+    (root / 'LICENSE-A').write_text('MIT notice from author A')
+    (root / 'LICENSE-B').write_text('MIT notice from author B')
+    recipe = {'source': 'scene.xml', 'licenses': [
+        {'files': ['scene.xml'], 'license': 'MIT', 'notice': 'LICENSE-A'},
+        {'files': ['body.xml'], 'license': 'MIT', 'notice': 'LICENSE-B'}],
+        'manifest': {'id': 'fixture', 'version': '0.1.0', 'name': 'Fixture', 'kind': 'scene', 'license': 'MIT'}}
+    result = module.pack(root, recipe, tmp_path / 'scene.zip')
+    assert result['validation']['compiled_physics'] == 'passed'
+    with zipfile.ZipFile(result['path']) as archive:
+        notices = {archive.read(name).decode() for name in archive.namelist() if name.startswith('licenses/')}
+    assert notices == {'MIT notice from author A', 'MIT notice from author B'}
