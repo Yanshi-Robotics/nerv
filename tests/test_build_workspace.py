@@ -88,7 +88,7 @@ def test_build_environment_contains_all_caches_and_filters_external_python(tmp_p
 @pytest.mark.parametrize('failure', [False, True])
 def test_build_installs_locked_frontend_dependencies_before_packaging(tmp_path, monkeypatch, failure):
     from types import SimpleNamespace
-    from nerv import build_workspace, build_tools
+    from nerv import build_workspace, build_tools, managed, build_validation
     directory = tmp_path / 'build'
     directory.mkdir()
     (directory / 'bundle').mkdir()
@@ -96,12 +96,13 @@ def test_build_installs_locked_frontend_dependencies_before_packaging(tmp_path, 
     tools = {'python': str(tmp_path / 'python/bin/python'), 'node': str(tmp_path / 'node/bin/node'), 'npm': 'npm-cli.js'}
     monkeypatch.setattr(build_tools, 'prepare', lambda *_: (tools, {}))
     calls = []
-    def run(command, **kwargs):
+    def run(storage, resources, command, **kwargs):
         calls.append(command)
         if len(calls) == 2:
             (directory / 'bundle/release.json').write_text('{"version":"fixture"}')
         return SimpleNamespace(returncode=1 if failure else 0)
-    monkeypatch.setattr(build_workspace.subprocess, 'run', run)
+    monkeypatch.setattr(managed, 'run', run)
+    monkeypatch.setattr(build_validation, 'validate', lambda *a, **k: {'state': 'passed'})
     if failure:
         with pytest.raises(ValueError, match='Candidate build failed'):
             build_workspace.build(tmp_path / 'source', tmp_path)

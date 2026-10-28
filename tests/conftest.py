@@ -32,6 +32,7 @@ def serve(app, port: int):
 
 @pytest.fixture(autouse=True)
 def _isolated_data(tmp_path, monkeypatch):
+    monkeypatch.delenv("NERV_STORAGE_HOME", raising=False)
     monkeypatch.setenv("NERV_HOME", str(tmp_path / "home"))
     monkeypatch.setenv("NERV_TRUST_ALL", "1")
     monkeypatch.setenv("NERV_SESSION_ROOT", str(tmp_path / "sessions"))

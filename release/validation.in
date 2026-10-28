@@ -1,0 +1,6 @@
+# Development checks only; never installed into a user's Host or Runtime.
+pytest==9.1.1
+ruff==0.16.5
+pyzmq==27.2.0
+numpy==2.5.2
+mujoco==3.12.0

@@ -362,15 +362,7 @@ def cmd_preview(a):
         except (ValueError, OSError, subprocess.SubprocessError) as error:
             print(str(error), file=sys.stderr)
             return 1
-    record = home / 'active.json'
-    if not record.is_file():
-        print('Install a preview bundle before starting the preview channel.', file=sys.stderr)
-        return 1
-    python = Path(json.loads(record.read_text())['python']).absolute()
-    if not python.is_file() or not python.parent.parent.resolve().is_relative_to(root):
-        print('Preview interpreter is outside managed storage.', file=sys.stderr)
-        return 1
-    rest = a.arguments
+    rest = list(a.arguments)
     if not rest:
         rest = ['serve', '--port', '8100']
     if rest[0] == 'update' and '--manifest' not in rest:
@@ -384,9 +376,27 @@ def cmd_preview(a):
     if rest[0] not in ('serve', 'update', 'rollback'):
         print('Unknown preview operation.', file=sys.stderr)
         return 2
+    if (home / 'update-pending.json').exists() and rest[0] != 'rollback':
+        print('A preview update was interrupted. Run nerv preview rollback.', file=sys.stderr)
+        return 1
+    record = home / 'active.json'
+    if record.is_file():
+        python = Path(json.loads(record.read_text())['python']).absolute()
+    elif rest[0] in ('update', 'rollback'):
+        # The installed host can initialize an empty preview data directory.
+        python = Path(sys.executable).absolute()
+    else:
+        print('Install a preview bundle with nerv preview update --bundle DIRECTORY.', file=sys.stderr)
+        return 1
+    if not python.is_file() or not python.parent.parent.resolve().is_relative_to(root):
+        print('Preview operations require an installed, managed NERV interpreter.', file=sys.stderr)
+        return 1
+    home.mkdir(parents=True, exist_ok=True)
     env = {k: v for k, v in os.environ.items() if k not in ('PYTHONPATH', 'PYTHONHOME', 'VIRTUAL_ENV')}
     env.update(NERV_HOME=str(home), NERV_STORAGE_HOME=str(root), NERV_CHANNEL='preview')
-    return subprocess.call([str(python), '-I', '-m', 'nerv.platform.cli', *rest], env=env, cwd=home)
+    from ..managed import run
+    return run(root, [python.parent.parent], [str(python), '-I', '-m', 'nerv.platform.cli', *rest],
+               env=env, cwd=home).returncode
 
 
 def cmd_install_system(args):

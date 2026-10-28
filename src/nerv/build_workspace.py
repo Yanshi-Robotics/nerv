@@ -103,9 +103,9 @@ def snapshot(source, root=None):
     return directory, status
 
 
-def build(source, root=None, progress=print):
+def build(source, root=None, progress=print, *, validate=True, smoke=False):
     from .build_tools import prepare
-    from .managed import lease
+    from .managed import lease, run
     storage = Path(root).resolve() if root else storage_root()
     directory, record = snapshot(source, storage)
     progress('Source snapshot: ' + str(directory))
@@ -122,9 +122,13 @@ def build(source, root=None, progress=print):
                             ([tools['python'], str(directory / 'source/scripts/build_release.py'),
                               '--output', str(directory / 'bundle')], directory / 'source')]
                 for command, cwd in commands:
-                    result = subprocess.run(command, cwd=cwd, env=env, stdout=log, stderr=subprocess.STDOUT)
+                    result = run(storage, [directory, Path(tools['python']).parent.parent, Path(tools['node']).parent],
+                                 command, cwd=cwd, env=env, stdout=log, stderr=subprocess.STDOUT)
                     if result.returncode:
                         raise ValueError('Candidate build failed; inspect ' + str(directory / 'build.log'))
+                if validate:
+                    from .build_validation import validate as validate_candidate
+                    record['validation'] = validate_candidate(directory, storage, tools, env, log, smoke=smoke)
         release = json.loads((directory / 'bundle/release.json').read_text())
         record.update(state='built', version=release['version'], bundle=str(directory / 'bundle'))
         atomic_json(directory / 'build.json', record)
