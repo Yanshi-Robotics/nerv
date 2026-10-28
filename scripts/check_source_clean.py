@@ -5,7 +5,11 @@ import os
 
 def violations(root):
     found = []
-    for directory, names, _ in os.walk(root):
+    for directory, names, files in os.walk(root):
+        if 'pyvenv.cfg' in files:
+            found.append(str(Path(directory).relative_to(root)))
+            names[:] = []
+            continue
         names[:] = [name for name in names if name not in ('.git', 'docs')]
         for name in list(names):
             path = Path(directory) / name
@@ -23,5 +27,7 @@ if __name__ == '__main__':
     root = Path(__file__).resolve().parents[1]
     found = violations(root)
     if found:
-        raise SystemExit('Source checkout contains generated dependencies: ' + ', '.join(found))
+        preview = ', '.join(found[:40])
+        suffix = f' (and {len(found) - 40} more)' if len(found) > 40 else ''
+        raise SystemExit('Source checkout contains generated dependencies: ' + preview + suffix)
     print('Source checkout contains no generated dependency directories.')
