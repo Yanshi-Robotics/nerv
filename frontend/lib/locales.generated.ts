@@ -1069,7 +1069,13 @@ export const LOCALES: Record<string, Locale> = {
       "Official policies": "Official policies",
       "Official policies use fixed versions. Simulation checks do not establish physical robot support.": "Official policies use fixed versions. Simulation checks do not establish physical robot support.",
       "Model card": "Model card",
-      "No official policy is listed for this format. You can import your own policy below.": "No official policy is listed for this format. You can import your own policy below."
+      "No official policy is listed for this format. You can import your own policy below.": "No official policy is listed for this format. You can import your own policy below.",
+      "Archive asset": "Archive asset",
+      "Archived assets": "Archived assets",
+      "Restore asset": "Restore asset",
+      "Asset archived. Saved versions and edits are kept.": "Asset archived. Saved versions and edits are kept.",
+      "Asset restored.": "Asset restored.",
+      "Archived assets are hidden from new sessions. Saved versions, active sessions and personal edits are preserved; archiving does not free disk space.": "Archived assets are hidden from new sessions. Saved versions, active sessions and personal edits are preserved; archiving does not free disk space."
     }
   },
   "zh": {
@@ -2122,7 +2128,13 @@ export const LOCALES: Record<string, Locale> = {
       "Official policies": "官方策略",
       "Official policies use fixed versions. Simulation checks do not establish physical robot support.": "官方策略使用固定版本。仿真检查不代表已支持真实机器人。",
       "Model card": "模型说明",
-      "No official policy is listed for this format. You can import your own policy below.": "此格式暂无官方策略，你可以在下方导入自己的策略。"
+      "No official policy is listed for this format. You can import your own policy below.": "此格式暂无官方策略，你可以在下方导入自己的策略。",
+      "Archive asset": "归档资产",
+      "Archived assets": "已归档资产",
+      "Restore asset": "恢复资产",
+      "Asset archived. Saved versions and edits are kept.": "资产已归档，已保存版本和编辑内容均保留。",
+      "Asset restored.": "资产已恢复。",
+      "Archived assets are hidden from new sessions. Saved versions, active sessions and personal edits are preserved; archiving does not free disk space.": "已归档资产不出现在新会话中。已保存版本、运行中的会话和个人修改均保留；归档不会释放磁盘空间。"
     }
   }
 };

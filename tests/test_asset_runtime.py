@@ -126,3 +126,24 @@ def test_preview_uses_declared_free_base_pose_without_controller(tmp_path):
     assert sim.data.qpos[:3] == pytest.approx([3, -2, 1])
     assert sim.data.qpos[3:7] == pytest.approx([0, 0, 0, 1])
     assert not sim.spawned
+
+
+def test_archive_withdraws_new_sessions_but_preserves_history_and_edits(tmp_path):
+    store = AssetStore(tmp_path / 'home')
+    record = store.import_asset(scene(tmp_path / 'source'))
+    workspace = store.work / record['id'] / 'scene.xml'
+    workspace.write_text('<mujoco><worldbody/></mujoco>')
+    old_path, _ = store.resolve(record['id'], record['current'])
+    original = (old_path / 'scene.xml').read_bytes()
+    store.remove(record['id'])
+    assert store.list() == []
+    assert store.list(include_removed=True)[0]['removed']
+    registered, errors = worlds(store.home, {'test-arm': robot()})
+    assert not errors
+    assert registered[world_name(record['id'], record['current'])].asset['current'] is False
+    assert (store.resolve(record['id'], record['current'])[0] / 'scene.xml').read_bytes() == original
+    assert workspace.read_text() == '<mujoco><worldbody/></mujoco>'
+    store.remove(record['id'], restore=True)
+    assert len(store.list()) == 1
+    registered, errors = worlds(store.home, {'test-arm': robot()})
+    assert registered[world_name(record['id'], record['current'])].asset['current'] is True

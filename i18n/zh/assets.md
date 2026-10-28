@@ -60,3 +60,7 @@ nerv assets export --id <copy-id> --path /path/to/new-export.zip
 
 命令行与网页使用同一个存储服务和检查流程。保存的场景通过内容指纹定位；官方更新不会
 合并或覆盖个人修改。场景加载、控制器兼容和任务表现分别检查，加载通过不代表策略已经验收。
+
+归档资产后，新会话不再显示它。已保存版本、运行中的会话和个人修改仍保留，归档不会释放
+磁盘空间；可在“已归档资产”中恢复。对应命令为 `nerv assets remove --id <saved-id>`
+和 `nerv assets restore --id <saved-id>`。本版不提供资产永久删除。

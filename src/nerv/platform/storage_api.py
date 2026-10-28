@@ -83,7 +83,9 @@ def environments():
 
 @router.get('/assets')
 def assets():
-    return {'assets': store().list()}
+    records = store().list(include_removed=True)
+    return {'assets': [row for row in records if not row.get('removed')],
+            'archived': [row for row in records if row.get('removed')]}
 
 
 @router.get('/asset-catalog')
@@ -118,6 +120,8 @@ def import_asset(body: AssetOperation):
 def operate(key: str, operation: str, body: AssetOperation):
     try:
         library = store()
+        if operation in ('remove', 'restore'):
+            return library.remove(key, restore=operation == 'restore')
         if operation == 'clone':
             return library.clone(key, body.name or None)
         if operation == 'save':

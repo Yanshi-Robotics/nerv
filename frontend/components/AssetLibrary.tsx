@@ -13,6 +13,7 @@ type AssetJob = InstallJob & {kind?: string};
 export default function AssetLibrary() {
   const { t } = useI18n();
   const [assets, setAssets] = useState<Asset[]>([]);
+  const [archived, setArchived] = useState<Asset[]>([]);
   const [catalog, setCatalog] = useState<CatalogAsset[]>([]);
   const [jobs, setJobs] = useState<AssetJob[]>([]);
   const [source, setSource] = useState('');
@@ -20,12 +21,13 @@ export default function AssetLibrary() {
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState('');
   const [error, setError] = useState('');
-  const refresh = () => storageApi('assets').then(v => setAssets(v.assets));
+  const refresh = () => storageApi('assets').then(v => { setAssets(v.assets); setArchived(v.archived || []); });
   useEffect(() => {
     storageApi('asset-catalog').then(v => setCatalog(v.assets)).catch(e => setError(e.message));
     return watchInstallLog(() => Promise.all([storageApi('assets'), moduleCatalog()]),
       ([library, downloads]) => {
         setAssets(library.assets);
+        setArchived(library.archived || []);
         setJobs(downloads.jobs.filter((job: AssetJob) => job.kind === 'asset'));
       }, e => setError((e as Error).message), 1000);
   }, []);
@@ -39,7 +41,7 @@ export default function AssetLibrary() {
     setBusy(true); setError(''); setMessage('');
     try {
       const result = await storageApi(path, body);
-      setMessage(result.path || (result.runtime === 'passed'
+      setMessage(path.endsWith('/remove') ? t('Asset archived. Saved versions and edits are kept.') : path.endsWith('/restore') ? t('Asset restored.') : result.path || (result.runtime === 'passed'
         ? t('Simulation load check passed. Rendering and task performance have not been checked.')
         : t('Asset files checked. Runtime and task validation are separate.')));
       await refresh();
@@ -72,7 +74,14 @@ export default function AssetLibrary() {
         <label className="form-label">{t('New ZIP file path')}<input className="form-field" value={destination} onChange={e => setDestination(e.target.value)} /></label>
         <button className="nerv-control action" disabled={busy || !destination.trim()} onClick={() => perform(`assets/${asset.id}/export`, {destination})}>{t('Export asset package')}</button>
       </details>
+      <button className="text-link" disabled={busy} onClick={() => perform(`assets/${asset.id}/remove`, {})}>{t('Archive asset')}</button>
     </article>)}
+    {archived.length > 0 && <details><summary>{t('Archived assets')}</summary>
+      <p className="muted">{t('Archived assets are hidden from new sessions. Saved versions, active sessions and personal edits are preserved; archiving does not free disk space.')}</p>
+      {archived.map(asset => <div className="flex items-center justify-between gap-3 py-2" key={asset.id}>
+        <span>{asset.name}</span><button className="text-link" disabled={busy} onClick={() => perform(`assets/${asset.id}/restore`, {})}>{t('Restore asset')}</button>
+      </div>)}
+    </details>}
     {jobs.map(job => <InstallJobCard key={job.id} job={job} label={job.module} retryDisabled={busy}
       onPause={() => control(() => pauseModuleInstall(job.id))}
       onCancel={() => control(() => cancelModuleInstall(job.id))}

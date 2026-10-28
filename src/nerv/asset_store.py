@@ -170,8 +170,18 @@ class AssetStore:
     def read(self, key):
         return json.loads(self.record_path(key).read_text(encoding='utf-8'))
 
-    def list(self):
-        return [json.loads(p.read_text()) for p in sorted((self.root / 'records').glob('*.json'))]
+    def list(self, *, include_removed=False):
+        records = [json.loads(p.read_text()) for p in sorted((self.root / 'records').glob('*.json'))]
+        return records if include_removed else [row for row in records if not row.get('removed')]
+
+    def remove(self, key, *, restore=False):
+        """Withdraw from new sessions without deleting history or personal edits."""
+        path = self.record_path(key)
+        with FileLock(str(path) + '.lock'):
+            record = self.read(key)
+            record['removed'] = not restore
+            atomic_json(path, record)
+            return record
 
     def import_asset(self, source):
         source = Path(source).expanduser().resolve(strict=True)
@@ -262,7 +272,7 @@ class AssetStore:
             record.setdefault('releases', {})[entry['version']] = {
                 'revision': revision, 'archive_sha256': entry['archive']['sha256'],
                 'source_commit': entry['source_commit']}
-            record.update(current=revision, version=entry['version'], name=manifest['name'],
+            record.update(current=revision, version=entry['version'], name=manifest['name'], removed=False,
                           source_asset=entry['id'], validation=checked['validation'])
             atomic_json(parent / (revision + '.receipt.json'), checked)
             atomic_json(record_path, record)

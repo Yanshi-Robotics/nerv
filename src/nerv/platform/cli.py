@@ -263,6 +263,8 @@ def cmd_assets(a):
     try:
         if a.action == 'list':
             result = library.list()
+        elif a.action in ('remove', 'restore'):
+            result = library.remove(a.id, restore=a.action == 'restore')
         elif a.action == 'catalog':
             from ..asset_catalog import entries
             from ..installation import read_manifest
@@ -462,7 +464,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--version", action="version", version=f"nerv {__version__}")
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser('assets', help='manage local data-only asset revisions')
-    p.add_argument('action', choices=['list', 'catalog', 'install', 'update', 'import', 'inspect', 'clone', 'save', 'export', 'verify', 'check'])
+    p.add_argument('action', choices=['list', 'catalog', 'install', 'update', 'import', 'inspect', 'clone', 'save', 'export', 'verify', 'check', 'remove', 'restore'])
     p.add_argument('--id', default='')
     p.add_argument('--path', default='')
     p.add_argument('--name')
