@@ -69,7 +69,13 @@ def artifact(wheel, output, base_url):
             with urllib.request.urlopen(urllib.request.Request(url, method='HEAD'), timeout=60) as response:
                 size = int(response.headers['Content-Length'])
         return {'name': name, 'url': url, 'bytes': size, 'sha256': wheel['hashes']['sha256'], 'kind': 'wheel'}
-    path = Path(unquote(urlsplit(url).path)) if url else Path(wheel['path'])
+    if url:
+        parsed = urlsplit(url)
+        if parsed.netloc not in ('', 'localhost'):
+            raise ValueError('Local wheel URL must not reference another host')
+        path = Path(urllib.request.url2pathname(parsed.path))
+    else:
+        path = Path(wheel['path'])
     if not path.is_absolute():
         path = output / path
     return {'name': path.name, 'url': base_url + '/' + path.name, 'bytes': path.stat().st_size,

@@ -126,3 +126,19 @@ def test_build_retry_window_is_bounded(tmp_path, monkeypatch):
     rows.append({'bytes': 100})
     with pytest.raises(ValueError, match='obsolete build dependencies'):
         build_workspace.build(tmp_path / 'source', tmp_path)
+
+
+def test_release_plan_local_file_url_preserves_native_drive_and_unicode(tmp_path):
+    import importlib.util
+    from pathlib import Path
+    spec = importlib.util.spec_from_file_location('download_plan_builder',
+        Path(__file__).parents[1] / 'scripts/build_download_plans.py')
+    module = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(module)
+    wheel = tmp_path / '中文 wheel.whl'
+    wheel.write_bytes(b'local fixture')
+    result = module.artifact({'url': wheel.as_uri()}, tmp_path, 'https://example.invalid')
+    assert result['bytes'] == wheel.stat().st_size
+    assert result['name'] == wheel.name
+    with pytest.raises(ValueError, match='another host'):
+        module.artifact({'url': 'file://remote/share/wheel.whl'}, tmp_path, 'https://example.invalid')
