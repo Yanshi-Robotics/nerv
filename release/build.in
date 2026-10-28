@@ -1,0 +1,7 @@
+setuptools==84.0.0
+wheel==0.48.0
+packaging==26.3
+PyYAML==6.0.3
+filelock==4.2.4
+uv==0.12.2
+pip==24.0

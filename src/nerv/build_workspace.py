@@ -6,6 +6,7 @@ ignored dependencies, credentials and runtime data never become build inputs.
 from __future__ import annotations
 
 import os
+import json
 from pathlib import Path, PurePosixPath
 import shutil
 import subprocess
@@ -16,14 +17,18 @@ from .install_system import atomic_json
 from .managed import fingerprint, storage_root
 
 EXCLUDED = {'.git', '.venv', 'venv', 'node_modules', '__pycache__', '.cache',
-            '.next', 'out', 'dist', 'build', 'temp', 'memory', 'logs', 'docs',
+            '.next', 'out', 'dist', 'temp', 'memory', 'logs', 'docs',
             '.aws', '.ssh', '.codex', '.claude'}
 PRIVATE_NAMES = {'credentials.json', 'trust.json', '.npmrc', '.pypirc', '.netrc'}
 
 
 def permitted(name):
+    if not name:
+        return False
     path = PurePosixPath(name)
-    return (not path.is_absolute() and not any(p in EXCLUDED or p in ('..', '') for p in path.parts)
+    return (not path.is_absolute() and path.parts[0] != 'build'
+            and not str(path).startswith('frontend/build/')
+            and not any(p in EXCLUDED or p in ('..', '') for p in path.parts)
             and path.name not in PRIVATE_NAMES
             and not (path.name.startswith('.env') and path.name != '.env.example'))
 
@@ -96,3 +101,35 @@ def snapshot(source, root=None):
         atomic_json(directory / 'build.json', status)
         raise
     return directory, status
+
+
+def build(source, root=None, progress=print):
+    from .build_tools import prepare
+    from .managed import lease
+    storage = Path(root).resolve() if root else storage_root()
+    directory, record = snapshot(source, storage)
+    progress('Source snapshot: ' + str(directory))
+    try:
+        tools, env = prepare(directory / 'source', storage, progress)
+        record.update(state='building', tools=tools)
+        atomic_json(directory / 'build.json', record)
+        env['NERV_BUILD_WORKSPACE'] = str(directory)
+        env['NERV_BUILD_NODE'] = tools['node']
+        env['NERV_BUILD_NPM'] = tools['npm']
+        with lease(storage, [directory, Path(tools['python']).parent.parent, Path(tools['node']).parent]):
+            with (directory / 'build.log').open('w', encoding='utf-8') as log:
+                commands = [([tools['node'], tools['npm'], 'ci', '--ignore-scripts'], directory / 'source/frontend'),
+                            ([tools['python'], str(directory / 'source/scripts/build_release.py'),
+                              '--output', str(directory / 'bundle')], directory / 'source')]
+                for command, cwd in commands:
+                    result = subprocess.run(command, cwd=cwd, env=env, stdout=log, stderr=subprocess.STDOUT)
+                    if result.returncode:
+                        raise ValueError('Candidate build failed; inspect ' + str(directory / 'build.log'))
+        release = json.loads((directory / 'bundle/release.json').read_text())
+        record.update(state='built', version=release['version'], bundle=str(directory / 'bundle'))
+        atomic_json(directory / 'build.json', record)
+        return record
+    except BaseException:
+        record['state'] = 'failed'
+        atomic_json(directory / 'build.json', record)
+        raise
