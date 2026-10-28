@@ -43,10 +43,10 @@ def manage(python: str, provider: str, operation: str, payload: dict):
     # Preserve a venv executable symlink: resolving it selects the system Python.
     if not executable.is_file():
         raise ValueError("select the runtime Python executable")
-    check_interpreter(executable)
     env = environment()
     from ..managed import lease, storage_root
     with lease(storage_root(paths.NERV_HOME), [executable.parent.parent]):
+        check_interpreter(executable)
         result = subprocess.run([str(executable), "-m", "nerv_runtime_sdk.worker", "manage", "--provider", provider,
             "--operation", operation, "--home", paths.NERV_HOME], input=json.dumps(payload),
             capture_output=True, text=True, encoding="utf-8", env=env, timeout=MANAGEMENT_TIMEOUT_S)
