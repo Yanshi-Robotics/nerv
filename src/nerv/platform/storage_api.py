@@ -41,6 +41,17 @@ def hub_credential_status():
     return CredentialStore(Path(paths.NERV_HOME)).describe('HUGGINGFACE_TOKEN')
 
 
+@router.get('/policy-catalog')
+def policy_catalog():
+    from ..installation import read_manifest
+    from ..policy_catalog import entries
+    try:
+        manifest, _ = read_manifest()
+        return {'policies': entries(manifest)}
+    except (ValueError, OSError) as error:
+        raise HTTPException(400, str(error)) from error
+
+
 @router.post('/hub/credential')
 def hub_credential(body: HubCredential):
     from ..vlm.store import CredentialStore

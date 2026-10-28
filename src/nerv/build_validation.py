@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 
 from . import managed
@@ -16,7 +17,7 @@ CONTRACT_TESTS = [
     'test_harness_memory.py', 'test_environment_cleanup.py', 'test_managed.py',
     'test_asset_store.py', 'test_asset_catalog.py', 'test_asset_runtime.py',
     'test_policy_sources.py', 'test_build_workspace.py', 'test_managed_preview.py', 'test_recoverable_downloads.py',
-    'test_scene_package.py', 'test_simulation_module.py', 'test_motion_policies.py', 'test_motion_policy_api.py',
+    'test_scene_package.py', 'test_simulation_module.py', 'test_motion_policies.py', 'test_motion_policy_api.py', 'test_build_retention.py',
 ]
 
 
@@ -49,8 +50,16 @@ def validate(directory, storage, tools, env, log, *, smoke=False):
         run('frontend types', [tools['node'], str(source / 'frontend/node_modules/typescript/bin/tsc'),
                               '--noEmit', '--incremental', 'false'], cwd=source / 'frontend')
         run('launcher tests', [tools['node'], tools['npm'], 'test'])
-        run('software contracts', [str(python), '-m', 'pytest', '-p', 'no:cacheprovider', '-q',
-                                   *['tests/' + name for name in CONTRACT_TESTS]])
+        if sys.platform == 'linux':
+            # Source-dependent simulation regressions need a coherent editable
+            # snapshot, not PYTHONPATH over a differently packaged installation.
+            run('managed source test installation', [str(uv), 'pip', 'install', '--python', str(python),
+                '--no-deps', '--no-build-isolation', '-e', str(source)])
+            run('complete CPU software and simulation suite', [str(python), '-m', 'pytest',
+                '-p', 'no:cacheprovider', '-q', 'tests'])
+        else:
+            run('software contracts', [str(python), '-m', 'pytest', '-p', 'no:cacheprovider', '-q',
+                                       *['tests/' + name for name in CONTRACT_TESTS]])
         if smoke:
             run('installed host and recovery', [str(python), str(source / 'scripts/verify_release.py'),
                 '--manifest', str(bundle / 'release.json'), '--home', str(directory / 'release-smoke')], timeout=1800)

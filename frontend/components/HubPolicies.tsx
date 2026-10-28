@@ -6,8 +6,9 @@ import { useI18n } from '@/lib/i18n';
 import InstallJobCard from './InstallJobCard';
 
 type HubJob = InstallJob & {kind?: string; repository?: string; result?: {path: string; commit: string}};
+type OfficialPolicy = {id: string; name: string; format: string; robot: string; environment: string; license: string; repository: string; commit: string; version: string};
 
-export default function HubPolicies({onChoose}: {onChoose: (path: string) => void}) {
+export default function HubPolicies({onChoose, format}: {onChoose: (path: string) => void; format: string}) {
   const { t } = useI18n();
   const [repo, setRepo] = useState('');
   const [revision, setRevision] = useState('main');
@@ -16,7 +17,9 @@ export default function HubPolicies({onChoose}: {onChoose: (path: string) => voi
   const [jobs, setJobs] = useState<HubJob[]>([]);
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState('');
+  const [official, setOfficial] = useState<OfficialPolicy[]>([]);
   useEffect(() => {
+    storageApi('policy-catalog').then(v => setOfficial(v.policies)).catch(e => setError(e.message));
     storageApi('hub/credential').then(v => setConfigured(v.configured)).catch(e => setError(e.message));
     return watchInstallLog(() => moduleCatalog(), v => setJobs(v.jobs.filter((j: HubJob) => j.kind === 'policy')),
       e => setError((e as Error).message), 1000);
@@ -28,6 +31,15 @@ export default function HubPolicies({onChoose}: {onChoose: (path: string) => voi
     finally { setBusy(false); }
   }
   return <section className="space-y-4">
+    <h2>{t('Official policies')}</h2>
+    <p className="muted">{t('Official policies use fixed versions. Simulation checks do not establish physical robot support.')}</p>
+    {official.filter(p => p.format === (format === 'onnx' ? 'onnx-motion' : format)).map(p =>
+      <article key={p.id} className="settings-row">
+        <div><b>{p.name}</b><p className="muted">{p.robot} · {p.environment} · v{p.version} · {p.license}</p>
+          <a href={`https://huggingface.co/${p.repository}/tree/${p.commit}`} target="_blank" rel="noreferrer">{t('Model card')}</a></div>
+        <button className="nerv-control action" disabled={busy} onClick={() => perform(() => storageApi('hub/download', {repository: p.repository, revision: p.commit}))}>{t('Download model files')}</button>
+      </article>)}
+    {!official.some(p => p.format === (format === 'onnx' ? 'onnx-motion' : format)) && <p className="muted">{t('No official policy is listed for this format. You can import your own policy below.')}</p>}
     <h2>{t('Hugging Face policies')}</h2>
     <p className="muted">{t('Download a fixed model revision, then use the same policy checks as a local import. Repository code is never executed.')}</p>
     <div className="grid gap-3 sm:grid-cols-2">

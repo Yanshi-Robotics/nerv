@@ -350,6 +350,17 @@ def cmd_preview(a):
     from ..managed import channel_home, storage_root
     root = storage_root()
     home = channel_home('preview', root)
+    if a.arguments and a.arguments[0] == 'builds':
+        parser = argparse.ArgumentParser(prog='nerv preview builds')
+        parser.add_argument('--confirmation', help='compact the exact reviewed build plan')
+        args = parser.parse_args(a.arguments[1:])
+        from ..build_retention import compact
+        try:
+            print(json.dumps(compact(root, args.confirmation), indent=2))
+            return 0
+        except (ValueError, OSError) as error:
+            print(str(error), file=sys.stderr)
+            return 1
     if a.arguments and a.arguments[0] == 'build':
         parser = argparse.ArgumentParser(prog='nerv preview build')
         parser.add_argument('--source', required=True)

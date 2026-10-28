@@ -89,3 +89,17 @@ Maintainers review changes and remain responsible for merge and release decision
 AI-assisted contributions follow the same scope, testing and evidence requirements
 as other changes. Planned Harness and plugin integrations are described in the
 [roadmap](ROADMAP.md).
+
+### Retire generated build dependencies
+
+Run `nerv preview builds` to review reclaimable generated directories and their
+size. NERV retains dependencies for the two most recent successful builds and the
+most recent failed build. Active leases and installed references also prevent
+compaction. Apply a reviewed plan with
+`nerv preview builds --confirmation <fingerprint>`.
+
+Compaction removes only generated dependency and build directories. Candidate
+packages, indexed source snapshots, logs, reports and test-home data remain
+available. Interrupted compaction can be retried with a fresh plan. A new build
+asks for this review when obsolete dependencies remain, so repeated builds do not
+silently accumulate complete environments.
