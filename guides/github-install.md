@@ -73,6 +73,8 @@ Close the robot instance before installing from the interface. The LeRobot compo
 
 ## User data and updates
 
+See [environment management and isolation](environments.md) for virtual environment types, storage ownership and local preview profiles.
+
 User state lives in `~/.nerv`: device profiles, schemes and immutable revisions, policy references, model settings, private credentials, session journals, installation jobs, versioned environments and caches. Source checkpoints and calibration remain at their selected locations. Explicit `NERV_HOME` chooses an alternative root; keep that override when launching again.
 
 ```bash

@@ -19,8 +19,10 @@ def seed(source: Path, destination: Path) -> dict:
         raise ValueError("This local preview helper currently supports POSIX credential files only")
     if source == destination or source.is_relative_to(destination):
         raise ValueError("The preview must be separate from the source home")
-    if destination.is_relative_to(source):
-        raise ValueError("Place the preview outside the source home")
+    if destination.is_relative_to(source) and not (
+        destination.parent == source / "profiles" and not (source / "profiles").is_symlink()
+    ):
+        raise ValueError("Use a separate home or a named child of the profiles directory")
     names = ("credentials.json", "vlm.json")
     if any((destination / name).exists() or (destination / name).is_symlink() for name in names):
         raise ValueError("Preview model configuration already exists; refusing to overwrite it")

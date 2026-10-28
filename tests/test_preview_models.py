@@ -53,3 +53,15 @@ def test_reject_unsafe_or_invalid_input_before_writing(tmp_path, kind):
     with pytest.raises((ValueError, json.JSONDecodeError)):
         helper.seed(source, target)
     assert not (target / "vlm.json").exists() or target == source
+
+
+def test_named_profile_copies_models_without_sharing_session_state(tmp_path):
+    source = tmp_path / 'main'
+    target = source / 'profiles/preview'
+    CredentialStore(source).set('DEEPSEEK_API_KEY', 'offline-fixture')
+    private_write(source / 'vlm.json', {'selection': 'deepseek-flash'})
+    helper.seed(source, target)
+    assert CredentialStore(target).resolve('DEEPSEEK_API_KEY') == 'offline-fixture'
+    assert not (target / 'memory').exists()
+    CredentialStore(target).set('DEEPSEEK_API_KEY', 'independent-fixture')
+    assert CredentialStore(source).resolve('DEEPSEEK_API_KEY') == 'offline-fixture'
