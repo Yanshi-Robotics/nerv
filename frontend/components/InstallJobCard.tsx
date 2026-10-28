@@ -14,7 +14,8 @@ export function InstallationLocation({ path, root }: {path?: string | null; root
     <summary className="nerv-control cursor-pointer py-2 text-xs">{t("Installation location")}</summary>
     <p className="muted text-xs">{t(path ? "Component environment" : "Component environments folder")}</p>
     <code className="block text-xs break-all select-all">{path || root}</code>
-    <p className="muted text-xs">{t("Managed by this NERV instance. Your training environment is unchanged.")}</p>
+    <p className="muted text-xs">{t("Independent Python venv, managed by NERV with uv. Your training environment is unchanged.")}</p>
+    <a className="nerv-control underline text-xs" href="#settings/system">{t("Environment management and isolation")}</a>
   </details>;
 }
 

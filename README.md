@@ -109,6 +109,8 @@ Connecting can enable motor torque. Ordinary disconnect retains torque; explicit
 
 ## Modules, updates and support
 
+NERV uses uv-managed Python virtual environments under `~/.nerv`, separate from system Python and training environments. See [environment management and isolation](guides/environments.md) for directory ownership, preview profiles, updates and shared hardware limits.
+
 SO-101 Simulation includes pick-and-place, snack-sorting and Tower of Hanoi scenes with local controllers. It does not include trained task policies. Installed modules appear first in Settings; installation supports persistent progress, cancellation, integrity checks and retry. Arbitrary simulator imports are not exposed. Real and Sim bindings remain separate; matching tensor dimensions do not make a real ACT usable in simulation. See the [module and scheme contract](guides/control-schemes.md).
 
 Stop tasks, disconnect devices and exit NERV before updating or rolling back. Check for a published update:

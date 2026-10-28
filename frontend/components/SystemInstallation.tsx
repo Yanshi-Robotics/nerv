@@ -1,5 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
+import EnvironmentDisclosure from "./EnvironmentDisclosure";
 import { userApi } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 
@@ -46,7 +47,7 @@ export default function SystemInstallation() {
       <label className="block">{t("Total bandwidth limit (bytes/s; 0 means unlimited)")}<input className="nerv-control block" type="number" min={0} value={values.bandwidth_bytes_s} onChange={e => setValues({...values, bandwidth_bytes_s: Number(e.target.value)})}/></label>
       <label className="block">{t("Download proxy")}<input className="nerv-control block w-full" type="password" autoComplete="off" value={proxy} onChange={e => setProxy(e.target.value)} placeholder={t(data.settings.proxy_configured ? "Proxy saved. Leave blank to keep it." : "Optional proxy URL")}/></label>
       <button className="nerv-control underline text-sm" disabled={busy} onClick={async () => {try {load(await userApi("system/settings", "PUT", {proxy: ""}));} catch(e) {setError((e as Error).message);}}}>{t("Clear saved proxy")}</button>
-      <details><summary className="nerv-control cursor-pointer">{t("Installation location")}</summary><code className="break-all">{data.installation_root}</code></details>
+      <details className="rounded-xl border border-neutral-700 p-4 space-y-3"><summary className="nerv-control cursor-pointer">{t("Environment management and isolation")}</summary><p>{t("Installation location")}</p><code className="block break-all select-all">{data.installation_root}</code><EnvironmentDisclosure /></details>
       <div className="flex gap-3"><button className="nerv-control nerv-primary action" disabled={busy} onClick={() => action("save")}>{t("Save")}</button><button className="nerv-control action" disabled={busy} onClick={() => action("reset")}>{t("Restore defaults")}</button></div>
       <div className="space-y-3">{Object.entries(data.plans).map(([key, plan]: [string, any]) => <article key={key} className="rounded-xl border border-neutral-700 p-4"><h2>{key}</h2><p>{plan.target} · {plan.backend}</p><p>{plan.compatible ? `${t("Download size")}: ${(plan.download_bytes / 1048576).toFixed(1)} MiB` : plan.reason}</p>{plan.compatible && !plan.validated && <p className="muted">{t("Candidate environment. Installation checks are still required.")}</p>}</article>)}</div>
     </>}

@@ -16,4 +16,4 @@ python = record["python"]
 if (root / "update-pending.json").exists():
     # Recovery must not depend on the old host knowing the new transaction format.
     os.execv(python, [python, str(root / "bootstrap/install.py"), "--rollback"])
-os.execv(python, [python, "-m", "nerv.platform.cli", *sys.argv[1:]])
+os.execv(python, [python, "-I", "-m", "nerv.platform.cli", *sys.argv[1:]])

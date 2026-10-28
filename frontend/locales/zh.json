@@ -999,6 +999,13 @@
     "No USB serial device found. Connect the follower, then check again.": "未发现 USB 串口设备。请插上从臂，再检查一次。",
     "Light": "浅色",
     "Dark": "深色",
-    "Follow system": "跟随系统"
+    "Follow system": "跟随系统",
+    "Environment management and isolation": "环境管理与隔离说明",
+    "Independent Python venv, managed by NERV with uv. Your training environment is unchanged.": "独立的 Python venv，由 NERV 通过 uv 管理，不修改你的训练环境。",
+    "NERV uses independent Python virtual environments (venv), created and maintained with uv. Docker is not required.": "NERV 使用独立的 Python 虚拟环境（venv），通过 uv 创建和维护，无需 Docker。",
+    "The host, SO-101 runtime and simulation have separate dependencies. Installing a component does not install packages into your system Python, Conda or training environments.": "主程序、SO-101 运行组件和仿真分别安装依赖。安装组件不会向系统 Python、Conda 或训练环境安装软件包。",
+    "Environments, managed Python and download caches live under the current NERV_HOME (default: ~/.nerv). A preview uses a separate home for its settings, keys, sessions and environments.": "虚拟环境、托管 Python 和下载缓存位于当前 NERV_HOME 中，默认是 ~/.nerv。测试版使用独立目录保存配置、密钥、会话和环境。",
+    "NERV verifies downloads and checks a new environment before activating it. Updates retain the previous environment for rollback. Do not move or edit environment folders manually.": "NERV 校验下载文件，检查新环境后才启用。更新时保留上一环境供回滚使用。请不要手动移动或修改环境目录。",
+    "Models and calibration files stay at your selected locations. Python isolation does not isolate hardware: cameras, serial ports, GPU memory and system drivers are shared with other applications.": "模型和标定文件保留在你选择的位置。Python 环境隔离不等于硬件隔离：相机、串口、显存和系统驱动仍与其他程序共享。"
   }
 }
