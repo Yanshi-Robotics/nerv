@@ -114,6 +114,10 @@ def operate(key: str, operation: str, body: AssetOperation):
         if operation == 'verify':
             _, result = library.resolve(key, body.revision)
             return result
+        if operation == 'check':
+            from ..asset_runtime import check
+            from .registry import Registry
+            return check(paths.NERV_HOME, key, body.revision, Registry().bodies)
         if operation == 'export':
             return library.export(key, body.destination, body.revision)
         if operation == 'inspect':

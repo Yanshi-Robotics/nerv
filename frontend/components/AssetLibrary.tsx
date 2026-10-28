@@ -39,7 +39,9 @@ export default function AssetLibrary() {
     setBusy(true); setError(''); setMessage('');
     try {
       const result = await storageApi(path, body);
-      setMessage(result.path || t('Asset files checked. Runtime and task validation are separate.'));
+      setMessage(result.path || (result.runtime === 'passed'
+        ? t('Simulation load check passed. Rendering and task performance have not been checked.')
+        : t('Asset files checked. Runtime and task validation are separate.')));
       await refresh();
     } catch (e) { setError((e as Error).message); }
     finally { setBusy(false); }
@@ -63,7 +65,9 @@ export default function AssetLibrary() {
         <button className="nerv-control action" disabled={busy} onClick={() => perform(`assets/${asset.id}/clone`, {})}>{t('Create personal copy')}</button>
         {asset.origin !== 'official' && <button className="nerv-control action" disabled={busy} onClick={() => perform(`assets/${asset.id}/save`, {})}>{t('Check and save revision')}</button>}
         <button className="nerv-control action" disabled={busy} onClick={() => perform(`assets/${asset.id}/verify`, {})}>{t('Check')}</button>
+        <button className="nerv-control action" disabled={busy} onClick={() => perform(`assets/${asset.id}/check`, {revision: asset.current})}>{t('Check simulation loading')}</button>
       </div>
+      <p className="muted text-sm">{t('Compatible saved scenes appear in New Session. A running session keeps its original revision.')}</p>
       <details><summary>{t('Export asset package')}</summary>
         <label className="form-label">{t('New ZIP file path')}<input className="form-field" value={destination} onChange={e => setDestination(e.target.value)} /></label>
         <button className="nerv-control action" disabled={busy || !destination.trim()} onClick={() => perform(`assets/${asset.id}/export`, {destination})}>{t('Export asset package')}</button>

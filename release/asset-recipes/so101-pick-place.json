@@ -1,0 +1,52 @@
+{
+  "source": "build/so101-pick-place.xml",
+  "licenses": [
+    {
+      "files": [
+        "build/so101-*"
+      ],
+      "license": "MIT",
+      "notice": "LICENSE"
+    },
+    {
+      "files": [
+        "robots/so101/**"
+      ],
+      "license": "Apache-2.0",
+      "notice": "robots/so101/LICENSE"
+    }
+  ],
+  "manifest": {
+    "id": "so101-pick-place",
+    "version": "0.1.0",
+    "name": "SO-101: Single snack into basket",
+    "kind": "scene",
+    "license": "MIT AND Apache-2.0",
+    "runtime": {
+      "bodies": [
+        "arm-lerobot-so101"
+      ],
+      "spawn": {
+        "initial_joints": {
+          "shoulder_pan": 0,
+          "shoulder_lift": -1.2,
+          "elbow_flex": 0.6,
+          "wrist_flex": 1.5,
+          "wrist_roll": 0,
+          "gripper": 0.5
+        }
+      },
+      "physics": {
+        "dt": 0.001,
+        "realtime_factor": 1.0,
+        "render_width": 640,
+        "render_height": 480,
+        "stream_fps": 12,
+        "third_person": true,
+        "chase_back_m": 0.8,
+        "chase_up_m": 0.55,
+        "chase_min_m": 0.2
+      }
+    }
+  }
+}

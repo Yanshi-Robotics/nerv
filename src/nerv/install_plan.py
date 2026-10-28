@@ -77,12 +77,13 @@ def unpack_python(archive, destination):
     return matches[0]
 
 
-def runtime_check(python, receipt):
+def runtime_check(python, receipt, *, runner=None):
     """Probe the selected interpreter, not the web browser or host's torch installation."""
     script = '''import json, platform, sys
 v={'os':platform.system(),'arch':platform.machine(),'python':list(sys.version_info[:2])}
 print(json.dumps(v))'''
-    result = subprocess.run([str(python), '-I', '-c', script], capture_output=True, text=True, timeout=15)
+    runner = runner or subprocess.run
+    result = runner([str(python), '-I', '-c', script], capture_output=True, text=True, timeout=15)
     if result.returncode:
         raise ValueError('Runtime interpreter check failed')
     observed = json.loads(result.stdout)
@@ -93,7 +94,7 @@ print(json.dumps(v))'''
         if observed['os'] != expected_os or systems.ARCHES.get(observed['arch'].lower()) != arch or observed['python'] != [3, 12]:
             raise ValueError('Runtime interpreter does not match its installation platform')
     if profile and receipt.get('product', '').startswith('lerobot'):
-        probe = subprocess.run([str(python), '-I', '-c',
+        probe = runner([str(python), '-I', '-c',
             'import json,torch; print(json.dumps({"torch":torch.__version__,"cuda":torch.version.cuda}))'],
             capture_output=True, text=True, timeout=30)
         if probe.returncode:

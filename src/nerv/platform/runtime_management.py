@@ -45,14 +45,25 @@ def manage(python: str, provider: str, operation: str, payload: dict):
         raise ValueError("select the runtime Python executable")
     env = environment()
     from ..managed import lease, storage_root
-    with lease(storage_root(paths.NERV_HOME), [executable.parent.parent]):
-        check_interpreter(executable)
-        result = subprocess.run([str(executable), "-m", "nerv_runtime_sdk.worker", "manage", "--provider", provider,
-            "--operation", operation, "--home", paths.NERV_HOME], input=json.dumps(payload),
-            capture_output=True, text=True, encoding="utf-8", env=env, timeout=MANAGEMENT_TIMEOUT_S)
-    if result.returncode:
-        raise ValueError(result.stderr.strip().splitlines()[-1] if result.stderr.strip() else "runtime management failed")
-    return json.loads(result.stdout.strip().splitlines()[-1])
+    with lease(storage_root(paths.NERV_HOME), [executable.parent.parent], child=True) as reservation:
+        try:
+            check_interpreter(executable)
+            process = subprocess.Popen([str(executable), "-m", "nerv_runtime_sdk.worker", "manage", "--provider", provider,
+                "--operation", operation, "--home", paths.NERV_HOME], stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, encoding="utf-8", env=env)
+        except BaseException:
+            reservation.failed_to_start()
+            raise
+        reservation.started(process.pid)
+        try:
+            output, error = process.communicate(json.dumps(payload), timeout=MANAGEMENT_TIMEOUT_S)
+        except BaseException:
+            process.kill()
+            process.communicate()
+            raise
+    if process.returncode:
+        raise ValueError(error.strip().splitlines()[-1] if error.strip() else "runtime management failed")
+    return json.loads(output.strip().splitlines()[-1])
 
 
 def environment():
@@ -60,5 +71,7 @@ def environment():
             "APPDATA", "LOCALAPPDATA", "LD_LIBRARY_PATH", "CUDA_VISIBLE_DEVICES")
     env = {k: v for k, v in os.environ.items() if k.upper() in safe}
     env["NERV_HOME"] = paths.NERV_HOME
+    from ..managed import storage_root
+    env["NERV_STORAGE_HOME"] = str(storage_root(paths.NERV_HOME))
     env["PYTHONUTF8"] = "1"
     return env

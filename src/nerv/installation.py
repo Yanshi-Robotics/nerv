@@ -391,13 +391,16 @@ def _verify_record(record):
     python = Path(record["python"])
     if not python.is_file():
         raise ValueError("Previous installation is unavailable")
+    def probe(command, **kwargs):
+        return managed.run(managed.storage_root(home()), [python.parent.parent], command,
+                           env=installer_environment(), **kwargs)
     if record.get('platform'):
         compatibility = install_system.receipt_compatible(record, install_system.detect())
         if compatibility['compatible'] is False:
             raise ValueError(compatibility['reason'])
-        install_plan.runtime_check(python, record)
+        install_plan.runtime_check(python, record, runner=probe)
     module = "nerv.platform.cli" if record.get("product", "host") == "host" else "nerv_runtime_sdk.worker"
-    subprocess.run([str(python), "-m", module, "--version" if module.endswith("cli") else "discover"], check=True)
+    probe([str(python), "-m", module, "--version" if module.endswith("cli") else "discover"], check=True, timeout=60)
 
 
 def _rebind(previous, records):

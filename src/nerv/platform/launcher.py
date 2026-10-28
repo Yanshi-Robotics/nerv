@@ -84,19 +84,23 @@ class Launcher:
         return py
 
     def _spawn(self, key: str, kind: str, python: str, args: list[str], url: str,
-               extra_env: dict | None = None, bus_url: str = "") -> NodeHandle:
+               extra_env: dict | None = None, bus_url: str = "", resource_paths=()) -> NodeHandle:
         from .runtime_management import check_interpreter
         from ..managed import lease, storage_root
         resources = ExitStack()
         reservation = resources.enter_context(lease(storage_root(paths.NERV_HOME),
-            [Path(python).absolute().parent.parent], child=True))
+            [Path(python).absolute().parent.parent, *resource_paths], child=True))
         try:
             check_interpreter(python)
         except BaseException:
             reservation.failed_to_start()
             resources.close()
             raise
-        log_path = os.path.join(self.log_dir, re.sub(r'[^A-Za-z0-9_.-]', "_", key) + ".log")
+        import hashlib
+        log_name = re.sub(r'[^A-Za-z0-9_.-]', "_", key)
+        if len(log_name) > 160:
+            log_name = log_name[:120] + '-' + hashlib.sha256(key.encode()).hexdigest()[:32]
+        log_path = os.path.join(self.log_dir, log_name + ".log")
         safe = ("PATH", "HOME", "USER", "LOGNAME", "LANG", "SYSTEMROOT", "SystemRoot", "WINDIR", "TEMP", "TMP", "USERPROFILE", "APPDATA", "LOCALAPPDATA", "NERV_HOME", "LD_LIBRARY_PATH",
                 "CUDA_VISIBLE_DEVICES", "MUJOCO_GL", "DISPLAY", "XAUTHORITY",
                 "LIBGL_ALWAYS_SOFTWARE", "__EGL_VENDOR_LIBRARY_FILENAMES", "MUJOCO_EGL_DEVICE_ID", "EGL_PLATFORM")
@@ -210,7 +214,8 @@ class Launcher:
         return self._spawn(key, "world", py,
                            ["-m", "nerv.world", "--world", world.name, "--body", body.name,
                             "--http-port", str(http_port), "--bus-port", str(bus_port),
-                            "--host", config.NODE_BIND_HOST, "--instance-config", str(request)], url, bus_url=bus)
+                            "--host", config.NODE_BIND_HOST, "--instance-config", str(request)], url, bus_url=bus,
+                           resource_paths=[world.assets_root] if world.asset else [])
 
     def ensure_body(self, body: BodySpec, world: WorldSpec, world_handle: NodeHandle | None) -> NodeHandle:
         self.check_body_binding(body, world, world_handle)

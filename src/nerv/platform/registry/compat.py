@@ -22,6 +22,8 @@ def check(world: WorldSpec, body: BodySpec) -> tuple[bool, str]:
 def matrix(reg) -> list[dict]:
     out = []
     for w in reg.worlds.values():
+        if not w.asset.get('current', True):
+            continue
         for b in reg.bodies.values():
             ok, reason = check(w, b)
             out.append({"world": w.name, "body": b.name, "ok": ok, "reason": reason})

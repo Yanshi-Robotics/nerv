@@ -1057,7 +1057,10 @@ export const LOCALES: Record<string, Locale> = {
       "Use downloaded files for import": "Use downloaded files for import",
       "Official assets": "Official assets",
       "This release has no published asset packages.": "This release has no published asset packages.",
-      "Install asset": "Install asset"
+      "Install asset": "Install asset",
+      "Simulation load check passed. Rendering and task performance have not been checked.": "Simulation load check passed. Rendering and task performance have not been checked.",
+      "Check simulation loading": "Check simulation loading",
+      "Compatible saved scenes appear in New Session. A running session keeps its original revision.": "Compatible saved scenes appear in New Session. A running session keeps its original revision."
     }
   },
   "zh": {
@@ -2098,7 +2101,10 @@ export const LOCALES: Record<string, Locale> = {
       "Use downloaded files for import": "使用已下载文件导入",
       "Official assets": "官方资产",
       "This release has no published asset packages.": "当前版本尚未提供已发布的资产包。",
-      "Install asset": "安装资产"
+      "Install asset": "安装资产",
+      "Simulation load check passed. Rendering and task performance have not been checked.": "仿真加载检查通过。尚未检查渲染和任务表现。",
+      "Check simulation loading": "检查仿真加载",
+      "Compatible saved scenes appear in New Session. A running session keeps its original revision.": "兼容的已保存场景会出现在新建会话中。运行中的会话继续使用原版本。"
     }
   }
 };
