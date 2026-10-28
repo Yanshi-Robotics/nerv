@@ -725,6 +725,7 @@
     "Installing…": "正在安装…",
     "Install component": "安装组件",
     "LeRobot 0.6.1 and Feetech driver. Connecting the arm is a separate step.": "安装 LeRobot 0.6.1 和 Feetech 驱动，机械臂连接在后续步骤中单独进行。",
+    "resolving": "读取模型文件清单",
     "queued": "等待安装",
     "download": "下载文件",
     "environment": "环境配置",

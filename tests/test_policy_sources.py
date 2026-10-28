@@ -23,11 +23,22 @@ def test_hub_resolution_pins_commit_and_skips_remote_code(monkeypatch):
                 {'rfilename': 'modeling.py'}, {'rfilename': '.gitattributes'}]}).encode()
         return content
     monkeypatch.setattr(sources, 'read_metadata', read)
-    plan = sources.resolve('hf://owner/model', 'candidate')
+    messages = []
+    plan = sources.resolve('hf://owner/model', 'candidate', progress=messages.append)
     assert plan['commit'] == commit and plan['private']
     assert [f['path'] for f in plan['files']] == ['config.json', 'model.safetensors']
     assert all('/resolve/' + commit + '/' in f['url'] for f in plan['files'])
     assert calls[1] == '/owner/model/resolve/' + commit + '/config.json'
+    assert messages[0] == 'Reading model inventory'
+    assert messages[-1] == 'Checking model file 4/4'
+
+
+def test_cancel_metadata_before_network(monkeypatch):
+    def unexpected(*args):
+        raise AssertionError('Cancelled metadata must not access the network')
+    monkeypatch.setattr(sources, 'read_metadata', unexpected)
+    with pytest.raises(InterruptedError):
+        sources.resolve('owner/model', stopped=lambda: True)
 
 
 def test_pinned_git_blob_mismatch_fails(monkeypatch):
@@ -128,7 +139,7 @@ def test_hub_job_interruption_keeps_pinned_plan(tmp_path, monkeypatch):
     installation.write_json(record, {'id': 'abc', 'kind': 'policy', 'module': 'huggingface:owner/model',
         'repository': 'owner/model', 'revision': 'main', 'phase': 'queued', 'state': 'queued'})
     monkeypatch.setattr(CredentialStore, 'resolve', lambda self, key: None)
-    monkeypatch.setattr(sources, 'resolve', lambda *a: plan)
+    monkeypatch.setattr(sources, 'resolve', lambda *a, **k: plan)
     monkeypatch.setattr(sources, 'download', lambda *a, **k: (_ for _ in ()).throw(DownloadStopped()))
     module_jobs._work('abc')
     final = json.loads(record.read_text())

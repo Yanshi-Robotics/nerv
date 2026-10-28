@@ -312,8 +312,12 @@ def _work(job_id):
             from ..vlm.store import CredentialStore
             token = CredentialStore(installation.home()).resolve('HUGGINGFACE_TOKEN') or None
             if not state.get('plan_snapshot'):
-                progress(phase='verification')
-                plan = policy_sources.resolve(state['repository'], state['revision'], token)
+                progress(phase='resolving')
+                def metadata_progress(message):
+                    print(message, flush=True)
+                    progress()
+                plan = policy_sources.resolve(state['repository'], state['revision'], token,
+                                              progress=metadata_progress, stopped=stopped)
                 from ..policy_catalog import verify_plan
                 verify_plan(state.get('release_snapshot', {}), plan)
                 progress(plan_snapshot=plan)

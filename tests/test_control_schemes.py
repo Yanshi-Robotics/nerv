@@ -51,10 +51,14 @@ def test_grant_restricts_actions_budget_generation_and_stop():
 
 
 def test_missing_grant_and_expired_grant_fail_closed():
+    from threading import Event
     node, client = node_fixture()
+    cancelled = Event()
+    node.impl.cancel_current.side_effect = lambda reason: (cancelled.set() or {"ok": True})
     assert not client.post("/control/claim", json={"token": "legacy", "owner": "host", "generation": 1}).json()["ok"]
     assert client.post("/control/claim", json=dict(token="one", owner="host", generation=1, allowed_actions=["move"], max_runtime_s=.02, action_budget=1)).json()["ok"]
-    time.sleep(.04)
+    # Observe the expiry callback, not an assumed scheduler latency on CI hosts.
+    assert cancelled.wait(2), "Expired control grant did not cancel execution"
     with pytest.raises(InterruptedError):
         node.invoke("move", _nerv_control="one")
     node.impl.cancel_current.assert_called_with("control_grant_expired")
