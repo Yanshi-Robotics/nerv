@@ -3,6 +3,21 @@
 Versions are managed from 0.2.0 on: every release gets an entry here and a `v<version>` tag.
 The 0.1.x entries below are the pre-release trail.
 
+## [0.8.5] — Unreleased local candidate
+
+- Manage stable and preview environments, tools, downloads and builds under NERV_HOME,
+  with immutable environment identities, usage leases and reference-aware cleanup.
+- Add external source snapshots and pinned build tools; preserve independent channel data
+  and recovery references. Preview installation remains an explicit operation.
+- Separate simulation engines from versioned scene packages. Add official asset catalogs,
+  data-only MJCF imports, personal copies, saved revisions and export/re-import.
+- Add pinned Hugging Face downloads and local ONNX motion records alongside native ACT
+  imports. Explicit motion-policy selection fixes a checked revision for new instances.
+- Preserve source files, third-party notices and existing deployment contracts. Unknown-origin
+  legacy policies are excluded from new official publication pending provenance review.
+- This candidate has not been released. Public download, final installation acceptance and
+  reviewed legacy cleanup remain pending; physical operations remain operator-run.
+
 ## [0.8.4] — Unreleased local candidate
 
 - Add computer readiness checks and a six-step SO-101 setup flow with passive discovery.
