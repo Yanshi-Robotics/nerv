@@ -30,33 +30,19 @@ def tags(target):
     return list(cpython_tags((3, 12), abis=['cp312'], platforms=platforms)) + list(compatible_tags((3, 12), interpreter='cp312', platforms=platforms))
 
 
-def read_json(url):
-    request = urllib.request.Request(url, headers={'Accept': 'application/vnd.github+json', 'User-Agent': 'NERV-release-builder'})
-    with urllib.request.urlopen(request, timeout=60) as source:
-        return json.load(source)
-
-
 def python_artifacts(output):
-    cached = output / 'python-artifacts.json'
-    if cached.exists():
-        return json.loads(cached.read_text())
-    listings = json.loads(subprocess.check_output(['uv', 'python', 'list', PYTHON, '--only-downloads', '--all-platforms', '--all-arches', '--output-format', 'json']))
-    result, releases = {}, {}
-    for target in TARGETS:
-        system, arch = target.split('-', 1)
-        source_os = 'macos' if system == 'macos' else system
-        choices = [v for v in listings if v['os'] == source_os and v['arch'] == arch and v['variant'] == 'default' and v['implementation'] == 'cpython' and v.get('url') and (system != 'linux' or v['libc'] == 'gnu')]
-        source = choices[0]['url']
-        release, name = source.rsplit('/', 2)[-2:]
-        name = unquote(name)
-        if release not in releases:
-            releases[release] = read_json(f'https://api.github.com/repos/astral-sh/python-build-standalone/releases/tags/{release}')
-        asset = next(v for v in releases[release]['assets'] if v['name'] == name)
-        checksum = asset.get('digest', '')
-        if not checksum.startswith('sha256:'):
-            raise ValueError('Python release asset lacks a published SHA-256 digest')
-        result[target] = {'name': name, 'url': asset['browser_download_url'], 'bytes': asset['size'], 'sha256': checksum[7:], 'kind': 'python'}
-    cached.write_text(json.dumps(result, indent=2))
+    # Release inputs are reviewed and pinned in Git. Rebuilding must not depend
+    # on a shared CI runner's anonymous GitHub API quota or a moving release.
+    document = json.loads((ROOT / 'release/python-artifacts.json').read_text())
+    if document['python_version'] != PYTHON or set(document['targets']) != set(TARGETS):
+        raise ValueError('Pinned Python artifacts do not match the release targets')
+    result = document['targets']
+    for item in result.values():
+        if (not item['name'].startswith('cpython-' + PYTHON + '+')
+                or len(item['sha256']) != 64 or item['bytes'] <= 0
+                or not item['url'].startswith('https://github.com/astral-sh/python-build-standalone/releases/download/')):
+            raise ValueError('Invalid pinned Python artifact')
+    (output / 'python-artifacts.json').write_text(json.dumps(result, indent=2))
     return result
 
 

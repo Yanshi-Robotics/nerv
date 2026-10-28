@@ -1,5 +1,7 @@
 import hashlib
 import json
+import os
+import subprocess
 from pathlib import Path
 
 import pytest
@@ -73,7 +75,18 @@ def test_token_is_private_and_removed_on_failure(tmp_path):
     with pytest.raises(RuntimeError):
         with sources.authorization(tmp_path, 'test-token') as path:
             target = path
-            assert path.stat().st_mode & 0o077 == 0
+            if os.name == 'nt':
+                script = ('$acl = Get-Acl -LiteralPath $env:NERV_TEST_AUTH_FILE; '
+                          '$sid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User; '
+                          'if (!$acl.AreAccessRulesProtected) { exit 1 }; '
+                          'foreach ($rule in $acl.Access) { '
+                          'if ($rule.IsInherited -or $rule.IdentityReference.Translate('
+                          '[System.Security.Principal.SecurityIdentifier]).Value -ne $sid.Value) { exit 2 } }; '
+                          'if ($acl.Access.Count -eq 0) { exit 3 }')
+                subprocess.run(['powershell', '-NoProfile', '-NonInteractive', '-Command', script],
+                               env=dict(os.environ, NERV_TEST_AUTH_FILE=str(path)), check=True)
+            else:
+                assert path.stat().st_mode & 0o077 == 0
             assert path.read_text() == 'Authorization: Bearer test-token\n'
             raise RuntimeError()
     assert not target.exists()
@@ -138,3 +151,14 @@ def test_official_catalog_requires_pinned_files_and_rejects_changed_hub_inventor
     row['commit'] = 'main'
     with pytest.raises(ValueError, match='pinned'):
         entries(manifest)
+
+
+def test_authorization_is_never_written_when_permission_setup_fails(tmp_path, monkeypatch):
+    def deny(path):
+        assert path.read_bytes() == b''
+        raise PermissionError('ACL unavailable')
+    monkeypatch.setattr(sources, 'restrict_transfer_file', deny)
+    with pytest.raises(PermissionError, match='ACL unavailable'):
+        with sources.authorization(tmp_path, 'sensitive-test-fixture'):
+            pytest.fail('Must not expose an unprotected credential')
+    assert list((tmp_path / 'private/transfers').iterdir()) == []

@@ -132,11 +132,30 @@ def authorization(home, token):
     directory.mkdir(parents=True, exist_ok=True, mode=0o700)
     fd, name = tempfile.mkstemp(dir=directory, prefix='authorization-')
     try:
-        with os.fdopen(fd, 'w') as stream:
+        with os.fdopen(fd, 'w', encoding='utf-8') as stream:
+            restrict_transfer_file(Path(name))
             stream.write('Authorization: Bearer ' + token + '\n')
         yield Path(name)
     finally:
         Path(name).unlink(missing_ok=True)
+
+
+def restrict_transfer_file(path):
+    """Protect the empty transfer file before writing a credential into it."""
+    if os.name != 'nt':
+        path.chmod(0o600)
+        return
+    import subprocess
+    # POSIX mode bits do not describe Windows access. A new mkstemp file has
+    # inherited ACLs; remove those and grant only the current account's SID.
+    identity = subprocess.check_output(['whoami', '/user', '/fo', 'csv', '/nh'],
+                                       timeout=10).decode(errors='replace')
+    sids = re.findall(r'S-1-[0-9-]+', identity)
+    if len(sids) != 1:
+        raise PermissionError('Cannot identify the Windows credential owner')
+    subprocess.run(['icacls', str(path), '/inheritance:r', '/grant:r', '*' + sids[0] + ':F', '/q'],
+                   stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                   check=True, timeout=10)
 
 
 def download(home, plan, *, token=None, stopped=lambda: None, report=lambda **_: None):
