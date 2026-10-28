@@ -1017,7 +1017,10 @@ export const LOCALES: Record<string, Locale> = {
       "External motor setup and calibration guide": "External motor setup and calibration guide",
       "USB → computer · follower power → power supply": "USB → computer · follower power → power supply",
       "Other serial ports": "Other serial ports",
-      "No USB serial device found. Connect the follower, then check again.": "No USB serial device found. Connect the follower, then check again."
+      "No USB serial device found. Connect the follower, then check again.": "No USB serial device found. Connect the follower, then check again.",
+      "Light": "Light",
+      "Dark": "Dark",
+      "Follow system": "Follow system"
     }
   },
   "zh": {
@@ -2018,7 +2021,10 @@ export const LOCALES: Record<string, Locale> = {
       "External motor setup and calibration guide": "查看外部电机配置与标定指南",
       "USB → computer · follower power → power supply": "USB 接电脑 · 从臂电源接电源适配器",
       "Other serial ports": "其他串口",
-      "No USB serial device found. Connect the follower, then check again.": "未发现 USB 串口设备。请插上从臂，再检查一次。"
+      "No USB serial device found. Connect the follower, then check again.": "未发现 USB 串口设备。请插上从臂，再检查一次。",
+      "Light": "浅色",
+      "Dark": "深色",
+      "Follow system": "跟随系统"
     }
   }
 };

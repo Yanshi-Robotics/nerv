@@ -9,9 +9,7 @@ export const metadata: Metadata = {
   description: "NERV — operator console: a session is brain × body × world",
 };
 
-// 首屏绘制前就把主题定好：读 localStorage 的偏好，没存过就用深色（默认）。
-// 这样刷新带浅色偏好的页面时，不会先闪一下深色再变浅。
-const THEME_INIT = `(function(){try{var t=localStorage.getItem('nerv-theme');if(t!=='light'&&t!=='dark')t='dark';document.documentElement.dataset.theme=t;}catch(e){document.documentElement.dataset.theme='dark';}})();`;
+import { THEME_INIT } from "@/lib/theme";
 
 // 同样在首屏绘制前把 <html lang> 定好。
 //
@@ -30,7 +28,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     // 预渲染用正典语言——静态导出的这份 HTML 里的文案就是正典语言的文案，两者必须一致。
     // 上一版这里写死 `lang="zh"` 而内容是英文，对外声称的和实际给的对不上。
-    <html lang={LOCALES[SOURCE_LANG].meta.html} data-theme="dark" suppressHydrationWarning>
+    <html lang={LOCALES[SOURCE_LANG].meta.html} data-theme="light" suppressHydrationWarning>
       <head>
         <script dangerouslySetInnerHTML={{ __html: THEME_INIT }} />
         <script dangerouslySetInnerHTML={{ __html: LANG_INIT }} />

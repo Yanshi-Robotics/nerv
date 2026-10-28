@@ -996,6 +996,9 @@
     "External motor setup and calibration guide": "External motor setup and calibration guide",
     "USB → computer · follower power → power supply": "USB → computer · follower power → power supply",
     "Other serial ports": "Other serial ports",
-    "No USB serial device found. Connect the follower, then check again.": "No USB serial device found. Connect the follower, then check again."
+    "No USB serial device found. Connect the follower, then check again.": "No USB serial device found. Connect the follower, then check again.",
+    "Light": "Light",
+    "Dark": "Dark",
+    "Follow system": "Follow system"
   }
 }
