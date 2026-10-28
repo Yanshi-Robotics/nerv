@@ -2,40 +2,11 @@
 
 [中文](../i18n/zh/github-install.md) · [NERV](../README.md)
 
-0.8.1 is a development release for local testing. A release bundle contains the host, Runtime SDK and LeRobot adapter wheels, dependency locks, the optional SO-101 simulation archive, installers and `release.json`. Physical acceptance and student onboarding trials are still pending.
+This guide describes the 0.8.5 candidate. The public installer installs the latest published
+release; check [release notes](https://github.com/Yanshi-Robotics/nerv/releases) for its version.
+Physical-device acceptance and student onboarding trials remain separate from software checks.
 
-
-The 0.8.3 local candidate uses complete platform download plans and an explicit CPU/NVIDIA selection. See [recoverable installation](recoverable-installation.md). The older published release uses the legacy dependency installer described below.
-
-## Install a supplied candidate
-
-Extract the complete bundle. From its directory, Linux/macOS users run:
-
-```bash
-sh ./install.sh --bundle .
-```
-
-Windows PowerShell users run:
-
-```powershell
-./install.ps1 -Bundle .
-```
-
-The installer downloads pinned uv from its official distribution when needed, obtains Python 3.12, verifies release assets and installs hashed dependencies. Internet access is still needed for Python and dependencies. It does not reuse a training environment. Installation can be retried after a failed download. Incomplete environments never become the active host.
-
-Open a new terminal so the user PATH change takes effect:
-
-```bash
-nerv
-```
-
-The default address is `http://127.0.0.1:8170`. Browser opening waits for readiness and is suppressed for remote/headless terminals. `nerv serve --no-browser` disables it explicitly. `nerv serve --port PORT` overrides the default. Port conflicts are reported without terminating other processes.
-
-If a previous `nerv` command exists, the installer prints its location. Check `command -v nerv` on POSIX or `Get-Command nerv -All` in PowerShell. The managed command lives in `~/.nerv/bin`. Do not assume an older npm installation changed just because the checkout changed.
-
-## GitHub one-command entry
-
-These commands install the latest published development release. Read its release notes for the tested platforms and remaining acceptance work.
+## Install NERV
 
 Linux/macOS:
 
@@ -49,96 +20,131 @@ Windows PowerShell:
 irm https://github.com/Yanshi-Robotics/nerv/releases/latest/download/install.ps1 | iex
 ```
 
-The public origin is GitHub Releases, not the npm registry. The downloaded shell/PowerShell script bootstraps the installer; wheel, module and dependency integrity checks follow the release manifest. Review the installer before executing it if required by your environment.
+NERV installs managed CPython, uv and application packages under your user directory's
+`.nerv`. It uses standard Python virtual environments and explicit interpreter paths.
+It does not install into your system Python or an existing training environment. Normal
+installation does not require Git, Node.js, npm or a source checkout. Read the
+[environment disclosure](environments.md) for storage, isolation and shared hardware limits.
 
-## Components
-
-Use **Simulation and components** to install or reinstall SO-101 / LeRobot or SO-101 Simulation. The interface reports phase, bundle size and download progress when available. Python dependencies are additional downloads; LeRobot's tensor stack is substantially larger. The host owns no model tensors. Install jobs persist across browser refresh; interrupted jobs can be retried. Concurrent installation is refused.
-
-Equivalent commands:
-
-```bash
-nerv runtime install lerobot0.6.1
-```
-
-```bash
-nerv runtime install so101-sim
-```
-
-```bash
-nerv runtime list
-```
-
-Close the robot instance before installing from the interface. The LeRobot component does not connect the arm. Simulation registration follows XML loading, stepping and two-camera rendering checks. It is not a task-success test. Importing arbitrary simulation packages is not available in the student interface.
-
-## User data and updates
-
-See [environment management and isolation](environments.md) for virtual environment types, storage ownership and local preview profiles.
-
-User state lives in `~/.nerv`: device profiles, schemes and immutable revisions, policy references, model settings, private credentials, session journals, installation jobs, versioned environments and caches. Source checkpoints and calibration remain at their selected locations. Explicit `NERV_HOME` chooses an alternative root; keep that override when launching again.
-
-```bash
-nerv update --check
-```
-
-```bash
-nerv update
-```
-
-```bash
-nerv rollback
-```
-
-The check downloads release metadata without installing it. Before update/rollback, stop the task, disconnect devices and exit the server. The host lock rejects updates while NERV is running. Update snapshots versioned configuration, installs the host and every installed official module into new environments, checks dependencies and module imports, then activates the complete set. A failure restores the previous pointers and configuration. Rollback restores that set and its configuration; credentials and event histories stay current. Configuration created after the update is preserved in the reported backup directory, including newer policy references. Original checkpoints remain untouched.
-
-Updates coordinate installed official Runtime modules and rewrite their exact interpreter references in device profiles. Unknown modules or configuration formats block the update before activation. An interrupted update blocks startup: run `nerv rollback` to recover. This release has configuration schema 1; it refuses unknown schemas instead of attempting an unverified migration. Updates require the server to be stopped.
-
-On POSIX, credentials use private file permissions; on Windows, the key store uses the operating system credential service. Updates do not move secrets into an installation environment. Backups containing private state stay under the user directory.
-
-## Build a candidate
-
-Maintainers need Python 3.12, uv, Node.js and the initialized world/policy submodules. Follow [CONTRIBUTING.md](../CONTRIBUTING.md) to install build dependencies. From the source repository:
-
-```bash
-python scripts/build_release.py
-```
-
-This builds the interface, wheels, three scene resources and hashed dependency locks in `temp/release`. It does not publish. Distribute the files listed in the manifest and the bootstrap/install scripts together, rather than only the host wheel. Retain the manifest with each tested bundle.
-
-## npm compatibility
-
-The existing source installation remains available for contributors with Node.js 22+, npm and uv:
-
-```bash
-npm install --global --install-links .
-```
+Open a new terminal, then run:
 
 ```bash
 nerv
 ```
 
-Launchers shipped from 0.7.1 support `nerv update` and delegate to the active release after migration. Older npm launchers do not gain new commands when a release is published: run the GitHub installer once to register the managed command, then open a new terminal. Future updates use `nerv update`. When a managed release installation exists, the current npm launcher delegates to its active host. The source fallback still builds the frontend and creates a source-fingerprinted environment; it is not the recommended student distribution. No new npm registry registration is needed.
+The interface opens at `http://127.0.0.1:8170`. Use `nerv serve --no-browser` to keep the
+browser closed, or `nerv serve --port PORT` to choose another port. NERV reports an occupied
+port without stopping its owner. Remote/headless terminals do not force a browser open.
+
+The managed launcher lives in `~/.nerv/bin`. If another `nerv` command already exists, check
+`command -v nerv` on POSIX or `Get-Command nerv -All` in PowerShell. An old npm launcher may
+need a one-time GitHub installation to register the managed command. There is no need to
+install the development repository inside Node.js.
+
+## Install a supplied candidate
+
+Extract the complete candidate bundle. From its directory:
+
+```bash
+sh ./install.sh --bundle .
+```
+
+Or in Windows PowerShell:
+
+```powershell
+./install.ps1 -Bundle .
+```
+
+The installer uses pinned platform files and integrity checks. A supplied bundle contains
+NERV packages and manifests, but it is not necessarily a complete offline cache: Python,
+uv and third-party wheels may still need downloading. Downloaded files remain available
+for retry. Incomplete environments do not become active.
+
+The Shell installer accepts `--no-path` when shell-profile changes are unwanted. Launch
+the printed absolute command and keep the same `NERV_HOME` override on subsequent runs.
+
+## Prepare components and assets
+
+Open **Settings → System and installation** to inspect the host system and CPU/NVIDIA plan.
+Then use **Components and simulation**, or the SO-101 setup flow, to install a Runtime.
+Installed components appear first. Each card exposes its path, download progress, stages,
+logs and recovery actions. Installing LeRobot does not connect or energize the arm.
+
+```bash
+nerv runtime install lerobot0.6.1
+nerv runtime install so101-sim
+nerv runtime list
+```
+
+Downloads use a persistent per-file cache with checksums and validated range responses.
+Temporary network failures retry with bounded backoff; unsupported resume or changed files
+restart only the affected file. Pause and restart retain useful fragments. Download percent
+measures bytes, not environment creation or verification. Installation completes only after
+its checks pass. Configure concurrency, bandwidth and proxy settings in System and installation;
+see [recoverable installation](recoverable-installation.md).
+
+Scene packages are versioned separately from Python environments. Use **My assets** to
+install official scenes, create personal copies or import a data-only MJCF package with a
+NERV manifest. See [asset management](assets.md). Loading and rendering a scene does not
+establish task success or compatibility with an arbitrary trained policy.
+
+## Update and recover
+
+Stop tasks, disconnect devices and exit NERV before changing versions.
+
+```bash
+nerv update --check
+nerv update
+nerv rollback
+```
+
+Checking downloads metadata without installing. Updating selects compatible locked plans,
+reuses unchanged verified environments, stages changed ones and checks them before switching
+pointers. It coordinates installed official components and their device-profile references.
+Unknown modules or configuration formats block activation. A failure restores the previous
+configuration and pointers. An interrupted update blocks startup until `nerv rollback`.
+
+Credentials and event history remain user data. Recovery preserves newer configuration in
+the reported backup directory rather than silently discarding it. External checkpoints and
+calibration files stay at their original locations. Do not remove `.nerv` to fix an update.
+
+## Use an isolated preview
+
+With a 0.8.5-capable managed host, install a complete candidate into the preview channel:
+
+```bash
+nerv preview update --bundle /path/to/extracted/bundle
+nerv preview
+nerv preview rollback
+```
+
+Preview runs on port 8100. Its sessions, credentials, device profiles and editable assets
+live under `.nerv/profiles/preview`. Stable data stays independent. Copy model configuration
+explicitly if needed; later changes are not synchronized and motion authorization is never
+copied. Immutable files and compatible environments can share managed storage.
+
+## Build from source
+
+Developers edit a Git checkout, then build outside it:
+
+```bash
+nerv preview build --source /path/to/nerv
+```
+
+The command creates a source snapshot and pinned toolchain under `.nerv`, runs checks and
+produces a bundle. It does not activate the candidate. Install that bundle with the preview
+command above. Initial contributor setup and CI use the bootstrap in
+[CONTRIBUTING.md](../CONTRIBUTING.md). Do not create `.venv`, `node_modules`, build caches or
+dependency symlinks in the author checkout.
 
 ## Platform limits
 
-Linux is the primary software and physical acceptance target. Windows native, WSL2, Apple Silicon macOS and Intel macOS remain experimental until their dependencies and devices have been tested separately. WSL2 USB passthrough and cameras require host setup. Linux persistent camera paths, Windows DirectShow devices and macOS AVFoundation devices are enumerated without opening cameras. Where available, device identities are saved and resolved again before connection. Devices without a unique identity require visual confirmation; manual indices remain available if enumeration fails. Enumerating a serial device does not establish that its calibration or mechanics are correct.
+Install plans are specific to the operating system, architecture, Python ABI and compute
+backend. Windows and WSL cannot share virtual environments. WSL uses Linux packages but
+requires separate USB, camera and GPU forwarding. macOS uses the CPU route; no MPS support
+is promised. A target without compatible binary packages is unavailable for that component.
 
-The bootstrap uses uv's [unmanaged installation option](https://docs.astral.sh/uv/reference/installer/)
-so uv itself does not modify global shell configuration. NERV registers its own command.
-For a temporary install that must not edit your shell profile, the Shell installer accepts
-`--no-path`; launch the printed absolute command and retain the same `NERV_HOME`.
-
-### Interrupted dependency downloads
-
-The installer keeps verified downloads in the current NERV home's cache. A failed
-network request leaves the existing active environment unchanged. Retry from the
-component card after connectivity recovers; incomplete downloads may need to restart.
-
-Web jobs and CLI installations use the same network configuration. Dependency downloads
-use up to four concurrent requests, a 60-second connection timeout, a 180-second read
-timeout and five HTTP retries. Existing `HTTP_PROXY`, `HTTPS_PROXY`, `ALL_PROXY`,
-`NO_PROXY` and `SSL_CERT_FILE` settings are preserved for the installer only. Operators
-can override the limits with `UV_CONCURRENT_DOWNLOADS`, `UV_HTTP_CONNECT_TIMEOUT`,
-`UV_HTTP_TIMEOUT` and `UV_HTTP_RETRIES` before starting NERV. Model credentials are not
-forwarded. These settings cannot repair a persistent DNS outage; check the network or
-proxy when the installation log reports name-resolution failure.
+Software checks do not validate USB permissions, camera identity, motor configuration,
+calibration, torque behavior or grasp reliability. Follow the SO-101 setup guide and keep
+physical connection and motion under operator control. Linux is the primary physical
+acceptance target; other platforms retain their stated experimental hardware status.
