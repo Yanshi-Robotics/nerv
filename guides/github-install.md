@@ -2,7 +2,7 @@
 
 [中文](../i18n/zh/github-install.md) · [NERV](../README.md)
 
-This guide describes the 0.8.5 candidate. The public installer installs the latest published
+This guide describes NERV 0.8.5. The public installer installs the latest published
 release; check [release notes](https://github.com/Yanshi-Robotics/nerv/releases) for its version.
 Physical-device acceptance and student onboarding trials remain separate from software checks.
 

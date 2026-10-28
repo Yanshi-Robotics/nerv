@@ -8,7 +8,7 @@ NERV is a local workspace for running robot tasks with trained policies and visu
 
 [SO-101 setup](guides/standard-so101.md) · [Architecture](guides/architecture.md) · [Roadmap](ROADMAP.md) · [Changelog](CHANGELOG.md)
 
-Version 0.8.5 is an unreleased local candidate. The installer below uses the published release, currently 0.8.1; it does not install this candidate. Real SO-101 acceptance and student onboarding trials remain pending.
+NERV 0.8.5 is a development release for software and simulation testing. Real SO-101 acceptance and student onboarding trials remain pending. See the release notes for the exact package version installed by the commands below.
 
 <div align="center"><img src="assets/readme/diagrams/en/overview.svg" alt="NERV connects task setup, a user-selected control scheme and Runtime execution with shared observations and history" width="960"></div>
 
@@ -50,9 +50,9 @@ nerv serve --no-browser
 
 Use `--port` to choose another port; NERV reports occupied ports without stopping other processes. See the [installation guide](guides/github-install.md) for diagnostics, extracted bundles and migration from older npm launchers.
 
-The 0.8.4 candidate adds a six-step **Your Robots → SO-101 setup** flow: computer checks, runtime installation, arm discovery, prerequisite checks, camera confirmation and saving. Motor setup and calibration remain external; NERV only reads their current values after you click **Check device**. See [SO-101 setup](guides/so101-setup.md).
+SO-101 setup provides a six-step **Your Robots → SO-101 setup** flow: computer checks, runtime installation, arm discovery, prerequisite checks, camera confirmation and saving. Motor setup and calibration remain external; NERV only reads their current values after you click **Check device**. See [SO-101 setup](guides/so101-setup.md).
 
-The 0.8.3 installation foundation provides **Settings → System and installation**, CPU/NVIDIA installation plans, complete dependency download totals and persistent pause/resume. See [recoverable installation](guides/recoverable-installation.md) for the candidate workflow and platform limits.
+Installation provides **Settings → System and installation**, CPU/NVIDIA installation plans, complete dependency download totals and persistent pause/resume. See [recoverable installation](guides/recoverable-installation.md) for the installation workflow and platform limits.
 
 ## What you can do
 
@@ -73,7 +73,7 @@ New Session is the default page and the destination of the NERV logo. Your Robot
 
 Without an API key, you can still install components, configure the robot, view cameras and run fixed ACT through Your Robots → Device and fixed policy workspace. Policies are imported separately through Settings → Policy library.
 
-<div align="center"><img src="assets/readme/images/new-session-0.8.5.png" alt="NERV 0.8.5 candidate: New Session, setup checklist and unified sidebar" width="960"></div>
+<div align="center"><img src="assets/readme/images/new-session-0.8.5.png" alt="NERV 0.8.5: New Session, setup checklist and unified sidebar" width="960"></div>
 
 The robot detail page opens a local 3D model; its display pose is an illustration, not measured telemetry. Names, pictures and connection settings persist across restarts; motion permission does not. About displays the running version, while Updates contains the explicit update check. Navigating between pages preserves the active workspace and stop controls. Runtime preference changes apply to new Agent turns, not work already in progress.
 
@@ -111,7 +111,7 @@ Connecting can enable motor torque. Ordinary disconnect retains torque; explicit
 
 NERV uses uv-managed Python virtual environments under `~/.nerv`, separate from system Python and training environments. See [environment management and isolation](guides/environments.md) for directory ownership, preview profiles, updates and shared hardware limits.
 
-The 0.8.5 candidate separates the simulation engine from scene packages. Install the engine in Components and simulation, then install pick-and-place, snack-sorting, Tower of Hanoi, the G1 apartment or the hillside residence from My assets. Scene packages do not include trained policies. Installed modules appear first in Settings; installation supports persistent progress, cancellation, integrity checks and retry. The 0.8.5 candidate adds [data-only MJCF asset import, personal copies and saved revisions](guides/assets.md); it does not execute third-party simulator code. Real and Sim bindings remain separate; matching tensor dimensions do not make a real ACT usable in simulation. See the [module and scheme contract](guides/control-schemes.md).
+NERV 0.8.5 separates the simulation engine from scene packages. Install the engine in Components and simulation, then install pick-and-place, snack-sorting, Tower of Hanoi, the G1 apartment or the hillside residence from My assets. Scene packages do not include trained policies. Installed modules appear first in Settings; installation supports persistent progress, cancellation, integrity checks and retry. NERV 0.8.5 adds [data-only MJCF asset import, personal copies and saved revisions](guides/assets.md); it does not execute third-party simulator code. Real and Sim bindings remain separate; matching tensor dimensions do not make a real ACT usable in simulation. See the [module and scheme contract](guides/control-schemes.md).
 
 Stop tasks, disconnect devices and exit NERV before updating or rolling back. Check for a published update:
 
@@ -140,14 +140,14 @@ Updates stage the host and installed official modules before activation. Failed 
 | Windows native / WSL2 | Experimental; USB, camera backends and passthrough need hardware testing |
 | macOS Apple Silicon | Experimental CPU installation; camera permissions and hardware need validation |
 | macOS Intel | No 0.8.5 host package: the locked cryptography dependency has no compatible wheel |
-| G1 simulation | Managed scene and local ONNX imports in the candidate; a compatible, checked motion policy is required |
+| G1 simulation | Managed scene and local ONNX imports in 0.8.5; a compatible, checked motion policy is required |
 | GR00T / SmolVLA | Planned policy backends; not delivered integrations |
 
 The [acceptance guide](guides/release-acceptance.md) separates software, simulation, physical tasks and novice onboarding. The [roadmap](ROADMAP.md) describes future Harness extensions, plugin management and Yanshifu integration; these are outside 0.8.2.
 
 ## Demo and interface
 
-Version 0.8.5 manages installed components and saved asset revisions in separate settings pages. These screenshots show the local candidate; file checks and software inference checks do not establish physical task success.
+Version 0.8.5 manages installed components and saved asset revisions in separate settings pages. These screenshots show the tested 0.8.5 interface; file checks and software inference checks do not establish physical task success.
 
 <div align="center"><img src="assets/readme/images/components-0.8.5.png" alt="NERV 0.8.5: installed LeRobot and simulation environments" width="960"></div>
 <div align="center"><img src="assets/readme/images/assets-0.8.5.png" alt="NERV 0.8.5: a personal asset copy and its saved revisions" width="960"></div>

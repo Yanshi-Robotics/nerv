@@ -76,7 +76,7 @@ own compatibility checks.
 
 ## Local candidates
 
-The 0.8.5 development implementation uses `~/.nerv/profiles/preview` for preview data.
+NERV 0.8.5 uses `~/.nerv/profiles/preview` for preview data.
 Credentials, sessions, device settings and editable assets belong to that channel. Verified
 installation files and compatible environments use the shared storage root `~/.nerv`.
 Copying model settings once does not synchronize later changes or copy conversation history.
@@ -85,7 +85,7 @@ active channel or copy credentials.
 
 The new `nerv preview` command starts an installed preview on port 8100. An occupied port
 is an error, not permission to stop another process. These commands require the new host;
-the public 0.8.1 launcher does not provide the 0.8.5 preview workflow.
+older 0.8.1 launchers must be updated before using the preview workflow.
 
 ## Source, build tools and installed software
 
