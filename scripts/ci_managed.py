@@ -26,7 +26,7 @@ def main():
     env = dict(os.environ, NERV_HOME=str(root), NERV_STORAGE_HOME=str(root),
                UV_CACHE_DIR=str(root / '.cache/uv'), PIP_CACHE_DIR=str(root / '.cache/pip'),
                UV_PYTHON_INSTALL_DIR=str(root / 'python'), UV_NO_CONFIG='1',
-               PYTHONDONTWRITEBYTECODE='1')
+               PYTHONDONTWRITEBYTECODE='1', PYTHONUTF8='1', PYTHONIOENCODING='utf-8')
     for key in ('PYTHONPATH', 'PYTHONHOME', 'VIRTUAL_ENV'):
         env.pop(key, None)
     if not args.worker:

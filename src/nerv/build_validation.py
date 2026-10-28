@@ -28,6 +28,8 @@ def validate(directory, storage, tools, env, log, *, smoke=False):
     uv = Path(tools['python']).parent / ('uv.exe' if os.name == 'nt' else 'uv')
     env = dict(env, PYTHONDONTWRITEBYTECODE='1', CUDA_VISIBLE_DEVICES='-1',
                NERV_HOME=str(directory / 'validation-home'), NERV_STORAGE_HOME=str(directory / 'validation-home'))
+    if sys.platform == 'linux':
+        env.update(MUJOCO_GL='egl', LIBGL_ALWAYS_SOFTWARE='1')
     state = {'state': 'running', 'checks': [], 'hardware': 'not_tested'}
     report = directory / 'validation.json'
     atomic_json(report, state)
@@ -51,6 +53,9 @@ def validate(directory, storage, tools, env, log, *, smoke=False):
                               '--noEmit', '--incremental', 'false'], cwd=source / 'frontend')
         run('launcher tests', [tools['node'], tools['npm'], 'test'])
         if sys.platform == 'linux':
+            from .build_assets import prepare
+            state['data_fixtures'] = prepare(source, storage, env)
+            atomic_json(report, state)
             # Source-dependent simulation regressions need a coherent editable
             # snapshot, not PYTHONPATH over a differently packaged installation.
             run('managed source test installation', [str(uv), 'pip', 'install', '--python', str(python),

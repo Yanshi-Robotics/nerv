@@ -19,7 +19,10 @@ not changes to the application's runtime dependencies or a hardware-support clai
 Each build retains `build.json`, a build log and an extracted `bundle/` directory.
 Successful packaging creates `nerv-VERSION-bundle.zip`. A successful build does not
 install, activate, publish or restart NERV. Inspect failures before explicit cleanup.
-Automatic build retention and migration of the older CI entry point remain pending.
+The CI entry point uses the same managed builder. Reviewed compaction retains recent
+builds and all installed references; see CONTRIBUTING.md for retention limits.
+Linux simulation regression fixtures restore missing data from pinned official asset
+packages into the snapshot. They never copy ignored files from the author checkout.
 
 Students can use the extracted bundle's Shell/PowerShell installer after candidate
 validation. Keep hardware and student acceptance separate from CI and package checks.

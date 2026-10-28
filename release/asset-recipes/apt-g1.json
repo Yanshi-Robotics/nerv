@@ -1,0 +1,143 @@
+{
+  "source": "build/apt-g1.xml",
+  "licenses": [
+    {
+      "files": [
+        "textures/appliance_panel.png",
+        "textures/art0.png",
+        "textures/art1.png",
+        "textures/art2.png",
+        "textures/art3.png",
+        "textures/carpet.png",
+        "textures/city_skyline.png",
+        "textures/fabric.png",
+        "textures/fabric_blue.png",
+        "textures/marble.png",
+        "textures/marble_dark.png",
+        "textures/marble_greige.png",
+        "textures/marble_grey.png",
+        "textures/marble_warm.png",
+        "textures/oven_glass.png",
+        "textures/residences/grass.png",
+        "textures/residences/house/sky/sky_fileback.png",
+        "textures/residences/house/sky/sky_filedown.png",
+        "textures/residences/house/sky/sky_filefront.png",
+        "textures/residences/house/sky/sky_fileleft.png",
+        "textures/residences/house/sky/sky_fileright.png",
+        "textures/residences/house/sky/sky_fileup.png",
+        "textures/residences/limestone.png",
+        "textures/residences/linen.png",
+        "textures/residences/pale_oak.png",
+        "textures/residences/pool_tile.png",
+        "textures/tile_grey.png",
+        "textures/tile_white.png",
+        "textures/wall_paint.png",
+        "textures/wood_floor.png",
+        "textures/wood_floor_light.png",
+        "build/apt-g1.xml",
+        "textures/house3/facade_glass.png",
+        "textures/house3/facade_limestone.png",
+        "textures/residences/city/glass.png",
+        "textures/residences/city/roof.png",
+        "textures/residences/city/stone.png"
+      ],
+      "license": "MIT",
+      "notice": "LICENSE"
+    },
+    {
+      "files": [
+        "robots/g1/**"
+      ],
+      "license": "BSD-3-Clause",
+      "notice": "robots/g1/G1_MODEL_LICENSE"
+    },
+    {
+      "files": [
+        "textures/house3/h3_linen.png",
+        "textures/house3/h3_marble.png",
+        "textures/house3/h3_marble_blk.png",
+        "textures/house3/h3_oak.png",
+        "textures/house3/h3_oak_dark.png",
+        "textures/house3/h3_onyx.png",
+        "textures/house3/h3_plaster.png",
+        "textures/house3/h3_rug.png",
+        "textures/house3/h3_travertine.png",
+        "textures/house3/sky_file*.png"
+      ],
+      "license": "CC0-1.0",
+      "notice": "textures/house3/ATTRIBUTION.md"
+    },
+    {
+      "files": [
+        "decor/assets/coffee_table/**"
+      ],
+      "license": "CC0-1.0",
+      "notice": "decor/assets/coffee_table/LICENSE.txt"
+    },
+    {
+      "files": [
+        "decor/assets/armchair/**"
+      ],
+      "license": "CC0-1.0",
+      "notice": "decor/assets/armchair/LICENSE.txt"
+    },
+    {
+      "files": [
+        "decor/assets/dining_chair/**"
+      ],
+      "license": "CC0-1.0",
+      "notice": "decor/assets/dining_chair/LICENSE.txt"
+    },
+    {
+      "files": [
+        "decor/assets/rc_fridge/**",
+        "decor/assets/rc_sink/**",
+        "decor/assets/rc_stove/**",
+        "decor/assets/rc_hood/**"
+      ],
+      "license": "CC-BY-4.0",
+      "notice": "decor/ATTRIBUTION.md",
+      "source": "https://huggingface.co/datasets/nvidia/PhysicalAI-Robotics-Manipulation-Objects-Kitchen-MJCF/tree/420a04af939c34873e6839a586b70844baf28aab/fixtures_lightwheel"
+    },
+    {
+      "files": [
+        "decor/assets/plant_b/**"
+      ],
+      "license": "CC0-1.0",
+      "notice": "decor/assets/plant_b/LICENSE.txt"
+    },
+    {
+      "files": [
+        "textures/house3/park_aerial.png",
+        "textures/house3/city_ground.png"
+      ],
+      "license": "LicenseRef-USGS-NAIP-Public-Domain",
+      "notice": "textures/house3/ATTRIBUTION.md"
+    }
+  ],
+  "manifest": {
+    "id": "apt-g1",
+    "version": "0.1.0",
+    "name": "Manhattan duplex with G1",
+    "kind": "scene",
+    "license": "MIT AND BSD-3-Clause AND CC0-1.0 AND CC-BY-4.0 AND LicenseRef-USGS-NAIP-Public-Domain AND LicenseRef-NYC-Open-Data",
+    "runtime": {
+      "bodies": [
+        "humanoid-unitree-g1"
+      ],
+      "spawn": {
+        "x": 3.0,
+        "y": 0.0,
+        "yaw": 0.0
+      },
+      "physics": {
+        "dt": 0.002,
+        "realtime_factor": 1,
+        "render_width": 640,
+        "render_height": 480,
+        "stream_fps": 12,
+        "third_person": true
+      }
+    }
+  }
+}
