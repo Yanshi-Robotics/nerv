@@ -65,7 +65,7 @@ def worlds(home, bodies):
     from .platform.registry.schema import WorldSpec
     store = AssetStore(home)
     result, errors = {}, []
-    for record in store.list():
+    for record in store.list(include_removed=True):
         for revision in record['revisions']:
             try:
                 directory, checked = store.resolve(record['id'], revision)
@@ -85,7 +85,8 @@ def worlds(home, bodies):
                     assets_root=str(directory), supports={name: manifest['entry'] for name in supported},
                     spawn=spec.spawn.model_dump(), physics=spec.physics.model_dump(),
                     python=interpreters.pop(), dir=str(directory),
-                    asset={'id': record['id'], 'revision': revision, 'current': record['current'] == revision})
+                    asset={'id': record['id'], 'revision': revision,
+                           'current': record['current'] == revision and not record.get('removed', False)})
             except (ValueError, OSError, KeyError) as error:
                 errors.append({'id': record['id'], 'revision': revision, 'reason': str(error)})
     return result, errors

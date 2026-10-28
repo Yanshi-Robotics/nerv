@@ -69,3 +69,9 @@ The command and web interfaces use the same store and checks. Saved scene revisi
 are addressed by their content fingerprint. Official updates do not merge or overwrite
 personal copies. Runtime loading, controller compatibility and task performance are
 separate checks; a load result does not certify a policy.
+
+Archive an asset to hide it from new sessions. Saved versions, active sessions and personal
+edits remain available for recovery; archiving does not reclaim disk space. Use the
+Archived assets section to restore it. The equivalent commands are `nerv assets remove
+--id <saved-id>` and `nerv assets restore --id <saved-id>`. Permanent asset deletion is not
+provided in this release.
