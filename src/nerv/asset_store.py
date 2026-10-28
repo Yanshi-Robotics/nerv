@@ -29,6 +29,7 @@ DATA_SUFFIXES = {'.json', '.yaml', '.yml', '.xml', '.mjcf', '.obj', '.mtl', '.st
                  '.png', '.jpg', '.jpeg', '.webp', '.hdr', '.exr', '.glb', '.gltf', '.bin',
                  '.md', '.txt', '.csv', '.msh'}
 DATA_NAMES = {'LICENSE', 'NOTICE', 'COPYING'}
+FILE_ATTRIBUTES = ('file', 'fileleft', 'fileright', 'fileup', 'filedown', 'filefront', 'fileback')
 
 
 def relative(value):
@@ -100,7 +101,7 @@ def validate(root):
         if any(node.tag in ('plugin', 'extension') for node in tree.iter()):
             raise ValueError('Asset packages cannot load executable plugins')
         for node in tree.iter():
-            for key in ('file', 'meshdir', 'texturedir', 'assetdir'):
+            for key in (*FILE_ATTRIBUTES, 'meshdir', 'texturedir', 'assetdir'):
                 value = node.get(key)
                 if value:
                     relative(value)
@@ -113,14 +114,15 @@ def validate(root):
             directories.update(node.get(k) for k in ('meshdir', 'texturedir', 'assetdir') if node.get(k))
     for name, tree in trees.items():
         for node in tree.iter():
-            value = node.get('file')
-            if not value:
-                continue
-            bases = {PurePosixPath(name).parent, PurePosixPath(entry).parent}
-            prefixes = {''} if node.tag == 'include' else directories
-            candidates = {str(base / prefix / value) for base in bases for prefix in prefixes}
-            if not candidates.intersection(files):
-                raise ValueError('Missing asset dependency: ' + value)
+            for attribute in FILE_ATTRIBUTES:
+                value = node.get(attribute)
+                if not value:
+                    continue
+                bases = {PurePosixPath(name).parent, PurePosixPath(entry).parent}
+                prefixes = {''} if node.tag == 'include' else directories
+                candidates = {str(base / prefix / value) for base in bases for prefix in prefixes}
+                if not candidates.intersection(files):
+                    raise ValueError('Missing asset dependency: ' + value)
     for name in files:
         if Path(name).suffix.lower() == '.gltf':
             gltf = json.loads((root / name).read_text(encoding='utf-8'))
