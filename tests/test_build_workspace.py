@@ -158,3 +158,27 @@ def test_python_release_artifacts_are_pinned_without_network(tmp_path, monkeypat
     monkeypatch.setattr(module, 'PYTHON', '0.0.0')
     with pytest.raises(ValueError, match='release targets'):
         module.python_artifacts(tmp_path)
+
+
+def test_bootstrap_seeds_use_pinned_inputs_and_repeatable_bundle(tmp_path, monkeypatch):
+    import hashlib
+    import importlib
+    from pathlib import Path
+    import urllib.request
+    root = Path(__file__).parents[1]
+    monkeypatch.syspath_prepend(str(root / 'scripts'))
+    builder = importlib.import_module('build_bootstrap_seeds')
+    monkeypatch.setattr(urllib.request, 'urlopen', lambda *a, **k: pytest.fail('No API discovery'))
+    python = json.loads((root / 'release/python-artifacts.json').read_text())['targets']
+    targets = json.loads((root / 'release/uv-artifacts.json').read_text())['targets']
+    manifest = {'version': 'fixture', 'files': {}, 'download_plans': {'host': {
+        target + '/cpu': {'available': True, 'artifacts': [python[target]]} for target in targets}}}
+    (tmp_path / 'release.json').write_text(json.dumps(manifest))
+    builder.build(tmp_path)
+    first = hashlib.sha256((tmp_path / 'nerv-fixture-bundle.zip').read_bytes()).hexdigest()
+    builder.build(tmp_path)
+    assert hashlib.sha256((tmp_path / 'nerv-fixture-bundle.zip').read_bytes()).hexdigest() == first
+    result = json.loads((tmp_path / 'release.json').read_text())
+    assert set(result['bootstrap_targets']) == set(targets)
+    for target in targets:
+        assert targets[target] in result['bootstrap_targets'][target]['artifacts']
