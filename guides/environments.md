@@ -39,6 +39,8 @@ instance.
 | `memory/`, `devices/`, `schemes/`, `artifacts/` | Session history, device settings, control schemes and policy references |
 | `credentials.json`, `vlm.json` | Private credentials and model settings |
 | `backups/` | Update recovery snapshots |
+| `toolchains/`, `builds/` | Pinned developer tools and source snapshots used to build candidates |
+| `assets/`, `workspaces/assets/` | Saved asset revisions and editable personal copies |
 
 Imported model directories and external calibration files stay at their original locations.
 NERV references them; deleting `.nerv` will not delete those external files, but it will
@@ -74,13 +76,41 @@ own compatibility checks.
 
 ## Local candidates
 
-A local candidate can use `~/.nerv/profiles/preview` as its own `NERV_HOME`. Its configuration,
-credentials, sessions, installation receipts, environments and caches remain separate from
-the main root. This is a directory convention, not a shared live configuration: copying
-model settings once does not synchronize subsequent changes or copy conversation history.
+The 0.8.5 development implementation uses `~/.nerv/profiles/preview` for preview data.
+Credentials, sessions, device settings and editable assets belong to that channel. Verified
+installation files and compatible environments use the shared storage root `~/.nerv`.
+Copying model settings once does not synchronize later changes or copy conversation history.
+An explicit `NERV_STORAGE_HOME` changes the shared storage root; it does not select the
+active channel or copy credentials.
 
-Developers can install a candidate into that root, then run
-`python3 scripts/run_preview.py` from the checkout. The helper starts the installed candidate
-on port 8100 and refuses the main root. An occupied port is an error, not permission to stop
-another process. The source checkout and its frontend build tools are development inputs;
-users of a release package do not need them.
+The new `nerv preview` command starts an installed preview on port 8100. An occupied port
+is an error, not permission to stop another process. These commands require the new host;
+the public 0.8.1 launcher does not provide the 0.8.5 preview workflow.
+
+## Source, build tools and installed software
+
+Developers edit a Git checkout in their project directory. Pushing it uploads source commits
+to GitHub; it does not install or activate software on their computer. A release contains
+built application packages, the prebuilt web interface and installation manifests. Users
+install those packages without cloning the development repository.
+
+```mermaid
+flowchart LR
+    S["Developer's source checkout"] --> B["Managed build workspace<br/>.nerv/builds"]
+    T["Pinned Python and Node.js<br/>.nerv/toolchains"] --> B
+    B --> P["Verified release packages"]
+    P --> R["GitHub Release"]
+    R --> I["User's installed application<br/>.nerv/envs"]
+    I --> U["Browser interface"]
+```
+
+Node.js builds the web interface. It is a program, not the folder where NERV is installed.
+Build dependencies such as `node_modules` belong to the managed build workspace. Ordinary
+users receive the compiled interface and do not run npm or activate a Python environment.
+Editing the developer checkout does not change an installed release. Build and install a
+new preview to test those edits; publish a verified release to make them available to users.
+
+The managed build command is `nerv preview build --source <checkout>`. It copies indexed
+source files into a build workspace, excluding credentials, runtime data and existing
+dependency directories. It builds a candidate without activating it. Retiring legacy
+development environments requires a separate inventory and recovery check.

@@ -218,6 +218,52 @@ class AssetStore:
             atomic_json(parent / (revision + '.receipt.json'), checked)
             return record
 
+    def install_official(self, archive, entry):
+        from .asset_catalog import validate_entry
+        entry = validate_entry(entry)
+        archive = Path(archive)
+        if archive.stat().st_size != entry['archive']['bytes'] or digest(archive) != entry['archive']['sha256']:
+            raise ValueError('Official asset checksum mismatch')
+        key = 'official-' + identifier(entry['id'])
+        identifier(key)
+        record_path = self.record_path(key)
+        record_path.parent.mkdir(parents=True, exist_ok=True)
+        with FileLock(str(record_path) + '.lock'):
+            record = self.read(key) if record_path.exists() else {
+                'id': key, 'origin': 'official', 'revisions': [], 'releases': {}}
+            if record['origin'] != 'official':
+                raise ValueError('Official asset identity conflicts with a local record')
+            prior = record.get('releases', {}).get(entry['version'])
+            if prior and prior['archive_sha256'] != entry['archive']['sha256']:
+                raise ValueError('An official asset release cannot change its published bytes')
+            parent = self.root / 'versions' / key
+            parent.mkdir(parents=True, exist_ok=True)
+            with tempfile.TemporaryDirectory(dir=parent, prefix='.install-') as temp:
+                staging = Path(temp) / 'data'
+                staging.mkdir()
+                extract(archive, staging)
+                checked = validate(staging)
+                manifest = checked['manifest']
+                if any(manifest.get(k) != entry[k] for k in ('id', 'version', 'license')):
+                    raise ValueError('Asset package identity or license differs from its catalog')
+                revision = checked['revision']
+                destination = parent / revision
+                if destination.exists():
+                    if validate(destination)['revision'] != revision:
+                        raise ValueError('Installed official asset is damaged; restore it before reuse')
+                else:
+                    os.replace(staging, destination)
+            if revision not in record['revisions']:
+                record['revisions'].append(revision)
+            record.setdefault('releases', {})[entry['version']] = {
+                'revision': revision, 'archive_sha256': entry['archive']['sha256'],
+                'source_commit': entry['source_commit']}
+            record.update(current=revision, version=entry['version'], name=manifest['name'],
+                          source_asset=entry['id'], validation=checked['validation'])
+            atomic_json(parent / (revision + '.receipt.json'), checked)
+            atomic_json(record_path, record)
+            return record
+
     def resolve(self, key, revision=None):
         record = self.read(key)
         revision = revision or record['current']

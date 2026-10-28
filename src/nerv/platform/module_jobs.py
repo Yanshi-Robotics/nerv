@@ -142,6 +142,26 @@ def start_policy(repository, revision='main'):
         return _spawn(job_id)
 
 
+def start_asset(asset_id, version):
+    from filelock import FileLock
+    from ..asset_catalog import entries
+    manifest, _ = installation.read_manifest()
+    matches = [entry for entry in entries(manifest) if entry['id'] == asset_id and entry['version'] == version]
+    if len(matches) != 1:
+        raise ValueError('Choose a published version from the official asset catalog')
+    root = installation.home() / 'install-jobs'
+    root.mkdir(parents=True, exist_ok=True)
+    with FileLock(root / 'dispatch.lock', timeout=0):
+        if any(job['state'] in ('queued', 'running') for job in catalog()['jobs']):
+            raise ValueError('Wait for or pause the current download')
+        job_id = uuid.uuid4().hex
+        installation.write_json(root / f'{job_id}.json', {
+            'id': job_id, 'kind': 'asset', 'module': matches[0]['name'],
+            'plan_snapshot': matches[0], 'state': 'queued',
+            'phase': 'queued', 'created_at': time.time()})
+        return _spawn(job_id)
+
+
 def _spawn(job_id):
     root = installation.home() / 'install-jobs'
     record_path = root / f'{job_id}.json'
@@ -266,6 +286,11 @@ def _work(job_id):
         return None
     try:
         progress(state="running", pid=os.getpid())
+        if state.get('kind') == 'asset':
+            from ..asset_catalog import install
+            install(installation.home(), state['plan_snapshot'], env=installation.installer_environment(),
+                    stopped=stopped, progress=progress)
+            return
         if state.get('kind') == 'policy':
             from .. import policy_sources
             from ..vlm.store import CredentialStore

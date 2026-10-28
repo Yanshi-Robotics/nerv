@@ -1054,7 +1054,10 @@ export const LOCALES: Record<string, Locale> = {
       "Remove token": "Remove token",
       "Download model files": "Download model files",
       "Pinned commit": "Pinned commit",
-      "Use downloaded files for import": "Use downloaded files for import"
+      "Use downloaded files for import": "Use downloaded files for import",
+      "Official assets": "Official assets",
+      "This release has no published asset packages.": "This release has no published asset packages.",
+      "Install asset": "Install asset"
     }
   },
   "zh": {
@@ -2092,7 +2095,10 @@ export const LOCALES: Record<string, Locale> = {
       "Remove token": "移除令牌",
       "Download model files": "下载模型文件",
       "Pinned commit": "固定提交",
-      "Use downloaded files for import": "使用已下载文件导入"
+      "Use downloaded files for import": "使用已下载文件导入",
+      "Official assets": "官方资产",
+      "This release has no published asset packages.": "当前版本尚未提供已发布的资产包。",
+      "Install asset": "安装资产"
     }
   }
 };

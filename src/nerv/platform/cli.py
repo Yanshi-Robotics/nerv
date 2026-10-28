@@ -263,6 +263,28 @@ def cmd_assets(a):
     try:
         if a.action == 'list':
             result = library.list()
+        elif a.action == 'catalog':
+            from ..asset_catalog import entries
+            from ..installation import read_manifest
+            result = entries(read_manifest()[0])
+        elif a.action in ('install', 'update'):
+            import time
+            from . import module_jobs
+            if not a.revision:
+                raise ValueError('Select an explicit catalog version with --revision')
+            job = module_jobs.start_asset(a.id, a.revision)
+            job_path = module_jobs._job_path(job['id'])
+            try:
+                while True:
+                    result = json.loads(job_path.read_text())
+                    if result['state'] not in ('queued', 'running'):
+                        break
+                    time.sleep(1)
+            except KeyboardInterrupt:
+                module_jobs.pause(job['id'])
+                return 130
+            if result['state'] != 'complete':
+                raise ValueError(f"Asset download {result['state']}; continue job {job['id']} from Settings")
         elif a.action == 'import':
             result = library.import_asset(a.path)
         elif a.action == 'inspect':
@@ -405,7 +427,7 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--version", action="version", version=f"nerv {__version__}")
     sub = ap.add_subparsers(dest="cmd", required=True)
     p = sub.add_parser('assets', help='manage local data-only asset revisions')
-    p.add_argument('action', choices=['list', 'import', 'inspect', 'clone', 'save', 'export', 'verify'])
+    p.add_argument('action', choices=['list', 'catalog', 'install', 'update', 'import', 'inspect', 'clone', 'save', 'export', 'verify'])
     p.add_argument('--id', default='')
     p.add_argument('--path', default='')
     p.add_argument('--name')
