@@ -27,9 +27,11 @@ class ScriptedBrain:
 
     def run_turn(self, link, user: UserMessage):
         obs = link.observe()
-        assert obs is not None and "clearance_m" in obs.state and obs.images
+        assert obs is not None, "The turn was invalidated before observation"
+        assert "clearance_m" in obs.state, obs.state
+        assert obs.images, obs.state
         names = {t.name for t in link.tools()}
-        assert {"move_forward", "turn_left", "turn_right", "calc"} <= names
+        assert {"move_forward", "turn_left", "turn_right", "calc"} <= names, names
         link.think(Think("walk", [CallTool("c1", "move_forward", {"meters": 1.0})]))
         self.results.append(link.call_tool(CallTool("c1", "move_forward", {"meters": 1.0})))
         self.results.append(link.call_tool(CallTool("c2", "calc", {"expression": "17*23"})))
@@ -56,6 +58,7 @@ def test_scripted_brain_walks_one_metre(tmp_path, monkeypatch):
         hub.tasks.select_scheme(sid, plan.id)
         # disarmed: the gate refuses the skill and the brain is told why
         out = hub.handle(sid, "walk")
+        assert brain.results, out
         r = brain.results[0]
         assert not r.ok and "not armed" in r.message and out["reply"] == "done"
         # armed: the skill really runs and comes back measured
