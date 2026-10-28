@@ -24,7 +24,7 @@ PROGRESS_SECONDS = 1
 CHUNK_SIZE = 1024 * 1024
 OFFICIAL_HOSTS = {'github.com', 'objects.githubusercontent.com', 'release-assets.githubusercontent.com',
                   'files.pythonhosted.org', 'pypi.org', 'download.pytorch.org', 'download-r2.pytorch.org',
-                  'huggingface.co'}
+                  'huggingface.co', 'nodejs.org'}
 
 
 class DownloadWaiting(RuntimeError):

@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "node_version": "24.21.0",
+  "uv_version": "0.12.2",
+  "node": {
+    "linux-x86_64": {"name": "node-v24.21.0-linux-x64.tar.xz", "bytes": 31890184, "sha256": "fd8e59d5a511510f6a298afb548f18c7d2b1be404d8b4a27d94fbe49f56cb2d6"},
+    "windows-x86_64": {"name": "node-v24.21.0-win-x64.zip", "bytes": 37618919, "sha256": "158f7685b44de51f6c0df1d153526cbcd3e1bc739a8dfc607721cef75de9e541"},
+    "macos-aarch64": {"name": "node-v24.21.0-darwin-arm64.tar.gz", "bytes": 52909993, "sha256": "bed7eea5325e1108f32ce5228ddd6a5f0f08a499ee42aa7442aea583702f6057"},
+    "macos-x86_64": {"name": "node-v24.21.0-darwin-x64.tar.gz", "bytes": 54203979, "sha256": "1462cb3b3046b815cf8ea436d3da450ec1a9f11dac7e5a46b0ada5305d7e8097"}
+  }
+}

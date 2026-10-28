@@ -13,13 +13,15 @@ output.mkdir(parents=True, exist_ok=True)
 (output / "README.md").write_text("2026-10-23: standard SO-101 local release validation. "
     "Build candidates and logs may be removed after release validation; no original models are stored here.\n")
 npm = "npm.cmd" if os.name == "nt" else "npm"
-subprocess.run([npm, "--prefix", "frontend", "run", "build"], cwd=root,
+npm_command = ([os.environ['NERV_BUILD_NODE'], os.environ['NERV_BUILD_NPM']]
+               if os.environ.get('NERV_BUILD_NODE') and os.environ.get('NERV_BUILD_NPM') else [npm])
+subprocess.run([*npm_command, "--prefix", "frontend", "run", "build"], cwd=root,
                env={**os.environ, "NERV_STATIC_EXPORT": "1", "NEXT_PUBLIC_API": ""}, check=True)
 for package in ("packages/nerv-runtime-sdk", "packages/nerv-runtime-lerobot", "."):
-    subprocess.run([sys.executable, "-m", "pip", "wheel", "--no-deps",
+    subprocess.run([sys.executable, "-m", "pip", "wheel", "--no-deps", "--no-build-isolation",
                     "--wheel-dir", str(output / "wheels"), package], cwd=root, check=True)
 # The pinned Feetech release is source-only on PyPI. Ship its pure Python wheel
 # so students need neither a compiler nor an unverified build during installation.
-subprocess.run([sys.executable, "-m", "pip", "wheel", "--no-deps", "--wheel-dir",
+subprocess.run([sys.executable, "-m", "pip", "wheel", "--no-deps", "--no-build-isolation", "--wheel-dir",
                 str(output), "feetech-servo-sdk==1.0.0"], cwd=root, check=True)
 subprocess.run([sys.executable, str(root / "scripts/bundle_release.py"), "--output", str(output)], cwd=root, check=True)

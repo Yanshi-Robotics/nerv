@@ -314,6 +314,18 @@ def cmd_preview(a):
     from ..managed import channel_home, storage_root
     root = storage_root()
     home = channel_home('preview', root)
+    if a.arguments and a.arguments[0] == 'build':
+        parser = argparse.ArgumentParser(prog='nerv preview build')
+        parser.add_argument('--source', required=True)
+        args = parser.parse_args(a.arguments[1:])
+        from ..build_workspace import build
+        try:
+            result = build(args.source, root)
+            print(json.dumps({key: result[key] for key in ('state', 'version', 'bundle', 'source_fingerprint')}, indent=2))
+            return 0
+        except (ValueError, OSError, subprocess.SubprocessError) as error:
+            print(str(error), file=sys.stderr)
+            return 1
     record = home / 'active.json'
     if not record.is_file():
         print('Install a preview bundle before starting the preview channel.', file=sys.stderr)
