@@ -7,6 +7,15 @@
 //    注意用的是 `??` 不是 `||`：空串必须能穿过去。
 const BASE = process.env.NEXT_PUBLIC_API ?? "http://localhost:8170";
 
+export async function storageApi(path: string, body?: Record<string, unknown>) {
+  const response = await fetch(`${BASE}/api/storage/${path}`, body === undefined ? undefined : {
+    method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify(body),
+  });
+  const data = await response.json();
+  if (!response.ok) throw new Error(typeof data.detail === 'string' ? data.detail : 'Storage operation failed');
+  return data;
+}
+
 // 前端轮询 / 显示上限：集中此处、可用 NEXT_PUBLIC_* env 覆盖，不在各组件内联写死。
 export const SIGNAL_LOG_SHOWN = Number(process.env.NEXT_PUBLIC_SIGNAL_LOG_SHOWN) || 300; // ≤ 后端 NERV_SIGNAL_LOG_MAXLEN
 export const POLL_NODES_MS = Number(process.env.NEXT_PUBLIC_POLL_NODES_MS) || 3000;

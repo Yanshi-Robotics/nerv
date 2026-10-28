@@ -41,8 +41,8 @@ export function scanKeys(root) {
   for (const file of files) {
     if (file.endsWith(path.join("lib", "i18n.ts"))) continue; // 词典自己不算调用点
     const text = fs.readFileSync(file, "utf8");
-    for (const m of text.matchAll(/\b(?:t|tt)\(\s*"((?:[^"\\]|\\.)*)"/g)) {
-      const key = unescapeTs(m[1]);
+    for (const m of text.matchAll(/\b(?:t|tt)\(\s*(?:"((?:[^"\\]|\\.)*)"|'((?:[^'\\]|\\.)*)')/g)) {
+      const key = unescapeTs(m[1] ?? m[2]);
       if (!keys.has(key)) keys.set(key, path.relative(root, file));
     }
   }

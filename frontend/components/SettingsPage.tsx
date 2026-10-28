@@ -19,12 +19,14 @@ import NervDashboard from "./NervDashboard";
 import SessionLogsView from "./SessionLogsView";
 import SystemInstallation from "./SystemInstallation";
 import SimulationLibrary from "./SimulationLibrary";
+import AssetLibrary from './AssetLibrary';
 const sections = [
   ["general", "General"],
   ["models", "Models and API keys"],
   ["schemes", "Control schemes"],
   ["policies", "Policy library"],
   ["components", "Components and simulation"],
+  ["assets", "My assets"],
   ["system", "System and installation"],
   ["runtime", "Runtime parameters"],
   ["diagnostics", "Diagnostics and logs"],
@@ -279,6 +281,7 @@ export default function SettingsPage({
           />
         )}
         {section === "system" && <SystemInstallation />}
+        {section === "assets" && <AssetLibrary />}
         {section === "runtime" && <RuntimeSettings />}
         {section === "diagnostics" && (
           <>

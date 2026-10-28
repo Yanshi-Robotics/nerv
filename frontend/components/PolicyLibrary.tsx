@@ -3,6 +3,7 @@ import { useEffect, useState } from "react";
 import { setupDevice } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
 import DirectoryPicker from "./DirectoryPicker";
+import HubPolicies from "./HubPolicies";
 export default function PolicyLibrary({
   onComponents,
 }: {
@@ -72,7 +73,8 @@ export default function PolicyLibrary({
           </button>
         </article>
       ))}
-      <details open={!policies.length}>
+      <HubPolicies onChoose={path => setDraft(value => ({...value, path}))}/>
+      <details open={!policies.length || !!draft.path}>
         <summary className="cursor-pointer py-3 font-medium">
           {t("Import local policy")}
         </summary>

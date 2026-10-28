@@ -1,0 +1,8 @@
+<mujoco model="tabletop-example">
+  <option timestep="0.002"/>
+  <worldbody>
+    <light pos="0 0 3"/>
+    <geom name="floor" type="plane" size="2 2 .1" rgba=".3 .35 .4 1"/>
+    <geom name="table" type="box" pos="0 0 .5" size=".6 .4 .025" rgba=".6 .5 .4 1"/>
+  </worldbody>
+</mujoco>

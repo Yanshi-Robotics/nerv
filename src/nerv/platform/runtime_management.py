@@ -45,9 +45,11 @@ def manage(python: str, provider: str, operation: str, payload: dict):
         raise ValueError("select the runtime Python executable")
     check_interpreter(executable)
     env = environment()
-    result = subprocess.run([str(executable), "-m", "nerv_runtime_sdk.worker", "manage", "--provider", provider,
-        "--operation", operation, "--home", paths.NERV_HOME], input=json.dumps(payload),
-        capture_output=True, text=True, encoding="utf-8", env=env, timeout=MANAGEMENT_TIMEOUT_S)
+    from ..managed import lease, storage_root
+    with lease(storage_root(paths.NERV_HOME), [executable.parent.parent]):
+        result = subprocess.run([str(executable), "-m", "nerv_runtime_sdk.worker", "manage", "--provider", provider,
+            "--operation", operation, "--home", paths.NERV_HOME], input=json.dumps(payload),
+            capture_output=True, text=True, encoding="utf-8", env=env, timeout=MANAGEMENT_TIMEOUT_S)
     if result.returncode:
         raise ValueError(result.stderr.strip().splitlines()[-1] if result.stderr.strip() else "runtime management failed")
     return json.loads(result.stdout.strip().splitlines()[-1])

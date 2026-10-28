@@ -8,7 +8,7 @@ import os
 import threading
 from pathlib import Path
 
-from .. import installation, install_system, install_plan, install_downloads
+from .. import installation, install_system, install_plan, install_downloads, managed
 
 # Bound each live-log response even when package managers produce very long lines.
 LOG_TAIL_BYTES = 64 * 1024
@@ -32,7 +32,7 @@ def system_facts(refresh=False):
 def system_description(refresh=False):
     manifest, _ = installation.read_manifest()
     return {'facts': system_facts(refresh), 'settings': install_system.settings(installation.home(), public=True),
-            'targets': list(install_system.TARGETS), 'installation_root': str(installation.home()),
+            'targets': list(install_system.TARGETS), 'installation_root': str(managed.storage_root(installation.home())), 'data_home': str(installation.home()),
             'plans': {key: install_plan.describe(installation.home(), manifest, key, system_facts())
                       for key in manifest['products']}}
 
@@ -66,7 +66,7 @@ def catalog():
              for key in manifest['products']} if manifest.get('download_plans') else {}
     return {"modules": [{**plans.get(key, {}), "id": key, "label": product["label"], "installed": key in installed,
                          "needs_repair": _needs_repair(key, installed),
-                         "installation_root": str((installation.home() / "envs" / key).resolve()),
+                         "installation_root": str((managed.storage_root(installation.home()) / "envs" / key).resolve()),
                          "installation_path": str(Path(installed[key]["python"]).parent.parent) if key in installed else None,
                          "download_bytes": plans.get(key, {}).get('download_bytes') if plans else sum(manifest.get("files", {}).get(n, {}).get("bytes", 0)
                                                for n in manifest["products"].get(key, {}).get("files", []))}
@@ -89,7 +89,12 @@ def _needs_repair(key, installed):
         if not receipt.is_file():
             return True
         verified = json.loads(receipt.read_text(encoding="utf-8"))
-        if verified.get("python") != record["python"] or verified.get("version") != record.get("version"):
+        if verified.get("python") != record["python"]:
+            return True
+        if record.get("environment_id"):
+            if verified.get("environment_id") != record["environment_id"]:
+                return True
+        elif verified.get("version") != record.get("version"):
             return True
         if record.get("registry_root") and not (Path(record["registry_root"]) / "worlds").is_dir():
             return True
@@ -114,6 +119,26 @@ def start(module):
         job_id = uuid.uuid4().hex
         installation.write_json(root / f'{job_id}.json', {'id': job_id, 'module': module, 'state': 'queued',
             'phase': 'queued', 'created_at': time.time(), 'plan_snapshot': snapshot, 'release_snapshot': manifest})
+        return _spawn(job_id)
+
+
+def start_policy(repository, revision='main'):
+    """Use the same persistent queue and pause/resume worker as components."""
+    from filelock import FileLock
+    from ..policy_sources import repository as validate_repository
+    repository = validate_repository(repository)
+    if not isinstance(revision, str) or not revision or len(revision) > 200:
+        raise ValueError('Invalid model revision')
+    root = installation.home() / 'install-jobs'
+    root.mkdir(parents=True, exist_ok=True)
+    with FileLock(root / 'dispatch.lock', timeout=0):
+        if any(job['state'] in ('queued', 'running') for job in catalog()['jobs']):
+            raise ValueError('Wait for or pause the current download')
+        job_id = uuid.uuid4().hex
+        installation.write_json(root / f'{job_id}.json', {
+            'id': job_id, 'kind': 'policy', 'module': 'huggingface:' + repository,
+            'repository': repository, 'revision': revision, 'state': 'queued',
+            'phase': 'queued', 'created_at': time.time()})
         return _spawn(job_id)
 
 
@@ -241,6 +266,19 @@ def _work(job_id):
         return None
     try:
         progress(state="running", pid=os.getpid())
+        if state.get('kind') == 'policy':
+            from .. import policy_sources
+            from ..vlm.store import CredentialStore
+            token = CredentialStore(installation.home()).resolve('HUGGINGFACE_TOKEN') or None
+            if not state.get('plan_snapshot'):
+                progress(phase='verification')
+                plan = policy_sources.resolve(state['repository'], state['revision'], token)
+                progress(plan_snapshot=plan)
+            progress(phase='download')
+            result = policy_sources.download(installation.home(), state['plan_snapshot'],
+                token=token, stopped=stopped, report=progress)
+            progress(state='complete', phase='complete', result=result)
+            return
         manifest_path = None
         if state.get('release_snapshot'):
             manifest_path = root / f'{job_id}.manifest'

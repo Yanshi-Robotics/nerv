@@ -232,3 +232,77 @@ def test_install_failure_reports_dns_and_keeps_original_log(tmp_path, monkeypatc
     assert module_jobs.failure_code('abc') == 'download_failed'
     log.write_text('An incompatible package version')
     assert module_jobs.failure_code('abc') is None
+
+
+def test_component_identity_reuses_environment_across_channels_and_release_labels(tmp_path, monkeypatch):
+    from pathlib import Path
+    root = tmp_path / 'managed'
+    monkeypatch.setenv('NERV_HOME', str(root))
+    manifest, wheel = bundle(tmp_path)
+    lock = manifest.parent / 'runtime.lock'
+    lock.write_text('exact test dependency lock')
+    value = json.loads(manifest.read_text())
+    value['files'][lock.name] = {'sha256': hashlib.sha256(lock.read_bytes()).hexdigest()}
+    value['products']['fixture'] = {'label': 'Fixture runtime', 'files': [wheel.name, lock.name],
+                                   'packages': [wheel.name], 'lock': lock.name}
+    i.write_json(manifest, value)
+    commands = []
+    def run(command, *args):
+        commands.append(command)
+        if command[1] == 'venv':
+            python = i.python_at(Path(command[-1]))
+            python.parent.mkdir(parents=True)
+            python.touch()
+    monkeypatch.setattr(i, 'run', run)
+    monkeypatch.setattr(i, '_verify_record', lambda r: None)
+    monkeypatch.setattr(i, 'uv_executable', lambda: 'uv')
+    original = i.install('fixture', manifest=manifest)
+    count = len(commands)
+    value['version'] = 'another-ui-release'
+    i.write_json(manifest, value)
+    monkeypatch.setenv('NERV_HOME', str(root / 'profiles/preview'))
+    reused = i.install('fixture', manifest=manifest)
+    assert reused['python'] == original['python']
+    assert len(commands) == count
+    assert len(list((root / 'envs/fixture').iterdir())) == 1
+    assert (root / 'runtimes/fixture.json').exists()
+    assert (root / 'profiles/preview/runtimes/fixture.json').exists()
+
+
+def test_archive_update_changes_resources_without_reinstalling_python(tmp_path, monkeypatch):
+    from pathlib import Path
+    root = tmp_path / 'managed'
+    monkeypatch.setenv('NERV_HOME', str(root))
+    manifest, wheel = bundle(tmp_path)
+    lock = manifest.parent / 'runtime.lock'
+    lock.write_text('exact test dependency lock')
+    archive = manifest.parent / 'scene.zip'
+    value = json.loads(manifest.read_text())
+    value['files'][lock.name] = {'sha256': hashlib.sha256(lock.read_bytes()).hexdigest()}
+    value['products']['fixture'] = {'label': 'Fixture runtime', 'files': [wheel.name, lock.name, archive.name],
+        'packages': [wheel.name], 'lock': lock.name, 'archive': archive.name}
+    commands = []
+    def run(command, *args):
+        commands.append(command)
+        if command[1] == 'venv':
+            python = i.python_at(Path(command[-1]))
+            python.parent.mkdir(parents=True)
+            python.touch()
+    monkeypatch.setattr(i, 'run', run)
+    monkeypatch.setattr(i, '_verify_record', lambda r: None)
+    monkeypatch.setattr(i, 'uv_executable', lambda: 'uv')
+    records = []
+    for revision in ('first', 'second'):
+        with zipfile.ZipFile(archive, 'w') as z:
+            z.writestr('worlds/test/world.yaml', json.dumps({'name': revision}))
+            z.writestr('assets/scene.xml', '<mujoco/>')
+        value['version'] = revision
+        value['files'][archive.name] = {'sha256': hashlib.sha256(archive.read_bytes()).hexdigest()}
+        i.write_json(manifest, value)
+        records.append(i.install('fixture', manifest=manifest))
+    assert records[0]['python'] == records[1]['python']
+    assert records[0]['registry_root'] != records[1]['registry_root']
+    assert sum(c[1] == 'venv' for c in commands) == 1
+    assert all(Path(r['registry_root']).is_relative_to(root / 'resources') for r in records)
+    old = Path(records[0]['registry_root']) / 'worlds/test/world.yaml'
+    assert json.loads(old.read_text())['name'] == 'first'

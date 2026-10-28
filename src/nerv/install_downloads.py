@@ -23,7 +23,8 @@ POLL_SECONDS = .2
 PROGRESS_SECONDS = 1
 CHUNK_SIZE = 1024 * 1024
 OFFICIAL_HOSTS = {'github.com', 'objects.githubusercontent.com', 'release-assets.githubusercontent.com',
-                  'files.pythonhosted.org', 'pypi.org', 'download.pytorch.org', 'download-r2.pytorch.org'}
+                  'files.pythonhosted.org', 'pypi.org', 'download.pytorch.org', 'download-r2.pytorch.org',
+                  'huggingface.co'}
 
 
 class DownloadWaiting(RuntimeError):
@@ -162,12 +163,14 @@ sys.exit(code)
 
 
 def transfer(root, item, *, env=None, stopped=lambda: None, report=lambda **_: None,
-             bandwidth=0, allow_http=False):
+             bandwidth=0, allow_http=False, authorization_file=None):
     from filelock import FileLock, Timeout
     target, partial, metadata = cache_paths(root, item)
     target.parent.mkdir(parents=True, exist_ok=True)
     url = item['url']
     parsed = urlsplit(url)
+    if authorization_file and (parsed.scheme != 'https' or parsed.hostname != 'huggingface.co'):
+        raise ValueError('Model authorization is restricted to Hugging Face')
     if not (allow_http and parsed.scheme == 'http' and parsed.hostname in ('127.0.0.1', 'localhost')):
         if parsed.scheme != 'https' or parsed.hostname not in OFFICIAL_HOSTS or parsed.username or parsed.password:
             raise ValueError('Artifact origin is not an approved official HTTPS source')
@@ -222,6 +225,10 @@ def transfer(root, item, *, env=None, stopped=lambda: None, report=lambda **_: N
             command = [curl, '--silent', '--location', '--max-redirs', '5', '--proto', '=http,https' if allow_http else '=https',
                        '--proto-redir', '=http,https' if allow_http else '=https', '--connect-timeout', str(CONNECT_TIMEOUT),
                        '--dump-header', str(head), '--output', str(chunk), '--header', 'Accept-Encoding: identity']
+            # curl strips Authorization when redirected to a different origin. Never use
+            # --location-trusted. The token stays out of argv and subprocess diagnostics.
+            if authorization_file:
+                command += ['--header', '@' + str(authorization_file)]
             if offset:
                 command += ['--header', f'Range: bytes={offset}-']
                 if validator:
@@ -326,9 +333,9 @@ def transfer(root, item, *, env=None, stopped=lambda: None, report=lambda **_: N
 
 
 def download_all(root, items, *, env, preferences, stopped=lambda: None, progress=lambda **_: None,
-                 allow_http=False):
+                 allow_http=False, authorization_file=None):
     items = list({v['sha256']: v for v in items}.values())
-    state = {v['sha256']: {'name': v['name'], 'bytes': v['bytes'], 'received': 0, 'state': 'queued', 'cached': False} for v in items}
+    state = {v['sha256']: {'name': v.get('display_name', v['name']), 'bytes': v['bytes'], 'received': 0, 'state': 'queued', 'cached': False} for v in items}
     guard = threading.Lock()
     degraded = threading.Event()
     abort = threading.Event()
@@ -371,7 +378,8 @@ def download_all(root, items, *, env, preferences, stopped=lambda: None, progres
     def work(item):
         return transfer(root, item, env=env, stopped=lambda: stopped() or ('paused' if abort.is_set() else None),
                         report=lambda **fields: emit(item['sha256'], **fields),
-                        bandwidth=preferences['bandwidth_bytes_s'] / preferences['concurrency'], allow_http=allow_http)
+                        bandwidth=preferences['bandwidth_bytes_s'] / preferences['concurrency'], allow_http=allow_http,
+                        **({'authorization_file': authorization_file} if authorization_file else {}))
 
     results = {}
     pending_items = iter(items)

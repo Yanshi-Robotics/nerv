@@ -22,11 +22,12 @@ import uuid
 import zipfile
 
 try:
-    from . import install_system, install_plan, install_downloads
+    from . import install_system, install_plan, install_downloads, managed
 except ImportError:  # Self-contained release bootstrap embeds the same helpers.
     import nerv_install_system as install_system
     import nerv_install_plan as install_plan
     import nerv_install_downloads as install_downloads
+    import nerv_managed as managed
 
 RELEASE_BASE = "https://github.com/Yanshi-Robotics/nerv/releases/latest/download"
 PYTHON_VERSION = "3.12"
@@ -97,8 +98,8 @@ def read_manifest(path=None):
 
 
 def uv_executable():
-    managed = home() / "bin" / ("uv.exe" if os.name == "nt" else "uv")
-    result = str(managed) if managed.is_file() else shutil.which("uv")
+    executable = managed.storage_root(home()) / "bin" / ("uv.exe" if os.name == "nt" else "uv")
+    result = str(executable) if executable.is_file() else shutil.which("uv")
     if not result:
         raise ValueError("Run the NERV installer to install managed uv")
     return result
@@ -116,13 +117,15 @@ def installer_environment(base=None):
     for key, value in defaults.items():
         env.setdefault(key, str(value))
     root = home()
+    storage = managed.storage_root(root)
     preferences = install_system.settings(root)
     if preferences['proxy']:
         env.update(HTTPS_PROXY=preferences['proxy'], HTTP_PROXY=preferences['proxy'], ALL_PROXY=preferences['proxy'])
     env.update(NERV_HOME=str(root), PYTHONUTF8="1", PYTHONUNBUFFERED="1",
-               UV_CACHE_DIR=str(root / ".cache/uv"),
+               NERV_STORAGE_HOME=str(storage),
+               UV_CACHE_DIR=str(storage / ".cache/uv"),
                UV_CREDENTIALS_DIR=str(root / ".cache/uv-credentials"),
-               UV_PYTHON_INSTALL_DIR=str(root / "python"))
+               UV_PYTHON_INSTALL_DIR=str(storage / "python"))
     return env
 
 
@@ -174,7 +177,9 @@ def install(product="host", *, manifest=None, cancelled=lambda: False, progress=
             raise ValueError('The saved installation target no longer matches this system')
     root.mkdir(parents=True, exist_ok=True)
     from filelock import FileLock, Timeout
-    lock = _lock or FileLock(root / "installation-process.lock")
+    storage = managed.storage_root(root)
+    storage.mkdir(parents=True, exist_ok=True)
+    lock = _lock or FileLock(storage / "installation-process.lock")
     try:
         lock.acquire(timeout=0)
     except Timeout:
@@ -183,9 +188,42 @@ def install(product="host", *, manifest=None, cancelled=lambda: False, progress=
     write_json(owner, {"pid": os.getpid(), "product": product})
     try:
         spec = value["products"][product]
-        stage = root / "envs" / product / (value["version"] + "-" + uuid.uuid4().hex[:8])
+        identity = managed.environment_identity(product, spec, value['files'], selected_plan)
+        stage = storage / 'envs' / product / identity
+        # A prior failed attempt may have left the canonical directory unusable.
+        # Reuse a verified replacement rather than producing a new retry each time.
+        candidates = [stage, *sorted(stage.parent.glob(identity + '-retry-*'))]
+        for candidate in candidates:
+            receipt = candidate / 'nerv-install.json'
+            if receipt.is_file():
+                candidate_record = json.loads(receipt.read_text())
+                if candidate_record.get('environment_id') == identity:
+                    stage = candidate
+                    break
+        existing = stage / 'nerv-install.json'
+        reused = existing.is_file()
+        if reused:
+            record = json.loads(existing.read_text())
+            _verify_record(record)
+        if reused and not spec.get('archive'):
+            if activate:
+                pointer = root / 'active.json' if product == 'host' else root / 'runtimes' / (product + '.json')
+                if product == 'host' and pointer.exists():
+                    current = json.loads(pointer.read_text())
+                    if current.get('python') != record['python']:
+                        write_json(root / 'previous.json', current)
+                if product != 'host' and pointer.exists():
+                    _rebind({product: json.loads(pointer.read_text())}, {product: record})
+                write_json(pointer, record)
+                if product == 'host':
+                    write_json(root / 'release.json', value)
+            progress(phase='complete', state='complete', reused=True, installation_path=str(stage))
+            return record
+        if stage.exists() and not reused:
+            # Never overwrite an incomplete or legacy environment in place.
+            stage = stage.with_name(identity + '-retry-' + uuid.uuid4().hex[:8])
         progress(installation_path=str(stage.resolve()))
-        cache = root / ".cache/releases" / value["version"]
+        cache = storage / ".cache/releases" / value["version"]
         cache.mkdir(parents=True, exist_ok=True)
         assets = {}
         selected_files = list(spec["files"])
@@ -228,10 +266,10 @@ def install(product="host", *, manifest=None, cancelled=lambda: False, progress=
         env = installer_environment()
         uv = uv_executable()
         if selected_plan:
-            assets = install_plan.install_plan(root, selected_plan, source, stage, env=env, preferences=preferences,
-                stopped=stopped, progress=progress, run=run, uv=uv)
+            assets = install_plan.install_plan(storage, selected_plan, source, stage, env=env, preferences=preferences,
+                stopped=stopped, progress=progress, run=run, uv=uv, **({'reuse': True} if reused else {}))
             python = str(python_at(stage))
-        else:
+        elif not reused:
             progress(phase="environment")
             run([uv, "venv", "--managed-python", "--python", PYTHON_VERSION, str(stage)], env, cancelled, progress)
             python = str(python_at(stage))
@@ -242,28 +280,43 @@ def install(product="host", *, manifest=None, cancelled=lambda: False, progress=
                 command = [uv, "pip", "install", "--python", python, "--require-hashes", "--only-binary=:all:",
                            "--find-links", str(cache), "-r", str(assets[spec["lock"]])]
             run(command, env, cancelled, progress)
+        else:
+            python = record['python']
         run([uv, "pip", "check", "--python", python], env, cancelled, progress)
         record = {"provider": spec.get("provider", product), "python": python, "label": spec["label"],
-                  "version": value["version"], "product": product}
+                  "version": value["version"], "product": product, 'environment_id': identity}
         if selected_plan:
             record['platform'] = {k: selected_plan[k] for k in ('target', 'backend', 'libc_min', 'macos_min', 'minimum_driver_major', 'minimum_compute_capability') if k in selected_plan}
             record['runtime_facts'] = install_plan.runtime_check(python, record)
         if spec.get("archive"):
             progress(phase="assets")
-            module_root = stage / "module"
-            unpack(assets[spec["archive"]], module_root)
-            for path in module_root.glob("worlds/*/world.yaml"):
-                data = json.loads(path.read_text(encoding="utf-8"))
-                data.update(python=python, assets_root=str(module_root / "assets"))
-                write_json(path, data)
-            for path in module_root.glob("bodies/*/body.yaml"):
-                data = json.loads(path.read_text(encoding="utf-8"))
-                for binding in data["buses"].values():
-                    binding["python"] = python
-                write_json(path, data)
+            archive_hash = value['files'][spec['archive']]['sha256']
+            module_root = storage / 'resources' / 'modules' / archive_hash / identity
+            # Bindings contain interpreter paths; each immutable environment gets
+            # a separate registry while Python dependencies remain reusable.
+            marker = module_root / 'nerv-module.json'
+            if not marker.is_file():
+                module_root.parent.mkdir(parents=True, exist_ok=True)
+                with tempfile.TemporaryDirectory(dir=module_root.parent, prefix='.unpack-') as temporary:
+                    extracted = Path(temporary) / 'module'
+                    unpack(assets[spec['archive']], extracted)
+                    if module_root.exists():
+                        raise ValueError('Incomplete module resource directory; inspect it before repair')
+                    os.replace(extracted, module_root)
+            if not marker.is_file():
+                for path in module_root.glob("worlds/*/world.yaml"):
+                    data = json.loads(path.read_text(encoding="utf-8"))
+                    data.update(python=python, assets_root=str(module_root / "assets"))
+                    write_json(path, data)
+                for path in module_root.glob("bodies/*/body.yaml"):
+                    data = json.loads(path.read_text(encoding="utf-8"))
+                    for binding in data["buses"].values():
+                        binding["python"] = python
+                    write_json(path, data)
             record["registry_root"] = str(module_root)
             progress(phase="verification")
             run([python, "-m", "nerv.runtime.module_check", str(module_root)], env, cancelled, progress)
+            write_json(marker, {'archive_sha256': archive_hash, 'environment_id': identity})
         else:
             progress(phase="verification")
             module = "nerv.platform.cli" if product == "host" else "nerv_runtime_sdk.worker"
@@ -272,8 +325,9 @@ def install(product="host", *, manifest=None, cancelled=lambda: False, progress=
                 run([python, "-m", spec["verify_module"]], env, cancelled, progress)
         if cancelled():
             raise InterruptedError("Installation cancelled")
-        write_json(stage / "release.json", value)
-        write_json(stage / "nerv-install.json", record)
+        if not reused:
+            write_json(stage / "release.json", value)
+            write_json(stage / "nerv-install.json", record)
         if state := stopped():
             raise install_downloads.DownloadStopped(state)
         if not activate:
@@ -371,7 +425,7 @@ def update(check=False, *, manifest=None, legacy_python=None):
         return _update(check=True, manifest=manifest)
     try:
         with FileLock(str(root / "host-running.lock"), timeout=0):
-            with FileLock(str(root / "installation-process.lock"), timeout=0) as lock:
+            with FileLock(str(managed.storage_root(root) / "installation-process.lock"), timeout=0) as lock:
                 return _update(manifest=manifest, lock=lock, legacy_python=legacy_python)
     except Timeout as exc:
         raise ValueError("Exit NERV and wait for any installation to finish, then run nerv update again.") from exc

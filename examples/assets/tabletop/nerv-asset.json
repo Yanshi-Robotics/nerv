@@ -1,0 +1,11 @@
+{
+  "schema": 1,
+  "id": "tabletop-example",
+  "name": "Empty tabletop",
+  "kind": "scene",
+  "engine": "mujoco",
+  "entry": "scene.xml",
+  "license": "MIT",
+  "capabilities": ["scene-preview"],
+  "description": "A local asset import example. No robot or task controller is included."
+}

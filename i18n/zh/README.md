@@ -182,3 +182,5 @@ NERV 由偃师造物维护。参与开发的 AI 贡献者包括：
 开发环境与评审要求见[贡献指南](../../CONTRIBUTING.md)，扩展接口见 [Runtime SDK](../../packages/nerv-runtime-sdk/README.md)，仓库约定见 [AGENTS.md](../../AGENTS.md)。可通过 [GitHub Issues](https://github.com/Yanshi-Robotics/nerv/issues) 提交版本和脱敏复现步骤，请勿附带凭据或私有录像。
 
 NERV 使用 [MIT 许可证](../../LICENSE)。外部 SDK、机器人模型和媒体保留各自许可证。
+
+官方策略的许可与对应源码要求单独记录，见[策略发布规范](guides/policy-publishing.md)。NERV 应用自身的许可证保持不变。
