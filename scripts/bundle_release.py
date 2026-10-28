@@ -108,6 +108,11 @@ def bundle(output=None):
         from nerv.asset_catalog import entries
         value['asset_catalog'] = json.loads(catalog_path.read_text())
         entries(value)
+    policy_catalog = ROOT / 'release/policy-catalog.json'
+    if policy_catalog.exists():
+        from nerv.policy_catalog import entries as policy_entries
+        value['policy_catalog'] = json.loads(policy_catalog.read_text())
+        policy_entries(value)
     (OUT / "release.json").write_text(json.dumps(value, indent=2))
     from build_download_plans import build as build_plans
     build_plans(OUT)

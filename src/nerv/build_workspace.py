@@ -104,6 +104,18 @@ def snapshot(source, root=None):
 
 
 def build(source, root=None, progress=print, *, validate=True, smoke=False):
+    from filelock import FileLock
+    storage = Path(root).resolve() if root else storage_root()
+    storage.mkdir(parents=True, exist_ok=True)
+    with FileLock(str(storage / 'build-process.lock'), timeout=0):
+        from .build_retention import plan
+        obsolete = plan(storage)['candidates']
+        if any(row['bytes'] for row in obsolete):
+            raise ValueError('Review obsolete build dependencies with nerv preview builds before building again')
+        return _build(source, storage, progress, validate=validate, smoke=smoke)
+
+
+def _build(source, root=None, progress=print, *, validate=True, smoke=False):
     from .build_tools import prepare
     from .managed import lease, run
     storage = Path(root).resolve() if root else storage_root()

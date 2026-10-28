@@ -138,7 +138,8 @@ nerv rollback
 | Linux 主程序与 SO-101 仿真 | 已做本地软件和安装检查；硬件单独验收 |
 | SO-101 真机／Linux | 已实现适配器与引导；真实抓取验收待完成 |
 | Windows 原生／WSL2 | 实验性支持；USB、相机后端及透传需实机测试 |
-| macOS Apple Silicon／Intel | 实验性支持；依赖、相机权限及 CPU／MPS 需验证 |
+| macOS Apple Silicon | 实验性 CPU 安装；相机权限和硬件仍需验证 |
+| macOS Intel | 0.8.5 暂无主程序安装包：锁定的 cryptography 依赖缺少兼容 wheel |
 | G1 仿真 | 候选版支持受管理场景与本地 ONNX 导入；需要兼容且通过检查的运动策略 |
 | GR00T／SmolVLA | 计划中的策略后端，尚未交付接入 |
 

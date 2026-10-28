@@ -3,6 +3,8 @@
 [中文](../i18n/zh/motion-policies.md) · [NERV](../README.md)
 
 Install the simulation component, then open **Settings → Policy library → ONNX**.
+The official catalog includes [G1 turn-aligned locomotion](https://huggingface.co/yanshi-robotics/g1-29dof-turn/tree/1d66616ba2e547a9f036b19aecb4a13f7c77d29a), pinned to its checked Hub commit.
+Choose **Download model files**, then **Use downloaded files for import**.
 Choose a local deployment directory containing `policy.onnx`, `contract.json` and
 `release.yaml`. A downloaded Hub repository can supply this directory. NERV records
 file hashes and keeps the original files unchanged.

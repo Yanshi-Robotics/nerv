@@ -1044,6 +1044,10 @@
     "Policy format": "Policy format",
     "Policy directory": "Policy directory",
     "Selected policy revision": "Selected policy revision",
-    "Use this policy revision": "Use this policy revision"
+    "Use this policy revision": "Use this policy revision",
+    "Official policies": "Official policies",
+    "Official policies use fixed versions. Simulation checks do not establish physical robot support.": "Official policies use fixed versions. Simulation checks do not establish physical robot support.",
+    "Model card": "Model card",
+    "No official policy is listed for this format. You can import your own policy below.": "No official policy is listed for this format. You can import your own policy below."
   }
 }

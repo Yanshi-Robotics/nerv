@@ -52,7 +52,7 @@ export default function PolicyLibrary({
           <option value="act">LeRobot ACT</option><option value="onnx">ONNX</option>
         </select>
       </label>
-      <HubPolicies onChoose={path => setDraft(value => ({...value, path}))}/>
+      <HubPolicies format={format} onChoose={path => setDraft(value => ({...value, path}))}/>
       {format === 'onnx' ? <MotionPolicies source={draft.path}/> : <>
       <h2>{t("Imported policies")}</h2>
       {!policies.length && (

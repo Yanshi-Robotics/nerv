@@ -138,7 +138,8 @@ Updates stage the host and installed official modules before activation. Failed 
 | Linux host and SO-101 simulation | Local software and installation checks; hardware acceptance is separate |
 | SO-101 real / Linux | Adapter and guided setup implemented; physical grasping acceptance pending |
 | Windows native / WSL2 | Experimental; USB, camera backends and passthrough need hardware testing |
-| macOS Apple Silicon / Intel | Experimental; dependencies, camera permissions and CPU/MPS require validation |
+| macOS Apple Silicon | Experimental CPU installation; camera permissions and hardware need validation |
+| macOS Intel | No 0.8.5 host package: the locked cryptography dependency has no compatible wheel |
 | G1 simulation | Managed scene and local ONNX imports in the candidate; a compatible, checked motion policy is required |
 | GR00T / SmolVLA | Planned policy backends; not delivered integrations |
 

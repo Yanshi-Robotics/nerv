@@ -127,6 +127,7 @@ def start_policy(repository, revision='main'):
     from filelock import FileLock
     from ..policy_sources import repository as validate_repository
     repository = validate_repository(repository)
+    manifest, _ = installation.read_manifest()
     if not isinstance(revision, str) or not revision or len(revision) > 200:
         raise ValueError('Invalid model revision')
     root = installation.home() / 'install-jobs'
@@ -138,7 +139,7 @@ def start_policy(repository, revision='main'):
         installation.write_json(root / f'{job_id}.json', {
             'id': job_id, 'kind': 'policy', 'module': 'huggingface:' + repository,
             'repository': repository, 'revision': revision, 'state': 'queued',
-            'phase': 'queued', 'created_at': time.time()})
+            'phase': 'queued', 'created_at': time.time(), 'release_snapshot': manifest})
         return _spawn(job_id)
 
 
@@ -298,6 +299,8 @@ def _work(job_id):
             if not state.get('plan_snapshot'):
                 progress(phase='verification')
                 plan = policy_sources.resolve(state['repository'], state['revision'], token)
+                from ..policy_catalog import verify_plan
+                verify_plan(state.get('release_snapshot', {}), plan)
                 progress(plan_snapshot=plan)
             progress(phase='download')
             result = policy_sources.download(installation.home(), state['plan_snapshot'],

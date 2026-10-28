@@ -20,3 +20,5 @@ ONNX 策略需要一个观测输入和一个动作输出，权重包含在 ONNX 
 
 导入本地策略不代表取得再分发许可。分享权重前请查看[策略发布规范](guides/policy-publishing.md)。
 来源不明的旧权重暂不加入新的官方 Hub 发布清单，待确认可分发范围后再处理。
+
+官方目录提供 [G1 转向行走策略](https://huggingface.co/yanshi-robotics/g1-29dof-turn/tree/1d66616ba2e547a9f036b19aecb4a13f7c77d29a)，固定到已核对的 Hub 提交。点击下载后，将下载目录用于导入，再执行检查和版本选择。该策略只提供仿真证据，未做真机验收。

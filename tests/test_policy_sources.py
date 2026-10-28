@@ -121,3 +121,20 @@ def test_hub_job_interruption_keeps_pinned_plan(tmp_path, monkeypatch):
     final = json.loads(record.read_text())
     assert final['state'] == 'paused' and final['plan_snapshot'] == plan
     assert 'result' not in final
+
+
+def test_official_catalog_requires_pinned_files_and_rejects_changed_hub_inventory():
+    from nerv.policy_catalog import entries, verify_plan
+    row = {'id': 'fixture', 'repository': 'yanshi-robotics/fixture', 'commit': 'a' * 40,
+           'format': 'onnx-motion', 'license': 'AGPL-3.0-only',
+           'files': [{'path': 'policy.onnx', 'sha256': 'b' * 64, 'bytes': 12}]}
+    manifest = {'policy_catalog': {'schema': 1, 'policies': [row]}}
+    assert entries(manifest) == [row]
+    plan = {'repository': row['repository'], 'commit': row['commit'], 'files': list(row['files'])}
+    verify_plan(manifest, plan)
+    plan['files'] = [{'path': 'policy.onnx', 'sha256': 'c' * 64, 'bytes': 12}]
+    with pytest.raises(ValueError, match='inventory'):
+        verify_plan(manifest, plan)
+    row['commit'] = 'main'
+    with pytest.raises(ValueError, match='pinned'):
+        entries(manifest)

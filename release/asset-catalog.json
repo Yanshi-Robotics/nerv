@@ -12,7 +12,7 @@
         "files": "passed",
         "model_load": "passed",
         "compiled_physics": "passed",
-        "rendering": "not_checked",
+        "rendering": "passed",
         "task": "not_checked"
       },
       "archive": {
@@ -33,7 +33,7 @@
         "files": "passed",
         "model_load": "passed",
         "compiled_physics": "passed",
-        "rendering": "not_checked",
+        "rendering": "passed",
         "task": "not_checked"
       },
       "archive": {
@@ -54,7 +54,7 @@
         "files": "passed",
         "model_load": "passed",
         "compiled_physics": "passed",
-        "rendering": "not_checked",
+        "rendering": "passed",
         "task": "not_checked"
       },
       "archive": {
@@ -75,7 +75,7 @@
         "files": "passed",
         "model_load": "passed",
         "compiled_physics": "passed",
-        "rendering": "not_checked",
+        "rendering": "passed",
         "task": "not_checked"
       },
       "archive": {

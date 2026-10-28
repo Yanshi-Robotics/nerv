@@ -1,0 +1,73 @@
+{
+  "schema": 1,
+  "policies": [
+    {
+      "id": "g1-29dof-turn",
+      "name": "G1 29-DoF turn-aligned locomotion",
+      "version": "0.1.0",
+      "format": "onnx-motion",
+      "robot": "unitree/g1/dof29",
+      "environment": "sim",
+      "license": "AGPL-3.0-only",
+      "repository": "yanshi-robotics/g1-29dof-turn",
+      "commit": "1d66616ba2e547a9f036b19aecb4a13f7c77d29a",
+      "validation": {
+        "software": "passed",
+        "simulation": "local_regression_passed",
+        "hardware": "not_tested"
+      },
+      "files": [
+        {
+          "path": "LICENSE",
+          "sha256": "d8a6cc31abc16b6748c7a21f21611f5a1ec33f67d22ca23d7da1c19b95496bee",
+          "bytes": 34020
+        },
+        {
+          "path": "README.md",
+          "sha256": "f7de0d24fb5de3da249e278940ece18fea50a6e5e9e4677b6a1b7da397be8058",
+          "bytes": 3489
+        },
+        {
+          "path": "actor.safetensors",
+          "sha256": "a5299d1c2c398975237f85d09c8969eaaf72232aab61a814add259a9a4bf043c",
+          "bytes": 1657540
+        },
+        {
+          "path": "architecture.json",
+          "sha256": "223b4e214bb5cbdc2f4e2e4e93bdcaad9eb3fd4349dc7a74e0daec2a0320f1ae",
+          "bytes": 188
+        },
+        {
+          "path": "checksums.sha256",
+          "sha256": "d583eb668bbe1e780043c38a661ac9a48ddff42eab6d5926a460e999250ed1e8",
+          "bytes": 804
+        },
+        {
+          "path": "contract.json",
+          "sha256": "1fdbe2ecc5d60945b5b630074425b053dbbca058b6a55be91833697083c8d6ef",
+          "bytes": 7169
+        },
+        {
+          "path": "evaluation/summary.json",
+          "sha256": "510fb998394f80d10aad817959aa431baff557e6f795d5043eda78e8c8e50275",
+          "bytes": 839
+        },
+        {
+          "path": "nerv-policy.json",
+          "sha256": "5a4f116f270a1a9222dd4363331f03fca5436dae72c48b8e707a011e4d67266d",
+          "bytes": 503
+        },
+        {
+          "path": "policy.onnx",
+          "sha256": "07400671a8fffae172d261688bc84f0e60d3d656156b564dbdc0a4638fb695c6",
+          "bytes": 1657864
+        },
+        {
+          "path": "release.yaml",
+          "sha256": "3d539d49fa143b8049bb3f860fc99766bd3c5a6dc26301427dd4b9683fe93715",
+          "bytes": 777
+        }
+      ]
+    }
+  ]
+}
