@@ -21,13 +21,20 @@ def build_environment(storage):
     storage = Path(storage)
     temporary = storage / '.cache/build/tmp'
     temporary.mkdir(parents=True, exist_ok=True)
+    # npm rejects loading the same path as both user and global configuration.
+    # Distinct empty files also work on Windows, where /dev/null is unavailable.
+    npm_configs = [storage / '.cache/build' / name for name in ('npm-user.conf', 'npm-global.conf')]
+    for path in npm_configs:
+        path.touch(exist_ok=True)
+        if path.read_bytes():
+            raise ValueError('Managed npm configuration must be empty')
     env = installer_environment()
     env.update(NERV_STORAGE_HOME=str(storage), UV_CACHE_DIR=str(storage / '.cache/uv'),
                UV_PYTHON_DOWNLOADS='never', UV_NO_PROGRESS='1', UV_NO_CONFIG='1',
                PIP_CACHE_DIR=str(storage / '.cache/pip'), PIP_CONFIG_FILE=os.devnull,
                PIP_DISABLE_PIP_VERSION_CHECK='1', TMPDIR=str(temporary), TEMP=str(temporary), TMP=str(temporary),
-               NPM_CONFIG_CACHE=str(storage / '.cache/npm'), NPM_CONFIG_USERCONFIG=os.devnull,
-               NPM_CONFIG_GLOBALCONFIG=os.devnull, NEXT_TELEMETRY_DISABLED='1',
+               NPM_CONFIG_CACHE=str(storage / '.cache/npm'), NPM_CONFIG_USERCONFIG=str(npm_configs[0]),
+               NPM_CONFIG_GLOBALCONFIG=str(npm_configs[1]), NEXT_TELEMETRY_DISABLED='1',
                NERV_STATIC_EXPORT='1', NEXT_PUBLIC_API='')
     return env
 

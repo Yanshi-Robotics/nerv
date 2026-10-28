@@ -27,7 +27,8 @@ def main():
         raise SystemExit('Select a new, unused test home')
     root.mkdir(parents=True)
     (root / 'README.md').write_text('Release smoke-test environment. Disposable after acceptance; contains only generated test records.\n')
-    os.environ.update(NERV_HOME=str(root), MUJOCO_GL='egl', LIBGL_ALWAYS_SOFTWARE='1', CUDA_VISIBLE_DEVICES='')
+    os.environ.update(NERV_HOME=str(root), NERV_STORAGE_HOME=str(root),
+                      MUJOCO_GL='egl', LIBGL_ALWAYS_SOFTWARE='1', CUDA_VISIBLE_DEVICES='')
     if args.offline:
         os.environ.update(UV_OFFLINE='1', UV_NO_INDEX='1')
     sys.path.insert(0, str(Path(__file__).resolve().parents[1] / 'src'))

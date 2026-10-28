@@ -15,7 +15,10 @@ from nerv_runtime_lerobot.runtime import LeRobotRuntime
 def runtime_fixture():
     spec = Registry().body("arm-lerobot-so101")
     settings = {**spec.buses["real"].settings, "policy_device":"cpu", "cancel_timeout_s":0.01}
-    runtime = LeRobotRuntime(RobotProfile(id=spec.name, family=spec.family, configuration=spec.model_dump()), EnvironmentBinding(id="fixture", profile_id=spec.name, mode="real", provider="lerobot0.6.1", configuration=settings))
+    # This lifecycle fixture must not depend on an installed policy or local checkpoint.
+    profile = {**spec.model_dump(), "skills": {}}
+    runtime = LeRobotRuntime(RobotProfile(id=spec.name, family=spec.family, configuration=profile), EnvironmentBinding(id="fixture", profile_id=spec.name, mode="real", provider="lerobot0.6.1", configuration=settings))
+    runtime._artifacts = {"snack_into_box": {}}
     writes = []
     runtime._robot = SimpleNamespace(send_action=lambda action: writes.append(action))
     runtime._send_recorded = lambda action, **kwargs: runtime._robot.send_action(action)

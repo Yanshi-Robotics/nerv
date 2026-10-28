@@ -11,71 +11,56 @@ device details in adapters and policy details in policy backends. Core services 
 use declared capabilities. A new robot or policy needs its own compatibility evidence;
 an interface fixture does not establish that a real model or robot works.
 
-Use a separate Python environment. Install the Runtime SDK and host development extras
-from this checkout; adapter tests can use a dependency-free editable adapter installation.
-Install the native LeRobot environment separately for model integration or hardware work.
+## Build outside the checkout
 
-```bash
-python -m pip install -e ./packages/nerv-runtime-sdk -e '.[platform,dev]'
-```
+The 0.8.5 development workflow keeps Python environments, Node.js, frontend dependencies,
+caches and candidate packages under the NERV storage root. Edit the Git checkout in your
+project directory; do not create a venv or run npm install there. The managed build takes
+an indexed source snapshot, including edits to tracked files. Add new files to the index
+when they should be included; credentials, user data and existing build directories are excluded.
 
-```bash
-python -m pip install --no-deps -e ./packages/nerv-runtime-lerobot
-```
-
-```bash
-python -m pytest tests/test_standard_product.py tests/test_lerobot_adapter.py tests/test_runtime_sdk.py tests/test_runtime_management.py -q
-```
-
-```bash
-npm --prefix frontend ci
-```
-
-```bash
-npm --prefix frontend run check:locales
-```
-
-For simulation regression, also install the host `sim` extra and initialize the required
-submodules. Headless Linux may need `MUJOCO_GL=egl LIBGL_ALWAYS_SOFTWARE=1`. Run the relevant
-tests and report their environment. Build the complete candidate bundle with
-`python scripts/build_release.py` (uv is also required). Students use its prebuilt installer
-without Node.js. Dependency constraints live under `release/constraints`; changing those
-versions requires package installation and relevant runtime checks.
-
-From the repository root on Linux or macOS, the existing simulation setup is:
+With a host that supports the managed preview commands:
 
 ```bash
 git submodule update --init --recursive
+nerv preview build --source /path/to/nerv
 ```
+
+The command reports the candidate bundle directory. It prepares pinned tools, builds the
+static interface and Python packages, then runs frontend and software contract checks in
+a separate validation environment. It does not activate the candidate.
 
 ```bash
-.venv/bin/python -m pip install -e '.[sim]'
+nerv preview update --bundle /path/to/reported/bundle
+nerv preview
 ```
 
-After building the static UI as described in the README installation guide, start
-the development Python host:
+Preview data belongs to its own profile. Device authorization and conversation history
+are not copied from the stable channel. Stop the preview before updating or rolling it back;
+never stop another service to free a port.
+
+For CI or initial development before a supporting host has been installed, Python 3.12
+and uv 0.12.2 can bootstrap the same build workflow:
 
 ```bash
-.venv/bin/nerv serve
+python scripts/ci_managed.py
 ```
 
-The optional frontend development server uses port 8100:
+This creates a bootstrap environment in `.nerv/ci`, obtains the locked build tools and
+runs an installed-host update/rollback smoke test in a new isolated directory. It does
+not change a stable or preview active pointer. On Windows, Linux and macOS the tools
+use their respective platform packages; venvs are not portable between systems.
 
-```bash
-npm --prefix frontend run dev
-```
+Dependency baselines live in `release/constraints`, `release/build.lock` and
+`release/validation.lock`. Change them deliberately and test affected runtimes. The
+three SO-101 scenes use bounded local joint/gripper control, not a deployed ACT policy.
+Simulation checks, model inference and physical task acceptance remain separate.
+The [asset guide](guides/assets.md) explains data-only scene packages and personal revisions.
 
-G1 worlds use their registered gait skills. The SO-101 worlds `so101-pick-place`,
-`so101-sort-snacks` and `so101-hanoi-five` use bounded joint/gripper control, not a
-deployed ACT policy. The standard workbench scene generator is:
-
-```bash
-.venv/bin/python worlds/tools/make_workbench.py --all
-```
-
-See the [workbench guide](worlds/scenes/so101_workbench/README.md) for scene configuration.
-On Windows, use the corresponding `.venv\Scripts` executables; hardware and rendering
-support still require platform-specific verification.
+Use the paths in the build record for additional diagnostics. Do not move dependencies
+back into the author checkout or add dependency symlinks there. Run
+`python scripts/check_source_clean.py` to check the source directory after migration.
+Existing legacy dependencies require a reviewed inventory and recovery check before removal.
 
 ## Review and evidence
 

@@ -78,13 +78,11 @@ Real preparation can energize motors. Only the operator may trigger it or physic
 Local tests, tensor forward passes, API validation and real task evidence are separate gates.
 Use 0.5.0 as the audited baseline, 0.6.x for development, and 1.0.0 only after the 10-trial and
 fault-test acceptance in `docs/版本与验收/1.0.0/acceptance.md`. Update both README languages and matching interface
-contracts with runtime or lifecycle changes. Install local packages before testing:
-
-```
-.venv/bin/python -m pip install -e ./packages/nerv-runtime-sdk -e '.[platform,sim,dev]'
-.venv/bin/python -m pip install --no-deps -e ./packages/nerv-runtime-lerobot
-.venv/bin/python -m ruff check src packages tests
-```
+contracts with runtime or lifecycle changes. Build and test in managed storage with
+`nerv preview build --source <checkout>`. Before a compatible host is available, use
+`python scripts/ci_managed.py` with Python 3.12 and uv 0.12.2. Do not create venvs,
+node_modules, build output or dependency symlinks in the author checkout. See
+CONTRIBUTING.md for candidate validation and the explicit preview installation step.
 
 ## Documentation and commit policy
 
