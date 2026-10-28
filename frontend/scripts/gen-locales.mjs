@@ -39,6 +39,9 @@ for (const file of files) {
   const raw = JSON.parse(fs.readFileSync(path.join(LOCALES_DIR, file), "utf8"));
 
   // 结构校验放在生成时而不是运行时：坏文件应该让构建失败，而不是让界面在用户面前塌掉。
+  if (Object.keys(raw).some(key => !["meta", "strings"].includes(key))) {
+    throw new Error(`${file}: put translation entries inside strings`);
+  }
   const meta = raw.meta || {};
   for (const k of ["code", "label", "html"]) {
     if (typeof meta[k] !== "string" || !meta[k]) throw new Error(`${file}: meta.${k} 缺失或不是字符串`);

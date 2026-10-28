@@ -105,7 +105,7 @@ print(json.dumps(v))'''
     return observed
 
 
-def install_plan(root, plan, source, stage, *, env, preferences, stopped, progress, run, uv):
+def install_plan(root, plan, source, stage, *, env, preferences, stopped, progress, run, uv, reuse=False):
     root, source, stage = Path(root), Path(source), Path(stage)
     items = plan['artifacts']
     # Local release wheels can be seeded without network access, after hashing.
@@ -125,6 +125,8 @@ def install_plan(root, plan, source, stage, *, env, preferences, stopped, progre
     paths = downloads.download_all(root, items, env=env, preferences=preferences, stopped=stopped, progress=progress)
     if state := stopped():
         raise downloads.DownloadStopped(state)
+    if reuse:
+        return {v['name']: paths[v['sha256']] for v in items}
     progress(phase='verification')
     python_item = next(v for v in items if v.get('kind') == 'python')
     python_root = root / 'python' / python_item['sha256']

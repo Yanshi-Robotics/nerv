@@ -231,11 +231,112 @@ def cmd_policy(a):
     if a.action == "configure":
         payload = {key: getattr(a, key) for key in ("port", "id", "calibration_dir", "camera_config_file", "policy_device")}
     try:
+        if a.action == 'import' and a.path.startswith(('hf://', 'https://huggingface.co/')):
+            import time
+            from . import module_jobs
+            job = module_jobs.start_policy(a.path, a.revision)
+            job_path = module_jobs._job_path(job['id'])
+            try:
+                while True:
+                    state = json.loads(job_path.read_text())
+                    if state['state'] == 'complete':
+                        payload['path'] = state['result']['path']
+                        break
+                    if state['state'] not in ('queued', 'running'):
+                        raise ValueError(f"Model download {state['state']}; job {job['id']} can be continued from Settings")
+                    time.sleep(1)
+            except KeyboardInterrupt:
+                module_jobs.pause(job['id'])
+                return 130
         print(json.dumps(manage(a.python, a.provider, a.action, payload), indent=2))
         return 0
     except (ValueError, OSError) as error:
         print(str(error), file=sys.stderr)
         return 1
+
+
+def cmd_assets(a):
+    from ..asset_store import AssetStore
+    library = AssetStore(paths.NERV_HOME)
+    try:
+        if a.action == 'list':
+            result = library.list()
+        elif a.action == 'import':
+            result = library.import_asset(a.path)
+        elif a.action == 'inspect':
+            result = library.read(a.id)
+        elif a.action == 'save':
+            result = library.save(a.id)
+        elif a.action == 'clone':
+            result = library.clone(a.id, a.name)
+        elif a.action == 'export':
+            result = library.export(a.id, a.path, a.revision)
+        else:
+            _, result = library.resolve(a.id, a.revision)
+        print(json.dumps(result, indent=2))
+        return 0
+    except (OSError, ValueError) as error:
+        print(str(error), file=sys.stderr)
+        return 1
+
+
+def cmd_environments(a):
+    import subprocess
+    from ..managed import environments
+    try:
+        records = environments()
+        if a.id:
+            records = [r for r in records if r.get('environment_id') == a.id]
+            if not records:
+                raise ValueError('Unknown managed environment')
+        if a.action == 'doctor':
+            from ..installation import _verify_record
+            from ..managed import lease, storage_root
+            for record in records:
+                try:
+                    with lease(storage_root(), [record['path']]):
+                        _verify_record(record)
+                    record.update(healthy=True, health='passed')
+                except (ValueError, OSError, subprocess.SubprocessError) as error:
+                    record.update(healthy=False, health='failed', reason=str(error))
+        print(json.dumps(records, indent=2))
+        return int(a.action == 'doctor' and any(not r['healthy'] for r in records))
+    except (OSError, ValueError) as error:
+        print(str(error), file=sys.stderr)
+        return 1
+
+
+def cmd_preview(a):
+    from pathlib import Path
+    import subprocess
+    from ..managed import channel_home, storage_root
+    root = storage_root()
+    home = channel_home('preview', root)
+    record = home / 'active.json'
+    if not record.is_file():
+        print('Install a preview bundle before starting the preview channel.', file=sys.stderr)
+        return 1
+    python = Path(json.loads(record.read_text())['python']).absolute()
+    if not python.is_file() or not python.parent.parent.resolve().is_relative_to(root):
+        print('Preview interpreter is outside managed storage.', file=sys.stderr)
+        return 1
+    rest = a.arguments
+    if not rest:
+        rest = ['serve', '--port', '8100']
+    if rest[0] == 'update' and '--manifest' not in rest:
+        if '--bundle' not in rest:
+            print('No public preview feed is configured. Use nerv preview update --bundle DIRECTORY.', file=sys.stderr)
+            return 1
+        index = rest.index('--bundle')
+        if len(rest) <= index + 1:
+            return 2
+        rest = [*rest[:index], '--manifest', str(Path(rest[index + 1]).absolute() / 'release.json'), *rest[index + 2:]]
+    if rest[0] not in ('serve', 'update', 'rollback'):
+        print('Unknown preview operation.', file=sys.stderr)
+        return 2
+    env = {k: v for k, v in os.environ.items() if k not in ('PYTHONPATH', 'PYTHONHOME', 'VIRTUAL_ENV')}
+    env.update(NERV_HOME=str(home), NERV_STORAGE_HOME=str(root), NERV_CHANNEL='preview')
+    return subprocess.call([str(python), '-I', '-m', 'nerv.platform.cli', *rest], env=env, cwd=home)
 
 
 def cmd_install_system(args):
@@ -289,6 +390,20 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="nerv", description="NERV — a nervous system for robots")
     ap.add_argument("--version", action="version", version=f"nerv {__version__}")
     sub = ap.add_subparsers(dest="cmd", required=True)
+    p = sub.add_parser('assets', help='manage local data-only asset revisions')
+    p.add_argument('action', choices=['list', 'import', 'inspect', 'clone', 'save', 'export', 'verify'])
+    p.add_argument('--id', default='')
+    p.add_argument('--path', default='')
+    p.add_argument('--name')
+    p.add_argument('--revision')
+    p.set_defaults(fn=cmd_assets)
+    p = sub.add_parser('env', help='inspect managed environments and references')
+    p.add_argument('action', choices=['list', 'inspect', 'doctor'])
+    p.add_argument('--id')
+    p.set_defaults(fn=cmd_environments)
+    p = sub.add_parser('preview', help='use the isolated preview channel')
+    p.add_argument('arguments', nargs=argparse.REMAINDER)
+    p.set_defaults(fn=cmd_preview)
 
     def _sess_args(p):
         p.add_argument("--brain", default="")
@@ -323,6 +438,7 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument("--device", default="cpu")
     p.add_argument("--policy-device", default="cpu")
     p.add_argument("--standard-declared", action="store_true")
+    p.add_argument('--revision', default='main', help='Hugging Face revision resolved to an immutable commit')
     p.set_defaults(fn=cmd_policy)
 
     p = sub.add_parser("chat", help="a conversation in the terminal")

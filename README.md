@@ -181,4 +181,4 @@ Maintainers review changes and decide what to merge and release.
 
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and review guidance, the [Runtime SDK](packages/nerv-runtime-sdk/README.md) for extension interfaces, and [AGENTS.md](AGENTS.md) for repository conventions. Report problems through [GitHub Issues](https://github.com/Yanshi-Robotics/nerv/issues) with versions and sanitized reproduction steps; exclude credentials and private recordings.
 
-NERV uses the [MIT license](LICENSE). External SDKs, robot models and media retain their own licenses.
+NERV uses the [MIT license](LICENSE). External SDKs, robot models and media retain their own licenses. Official policy releases have separate license and source requirements; see [policy publication](guides/policy-publishing.md).

@@ -27,6 +27,8 @@ from .session import log as slog
 nerv = Nerv()
 _shutdown_requested = threading.Event()
 app = FastAPI(title="NERV", version=__version__)
+from .storage_api import router as storage_router
+app.include_router(storage_router)
 app.add_middleware(CORSMiddleware, allow_origins=config.CORS_ORIGINS, allow_methods=["*"], allow_headers=["*"])
 
 

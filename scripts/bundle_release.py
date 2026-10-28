@@ -92,7 +92,7 @@ def bundle(output=None):
         if name == 'bootstrap.py':
             import base64
             embedded = "import sys, types, base64\nfrom pathlib import Path\nsys.path[:0] = [str(p) for p in (Path(__file__).parent / 'seed').glob('*.whl')]\n"
-            for module_name in ('install_system', 'install_downloads', 'install_plan'):
+            for module_name in ('install_system', 'install_downloads', 'install_plan', 'managed'):
                 code = (ROOT / 'src/nerv' / f'{module_name}.py').read_bytes()
                 encoded = base64.b64encode(code).decode()
                 embedded += f"_m = types.ModuleType('nerv_{module_name}'); sys.modules[_m.__name__] = _m; exec(compile(base64.b64decode({encoded!r}), {module_name!r}, 'exec'), _m.__dict__)\n"
