@@ -14,6 +14,7 @@ import json
 import uuid
 from pathlib import Path
 from dataclasses import dataclass, field
+from contextlib import ExitStack
 
 import httpx
 
@@ -33,11 +34,16 @@ class NodeHandle:
     log_path: str = ""
     attached: bool = False
     meta: dict = field(default_factory=dict)
+    resources: ExitStack | None = field(default=None, repr=False)
 
     def alive(self) -> bool:
         if self.attached:
             return True
-        return self.proc is not None and self.proc.poll() is None
+        running = self.proc is not None and self.proc.poll() is None
+        if not running and self.resources is not None:
+            self.resources.close()
+            self.resources = None
+        return running
 
 
 class Launcher:
@@ -80,7 +86,16 @@ class Launcher:
     def _spawn(self, key: str, kind: str, python: str, args: list[str], url: str,
                extra_env: dict | None = None, bus_url: str = "") -> NodeHandle:
         from .runtime_management import check_interpreter
-        check_interpreter(python)
+        from ..managed import lease, storage_root
+        resources = ExitStack()
+        reservation = resources.enter_context(lease(storage_root(paths.NERV_HOME),
+            [Path(python).absolute().parent.parent], child=True))
+        try:
+            check_interpreter(python)
+        except BaseException:
+            reservation.failed_to_start()
+            resources.close()
+            raise
         log_path = os.path.join(self.log_dir, re.sub(r'[^A-Za-z0-9_.-]', "_", key) + ".log")
         safe = ("PATH", "HOME", "USER", "LOGNAME", "LANG", "SYSTEMROOT", "SystemRoot", "WINDIR", "TEMP", "TMP", "USERPROFILE", "APPDATA", "LOCALAPPDATA", "NERV_HOME", "LD_LIBRARY_PATH",
                 "CUDA_VISIBLE_DEVICES", "MUJOCO_GL", "DISPLAY", "XAUTHORITY",
@@ -90,29 +105,27 @@ class Launcher:
         env.setdefault("PYTHONUNBUFFERED", "1")
         env["PYTHONUTF8"] = "1"
         env["NERV_HOME"] = paths.NERV_HOME
+        env["NERV_STORAGE_HOME"] = str(storage_root(paths.NERV_HOME))
         # nodes must accept requests from the page nerv serve itself hosts, not only the dev origin
         serve_origins = [f"http://127.0.0.1:{config.SERVE_PORT}", f"http://localhost:{config.SERVE_PORT}"]
         env["NERV_CORS_ORIGINS"] = ",".join(dict.fromkeys(config.CORS_ORIGINS + serve_origins))
-        logf = open(log_path, "ab")
-        proc = subprocess.Popen([python, *args], stdout=logf, stderr=subprocess.STDOUT, env=env,
-                                cwd=paths.DATA_ROOT)
+        try:
+            with open(log_path, "ab") as logf:
+                proc = subprocess.Popen([python, *args], stdout=logf, stderr=subprocess.STDOUT, env=env,
+                                        cwd=paths.DATA_ROOT)
+        except BaseException:
+            reservation.failed_to_start()
+            resources.close()
+            raise
+        reservation.started(proc.pid)
         h = NodeHandle(kind=kind, name=key, url=url, bus_url=bus_url, python=python, proc=proc,
-                       log_path=log_path)
+                       log_path=log_path, resources=resources)
         self.nodes[key] = h
         try:
             self._wait_health(h)
-        except Exception:
-            if proc.poll() is None:
-                proc.terminate()
-                try:
-                    proc.wait(timeout=config.NODE_STATUS_TIMEOUT)
-                except subprocess.TimeoutExpired:
-                    proc.kill()
-                    proc.wait()
-            self.nodes.pop(key, None)
+        except BaseException:
+            self.stop(key)
             raise
-        finally:
-            logf.close()
         return h
 
     def _wait_health(self, h: NodeHandle) -> dict:
@@ -286,7 +299,7 @@ class Launcher:
                            f"http://{config.NODE_BIND_HOST}:{port}")
 
     def stop(self, key: str) -> bool:
-        h = self.nodes.pop(key, None)
+        h = self.nodes.get(key)
         if h is None:
             return False
         if h.proc is not None and h.proc.poll() is None:
@@ -296,6 +309,12 @@ class Launcher:
             except subprocess.TimeoutExpired:
                 h.proc.kill()
                 h.proc.wait()
+        # Keep both the handle and lease if termination failed. Cleanup must not
+        # mistake a failed stop for permission to remove a live interpreter.
+        if h.resources is not None:
+            h.resources.close()
+            h.resources = None
+        self.nodes.pop(key, None)
         return True
 
     def stop_all(self) -> None:

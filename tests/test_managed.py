@@ -48,3 +48,63 @@ def test_inventory_preserves_legacy_preview_and_interrupted_update(tmp_path):
     assert rows[0]['references'] == ['preview:rollback']
     assert rows[0]['health'] == 'needs_check'
     assert json.loads((directory / 'nerv-install.json').read_text()) == record
+
+
+def test_recovery_keeps_both_host_generations(tmp_path):
+    from nerv.managed import environments
+    from nerv.install_system import atomic_json
+    recovery = tmp_path / 'backups/interrupted'
+    for name in ('active', 'previous'):
+        directory = tmp_path / 'envs/host' / name
+        python = directory / 'bin/python'
+        python.parent.mkdir(parents=True)
+        python.touch()
+        record = {'python': str(python), 'version': name}
+        atomic_json(directory / 'nerv-install.json', record)
+        atomic_json(recovery / (name + '.json'), record)
+    atomic_json(tmp_path / 'update-pending.json', {'snapshot': str(recovery)})
+    assert all('stable:rollback' in row['references'] for row in environments(tmp_path))
+
+
+def test_interrupted_launch_blocks_cleanup(tmp_path):
+    import pytest
+    with lease(tmp_path, [tmp_path / 'env'], child=True):
+        pass
+    with pytest.raises(ValueError, match='interrupted process launch'):
+        active_leases(tmp_path)
+
+
+def test_failed_spawn_releases_reservation(tmp_path):
+    with lease(tmp_path, [tmp_path / 'env'], child=True) as reservation:
+        reservation.failed_to_start()
+    assert active_leases(tmp_path) == []
+
+
+def test_child_survives_parent_crash(tmp_path):
+    import os
+    import subprocess
+    import sys
+    import time
+    from pathlib import Path
+    from nerv.managed import process_alive
+    code = '''
+import os, subprocess, sys
+from nerv.managed import lease
+with lease(sys.argv[1], [sys.argv[2]], child=True) as reservation:
+    child = subprocess.Popen([sys.executable, '-c', 'import time; time.sleep(2)'],
+                             stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    reservation.started(child.pid)
+    print(child.pid, flush=True)
+    os._exit(17)
+'''
+    environment = dict(os.environ, PYTHONPATH=str(Path(__file__).parents[1] / 'src'), PYTHONDONTWRITEBYTECODE='1')
+    parent = subprocess.run([sys.executable, '-c', code, str(tmp_path), str(tmp_path / 'env')],
+                            capture_output=True, text=True, env=environment, timeout=10)
+    assert parent.returncode == 17, parent.stderr
+    pid = int(parent.stdout.strip())
+    assert active_leases(tmp_path) == [str(tmp_path / 'env')]
+    deadline = time.monotonic() + 8
+    while process_alive(pid) and time.monotonic() < deadline:
+        time.sleep(.05)
+    assert not process_alive(pid)
+    assert active_leases(tmp_path) == []

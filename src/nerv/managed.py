@@ -52,8 +52,63 @@ def environment_identity(product, spec, files, plan=None):
                         'constraints': spec.get('constraints', [])})
 
 
+def process_alive(pid):
+    """Conservative liveness: an inaccessible or reused PID prevents cleanup."""
+    if type(pid) is not int or pid <= 0:
+        raise ValueError('Invalid managed process identity')
+    if platform.system() == 'Linux':
+        try:
+            # An exited child may await reaping by a different parent. It no
+            # longer reads an environment, even though kill(pid, 0) succeeds.
+            state = Path(f'/proc/{pid}/stat').read_text().rsplit(')', 1)[1].split()[0]
+            if state in ('Z', 'X'):
+                return False
+        except (OSError, IndexError):
+            pass
+    if os.name == 'nt':
+        import ctypes
+        from ctypes import wintypes
+        kernel = ctypes.WinDLL('kernel32', use_last_error=True)
+        kernel.OpenProcess.argtypes = [wintypes.DWORD, wintypes.BOOL, wintypes.DWORD]
+        kernel.OpenProcess.restype = wintypes.HANDLE
+        kernel.GetExitCodeProcess.argtypes = [wintypes.HANDLE, ctypes.POINTER(wintypes.DWORD)]
+        kernel.CloseHandle.argtypes = [wintypes.HANDLE]
+        handle = kernel.OpenProcess(0x1000, False, pid)
+        if not handle:
+            return ctypes.get_last_error() != 87  # Invalid PID; access denied remains protected.
+        try:
+            code = wintypes.DWORD()
+            return not kernel.GetExitCodeProcess(handle, ctypes.byref(code)) or code.value == 259
+        finally:
+            kernel.CloseHandle(handle)
+    try:
+        os.kill(pid, 0)
+        return True
+    except ProcessLookupError:
+        return False
+    except PermissionError:
+        return True
+
+
+class ProcessReservation:
+    def __init__(self, marker, record):
+        self.marker, self.record = marker, record
+
+    def started(self, pid):
+        from .install_system import atomic_json
+        if type(pid) is not int or pid <= 0:
+            raise ValueError('Invalid managed process identity')
+        self.record.update(child_pid=pid, process_state='running')
+        atomic_json(self.marker, self.record)
+
+    def failed_to_start(self):
+        from .install_system import atomic_json
+        self.record['process_state'] = 'not_started'
+        atomic_json(self.marker, self.record)
+
+
 @contextmanager
-def lease(root, paths):
+def lease(root, paths, *, child=False):
     """A held OS lock is the source of truth, not a potentially recycled PID."""
     from filelock import FileLock
     from .install_system import atomic_json
@@ -61,11 +116,19 @@ def lease(root, paths):
     directory.mkdir(parents=True, exist_ok=True)
     marker = directory / (uuid.uuid4().hex + '.json')
     with FileLock(str(marker) + '.lock'):
-        atomic_json(marker, {'pid': os.getpid(), 'paths': [str(Path(p).resolve()) for p in paths]})
+        record = {'pid': os.getpid(), 'paths': [str(Path(p).resolve()) for p in paths]}
+        if child:
+            record['process_state'] = 'starting'
+        atomic_json(marker, record)
         try:
-            yield
+            yield ProcessReservation(marker, record)
         finally:
-            marker.unlink(missing_ok=True)
+            # A crashed parent does not prove its child stopped. Preserve intent
+            # if interrupted between spawn and recording the child's PID.
+            retained = record.get('process_state') == 'starting' or (
+                record.get('child_pid') and process_alive(record['child_pid']))
+            if not retained:
+                marker.unlink(missing_ok=True)
     marker.with_suffix('.json.lock').unlink(missing_ok=True)
 
 
@@ -75,6 +138,11 @@ def active_leases(root):
     for marker in (Path(root) / 'leases').glob('*.json'):
         try:
             with FileLock(str(marker) + '.lock', timeout=0):
+                record = json.loads(marker.read_text())
+                if record.get('process_state') == 'starting':
+                    raise ValueError('An interrupted process launch needs review before cleanup')
+                if record.get('child_pid') and process_alive(record['child_pid']):
+                    result.extend(record['paths'])
                 continue
         except Timeout:
             try:
@@ -101,10 +169,15 @@ def environments(root=None):
                 references.setdefault(directory, []).append(channel + ':' + pointer.stem)
             snapshot = record.get('snapshot')
             if snapshot:
-                for receipt in (Path(snapshot) / 'runtimes').glob('*.json'):
+                recovery = Path(snapshot)
+                for receipt in [recovery / 'active.json', recovery / 'previous.json',
+                                *(recovery / 'runtimes').glob('*.json')]:
+                    if not receipt.is_file():
+                        continue
                     old = json.loads(receipt.read_text())
-                    directory = str(Path(old['python']).parent.parent.resolve())
-                    references.setdefault(directory, []).append(channel + ':rollback')
+                    if old.get('python'):
+                        directory = str(Path(old['python']).parent.parent.resolve())
+                        references.setdefault(directory, []).append(channel + ':rollback')
     rows = []
     receipts = set((base / 'envs').glob('*/*/nerv-install.json'))
     # Pre-unification preview environments remain visible until explicitly migrated.
