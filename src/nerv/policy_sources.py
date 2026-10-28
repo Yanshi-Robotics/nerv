@@ -146,14 +146,17 @@ def restrict_transfer_file(path):
         path.chmod(0o600)
         return
     import subprocess
-    # POSIX mode bits do not describe Windows access. A new mkstemp file has
-    # inherited ACLs; remove those and grant only the current account's SID.
-    identity = subprocess.check_output(['whoami', '/user', '/fo', 'csv', '/nh'],
-                                       timeout=10).decode(errors='replace')
-    sids = re.findall(r'S-1-[0-9-]+', identity)
-    if len(sids) != 1:
-        raise PermissionError('Cannot identify the Windows credential owner')
-    subprocess.run(['icacls', str(path), '/inheritance:r', '/grant:r', '*' + sids[0] + ':F', '/q'],
+    # Replace the entire DACL: disabling inheritance alone leaves explicit ACEs
+    # created by the Windows temporary-file implementation in place.
+    script = ('$ErrorActionPreference = "Stop"; '
+              '$sid = [System.Security.Principal.WindowsIdentity]::GetCurrent().User; '
+              '$acl = New-Object System.Security.AccessControl.FileSecurity; '
+              '$acl.SetOwner($sid); $acl.SetAccessRuleProtection($true, $false); '
+              '$rule = New-Object System.Security.AccessControl.FileSystemAccessRule('
+              '$sid, "FullControl", "Allow"); $acl.AddAccessRule($rule); '
+              'Set-Acl -LiteralPath $env:NERV_TRANSFER_ACL_FILE -AclObject $acl')
+    subprocess.run(['powershell', '-NoProfile', '-NonInteractive', '-Command', script],
+                   env=dict(os.environ, NERV_TRANSFER_ACL_FILE=str(path)),
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
                    check=True, timeout=10)
 
