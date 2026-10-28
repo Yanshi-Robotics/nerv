@@ -73,7 +73,7 @@ New Session is the default page and the destination of the NERV logo. Your Robot
 
 Without an API key, you can still install components, configure the robot, view cameras and run fixed ACT through Your Robots → Device and fixed policy workspace. Policies are imported separately through Settings → Policy library.
 
-<div align="center"><img src="assets/readme/images/new-session-0.8.2.png" alt="NERV 0.8.2 candidate: New Session, setup checklist and unified sidebar" width="960"></div>
+<div align="center"><img src="assets/readme/images/new-session-0.8.5.png" alt="NERV 0.8.5 candidate: New Session, setup checklist and unified sidebar" width="960"></div>
 
 The robot detail page opens a local 3D model; its display pose is an illustration, not measured telemetry. Names, pictures and connection settings persist across restarts; motion permission does not. About displays the running version, while Updates contains the explicit update check. Navigating between pages preserves the active workspace and stop controls. Runtime preference changes apply to new Agent turns, not work already in progress.
 
@@ -146,6 +146,11 @@ Updates stage the host and installed official modules before activation. Failed 
 The [acceptance guide](guides/release-acceptance.md) separates software, simulation, physical tasks and novice onboarding. The [roadmap](ROADMAP.md) describes future Harness extensions, plugin management and Yanshifu integration; these are outside 0.8.2.
 
 ## Demo and interface
+
+Version 0.8.5 manages installed components and saved asset revisions in separate settings pages. These screenshots show the local candidate; file checks and software inference checks do not establish physical task success.
+
+<div align="center"><img src="assets/readme/images/components-0.8.5.png" alt="NERV 0.8.5: installed LeRobot and simulation environments" width="960"></div>
+<div align="center"><img src="assets/readme/images/assets-0.8.5.png" alt="NERV 0.8.5: a personal asset copy and its saved revisions" width="960"></div>
 
 The G1 recording below is from an earlier simulation version. It demonstrates head-camera observation and a gait skill; it is not SO-101 hardware evidence. The instruction is “Walk to the living room.” The unedited turn plays at 2.5× speed; an [original-speed MP4](assets/readme/media/walk-to-the-living-room.mp4) is available.
 

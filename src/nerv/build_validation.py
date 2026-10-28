@@ -13,7 +13,7 @@ CONTRACT_TESTS = [
     'test_cli_serve.py', 'test_shutdown_process.py', 'test_user_preferences.py',
     'test_standard_product.py', 'test_lerobot_adapter.py', 'test_runtime_sdk.py',
     'test_runtime_management.py', 'test_user_paths.py', 'test_control_schemes.py',
-    'test_installation.py', 'test_release_recovery.py', 'test_setup_discovery.py',
+    'test_installation.py', 'test_release_recovery.py', 'test_release_wheel.py', 'test_setup_discovery.py',
     'test_harness_memory.py', 'test_environment_cleanup.py', 'test_managed.py',
     'test_asset_store.py', 'test_asset_catalog.py', 'test_asset_runtime.py',
     'test_policy_sources.py', 'test_build_workspace.py', 'test_managed_preview.py', 'test_recoverable_downloads.py',
