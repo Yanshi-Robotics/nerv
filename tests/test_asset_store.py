@@ -105,3 +105,14 @@ def test_export_resolves_parent_symlinks_and_preserves_lineage(tmp_path):
         manifest = json.loads(bundle.read(MANIFEST))
     assert manifest['derived_from']['revision'] == original['current']
     assert manifest['derived_from']['license'] == 'CC0-1.0'
+
+
+@pytest.mark.parametrize('attribute', ['fileleft', 'fileright', 'fileup', 'filedown', 'filefront', 'fileback'])
+def test_cubemap_face_paths_are_contained(tmp_path, attribute):
+    source = example(tmp_path / 'source')
+    (source / 'scene.xml').write_text(f'<mujoco><asset><texture type="cube" {attribute}="../private.png"/></asset></mujoco>')
+    with pytest.raises(ValueError, match='escapes'):
+        validate(source)
+    (source / 'scene.xml').write_text(f'<mujoco><asset><texture type="cube" {attribute}="missing.png"/></asset></mujoco>')
+    with pytest.raises(ValueError, match='Missing asset dependency'):
+        validate(source)
