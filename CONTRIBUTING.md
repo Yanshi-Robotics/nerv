@@ -100,6 +100,7 @@ compaction. Apply a reviewed plan with
 
 Compaction removes only generated dependency and build directories. Candidate
 packages, indexed source snapshots, logs, reports and test-home data remain
-available. Interrupted compaction can be retried with a fresh plan. A new build
-asks for this review when obsolete dependencies remain, so repeated builds do not
-silently accumulate complete environments.
+available. Interrupted compaction can be retried with a fresh plan. Up to six
+builds may retain generated dependencies, allowing retries while a preview is
+running. At that limit, a new build requires review and compaction of eligible
+old builds. Stop both NERV channels before applying compaction.

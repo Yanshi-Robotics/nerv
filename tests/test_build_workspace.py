@@ -79,6 +79,7 @@ def test_build_environment_contains_all_caches_and_filters_external_python(tmp_p
     monkeypatch.setenv('VIRTUAL_ENV', '/course/lerobot')
     monkeypatch.setenv('OPENAI_API_KEY', 'private-test-fixture')
     env = build_tools.build_environment(tmp_path)
+    assert env['SOURCE_DATE_EPOCH'] == '315532800'
     for key in ('UV_CACHE_DIR', 'PIP_CACHE_DIR', 'NPM_CONFIG_CACHE', 'TEMP', 'TMP', 'TMPDIR'):
         assert Path(env[key]).is_relative_to(tmp_path)
     for key in ('PYTHONPATH', 'VIRTUAL_ENV', 'OPENAI_API_KEY'):
@@ -114,3 +115,14 @@ def test_build_installs_locked_frontend_dependencies_before_packaging(tmp_path, 
         assert result['version'] == 'fixture'
         assert len(calls) == 2
     assert calls[0] == [tools['node'], tools['npm'], 'ci', '--ignore-scripts']
+
+
+def test_build_retry_window_is_bounded(tmp_path, monkeypatch):
+    from nerv import build_workspace, build_retention
+    rows = [{'bytes': 100}] * 5
+    monkeypatch.setattr(build_retention, 'plan', lambda _: {'candidates': rows, 'retained': []})
+    monkeypatch.setattr(build_workspace, '_build', lambda *a, **k: 'built')
+    assert build_workspace.build(tmp_path / 'source', tmp_path) == 'built'
+    rows.append({'bytes': 100})
+    with pytest.raises(ValueError, match='obsolete build dependencies'):
+        build_workspace.build(tmp_path / 'source', tmp_path)

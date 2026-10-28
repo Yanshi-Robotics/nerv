@@ -41,7 +41,15 @@ def main():
     os.environ.update(env)
     sys.path.insert(0, str(source / 'src'))
     from nerv.build_workspace import build
-    result = build(source, root, validate=True, smoke=True)
+    try:
+        result = build(source, root, validate=True, smoke=True)
+    except BaseException:
+        logs = sorted((root / 'builds').glob('*/build.log'), key=lambda p: p.stat().st_mtime_ns)
+        if logs:
+            # CI builds use a sanitized tool environment and no user credentials.
+            # Expose the actual subprocess failure, not only its wrapper traceback.
+            print('\n'.join(logs[-1].read_text(errors='replace').splitlines()[-250:]), flush=True)
+        raise
     artifact = root / 'ci/latest.json'
     artifact.write_text(json.dumps(result, indent=2))
     if os.environ.get('GITHUB_OUTPUT'):

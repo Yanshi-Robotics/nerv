@@ -12,6 +12,14 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "temp/release"
 
 
+def write_member(archive, name, content):
+    info = zipfile.ZipInfo(name, date_time=(1980, 1, 1, 0, 0, 0))
+    info.compress_type = zipfile.ZIP_DEFLATED
+    info.create_system = 3
+    info.external_attr = 0o100644 << 16
+    archive.writestr(info, content)
+
+
 def bundle(output=None):
     OUT = Path(output) if output is not None else ROOT / "temp/release"
     import sys
@@ -42,8 +50,8 @@ def bundle(output=None):
             body = yaml.safe_load((ROOT / "bodies" / body_id / "body.yaml").read_text())
             body["buses"] = {"sim": body["buses"]["sim"]}
             body["skills"] = {}
-            z.writestr(f"bodies/{body_id}/body.yaml", json.dumps(body))
-        z.writestr('module.json', json.dumps(simulation))
+            write_member(z, f"bodies/{body_id}/body.yaml", json.dumps(body))
+        write_member(z, 'module.json', json.dumps(simulation))
     sdk, host, device = (names[k] for k in ("nerv_runtime_sdk", "nerv", "nerv_runtime_lerobot"))
     motor_driver = next(OUT.glob("feetech_servo_sdk-1.0.0-*.whl")).name
     names["feetech_servo_sdk"] = motor_driver
@@ -121,7 +129,7 @@ def bundle(output=None):
     published = set(json.loads((OUT / 'release.json').read_text())['files'])
     with zipfile.ZipFile(OUT / f"nerv-{__version__}-bundle.zip", "w", zipfile.ZIP_DEFLATED) as bundle_zip:
         for name in sorted(published | {"release.json"}):
-            bundle_zip.write(OUT / name, name)
+            write_member(bundle_zip, name, (OUT / name).read_bytes())
     print(f"Release candidate: {OUT}")
 
 
