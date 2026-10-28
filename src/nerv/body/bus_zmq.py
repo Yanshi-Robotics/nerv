@@ -6,6 +6,7 @@ use independent channels so a slow frame cannot hold the policy or emergency-sto
 from __future__ import annotations
 
 import threading
+import os
 
 import zmq
 
@@ -57,10 +58,16 @@ class _RequestChannel:
 
 
 class ZmqBus:
-    def __init__(self, url: str, timeout_ms: int = 5000) -> None:
+    def __init__(self, url: str, timeout_ms: int = 5000, *, camera_timeout_ms: int | None = None) -> None:
         self.url = url
+        # Cold software rendering can compile scene shaders for several seconds.
+        # Keep its budget independent from motor/control requests.
+        if camera_timeout_ms is None:
+            camera_timeout_ms = int(os.environ.get('NERV_SIM_CAMERA_TIMEOUT_MS', '20000'))
+        if camera_timeout_ms <= 0:
+            raise ValueError('Simulation camera timeout must be positive')
         self._motor = _RequestChannel(url, timeout_ms)
-        self._camera = _RequestChannel(url, timeout_ms)
+        self._camera = _RequestChannel(url, camera_timeout_ms)
 
     def _req(self, msg: dict) -> dict:
         return self._motor.request(msg)

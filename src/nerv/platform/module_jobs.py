@@ -101,8 +101,18 @@ def _needs_repair(key, installed):
                 return True
         elif verified.get("version") != record.get("version"):
             return True
-        if record.get("registry_root") and not (Path(record["registry_root"]) / "worlds").is_dir():
-            return True
+        if record.get("registry_root"):
+            root = Path(record["registry_root"])
+            descriptor = root / 'module.json'
+            if descriptor.is_file():
+                module = json.loads(descriptor.read_text(encoding='utf-8'))
+                if (module.get('schema') != 2 or module.get('assets') != 'separate'
+                        or not module.get('bodies')
+                        or any(not (root / 'bodies' / name / 'body.yaml').is_file()
+                               for name in module['bodies'])):
+                    return True
+            elif not (root / 'worlds').is_dir():
+                return True
         return False
     except (OSError, ValueError, KeyError):
         return True

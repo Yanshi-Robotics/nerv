@@ -158,7 +158,7 @@ def restrict_transfer_file(path):
     subprocess.run(['powershell', '-NoProfile', '-NonInteractive', '-Command', script],
                    env=dict(os.environ, NERV_TRANSFER_ACL_FILE=str(path)),
                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-                   check=True, timeout=10)
+                   check=True, timeout=60)
 
 
 def download(home, plan, *, token=None, stopped=lambda: None, report=lambda **_: None):

@@ -86,7 +86,7 @@ def test_busy_camera_is_bounded_and_does_not_block_another_client(delayed_bus):
 
 def test_sensor_timeout_recovers_with_original_timeout_and_motor_still_works(delayed_bus):
     _, server, entered, release, _ = delayed_bus
-    bus = ZmqBus(server.bind_url, timeout_ms=40)
+    bus = ZmqBus(server.bind_url, timeout_ms=40, camera_timeout_ms=40)
     try:
         with pytest.raises(BusError):
             bus.sensor("head")
@@ -104,5 +104,16 @@ def test_sensor_timeout_recovers_with_original_timeout_and_motor_still_works(del
                 if time.monotonic() >= deadline:
                     raise
                 time.sleep(.01)
+    finally:
+        bus.close()
+
+
+def test_camera_budget_is_configurable_without_changing_motor_timeout(monkeypatch, delayed_bus):
+    existing, _, _, _, _ = delayed_bus
+    monkeypatch.setenv('NERV_SIM_CAMERA_TIMEOUT_MS', '15000')
+    bus = ZmqBus(existing.url, timeout_ms=40)
+    try:
+        assert bus._camera.timeout_ms == 15000
+        assert bus._motor.timeout_ms == 40
     finally:
         bus.close()
