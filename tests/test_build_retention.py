@@ -19,6 +19,10 @@ def builds(root):
         (directory / 'bundle/candidate.zip').write_text('keep package')
         (directory / 'release-smoke').mkdir()
         (directory / 'release-smoke/session.json').write_text('keep data')
+        (directory / 'release-smoke/envs').mkdir()
+        (directory / 'release-smoke/envs/python').write_text('generated dependency')
+        (directory / 'release-smoke/.cache/runtime-config').mkdir(parents=True)
+        (directory / 'release-smoke/.cache/runtime-config/device.json').write_text('keep device configuration')
         (directory / 'source').mkdir()
         (directory / 'source/package-lock.json').write_text('locked fixture')
         atomic_json(directory / 'build.json', {'state': 'built', 'files': {'package-lock.json': {'sha256': digest(directory / 'source/package-lock.json')}}})
@@ -36,6 +40,8 @@ def test_compaction_keeps_recent_builds_packages_and_test_data(tmp_path):
         assert (directory / 'validation').exists() == (index >= 2)
         assert (directory / 'bundle/candidate.zip').exists()
         assert (directory / 'release-smoke/session.json').exists()
+        assert (directory / 'release-smoke/envs').exists() == (index >= 2)
+        assert (directory / 'release-smoke/.cache/runtime-config/device.json').exists()
     assert not b.compact(tmp_path)['candidates']
 
 
