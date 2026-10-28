@@ -11,7 +11,6 @@ import shutil
 import tempfile
 from urllib.parse import quote, urlsplit
 
-import httpx
 from filelock import FileLock
 
 from .install_downloads import download_all, digest
@@ -49,6 +48,7 @@ def file_name(value):
 
 
 def read_metadata(path, token=None):
+    import httpx
     headers = {'Authorization': 'Bearer ' + token} if token else {}
     url = API + path
     # Metadata and small Git files may redirect through the Hub's resolve cache,
