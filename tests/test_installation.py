@@ -318,3 +318,21 @@ def test_archive_update_changes_resources_without_reinstalling_python(tmp_path, 
     assert all(Path(r['registry_root']).is_relative_to(root / 'resources') for r in records)
     old = Path(records[0]['registry_root']) / 'worlds/test/world.yaml'
     assert json.loads(old.read_text())['name'] == 'first'
+
+
+def test_engine_only_module_does_not_require_bundled_worlds(tmp_path, monkeypatch):
+    from nerv.platform.module_jobs import _needs_repair
+    monkeypatch.setenv('NERV_HOME', str(tmp_path))
+    stage = tmp_path / 'envs/sim/test'
+    python = stage / 'bin/python'
+    python.parent.mkdir(parents=True)
+    python.touch()
+    root = tmp_path / 'resources/sim'
+    record = {'python': str(python), 'environment_id': 'test', 'registry_root': str(root)}
+    i.write_json(stage / 'nerv-install.json', record)
+    i.write_json(tmp_path / 'runtimes/sim.json', record)
+    i.write_json(root / 'module.json', {'schema': 2, 'engine': 'mujoco', 'assets': 'separate', 'bodies': ['test']})
+    i.write_json(root / 'bodies/test/body.yaml', {})
+    assert not _needs_repair('sim', {'sim': record})
+    (root / 'bodies/test/body.yaml').unlink()
+    assert _needs_repair('sim', {'sim': record})
