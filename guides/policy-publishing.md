@@ -13,6 +13,11 @@ Each released repository must include its complete license text and an explicit 
 covered files. Third-party files retain their original notices and license terms.
 NERV application code retains the license in its own repository.
 
+For a release approved under these terms, use `license: agpl-3.0` in the Hugging Face
+model card and state `AGPL-3.0-only` in its license notice and file coverage list.
+The Hub metadata label does not replace the full license or grant an option to use a
+later version. List separately licensed source and dependencies in third-party notices.
+
 AGPL requires corresponding source when covered software is conveyed in object form.
 Its network clause also applies to users interacting remotely with a modified covered
 program. It permits commercial use. It does not require every independent program that
