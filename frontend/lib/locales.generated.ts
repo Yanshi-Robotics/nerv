@@ -1065,7 +1065,11 @@ export const LOCALES: Record<string, Locale> = {
       "Policy format": "Policy format",
       "Policy directory": "Policy directory",
       "Selected policy revision": "Selected policy revision",
-      "Use this policy revision": "Use this policy revision"
+      "Use this policy revision": "Use this policy revision",
+      "Official policies": "Official policies",
+      "Official policies use fixed versions. Simulation checks do not establish physical robot support.": "Official policies use fixed versions. Simulation checks do not establish physical robot support.",
+      "Model card": "Model card",
+      "No official policy is listed for this format. You can import your own policy below.": "No official policy is listed for this format. You can import your own policy below."
     }
   },
   "zh": {
@@ -2114,7 +2118,11 @@ export const LOCALES: Record<string, Locale> = {
       "Policy format": "策略格式",
       "Policy directory": "策略目录",
       "Selected policy revision": "已选择此策略版本",
-      "Use this policy revision": "使用此策略版本"
+      "Use this policy revision": "使用此策略版本",
+      "Official policies": "官方策略",
+      "Official policies use fixed versions. Simulation checks do not establish physical robot support.": "官方策略使用固定版本。仿真检查不代表已支持真实机器人。",
+      "Model card": "模型说明",
+      "No official policy is listed for this format. You can import your own policy below.": "此格式暂无官方策略，你可以在下方导入自己的策略。"
     }
   }
 };
