@@ -4,14 +4,17 @@ from pathlib import Path
 import shlex
 import zipfile
 
-from build_download_plans import read_json, UV_VERSION
+from build_download_plans import UV_VERSION
+from bundle_release import write_member
 
 
 def build(output):
     output = Path(output)
     manifest_path = output / 'release.json'
     manifest = json.loads(manifest_path.read_text())
-    uv_release = read_json(f'https://api.github.com/repos/astral-sh/uv/releases/tags/{UV_VERSION}')
+    pinned = json.loads((Path(__file__).resolve().parents[1] / 'release/uv-artifacts.json').read_text())
+    if pinned['uv_version'] != UV_VERSION:
+        raise ValueError('Pinned uv artifacts do not match the build version')
     triples = {'linux-x86_64': 'x86_64-unknown-linux-gnu', 'windows-x86_64': 'x86_64-pc-windows-msvc',
                'macos-x86_64': 'x86_64-apple-darwin', 'macos-aarch64': 'aarch64-apple-darwin'}
     manifest['bootstrap_targets'] = {}
@@ -20,10 +23,10 @@ def build(output):
         if not plan.get('available'):
             continue
         uv_name = f'uv-{triple}.' + ('zip' if target.startswith('windows') else 'tar.gz')
-        asset = next(v for v in uv_release['assets'] if v['name'] == uv_name)
-        if not (checksum := asset.get('digest', '')).startswith('sha256:'):
-            raise ValueError('uv asset lacks SHA-256 metadata')
-        uv = {'name': uv_name, 'url': asset['browser_download_url'], 'bytes': asset['size'], 'sha256': checksum[7:], 'kind': 'uv'}
+        uv = pinned['targets'].get(target)
+        if (not uv or uv['name'] != uv_name or len(uv['sha256']) != 64 or uv['bytes'] <= 0
+                or not uv['url'].startswith(f'https://github.com/astral-sh/uv/releases/download/{UV_VERSION}/')):
+            raise ValueError('A compatible pinned uv artifact is required for bootstrap')
         python = next(v for v in plan['artifacts'] if v['kind'] == 'python')
         libraries = [v for v in plan['artifacts'] if v['kind'] == 'wheel' and v['name'].startswith(('filelock-', 'pyyaml-', 'PyYAML-', 'typing_extensions-'))]
         artifacts = [python, uv, *libraries]
@@ -96,4 +99,4 @@ Copy-Item $uv.FullName "$root/bin/uv.exe"
     manifest_path.write_text(json.dumps(manifest, indent=2))
     with zipfile.ZipFile(output / f"nerv-{manifest['version']}-bundle.zip", 'w', zipfile.ZIP_DEFLATED) as archive:
         for name in sorted(set(manifest['files']) | {'release.json'}):
-            archive.write(output / name, name)
+            write_member(archive, name, (output / name).read_bytes())
