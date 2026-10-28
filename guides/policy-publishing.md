@@ -42,6 +42,24 @@ References: [AGPL-3.0 text](https://www.gnu.org/licenses/agpl-3.0.html),
 
 ## Release contents
 
+### Migrating existing policies
+
+Preserve a verified upstream license and attribution when migrating an existing policy.
+Do not relicense third-party or unknown-origin weights under the preferred license for
+new Yanshi-owned releases. A source-code repository license is not evidence that every
+weight stored alongside that code has the same license.
+
+When provenance or redistribution permission is unresolved, record that status and defer
+the new public upload and official catalogue entry. Preserve existing files, hashes and
+references while investigating; this preservation does not grant additional usage rights.
+Application development and user policy import can proceed independently. Resume the
+publication review when evidence becomes available, rather than assigning a default
+license to make the migration pass.
+
+See [GitHub's guidance on unlicensed material](https://choosealicense.com/no-permission/).
+
+### Files to include
+
 ONNX releases include `policy.onnx`, the authoritative `contract.json`, `release.yaml`,
 `nerv-policy.json`, `README.md`, `LICENSE`, `checksums.sha256` and an evaluation summary.
 Include corresponding source and third-party notices as established by the license review.
