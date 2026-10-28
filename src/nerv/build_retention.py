@@ -14,10 +14,14 @@ from . import managed
 from .install_system import atomic_json
 from .install_downloads import digest
 
-# Keep packages, source evidence and test reports. Only reproducible dependencies
-# and generated source output are reclaimable; release-smoke may contain user data.
+# Keep packages, source evidence, test reports and smoke-test configuration.
+# Explicit dependency subdirectories of a disposable smoke home are reclaimable;
+# never remove the entire home, which may contain recovery evidence or user data.
 GENERATED = ('validation', 'source/frontend/node_modules', 'source/frontend/.next',
-             'source/frontend/out', 'source/build', 'source/.cache')
+             'source/frontend/out', 'source/build', 'source/.cache',
+             'release-smoke/envs', 'release-smoke/python',
+             'release-smoke/.cache/downloads', 'release-smoke/.cache/uv', 'release-smoke/.cache/releases',
+             'release-smoke/bin', 'release-smoke/bootstrap')
 
 
 def plan(root):
