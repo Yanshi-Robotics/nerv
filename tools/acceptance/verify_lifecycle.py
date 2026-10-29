@@ -35,7 +35,7 @@ def prepare(output):
     os.environ["MUJOCO_GL"] = "disable"
     os.environ["CUDA_VISIBLE_DEVICES"] = ""
     os.environ["NERV_HOME"] = str(output / "nerv-home")
-    sys.path[:0] = [str(ROOT / "src"), str(ROOT / "worlds")]
+    sys.path[:0] = [str(ROOT / "src"), str(ROOT / "nerv-assets")]
     return output
 
 
@@ -380,8 +380,8 @@ def run(output, limit_s):
             "src/nerv/world/mujoco_node.py",
             "src/nerv/platform/scene_tests.py",
             "src/nerv/platform/hub.py",
-            "worlds/scenes/interaction.py",
-            "worlds/build/apt-g1.xml",
+            "nerv-assets/scenes/interaction.py",
+            "nerv-assets/build/apt-g1.xml",
             "bodies/humanoid-unitree-g1/body.yaml",
         ]
         report["source_sha256"] = {

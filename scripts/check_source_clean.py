@@ -13,7 +13,7 @@ def violations(root):
         names[:] = [name for name in names if name not in ('.git', 'docs')]
         for name in list(names):
             path = Path(directory) / name
-            # worlds/build contains indexed generated scene sources, not Python output.
+            # nerv-assets/build contains indexed generated scene sources, not Python output.
             relative = path.relative_to(root)
             if (name in ('node_modules', '__pycache__', '.pytest_cache', '.next', '.cache')
                     or name == '.venv' or name.startswith('.venv-') or name.endswith('.egg-info')

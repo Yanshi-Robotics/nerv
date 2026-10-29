@@ -36,7 +36,7 @@ def prepare(output):
     output.mkdir(parents=True)
     os.environ["MUJOCO_GL"] = "egl"
     os.environ["NERV_HOME"] = str(output / "nerv-home")
-    sys.path[:0] = [str(ROOT / "src"), str(ROOT / "worlds")]
+    sys.path[:0] = [str(ROOT / "src"), str(ROOT / "nerv-assets")]
     return output
 
 
@@ -121,16 +121,16 @@ def execute(output, scenes, queue_id):
             ROOT / "src/nerv/world/mujoco_node.py",
             ROOT / "src/nerv/world/scene_operator.py",
             ROOT / "bodies/humanoid-unitree-g1/body.yaml",
-            ROOT / "worlds/scenes/operator.py",
-            ROOT / "worlds/scenes/time_cycle.py",
-            ROOT / "worlds/scenes/apply_time_preset.py",
+            ROOT / "nerv-assets/scenes/operator.py",
+            ROOT / "nerv-assets/scenes/time_cycle.py",
+            ROOT / "nerv-assets/scenes/apply_time_preset.py",
             ROOT / "policies/g1-29dof-turn/policy.onnx",
         ]
         for scene in scenes:
             paths += [
-                ROOT / f"worlds/build/{scene}-g1.xml",
-                ROOT / f"worlds/scenes/{scene}/layout.py",
-                ROOT / f"worlds/scenes/{scene}/shots.py",
+                ROOT / f"nerv-assets/build/{scene}-g1.xml",
+                ROOT / f"nerv-assets/scenes/{scene}/layout.py",
+                ROOT / f"nerv-assets/scenes/{scene}/shots.py",
             ]
         report["source_sha256"] = {str(p.relative_to(ROOT)): sha(p.read_bytes()) for p in paths}
         report["world_source_hash"] = {scene: source_hash(source_files(scene)) for scene in scenes}

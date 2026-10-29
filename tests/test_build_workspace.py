@@ -53,11 +53,11 @@ def test_snapshot_pins_submodule_and_current_contents(tmp_path):
     child = repository(tmp_path / 'child')
     source = repository(tmp_path / 'source')
     subprocess.run(['git', '-C', str(source), '-c', 'protocol.file.allow=always',
-                    'submodule', 'add', '-q', str(child), 'worlds'], check=True)
-    (source / 'worlds/main.py').write_text('local asset change\n')
+                    'submodule', 'add', '-q', str(child), 'nerv-assets'], check=True)
+    (source / 'nerv-assets/main.py').write_text('local asset change\n')
     destination, record = snapshot(source, tmp_path / 'managed')
-    assert len(record['repositories']['worlds']) == 40
-    assert (destination / 'source/worlds/main.py').read_text() == 'local asset change\n'
+    assert len(record['repositories']['nerv-assets']) == 40
+    assert (destination / 'source/nerv-assets/main.py').read_text() == 'local asset change\n'
 
 
 @pytest.mark.parametrize('name', ['../secret', '/root/secret', '.env.local',
@@ -69,7 +69,7 @@ def test_forbidden_build_input(name):
 def test_examples_are_build_inputs():
     assert permitted('.env.example')
     assert permitted('examples/assets/tabletop/scene.xml')
-    assert permitted('worlds/build/scene.xml')  # Indexed asset entries, not Python build output.
+    assert permitted('nerv-assets/build/scene.xml')  # Indexed asset entries, not Python build output.
 
 
 def test_build_environment_contains_all_caches_and_filters_external_python(tmp_path, monkeypatch):

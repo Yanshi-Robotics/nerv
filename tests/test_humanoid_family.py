@@ -1,7 +1,7 @@
 """Humanoid smoke: the G1 walks and turns in alice-house apt through the motor bus.
 
 Needs the real assets, so it is gated on the environment:
-  worlds/    the nerv-world submodule (arena build/apt-g1.xml must exist)
+  nerv-assets/    the nerv-assets submodule (arena build/apt-g1.xml must exist)
   policies/  the nerv-policies submodule holding g1-29dof-turn/{policy.onnx,contract.json,release.yaml}
 Otherwise it skips and says why. Measured numbers are printed (run with -s).
 """
@@ -38,10 +38,10 @@ def _free_port() -> int:
 
 def _skip_reason() -> str:
     from nerv import paths
-    assets = os.path.join(paths.REPO_ROOT, "worlds")
+    assets = os.path.join(paths.REPO_ROOT, "nerv-assets")
     policies = os.path.join(paths.REPO_ROOT, "policies")
     if not assets:
-        return "worlds/ submodule is not initialised"
+        return "nerv-assets/ submodule is not initialised"
     if not policies:
         return "policies/ submodule is not initialised"
     if not os.path.isfile(os.path.join(assets, "build", "apt-g1.xml")):

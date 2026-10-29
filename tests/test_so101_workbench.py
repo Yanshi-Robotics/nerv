@@ -13,7 +13,7 @@ import pytest
 
 mujoco = pytest.importorskip("mujoco")
 ROOT = Path(__file__).resolve().parents[1]
-WORLD = ROOT / "worlds"
+WORLD = ROOT / "nerv-assets"
 # Load the asset package through its location; the NERV host does not import scene facts.
 spec = importlib.util.spec_from_file_location(
     "nerv_workbench_assets",

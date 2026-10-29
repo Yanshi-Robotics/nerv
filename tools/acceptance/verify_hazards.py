@@ -354,8 +354,8 @@ def execute(args):
                 ROOT / "src/nerv/body/families/humanoid.py",
                 ROOT / "src/nerv/world/mujoco_node.py",
                 ROOT / "bodies/humanoid-unitree-g1/body.yaml",
-                ROOT / "worlds/build/house-g1.xml",
-                ROOT / "worlds/build/apt-g1.xml",
+                ROOT / "nerv-assets/build/house-g1.xml",
+                ROOT / "nerv-assets/build/apt-g1.xml",
                 ROOT / "policies/g1-29dof-turn/policy.onnx",
                 ROOT / "policies/g1-29dof-turn/contract.json",
             ]
@@ -500,7 +500,7 @@ def main():
     os.environ["MUJOCO_GL"] = "disable"
     os.environ["CUDA_VISIBLE_DEVICES"] = ""
     os.environ["NERV_HOME"] = str(output / "nerv-home")
-    sys.path[:0] = [str(ROOT / "src"), str(ROOT / "worlds")]
+    sys.path[:0] = [str(ROOT / "src"), str(ROOT / "nerv-assets")]
     records = []
     try:
         for repetition in range(1, args.repeats + 1):

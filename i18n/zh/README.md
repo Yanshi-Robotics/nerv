@@ -172,7 +172,10 @@ nerv rollback
 <div align="center"><img src="../../assets/readme/images/world-explore/apt-cutaway.png" alt="操作员查看的公寓布局" width="960"></div>
 <div align="center"><img src="../../assets/readme/images/world-explore/house-west_pool-night.png" alt="仿真住宅泳池露台夜景" width="960"></div>
 
-[世界库工具](../../worlds/docs/explore/README.md)介绍场景测试与浏览器视图。G1 的平地步态不提供抓取、家具操作、自主坐下或上下楼梯能力；场景检查不能证明自主任务成功。
+[世界库工具](../../nerv-assets/docs/explore/README.md)介绍场景测试与浏览器视图。G1 的平地步态不提供抓取、家具操作、自主坐下或上下楼梯能力；场景检查不能证明自主任务成功。
+
+开发时，资产子模块位于 `nerv-assets/`（原 `worlds/`）。应用源码保留在 Git 工作目录；已安装的资产、策略和环境由 `NERV_HOME` 管理。目录分工与旧检出迁移方法见[开发指南](../../CONTRIBUTING.md#source-directories-and-installed-data)。
+
 
 </details>
 

@@ -1,5 +1,5 @@
-[submodule "worlds"]
-	path = worlds
+[submodule "nerv-assets"]
+	path = nerv-assets
 	url = https://github.com/Yanshi-Robotics/nerv-assets.git
 [submodule "policies"]
 	path = policies

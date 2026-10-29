@@ -1,6 +1,6 @@
 """NERV/World, simulation endpoint: a MuJoCo arena with motor firmware, cameras and a rangefinder.
 
-One process = one arena (an MJCF scene from the nerv-world library) hosting one body.
+One process = one arena (an MJCF scene from the nerv-assets library) hosting one body.
   * Physics runs on a background thread at ``physics.dt`` (world.yaml), throttled to
     ``physics.realtime_factor`` of wall time. Everything measured is SIM time.
   * The motor bus (ZMQ REP, nerve/wire.py JSON) is what the body node talks to at policy rate:
@@ -95,7 +95,7 @@ def _load_yaml(path: str) -> dict:
         return yaml.safe_load(f) or {}
 
 
-# ---- the scene library (nerv-world) ---------------------------------------------------------------
+# ---- the scene library (nerv-assets) ---------------------------------------------------------------
 class SceneLayout:
     """A scene's layout module from the assets library: spawn points, rooms, ceiling group.
 
@@ -108,7 +108,7 @@ class SceneLayout:
         self.assets_root = assets_root
         manifest = os.path.join(assets_root, "scenes", "manifest.py")
         if not os.path.isfile(manifest):
-            raise FileNotFoundError(f"no scene manifest at {manifest}; is the worlds/ submodule initialised "
+            raise FileNotFoundError(f"no scene manifest at {manifest}; is the nerv-assets/ submodule initialised "
                                     f"(git submodule update --init --recursive)?")
         spec = importlib.util.spec_from_file_location("nerv_assets_scenes_manifest", manifest)
         mod = importlib.util.module_from_spec(spec)
@@ -574,7 +574,7 @@ class WorldSim:
     def _build_ray_mask(self) -> None:
         """Rays must see the scenery and not the body: mj_ray filters by geom *group* (6 bits) plus
         one excluded body. The body's subtree and the scenery therefore need disjoint groups
-        (nerv-world convention: robot 2/3, house 0/1/4/5). If they clash we fall back to
+        (nerv-assets convention: robot 2/3, house 0/1/4/5). If they clash we fall back to
         excluding only the base body and say so — a fixed-base arm's rays are not load-bearing."""
         m = self.model
         is_self = [m.body_rootid[m.geom_bodyid[g]] == self.base_body for g in range(m.ngeom)]
@@ -1047,7 +1047,7 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="nerv world node",
                                  description="python -m nerv.world --world W --body B --http-port P --bus-port Q "
                                              "| --arena scene.xml --http-port P --bus-port Q")
-    ap.add_argument("--world", default="", help="world name from the registry (worlds/<name>/world.yaml)")
+    ap.add_argument("--world", default="", help="world name from the registry (nerv-assets/<name>/world.yaml)")
     ap.add_argument("--body", default="", help="body name from the registry; picks the arena via supports")
     ap.add_argument("--instance-config", default="")
     ap.add_argument("--arena", default="", help="registry-free: path to an MJCF scene")

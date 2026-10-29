@@ -24,10 +24,22 @@ MEMORY_DIR = os.path.join(DATA_ROOT, "memory")
 SESSIONS_DIR = os.path.join(MEMORY_DIR, "sessions")
 ENV_FILE = os.path.join(DATA_ROOT, ".env")
 
-# The registry directories ship with the repository (bodies/, worlds/, tools/). Extra roots
-# can be added with NERV_REGISTRY_PATHS (os.pathsep-separated) for out-of-tree nodes.
+# The source checkout uses nerv-assets/; installed and external registries use worlds/.
+# Add external roots with NERV_REGISTRY_PATHS (os.pathsep-separated).
 REGISTRY_ROOT = REPO_ROOT if _IN_CHECKOUT else os.path.join(_PKG, "registry")
 WEB_ROOT = os.path.join(REPO_ROOT, "frontend", "out") if _IN_CHECKOUT else os.path.join(_PKG, "web")
 BODIES_DIR = os.path.join(REGISTRY_ROOT, "bodies")
-WORLDS_DIR = os.path.join(REGISTRY_ROOT, "worlds")
+
+
+def world_registry_dir(root: str | os.PathLike[str]) -> str:
+    """Map only the application checkout to its asset source submodule.
+
+    Installed modules and user registries retain their versioned worlds/ layout.
+    Do not fall back to an obsolete checkout when the submodule is missing.
+    """
+    source = _IN_CHECKOUT and os.path.normcase(os.path.abspath(root)) == os.path.normcase(REPO_ROOT)
+    return os.path.join(root, "nerv-assets" if source else "worlds")
+
+
+WORLDS_DIR = world_registry_dir(REGISTRY_ROOT)
 TOOLS_DIR = os.path.join(REGISTRY_ROOT, "tools")

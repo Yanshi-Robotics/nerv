@@ -2,6 +2,40 @@ from nerv.platform.registry import Registry
 from nerv.platform.registry.compat import check, matrix
 
 
+def test_asset_checkout_and_installed_registries_use_distinct_paths(tmp_path, monkeypatch):
+    import json
+    from pathlib import Path
+    from nerv import paths
+
+    monkeypatch.setattr(paths, 'NERV_HOME', str(tmp_path / 'home'))
+    registry = Registry(roots=[paths.REPO_ROOT])
+    assert {'apt', 'house', 'so101-pick-place', 'so101-sort-snacks', 'so101-hanoi-five'} <= set(registry.worlds)
+    for world in registry.worlds.values():
+        assert Path(world.dir).is_relative_to(Path(paths.REPO_ROOT) / 'nerv-assets')
+        assert Path(world.assets_root) == Path(paths.REPO_ROOT) / 'nerv-assets'
+        assert (Path(world.assets_root) / 'scenes/manifest.py').is_file()
+
+    external = tmp_path / 'module'
+    descriptor = external / 'worlds/example/world.yaml'
+    descriptor.parent.mkdir(parents=True)
+    descriptor.write_text(json.dumps({'kind': 'sim', 'engine': 'mujoco'}))
+    assert set(Registry(roots=[external]).worlds) == {'example'}
+    monkeypatch.setattr(paths, '_IN_CHECKOUT', False)
+    monkeypatch.setattr(paths, 'REPO_ROOT', str(external))
+    assert set(Registry(roots=[external]).worlds) == {'example'}
+
+
+def test_missing_asset_checkout_does_not_load_stale_worlds(tmp_path, monkeypatch):
+    from nerv import paths
+    monkeypatch.setattr(paths, '_IN_CHECKOUT', True)
+    monkeypatch.setattr(paths, 'REPO_ROOT', str(tmp_path))
+    monkeypatch.setattr(paths, 'NERV_HOME', str(tmp_path / 'home'))
+    stale = tmp_path / 'worlds/obsolete/world.yaml'
+    stale.parent.mkdir(parents=True)
+    stale.write_text('kind: sim\nengine: mujoco\n')
+    assert Registry(roots=[tmp_path]).worlds == {}
+
+
 def test_repo_registry_loads():
     reg = Registry()
     assert {"arm-lerobot-so101", "humanoid-unitree-g1"} <= set(reg.bodies)

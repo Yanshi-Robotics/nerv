@@ -1,4 +1,4 @@
-"""Find and load the registry: bodies/, worlds/, tools/ (plus NERV_REGISTRY_PATHS roots)."""
+"""Load body, world and tool registries from source, installed and extra roots."""
 from __future__ import annotations
 
 import os
@@ -73,7 +73,7 @@ class Registry:
         self.tools: dict[str, ToolNodeSpec] = {}
         for root in (roots or _roots()):
             self._scan(os.path.join(root, "bodies"), "body.yaml", BodySpec, self.bodies)
-            self._scan(os.path.join(root, "worlds"), "world.yaml", WorldSpec, self.worlds)
+            self._scan(paths.world_registry_dir(root), "world.yaml", WorldSpec, self.worlds)
             self._scan(os.path.join(root, "tools"), "tool.yaml", ToolNodeSpec, self.tools)
         from ...motion_policies import selected_binding
         for spec in self.bodies.values():

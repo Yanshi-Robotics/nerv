@@ -33,7 +33,7 @@ def prepare(output):
     os.environ["MUJOCO_GL"] = "disable"
     os.environ["CUDA_VISIBLE_DEVICES"] = ""
     os.environ["NERV_HOME"] = str(output / "nerv-home")
-    sys.path[:0] = [str(ROOT / "src"), str(ROOT / "worlds")]
+    sys.path[:0] = [str(ROOT / "src"), str(ROOT / "nerv-assets")]
     return output
 
 

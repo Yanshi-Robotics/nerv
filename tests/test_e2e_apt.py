@@ -15,7 +15,7 @@ from nerv.platform.session import SessionStore
 
 from nerv import paths
 
-NEEDS = (os.path.join(paths.REPO_ROOT, "worlds", "build", "apt-g1.xml"),
+NEEDS = (os.path.join(paths.REPO_ROOT, "nerv-assets", "build", "apt-g1.xml"),
          os.path.join(paths.REPO_ROOT, "policies", "g1-29dof-turn", "policy.onnx"))
 
 

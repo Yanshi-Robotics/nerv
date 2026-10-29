@@ -11,6 +11,37 @@ device details in adapters and policy details in policy backends. Core services 
 use declared capabilities. A new robot or policy needs its own compatibility evidence;
 an interface fixture does not establish that a real model or robot works.
 
+## Source directories and installed data
+
+| Location | Purpose |
+|---|---|
+| `src/`, `frontend/`, `packages/` | Application and Runtime source |
+| `nerv-assets/` | Asset submodule: robot models, residential scenes, SO-101 workbenches, generators and scene descriptors |
+| `policies/` | Legacy policy history and migration input; installed policies use managed records |
+| `assets/` | Application and documentation media |
+| `NERV_HOME` (default `~/.nerv`) | Managed environments, build workspaces, downloaded assets, policies and channel data |
+
+The asset repository and its checkout directory are both named `nerv-assets`.
+The former checkout name was `worlds/`. The runtime concept of a World, `world.yaml`,
+API world identifiers and installed registry directories named `worlds/` retain their
+existing meaning. Renaming the source directory does not migrate installed user data.
+
+For a fresh development checkout:
+
+```bash
+git clone --recurse-submodules https://github.com/Yanshi-Robotics/nerv.git
+cd nerv
+git submodule sync --recursive
+git submodule update --init --recursive
+```
+
+Before updating an existing checkout across this rename, preserve and commit any asset
+submodule changes. If Git leaves an old `worlds/` directory behind, inspect its local
+changes and untracked assets before removing anything. Do not copy it over the new
+submodule or delete it to silence a warning. Use `git submodule status` and `.gitmodules`
+to verify the target path and pinned revision. Asset changes are committed in the asset
+repository first; the application then records that revision in its submodule pointer.
+
 ## Build outside the checkout
 
 The 0.8.5 development workflow keeps Python environments, Node.js, frontend dependencies,

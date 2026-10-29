@@ -1,4 +1,4 @@
 {
   "schema": 1,
-  "fixtures": [{"asset": "apt-g1", "destination": "worlds"}]
+  "fixtures": [{"asset": "apt-g1", "destination": "nerv-assets"}]
 }

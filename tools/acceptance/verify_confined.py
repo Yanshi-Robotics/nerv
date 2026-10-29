@@ -79,7 +79,7 @@ def execute(args):
                 root / "bodies/humanoid-unitree-g1/body.yaml",
                 root / "policies/g1-29dof-turn/policy.onnx",
                 root / "policies/g1-29dof-turn/contract.json",
-                root / "worlds/build/apt-g1.xml",
+                root / "nerv-assets/build/apt-g1.xml",
             )
         },
         world_source_hash=source_hash(source_files("apt")),
@@ -507,7 +507,7 @@ def main():
     os.environ["MUJOCO_GL"] = "disable"
     os.environ["CUDA_VISIBLE_DEVICES"] = ""
     os.environ["NERV_HOME"] = str(args.output / "nerv-home")
-    sys.path[:0] = [str(args.repository_root / "src"), str(args.repository_root / "worlds")]
+    sys.path[:0] = [str(args.repository_root / "src"), str(args.repository_root / "nerv-assets")]
     return 0 if execute(args) else 1
 
 

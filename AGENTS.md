@@ -17,7 +17,7 @@ repository, then where each fact lives.
 | Body node | `src/nerv/body/` | Families may (`families/`): verbs, closed loops, sensor summaries. Buses are endpoints. |
 | World node | `src/nerv/world/` | Physics, motor firmware, cameras, rays. Never a brain concern. |
 | Tool node | `src/nerv/tool/` | Whatever the tool computes. |
-| Registry | `bodies/ tools/` in this repo; `worlds/` is the nerv-assets submodule | Data: one YAML + guidance.md per entry. |
+| Registry | `bodies/ tools/` in this repo; `nerv-assets/` is the nerv-assets submodule | Data: one YAML + guidance.md per entry. |
 
 Test for placement: *would this code still make sense against a different body, world or brain?*
 If not, it belongs in a family, a node or a registry entry — never in the platform or the brain.
@@ -28,8 +28,8 @@ If not, it belongs in a family, a node or a registry entry — never in the plat
 |---|---|
 | What a body can do (verbs, kinds) | its family module + `bodies/<name>/body.yaml` |
 | Which policy drives a skill | `bodies/<name>/body.yaml` `skills.<verb>.policy` → managed policy records; legacy `policies/` remains migration input only |
-| Which bodies a world can host | `worlds/<name>/world.yaml` `supports` — the descriptor lives in the `worlds/` submodule (`nerv-assets`) next to the scenes |
-| Where scenes live | `worlds/` (submodule). It ships no policies. |
+| Which bodies a world can host | `nerv-assets/<name>/world.yaml` `supports` — the descriptor lives in the `nerv-assets/` submodule (`nerv-assets`) next to the scenes |
+| Where scenes live | `nerv-assets/` (submodule). It ships no policies. |
 | Every tunable of the platform | `src/nerv/config.py` (env `NERV_*`, `.env`) |
 | Tunables of a node | its YAML entry and its command-line args; nodes never import `config.py` |
 | Which nodes the operator approved | `~/.nerv/trust.json` (outside the repo) |

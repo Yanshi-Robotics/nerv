@@ -17,7 +17,7 @@ import time
 
 ROOT = Path(__file__).resolve().parents[2]
 sys.path.insert(0, str(ROOT / "src"))
-sys.path.insert(0, str(ROOT / "worlds"))
+sys.path.insert(0, str(ROOT / "nerv-assets"))
 
 GOAL_TOLERANCE_M = 0.18  # Remain near the authored centreline before turning near furnishings.
 MIN_COMMAND_M = 0.05  # Smallest useful correction with the released walking gait.
@@ -204,8 +204,8 @@ def main():
         ROOT / "src/nerv/world/clearance.py",
         ROOT / "src/nerv/world/mujoco_node.py",
         ROOT / "bodies/humanoid-unitree-g1/body.yaml",
-        ROOT / "worlds/scenes/paths.py",
-        ROOT / f"worlds/build/{args.scene}-g1.xml",
+        ROOT / "nerv-assets/scenes/paths.py",
+        ROOT / f"nerv-assets/build/{args.scene}-g1.xml",
     ]
     report["source_sha256"] = {
         str(p.relative_to(ROOT)): hashlib.sha256(p.read_bytes()).hexdigest() for p in source_paths

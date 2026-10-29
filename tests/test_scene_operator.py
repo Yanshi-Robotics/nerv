@@ -12,7 +12,7 @@ from nerv.world.scene_operator import SceneOperator
 
 @pytest.fixture
 def operator():
-    path = Path(__file__).resolve().parents[1] / "worlds/scenes/interaction.py"
+    path = Path(__file__).resolve().parents[1] / "nerv-assets/scenes/interaction.py"
     spec = importlib.util.spec_from_file_location("scene_interaction_for_test", path)
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)

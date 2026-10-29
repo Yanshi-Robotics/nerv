@@ -3,6 +3,13 @@
 Versions are managed from 0.2.0 on: every release gets an entry here and a `v<version>` tag.
 The 0.1.x entries below are the pre-release trail.
 
+## [Unreleased]
+
+- Rename the asset source submodule checkout from `worlds/` to `nerv-assets/` and update
+  developer documentation, generators, build fixtures and acceptance scripts together.
+- Keep installed `worlds/` registries and public World identifiers compatible; this
+  development-directory migration does not require reinstalling user assets.
+
 ## [0.8.5] — 2026-10-28
 
 - Manage stable and preview environments, tools, downloads and builds under NERV_HOME,

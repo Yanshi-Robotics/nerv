@@ -172,7 +172,10 @@ These preserved screenshots show earlier navigation, observation and operator vi
 <div align="center"><img src="assets/readme/images/world-explore/apt-cutaway.png" alt="Apartment layout for operators" width="960"></div>
 <div align="center"><img src="assets/readme/images/world-explore/house-west_pool-night.png" alt="Simulated house pool terrace at night" width="960"></div>
 
-The [world-library tools](worlds/docs/explore/README.md) cover scene testing and browser views. G1's flat-ground gait does not supply grasping, furniture manipulation, autonomous sitting or stair traversal. Scene checks do not certify autonomous task success.
+The [world-library tools](nerv-assets/docs/explore/README.md) cover scene testing and browser views. G1's flat-ground gait does not supply grasping, furniture manipulation, autonomous sitting or stair traversal. Scene checks do not certify autonomous task success.
+
+For development, the asset submodule is checked out at `nerv-assets/` (formerly `worlds/`). The application source stays in the Git checkout; installed assets, policies and environments live under `NERV_HOME`. See the [source directory guide](CONTRIBUTING.md#source-directories-and-installed-data).
+
 
 </details>
 
