@@ -174,7 +174,7 @@ These preserved screenshots show earlier navigation, observation and operator vi
 
 The [world-library tools](nerv-assets/docs/explore/README.md) cover scene testing and browser views. G1's flat-ground gait does not supply grasping, furniture manipulation, autonomous sitting or stair traversal. Scene checks do not certify autonomous task success.
 
-For development, the asset submodule is checked out at `nerv-assets/` (formerly `worlds/`). The application source stays in the Git checkout; installed assets, policies and environments live under `NERV_HOME`. See the [source directory guide](CONTRIBUTING.md#source-directories-and-installed-data).
+For development, the asset submodule is checked out at `nerv-assets/` (formerly `worlds/`). The application source stays in the Git checkout; installed assets, policies and environments live under `NERV_HOME`. See the [source directory guide](CONTRIBUTING.md#source-directories-and-installed-data). Old `worlds/` registry layouts require reinstallation; automatic migration is not provided.
 
 
 </details>

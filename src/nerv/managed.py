@@ -217,7 +217,7 @@ def environments(root=None):
         if key in visited:
             return
         visited.add(key)
-        for category, filename in (('bodies', 'body.yaml'), ('worlds', 'world.yaml'), ('tools', 'tool.yaml')):
+        for category, filename in (('bodies', 'body.yaml'), ('nerv-assets', 'world.yaml'), ('tools', 'tool.yaml')):
             for config in (Path(directory) / category).glob('*/' + filename):
                 collect(yaml.safe_load(config.read_text()) or {}, reason)
 

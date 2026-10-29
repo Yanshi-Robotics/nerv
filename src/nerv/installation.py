@@ -304,7 +304,7 @@ def install(product="host", *, manifest=None, cancelled=lambda: False, progress=
                         raise ValueError('Incomplete module resource directory; inspect it before repair')
                     os.replace(extracted, module_root)
             if not marker.is_file():
-                for path in module_root.glob("worlds/*/world.yaml"):
+                for path in module_root.glob("nerv-assets/*/world.yaml"):
                     data = json.loads(path.read_text(encoding="utf-8"))
                     data.update(python=python, assets_root=str(module_root / "assets"))
                     write_json(path, data)

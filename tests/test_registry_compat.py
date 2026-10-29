@@ -2,7 +2,7 @@ from nerv.platform.registry import Registry
 from nerv.platform.registry.compat import check, matrix
 
 
-def test_asset_checkout_and_installed_registries_use_distinct_paths(tmp_path, monkeypatch):
+def test_source_installed_and_external_registries_use_one_asset_path(tmp_path, monkeypatch):
     import json
     from pathlib import Path
     from nerv import paths
@@ -16,7 +16,7 @@ def test_asset_checkout_and_installed_registries_use_distinct_paths(tmp_path, mo
         assert (Path(world.assets_root) / 'scenes/manifest.py').is_file()
 
     external = tmp_path / 'module'
-    descriptor = external / 'worlds/example/world.yaml'
+    descriptor = external / 'nerv-assets/example/world.yaml'
     descriptor.parent.mkdir(parents=True)
     descriptor.write_text(json.dumps({'kind': 'sim', 'engine': 'mujoco'}))
     assert set(Registry(roots=[external]).worlds) == {'example'}
@@ -25,7 +25,8 @@ def test_asset_checkout_and_installed_registries_use_distinct_paths(tmp_path, mo
     assert set(Registry(roots=[external]).worlds) == {'example'}
 
 
-def test_missing_asset_checkout_does_not_load_stale_worlds(tmp_path, monkeypatch):
+def test_legacy_asset_registry_is_rejected(tmp_path, monkeypatch):
+    import pytest
     from nerv import paths
     monkeypatch.setattr(paths, '_IN_CHECKOUT', True)
     monkeypatch.setattr(paths, 'REPO_ROOT', str(tmp_path))
@@ -33,7 +34,8 @@ def test_missing_asset_checkout_does_not_load_stale_worlds(tmp_path, monkeypatch
     stale = tmp_path / 'worlds/obsolete/world.yaml'
     stale.parent.mkdir(parents=True)
     stale.write_text('kind: sim\nengine: mujoco\n')
-    assert Registry(roots=[tmp_path]).worlds == {}
+    with pytest.raises(ValueError, match="Legacy worlds/"):
+        Registry(roots=[tmp_path])
 
 
 def test_repo_registry_loads():

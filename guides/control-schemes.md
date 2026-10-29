@@ -24,7 +24,7 @@ An execution record, a model's completion judgment and independently verified ta
 
 ## Official optional modules
 
-`release.json` schema 1 lists product IDs, packages, extras, optional resources, dependency locks and asset SHA-256 hashes. Module installation uses a new environment, validates dependencies and runs its verification command before adding a runtime record. Installed simulation roots contain `bodies/`, `worlds/` and `assets/`; paths are resolved inside that environment. A real-device profile merges with the simulation binding instead of replacing it.
+`release.json` schema 1 lists product IDs, packages, extras, optional resources, dependency locks and asset SHA-256 hashes. Module installation uses a new environment, validates dependencies and runs its verification command before adding a runtime record. Scene-bearing module roots use `bodies/`, `nerv-assets/` and `assets/`; runtime-only modules declare separately installed assets. Old `worlds/` registry directories are rejected and must be reinstalled. A real-device profile merges with the simulation binding instead of replacing it.
 
 `GET /api/modules`, `POST /api/modules/MODULE/install` and `POST /api/modules/JOB/cancel` are operator endpoints. Jobs persist under the user home and survive browser refresh. They are not exposed as Agent shell tools. This release accepts only official module IDs and the official release origin. Arbitrary simulator ZIP or repository imports are intentionally not offered.
 

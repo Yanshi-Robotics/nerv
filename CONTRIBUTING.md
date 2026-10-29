@@ -22,9 +22,11 @@ an interface fixture does not establish that a real model or robot works.
 | `NERV_HOME` (default `~/.nerv`) | Managed environments, build workspaces, downloaded assets, policies and channel data |
 
 The asset repository and its checkout directory are both named `nerv-assets`.
-The former checkout name was `worlds/`. The runtime concept of a World, `world.yaml`,
-API world identifiers and installed registry directories named `worlds/` retain their
-existing meaning. Renaming the source directory does not migrate installed user data.
+Source, installed and external asset registries all use `nerv-assets/`. The former
+`worlds/` directory layout is unsupported: reinstall old scene modules using the new
+layout. There is no automatic conversion or fallback. Preserve personal asset edits
+and user data before reinstalling. World remains the runtime concept, with `world.yaml`
+descriptors and world API identifiers.
 
 For a fresh development checkout:
 

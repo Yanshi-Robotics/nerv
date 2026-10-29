@@ -306,7 +306,7 @@ def test_archive_update_changes_resources_without_reinstalling_python(tmp_path, 
     records = []
     for revision in ('first', 'second'):
         with zipfile.ZipFile(archive, 'w') as z:
-            z.writestr('worlds/test/world.yaml', json.dumps({'name': revision}))
+            z.writestr('nerv-assets/test/world.yaml', json.dumps({'name': revision}))
             z.writestr('assets/scene.xml', '<mujoco/>')
         value['version'] = revision
         value['files'][archive.name] = {'sha256': hashlib.sha256(archive.read_bytes()).hexdigest()}
@@ -316,7 +316,7 @@ def test_archive_update_changes_resources_without_reinstalling_python(tmp_path, 
     assert records[0]['registry_root'] != records[1]['registry_root']
     assert sum(c[1] == 'venv' for c in commands) == 1
     assert all(Path(r['registry_root']).is_relative_to(root / 'resources') for r in records)
-    old = Path(records[0]['registry_root']) / 'worlds/test/world.yaml'
+    old = Path(records[0]['registry_root']) / 'nerv-assets/test/world.yaml'
     assert json.loads(old.read_text())['name'] == 'first'
 
 

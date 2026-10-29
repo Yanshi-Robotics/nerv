@@ -7,8 +7,9 @@ The 0.1.x entries below are the pre-release trail.
 
 - Rename the asset source submodule checkout from `worlds/` to `nerv-assets/` and update
   developer documentation, generators, build fixtures and acceptance scripts together.
-- Keep installed `worlds/` registries and public World identifiers compatible; this
-  development-directory migration does not require reinstalling user assets.
+- Use `nerv-assets/` for source, installed and external registries. Reject old `worlds/`
+  layouts without fallback or automatic conversion; old scene modules require reinstallation.
+  World API identifiers retain their domain meaning.
 
 ## [0.8.5] — 2026-10-28
 

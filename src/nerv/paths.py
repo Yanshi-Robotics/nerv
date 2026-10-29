@@ -24,7 +24,7 @@ MEMORY_DIR = os.path.join(DATA_ROOT, "memory")
 SESSIONS_DIR = os.path.join(MEMORY_DIR, "sessions")
 ENV_FILE = os.path.join(DATA_ROOT, ".env")
 
-# The source checkout uses nerv-assets/; installed and external registries use worlds/.
+# All source, installed and external asset registries use nerv-assets/.
 # Add external roots with NERV_REGISTRY_PATHS (os.pathsep-separated).
 REGISTRY_ROOT = REPO_ROOT if _IN_CHECKOUT else os.path.join(_PKG, "registry")
 WEB_ROOT = os.path.join(REPO_ROOT, "frontend", "out") if _IN_CHECKOUT else os.path.join(_PKG, "web")
@@ -32,13 +32,10 @@ BODIES_DIR = os.path.join(REGISTRY_ROOT, "bodies")
 
 
 def world_registry_dir(root: str | os.PathLike[str]) -> str:
-    """Map only the application checkout to its asset source submodule.
-
-    Installed modules and user registries retain their versioned worlds/ layout.
-    Do not fall back to an obsolete checkout when the submodule is missing.
-    """
-    source = _IN_CHECKOUT and os.path.normcase(os.path.abspath(root)) == os.path.normcase(REPO_ROOT)
-    return os.path.join(root, "nerv-assets" if source else "worlds")
+    """Use the current asset layout and reject pre-release world directories."""
+    if os.path.isdir(os.path.join(root, "worlds")):
+        raise ValueError("Legacy worlds/ registries are unsupported; reinstall assets using nerv-assets/.")
+    return os.path.join(root, "nerv-assets")
 
 
 WORLDS_DIR = world_registry_dir(REGISTRY_ROOT)

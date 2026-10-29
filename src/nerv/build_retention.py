@@ -43,7 +43,7 @@ def plan(root):
                 references.extend((path.parent.resolve() / path.name, path.resolve()))
     def registry(home):
         import yaml
-        for category, filename in (('bodies', 'body.yaml'), ('worlds', 'world.yaml'), ('tools', 'tool.yaml')):
+        for category, filename in (('bodies', 'body.yaml'), ('nerv-assets', 'world.yaml'), ('tools', 'tool.yaml')):
             for file in (Path(home) / category).glob('*/' + filename):
                 collect(yaml.safe_load(file.read_text()))
     def pointers(home, recovery=False):

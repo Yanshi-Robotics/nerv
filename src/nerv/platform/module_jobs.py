@@ -111,7 +111,7 @@ def _needs_repair(key, installed):
                         or any(not (root / 'bodies' / name / 'body.yaml').is_file()
                                for name in module['bodies'])):
                     return True
-            elif not (root / 'worlds').is_dir():
+            elif not (root / 'nerv-assets').is_dir():
                 return True
         return False
     except (OSError, ValueError, KeyError):
