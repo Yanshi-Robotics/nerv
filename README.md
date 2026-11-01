@@ -59,6 +59,10 @@ Inside a project, the main camera or simulated scene fills the workbench. The sl
 
 Activity bubbles show attributed Agent statements, task state and execution feedback. They do not import an external conversation or turn an Agent statement into a verified robot result. Full history remains available from Activity. The console opens over the world; opening settings does not end its Run. Stop task and emergency stop remain separate operator controls.
 
+<div align="center"><img src="assets/readme/project-world-090-en.jpg" alt="SO-101 simulation workbench with overview camera, top and wrist monitors, stop controls and an attributed MCP observation statement" width="1100"></div>
+
+Installed candidate: an unarmed SO-101 simulation Run with an observation-only MCP SDK client. The client received two camera images and published the displayed statement. This screenshot shows the workbench and event path; no model reasoning, robot motion or physical hardware test was involved.
+
 ## Projects, runs and task history
 
 A Project is the saved configuration: robot, environment, execution structure, layout and revisions. A Run is one instance of that world or device workspace. A Task is a goal with frozen configuration and authority. An Execution is one policy or bounded action within that task.

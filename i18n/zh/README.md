@@ -59,6 +59,10 @@ irm https://github.com/Yanshi-Robotics/nerv/releases/latest/download/install.ps1
 
 活动气泡显示带来源的 Agent 说明、任务状态和执行反馈，不导入完整外部聊天，也不把 Agent 的文字当作已确认的设备结果。“活动”保留完整记录。控制台以覆盖层打开，进入设置不会结束当前 Run；停止任务和紧急停止仍是独立操作。
 
+<div align="center"><img src="../../assets/readme/project-world-090-zh.jpg" alt="SO-101 仿真工作台，包含总览画面、顶部与腕部监视框、停止控件及带来源的 MCP 观测说明" width="1100"></div>
+
+已安装候选版中的 SO-101 仿真 Run，未授权运动。仅有观测权限的 MCP SDK 客户端收到两幅相机图像后，发布了画面中的说明。截图展示工作台和事件传递，不包含模型推理、机器人动作或真实硬件测试。
+
 ## 项目、运行与任务历史
 
 Project 保存机器人、环境、执行结构、布局和修订。Run 表示一次世界或设备工作区实例。Task 是锁定配置与授权的目标任务，Execution 是任务中的一次策略或有限动作执行。
