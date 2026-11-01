@@ -59,7 +59,7 @@ Use `events` with a bounded `wait_s` or poll `task_status` to inspect progress. 
 
 | Client | Current statement |
 |---|---|
-| Codex | Intended stdio client; version-specific tool/image/task/stop acceptance pending |
+| Codex 0.162.1 | Actual app-server initialized the bridge and discovered 14 tools; model conversation, image use and continuous supervision remain unverified |
 | DeepSeek Harness | Intended stdio client; version-specific tool/image/task/stop acceptance pending |
 | Claude Code | Intended stdio client; version-specific tool/image/task/stop acceptance pending |
 

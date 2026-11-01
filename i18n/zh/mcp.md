@@ -59,7 +59,7 @@ nerv mcp --channel preview --client CLIENT_ID
 
 | 客户端 | 当前状态 |
 |---|---|
-| Codex | 计划接入 stdio；具体版本的工具、图像、任务与停止验收待完成 |
+| Codex 0.162.1 | 已通过实际 app-server 初始化桥接并发现 14 个工具；模型对话、图像使用和持续监督尚未验证 |
 | DeepSeek Harness | 计划接入 stdio；具体版本的工具、图像、任务与停止验收待完成 |
 | Claude Code | 计划接入 stdio；具体版本的工具、图像、任务与停止验收待完成 |
 

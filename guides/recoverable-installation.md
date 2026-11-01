@@ -2,7 +2,7 @@
 
 [中文](../i18n/zh/recoverable-installation.md) · [Installation guide](github-install.md)
 
-This feature belongs to the unreleased 0.8.3 candidate. Public installation commands continue to install the published version until a release is approved.
+This guide describes recoverable installation in the 0.9.0 local candidate. Public installation commands install the latest published release, not unpublished candidate changes.
 
 ## Choose an environment
 

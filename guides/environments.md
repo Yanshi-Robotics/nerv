@@ -14,7 +14,7 @@ saved absolute Python path; Runtime records select their own interpreters.
 
 | Environment | Purpose |
 |---|---|
-| Host | Web interface, sessions, model connections and task management |
+| Host | Project console, MCP connections, task management and optional robot decision services |
 | SO-101 Runtime | LeRobot, Feetech and ACT inference, installed on request |
 | Simulation | Simulation dependencies and scene resources, installed on request |
 
@@ -36,7 +36,7 @@ instance.
 | `python/`, `bin/`, `bootstrap/` | Managed Python, installer tools and entry points |
 | `.cache/downloads/`, `.cache/releases/`, `.cache/uv/` | Download records, verified artifacts, release assets and uv cache |
 | `active.json`, `previous.json`, `runtimes/` | Active host, rollback pointer and component receipts |
-| `memory/`, `devices/`, `schemes/`, `artifacts/` | Session history, device settings, control schemes and policy references |
+| `projects/`, `memory/`, `devices/`, `schemes/`, `artifacts/` | Projects, run/event history, device settings, control schemes and policy references |
 | `credentials.json`, `vlm.json` | Private credentials and model settings |
 | `backups/` | Update recovery snapshots |
 | `toolchains/`, `builds/` | Pinned developer tools and source snapshots used to build candidates |
@@ -61,6 +61,8 @@ venv directories manually: their interpreter links and entry points can contain 
 paths. To change a root, rebuild environments at the destination and migrate user data
 with a verified backup and updated Runtime references.
 
+Rollback restores the previous compatible configuration and history together. It archives newer Project data, event history and migration journals in the reported recovery directory. Keep that directory to return to the newer version; credentials remain in place.
+
 ## What isolation covers
 
 Python environments separate installed Python packages. They are not Docker containers,
@@ -76,16 +78,15 @@ own compatibility checks.
 
 ## Local candidates
 
-NERV 0.8.5 uses `~/.nerv/profiles/preview` for preview data.
-Credentials, sessions, device settings and editable assets belong to that channel. Verified
+NERV uses `~/.nerv/profiles/preview` for preview data.
+Credentials, Projects, run history, device settings and editable assets belong to that channel. Verified
 installation files and compatible environments use the shared storage root `~/.nerv`.
 Copying model settings once does not synchronize later changes or copy conversation history.
 An explicit `NERV_STORAGE_HOME` changes the shared storage root; it does not select the
 active channel or copy credentials.
 
-The new `nerv preview` command starts an installed preview on port 8100. An occupied port
-is an error, not permission to stop another process. These commands require the new host;
-older 0.8.1 launchers must be updated before using the preview workflow.
+The `nerv preview` command starts an installed preview on port 8100. An occupied port
+is an error, not permission to stop another process. These commands require a host that supports the preview workflow; update an older launcher first.
 
 ## Source, build tools and installed software
 

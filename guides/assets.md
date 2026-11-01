@@ -14,7 +14,7 @@ are immutable; create a personal copy before editing them.
 4. Choose **Check and save revision**. File validation must pass before a revision is saved.
 5. Choose **Check simulation loading** to load and step the scene in the installed
    simulation environment. Rendering quality and task success require separate checks.
-6. Select the saved scene in **New Session**. A running session continues to use its
+6. Select the saved scene when creating a **Project**. An active Run continues to use its
    original revision; saving changes does not replace its world.
 
 Export creates a ZIP of the selected saved revision, including its manifest and license
@@ -70,7 +70,7 @@ are addressed by their content fingerprint. Official updates do not merge or ove
 personal copies. Runtime loading, controller compatibility and task performance are
 separate checks; a load result does not certify a policy.
 
-Archive an asset to hide it from new sessions. Saved versions, active sessions and personal
+Archive an asset to hide it from new projects. Saved versions, active Runs and personal
 edits remain available for recovery; archiving does not reclaim disk space. Use the
 Archived assets section to restore it. The equivalent commands are `nerv assets remove
 --id <saved-id>` and `nerv assets restore --id <saved-id>`. Permanent asset deletion is not

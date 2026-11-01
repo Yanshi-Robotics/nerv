@@ -2,20 +2,22 @@
 
 [中文](../i18n/zh/standard-so101.md)
 
-NERV 0.8.0 is a development candidate. Its real-device adapter targets one standard SO-101 follower running LeRobot 0.6.1, with `top` and `wrist` OpenCV cameras at 640 × 480 and 30 FPS. Five arm joints use degrees; the native gripper uses 0–100. Real acceptance is pending. Model loading and software tests do not establish grasp reliability.
+NERV 0.9.0 is a development candidate. Its real-device adapter targets one standard SO-101 follower running LeRobot 0.6.1, with `top` and `wrist` OpenCV cameras at 640 × 480 and 30 FPS. Five arm joints use degrees; the native gripper uses 0–100. Real acceptance is pending. Model loading and software tests do not establish grasp reliability.
 
 Train and calibrate with LeRobot before using NERV. Keep the original checkpoint, calibration and course camera configuration. The leader arm is not needed for inference. Do not run LeRobot teleoperation and NERV against the same serial port or cameras simultaneously.
 
 ## Guided device setup
 
-Install the [candidate bundle](github-install.md), start `nerv`, and select **My robot → Register SO-101**. The guided steps replace manual interpreter paths and camera JSON editing:
+Install the [candidate bundle](github-install.md), start `nerv`, and select **Robots → Register SO-101**. The guided steps replace manual interpreter paths and camera JSON editing:
 
-1. Install **SO-101 / LeRobot** in its independent environment.
-2. Scan serial candidates and select the follower. Scanning does not open the motor bus.
-3. Select an existing calibration or browse to its directory and enter the robot ID. Choose CPU, CUDA or MPS only when supported by the installed backend.
-4. Preview the two camera devices, assign top/wrist and rotation, and confirm their physical roles. Linux offers persistent device paths; other systems currently require camera indices.
-5. Save configuration and return to My robot. Policy import is a separate next step in Settings → Policy library.
-6. Review the supervised-acceptance notice and connect. Connection can enable torque; motion remains disarmed.
+1. Check the computer, storage, installation tools and compatible CPU/NVIDIA plan.
+2. Install **SO-101 / LeRobot** in its independent environment.
+3. Scan serial candidates and select the follower. Discovery does not open the motor bus.
+4. Select the existing calibration and robot ID. Explicitly run the read-only prerequisite check; missing evidence or a mismatch blocks connection.
+5. Preview both cameras, assign top/wrist and rotation, and confirm their physical roles. Saved identities must resolve unambiguously before use.
+6. Save configuration and return to the robot. Connect explicitly after checking the work area; connection can enable torque, while motion remains disarmed. Import policies separately in **Policies** or **Settings → Policy library**.
+
+The inference device follows the verified CPU or NVIDIA environment. MPS is not a delivered installation plan.
 
 No hidden environment variable is required for the normal setup flow. Acceptance acknowledges an unverified integration; it does not change its support status. The preview process releases its cameras before the native LeRobot instance takes ownership. Preview and runtime never intentionally open the same camera together.
 
@@ -43,7 +45,7 @@ On Windows, use the corresponding `Scripts` executables. Quote paths containing 
 
 ## Connect and run
 
-Open **My robot → Device and fixed policy workspace** for operation without API credentials. Create an Agent chat from Home with a configured model. Review the runtime's capability manifest under **Device and access** before granting access.
+Create a **Real Project** from the console and select the registered SO-101. Opening its device workspace requires no chat model or API key. Use the world toolrail for device controls and fixed policies. Pair an external Agent in **Settings → Agent connections** when needed; see the [MCP guide](mcp.md). Review the Runtime capability manifest before granting access.
 
 **Prepare device** connects LeRobot and may enable motor torque. A person must trigger it after checking the work area. NERV uses the selected calibration and refuses a mismatch instead of recalibrating. Inspect the two live views and confirm their mount identity, orientation and scene.
 
@@ -65,7 +67,7 @@ Stop the current execution before switching between ACT and direct commands. **E
 | Decision expired | Obtain new observations and decide again; do not reuse an old command |
 | Target adjusted or not reached | Compare requested target, LeRobot's returned target and measured position |
 
-Detailed action receipts are local under `NERV_HOME/runtime-events`. Session images and logs may contain private scenes and paths. Review and redact them before sharing. Report the host/SDK/adapter versions, OS and architecture, LeRobot/PyTorch versions, inference device, exact error and reproduction steps. Never include API keys or an unreviewed configuration archive.
+Detailed action receipts are local under `NERV_HOME/runtime-events`. Observation images and logs may contain private scenes and paths. Review and redact them before sharing. Report the host/SDK/adapter versions, OS and architecture, LeRobot/PyTorch versions, inference device, exact error and reproduction steps. Never include API keys or an unreviewed configuration archive.
 
 ## Platform status and extensions
 

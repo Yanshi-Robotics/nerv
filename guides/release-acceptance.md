@@ -1,6 +1,6 @@
 # Standard SO-101 release acceptance
 
-The 0.8.5 package is a development candidate. This checklist defines release evidence; it
+The 0.9.0 package is a development candidate. This checklist defines release evidence; it
 does not assert that physical acceptance has already passed. Run it with the installed
 wheels outside the source checkout and retain the exact versions and artifact fingerprints.
 
@@ -49,7 +49,7 @@ change their hardware status.
 
 Verify a fixed ACT start/stop/timeout without any API key, with the visible operator page
 providing supervision. Closing or hiding that page must stop dispatch after the configured
-supervision deadline. Neither a chat-model change nor stopping a reply may alter the task.
+supervision deadline. An external Agent conversation change must not alter an operator-owned task. Separately verify that browser observation does not renew an external Agent task's supervision deadline.
 
 Attempt out-of-group ACT calls, ACT calls in visual-direct mode, old-generation actions,
 late model responses and incompatible Runtime protocols. Each must be rejected. Editing a

@@ -11,7 +11,7 @@ LeRobot 训练环境安装软件包。使用 `nerv` 时，无需手动激活虚�
 
 | 环境 | 用途 |
 |---|---|
-| 主程序 | 网页、会话、模型连接和任务管理 |
+| 主程序 | Project 控制台、MCP 连接、任务管理及可选机器人决策服务 |
 | SO-101 Runtime | 按需安装 LeRobot、Feetech 和 ACT 推理依赖 |
 | 仿真 | 按需安装仿真依赖和场景资源 |
 
@@ -31,7 +31,7 @@ ACT 策略共用兼容的 SO-101 Runtime，不为每个 checkpoint 重复创建�
 | `python/`、`bin/`、`bootstrap/` | 托管 Python、安装工具和启动入口 |
 | `.cache/downloads/`、`.cache/releases/`、`.cache/uv/` | 下载记录、校验后的文件、发布资源和 uv 缓存 |
 | `active.json`、`previous.json`、`runtimes/` | 当前主程序、回滚指向和组件安装记录 |
-| `memory/`、`devices/`、`schemes/`、`artifacts/` | 会话历史、设备配置、控制方案和策略引用 |
+| `projects/`、`memory/`、`devices/`、`schemes/`、`artifacts/` | Project、运行与事件历史、设备配置、控制方案和策略引用 |
 | `credentials.json`、`vlm.json` | 私有凭据和模型设置 |
 | `backups/` | 更新恢复快照 |
 
@@ -49,6 +49,8 @@ Runtime 检查通过后才启用。当前完整下载计划使用已校验的本
 链接和启动脚本可能含有绝对路径。更换根目录时，需要在目标位置重建环境，并在备份验证后迁移
 用户数据、更新 Runtime 引用。
 
+回滚会一起恢复与旧版本兼容的配置和历史。较新的 Project、事件历史和迁移记录保存在操作结果报告的恢复目录中。返回新版本时需要保留这个目录；密钥留在原位。
+
 ## 隔离的边界
 
 虚拟环境隔离 Python 软件包，不是 Docker 容器、虚拟机或安全沙箱。NERV 仍以当前账户的文件
@@ -61,12 +63,12 @@ Runtime 使用明确选择的解释器和经过筛选的进程环境。用户自
 
 ## 本地测试版
 
-0.8.5 开发实现使用 `~/.nerv/profiles/preview` 保存预览版的配置、密钥、会话、设备档案和
+NERV 使用 `~/.nerv/profiles/preview` 保存预览版的配置、密钥、Project、运行历史、设备档案和
 个人资产。安装文件和兼容的依赖环境由共用存储根 `~/.nerv` 管理，可以复用已校验文件。
 复制一次模型设置后，后续修改不会自动同步，也不会复制正式会话历史。
 
 新版 `nerv preview` 命令在 8100 端口启动已安装的预览版。端口占用时会报错，不会停止其他
-程序。旧版 0.8.1 启动器需要先更新，才能使用 0.8.5 的预览流程。开发源码、构建工具和安装包的关系见
+程序。不支持预览命令的旧启动器需要先更新。开发源码、构建工具和安装包的关系见
 [开发目录与安装环境](guides/development-and-installation.md)。
 
 ## 检查闲置环境

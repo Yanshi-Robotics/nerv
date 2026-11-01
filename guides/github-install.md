@@ -2,7 +2,7 @@
 
 [中文](../i18n/zh/github-install.md) · [NERV](../README.md)
 
-This guide describes NERV 0.8.5. The public installer installs the latest published
+This guide describes the NERV 0.9.0 local candidate. The public installer installs the latest published
 release; check [release notes](https://github.com/Yanshi-Robotics/nerv/releases) for its version.
 Physical-device acceptance and student onboarding trials remain separate from software checks.
 
@@ -104,13 +104,15 @@ pointers. It coordinates installed official components and their device-profile 
 Unknown modules or configuration formats block activation. A failure restores the previous
 configuration and pointers. An interrupted update blocks startup until `nerv rollback`.
 
-Credentials and event history remain user data. Recovery preserves newer configuration in
-the reported backup directory rather than silently discarding it. External checkpoints and
-calibration files stay at their original locations. Do not remove `.nerv` to fix an update.
+Rollback restores the compatible previous configuration and its history together. Newer
+Project data, event history and migration journals are archived in the recovery directory
+reported by the operation; keep that path when returning to the newer version. Credentials
+remain in place. External checkpoints and calibration files stay at their original locations.
+Do not remove `.nerv` to fix an update.
 
 ## Use an isolated preview
 
-With a 0.8.5-capable managed host, install a complete candidate into the preview channel:
+With a managed host that supports preview commands, install a complete candidate into the preview channel:
 
 ```bash
 nerv preview update --bundle /path/to/extracted/bundle
@@ -118,7 +120,7 @@ nerv preview
 nerv preview rollback
 ```
 
-Preview runs on port 8100. Its sessions, credentials, device profiles and editable assets
+Preview runs on port 8100. Its Projects, run history, credentials, device profiles and editable assets
 live under `.nerv/profiles/preview`. Stable data stays independent. Copy model configuration
 explicitly if needed; later changes are not synchronized and motion authorization is never
 copied. Immutable files and compatible environments can share managed storage.

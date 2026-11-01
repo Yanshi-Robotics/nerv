@@ -1,6 +1,6 @@
 # Connect an already configured SO-101
 
-NERV 0.8.4 is a local candidate. In **Your Robots**, open SO-101 setup. You need a
+NERV 0.9.0 is a local candidate. In **Robots**, open SO-101 setup. You need a
 standard follower whose motors have already been configured and calibrated in
 LeRobot. Keep its calibration JSON file and the robot ID used to create it.
 
