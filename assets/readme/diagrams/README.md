@@ -1,29 +1,32 @@
 # NERV architecture figures
 
-These original vector figures describe the NERV 0.8.2 candidate. English and Chinese
-versions share geometry and terminology. They illustrate implemented responsibilities
-and interfaces; they do not certify physical task performance.
+The current figures describe the NERV 0.9.0 local candidate. English and Chinese share
+geometry, use editable SVG text and shapes, and distinguish current interfaces from
+future deployment work. They are architecture illustrations, not screenshots or test evidence.
 
 | Figure | Purpose |
 |---|---|
-| `overview.svg` | Task setup, control schemes and execution, with shared observation and history |
-| `architecture.svg` | Three responsibility layers, the fixed-policy bypass and shared controls |
-| `control-schemes.svg` | The three supported templates and their different execution paths |
-| `runtime.svg` | Host and real-device Runtime environments, device ownership and feedback records |
+| `platform-090.svg` | External decisions, operator authority, Host services and Runtime execution |
+| `supervision-090.svg` | Observation delivery, acknowledgement, execution and local stop expiry |
+| `lifecycle-090.svg` | Project, current/historical Run, Task and Execution lifetimes |
+| `deployments-090.svg` | Same-machine MCP and separately marked future Brain/cloud deployment |
 
-Regenerate the SVGs from the repository root with Python 3:
+Regenerate these figures from the repository root:
 
 ```bash
-python3 assets/readme/diagrams/build.py
+python3 assets/readme/diagrams/build_090.py
 ```
 
-Edit wording and layout in `build.py`; regenerate both languages together. The output
-uses native SVG text and shapes with no external fonts, scripts, images or CDN requests.
-Text uses installed Noto Sans CJK SC, Arial or the system sans-serif fallback. The figures
-have explicit light backgrounds so their contrast is retained in either GitHub theme.
-Open the SVG at full size for detailed reading on narrow screens.
+`build_090.py` contains four independently composed layouts and reuses drawing primitives
+from `build.py`. Each generated SVG includes design notes, an accessible title and description.
+The figures have opaque light backgrounds for GitHub theme compatibility, require no external
+fonts or network assets, and use the repository MIT license. Render both languages when editing;
+check labels, path crossings and the distinction between implemented and future capabilities.
 
-The restrained colour palette, fine connection lines and separated forward/feedback
-paths follow the visual approach of Yanshi's Season 1 ACT courseware. The NERV layouts,
-icons and captions are original to this repository; no course photographs or external
-robot meshes are embedded. Sources and generated figures use the repository MIT licence.
+## Earlier figures
+
+The original `overview.svg`, `architecture.svg`, `control-schemes.svg` and `runtime.svg`
+remain 0.8-era references. Regenerate those with `python3 assets/readme/diagrams/build.py`.
+They describe the earlier internal conversation product and must not be used as the current
+0.9 Agent contract. Existing photographs, scene captures and demo videos remain separately
+version-labelled under `assets/readme/images` and `assets/readme/media`.

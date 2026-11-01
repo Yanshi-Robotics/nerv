@@ -2,36 +2,60 @@
 
 [中文](i18n/zh/ROADMAP.md) · [Project overview](README.md)
 
-NERV helps people connect a robot, select a control scheme and inspect what happened during a task. Development currently focuses on a usable standard SO-101 workflow and clear boundaries between conversation, task decisions and local execution.
+NERV is a robot foundation for different Agents, covering real devices and simulated worlds. The 0.9.0 local candidate introduces Projects and same-machine MCP while retaining environment, asset, policy and device management. Its [support matrix](README.md#robots-and-current-limits) distinguishes implementation from client, simulation and hardware acceptance.
 
-This roadmap describes intended work, not available features or release dates. Priorities can change after testing and community feedback. The extensions below are outside the 0.8.2 candidate. Physical acceptance and operating-system hardware support remain separate from software progress; see the [support matrix](README.md#modules-updates-and-support).
+The work below has no promised release date. Entries describe user value, the available foundation, the next step and evidence needed for completion. None of the future products below is delivered merely by adding an interface to 0.9.0.
 
-## Harness configuration and extension
+## Agent and Harness integration
 
-**Status: foundation available; user-facing extensions planned.**
+**Status: local MCP foundation available; client acceptance and extensions planned.**
 
-The internal Harness already manages execution loops, context, compaction and session memory. The next step is to make supported configuration and diagnostics easier to understand, document the extension boundaries, and validate an additional Harness integration.
+Users should be able to use their preferred Agent without replacing robot drivers. The internal Harness already provides execution loops, context, compaction and memory for managed decisions. The external bridge adds project permissions, observations and bounded tasks.
 
-Users should be able to inspect how an execution is managed and choose a supported integration without changing robot drivers. Completion requires a documented interface and a working additional integration that preserves independent chat and task cancellation, task records, and Host/Runtime authorization. Existing interfaces alone do not establish compatibility with arbitrary third-party agents.
+Next: test named client versions, document configuration and observability, and validate another Harness integration. Completion requires tool discovery, image handling, continuous supervision, task/stop behavior and reconnect tests in the actual client. Protocol fixtures alone do not establish arbitrary third-party compatibility.
+
+## Independent edge Brain and remote supervision
+
+**Status: planned.**
+
+A separate Brain could own model APIs or local models, context and scheduling while NERV owns devices and execution. The current MCP/task boundaries provide the starting point. A remote Agent additionally needs authenticated encrypted transport, device registration and connection management.
+
+Next: define a bounded Brain lifecycle and remote threat/connection model. Completion requires reconnect without action replay, explicit budgets and stopping conditions, and local failure handling when the cloud or model is unavailable. Being always online must not be described as complete autonomy. Neither product is included in 0.9.0.
+
+## Real and simulation transfer
+
+**Status: exploration.**
+
+The long-term direction includes Real2Sim, Sim2Real and multi-stage transfer. Projects, immutable asset/policy revisions and separate environment bindings provide a base for traceable comparisons. Reserved project types do not currently run transfer workflows.
+
+Next: select one robot/task, define calibration and observation correspondence, and establish evaluation criteria. Completion requires reproducible transforms, deployment-contract checks and separate simulation and physical results. A scene loading or a matching action dimension is not evidence of successful transfer.
 
 ## Plugin management
 
 **Status: planned.**
 
-NERV already has specific provider and Runtime extension interfaces. A general plugin installation and management experience is not implemented.
+NERV has specific provider and Runtime extension interfaces. Users would benefit from discovery, installation, compatibility checks, permission declarations and removal through a consistent workflow. A general plugin marketplace and compatibility with other products' plugin formats are not implemented.
 
-Planned work covers discovery, installation, compatibility checks, permission declarations and removal. A first supported plugin must complete that lifecycle and clearly report missing dependencies or incompatibilities. Plugins must use the existing authorization path for robot actions; installing a plugin must never grant motion authority. A plugin marketplace and compatibility with other applications' plugin formats are not current commitments.
+Next: validate the full lifecycle of one supported plugin, including missing dependencies and incompatible versions. Completion requires a documented manifest and permission boundary. Plugins must pass through Host/Runtime motion authorization; installation must never grant control automatically.
 
 ## Yanshifu integration
 
 **Status: exploration.**
 
-The intended use is to bring course knowledge, setup guidance and relevant learning tools into the robot workflow. NERV does not currently load the Yanshifu plugin.
+The proposed integration brings course knowledge, setup guidance and related learning tools into robot workflows. NERV does not currently load the Yanshifu plugin.
 
-The next step is to review the available content, licensing and interfaces, then define an integration using the plugin boundaries above. Completion requires a documented installation path and a demonstrable guidance workflow that identifies its sources and respects tool permissions. The integration format, content coverage and supported versions have not been selected. Robot training and automatic calibration remain outside NERV's current scope.
+Next: review content, licenses and interfaces, then select the integration format. Completion requires an installable guidance workflow that identifies its sources and respects permissions. Content coverage and supported versions remain undecided. Training and automatic calibration remain outside the current product scope.
 
-## Contributing requirements
+## Broader robot and policy support
 
-Use [GitHub Issues](https://github.com/Yanshi-Robotics/nerv/issues) to describe a use case or propose an extension. Include the robot, operating system, task, current obstacle and expected outcome. For a Harness or plugin proposal, include the project link, license, required permissions and the smallest useful demonstration.
+**Status: adapter foundations available; validation and provenance work ongoing.**
 
-Do not include API keys, private datasets or identifiable camera recordings. A roadmap entry is an invitation to discuss and validate the work, not a promise of a delivery date. See [contribution guidance](CONTRIBUTING.md) before starting an implementation.
+SO-101 and G1 paths provide starting points; Go2 still needs a complete verified deployment contract before motion can be offered. VLA, WAM and traditional planning have reserved extension contracts, not delivered general backends.
+
+Next: obtain reproducible policy metadata, confirm distribution rights and validate stopping/supervision per adapter. Completion requires compatible installation plans, declared sensor/action semantics, repeatable simulation checks and separate hardware acceptance where applicable. Multi-robot coordination remains future work.
+
+## Contribute a use case
+
+Use [GitHub Issues](https://github.com/Yanshi-Robotics/nerv/issues) to describe the robot, operating system, task, current obstacle and expected result. Integration proposals should include the project link, license, required permissions and a small useful demonstration. Follow [contribution guidance](CONTRIBUTING.md).
+
+Do not include API keys, private datasets or identifiable camera recordings. Roadmap discussion can change priorities; it does not certify a feature or commit a release date.

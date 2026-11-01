@@ -5,6 +5,25 @@ The 0.1.x entries below are the pre-release trail.
 
 ## [Unreleased]
 
+## [0.9.0] — Local acceptance candidate
+
+- Replace the built-in ordinary chat shell with a Project console, full world view,
+  camera monitors, a narrow operator tool rail and attributed activity bubbles.
+- Introduce durable Project/Run records, revision snapshots and resumable legacy
+  session migration. Reopening projects does not restore motion authority.
+- Add local stdio MCP pairing with channel/project permissions, observation receipts,
+  task/action request IDs, supervision expiry and operator-controlled handoff.
+- Retain ACT, bounded visual actions and optional managed decision services. External
+  Agents own their model context and budgets; NERV retains local execution and stop checks.
+- Keep installation recovery, isolated environments, asset revisions, policy imports,
+  SO-101 prerequisite checks and operator controls in the new console/workbench.
+- Add Go2 adapter/capability work, but block motion until a complete verified deployment
+  contract is available. Real hardware and branded Agent-client acceptance remain pending.
+- Rework bilingual documentation and provide editable architecture, supervision,
+  lifecycle and deployment figures. Independent Brain and remote transport remain future work.
+- This candidate does not publish application assets, update the public manifest or
+  activate a stable installation. Release requires separate acceptance and authorization.
+
 - Rename the asset source submodule checkout from `worlds/` to `nerv-assets/` and update
   developer documentation, generators, build fixtures and acceptance scripts together.
 - Use `nerv-assets/` for source, installed and external registries. Reject old `worlds/`

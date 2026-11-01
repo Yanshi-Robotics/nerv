@@ -1,0 +1,37 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="790" viewBox="0 0 1200 790" role="img" aria-labelledby="title desc">
+<title id="title">项目保存配置；运行保存实际发生的事</title><desc id="desc">重新打开不恢复动作授权；新修订不改变运行中任务。</desc>
+<defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1 L8 5 L1 9" fill="none" stroke="#5c7078" stroke-width="1.6"/></marker></defs>
+<style>text {font-family:"Noto Sans CJK SC",Arial,sans-serif;fill:#23343b;} .muted{fill:#5c7078;} .mono{font-family:"DejaVu Sans Mono",monospace;}</style>
+<rect width="1200" height="790" rx="24" fill="#f6f8f8"/>
+<path d="M40 104H1160" stroke="#ccd8dc"/>
+
+<text x="40" y="38" font-size="13" style="fill:#356a85" font-weight="700" text-anchor="start">NERV   /   0.9 / 03</text>
+<text x="40" y="73" font-size="28" style="fill:#23343b" font-weight="700" text-anchor="start">项目保存配置；运行保存实际发生的事</text>
+<text x="1160" y="38" font-size="12" style="fill:#5c7078" font-weight="400" text-anchor="end">架构与产品</text>
+<text x="40" y="764" font-size="16" style="fill:#5c7078" font-weight="400" text-anchor="start">重新打开不恢复动作授权；新修订不改变运行中任务。</text>
+<!-- SVG-DESIGN-NOTES Type: A. Q0: Configuration lifetime is longer than runtime and task lifetime.. Q1: Nested regions and a second inactive Run distinguish historical instances from current execution.. Q2: Explicit robot execution and authority boundaries. Q3: No decorative pictograms. Q4: Labels adjacent to their paths. Q5: Shared bilingual geometry; opaque light background for GitHub themes. -->
+<rect x="40" y="140" width="1120" height="560" rx="14" fill="#edf2f3" stroke="#ccd8dc" stroke-width="1.3"/>
+<text x="70" y="184" font-size="22" style="fill:#356a85" font-weight="700" text-anchor="start">PROJECT</text>
+<text x="70" y="220" font-size="19" style="fill:#5c7078" font-weight="400" text-anchor="start">机器人 · 世界 · 执行结构 · 布局 · 修订</text>
+<rect x="70" y="259" width="735" height="401" rx="14" fill="white" stroke="#ccd8dc" stroke-width="1.3"/>
+<text x="95" y="300" font-size="22" style="fill:#247a71" font-weight="700" text-anchor="start">当前 RUN</text>
+<text x="95" y="336" font-size="17" style="fill:#5c7078" font-weight="400" text-anchor="start">独立实例身份；每个项目至多一个活动运行</text>
+<rect x="100" y="373" width="675" height="250" rx="14" fill="#f6f8f8" stroke="#ccd8dc" stroke-width="1.3"/>
+<text x="125" y="411" font-size="21" style="fill:#356a85" font-weight="700" text-anchor="start">TASK</text>
+<text x="125" y="447" font-size="18" style="fill:#5c7078" font-weight="400" text-anchor="start">目标 · 锁定修订 · 预算 · 控制权代次</text>
+<rect x="125" y="485" width="280" height="98" rx="14" fill="white" stroke="#ccd8dc" stroke-width="1.3"/>
+<path d="M141 502v64" stroke="#247a71" stroke-width="3" stroke-linecap="round"/>
+<text x="157" y="519" font-size="20" style="fill:#23343b" font-weight="600" text-anchor="start">EXECUTION 01</text>
+<text x="157" y="546" font-size="16" style="fill:#5c7078" font-weight="400" text-anchor="start">策略或有限动作</text>
+<rect x="465" y="485" width="280" height="98" rx="14" fill="white" stroke="#ccd8dc" stroke-width="1.3"/>
+<path d="M481 502v64" stroke="#247a71" stroke-width="3" stroke-linecap="round"/>
+<text x="497" y="519" font-size="20" style="fill:#23343b" font-weight="600" text-anchor="start">EXECUTION 02</text>
+<text x="497" y="546" font-size="16" style="fill:#5c7078" font-weight="400" text-anchor="start">独立执行结果</text>
+<path d="M405,534 L465,534" fill="none" stroke="#247a71" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="845" y="259" width="285" height="401" rx="14" fill="#f3f4f4" stroke="#ccd8dc" stroke-width="1.3"/>
+<text x="870" y="302" font-size="22" style="fill:#5c7078" font-weight="700" text-anchor="start">历史 RUN</text>
+<text x="870" y="352" font-size="17" style="fill:#5c7078" font-weight="400" text-anchor="start">已结束／已中断</text>
+<text x="870" y="386" font-size="17" style="fill:#5c7078" font-weight="400" text-anchor="start">保留历史记录</text>
+<text x="870" y="420" font-size="17" style="fill:#5c7078" font-weight="400" text-anchor="start">不重放命令</text>
+<text x="600" y="739" font-size="18" style="fill:#5c7078" font-weight="400" text-anchor="middle">权重与官方资产使用不可变引用，不为每个项目复制一份。</text>
+</svg>

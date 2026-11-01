@@ -1,31 +1,27 @@
 # NERV
 
-[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB)](pyproject.toml) [![Status](https://img.shields.io/badge/Status-development-c59b42)](guides/release-acceptance.md) [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB)](pyproject.toml) [![Status](https://img.shields.io/badge/0.9.0-local_candidate-c59b42)](CHANGELOG.md) [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
 
-[![English](https://img.shields.io/badge/Language-English-607d8b)](README.md) [![简体中文](https://img.shields.io/badge/%E8%AF%AD%E8%A8%80-%E7%AE%80%E4%BD%93%E4%B8%AD%E6%96%87-607d8b)](i18n/zh/README.md)
+[English](README.md) · [简体中文](i18n/zh/README.md)
 
-NERV is a local workspace for running robot tasks with trained policies and visual AI. Connect a robot or simulation, choose a control scheme, and follow its observations and execution history in one interface. Training and calibration stay in your existing tools.
+**NERV is a robot platform for Agents, connecting local execution to real devices and simulated worlds.** Bring an Agent that you already use; NERV provides projects, observations, bounded actions, policy execution, operator controls and a record of what happened.
 
-[SO-101 setup](guides/standard-so101.md) · [Architecture](guides/architecture.md) · [Roadmap](ROADMAP.md) · [Changelog](CHANGELOG.md)
+NERV 0.9.0 replaces its ordinary chat interface with a Project console and an MCP connection. Your Agent owns the conversation and model context. NERV owns the robot lifecycle and local stopping. A project can also use an optional robot decision service or run a fixed policy through operator controls.
 
-NERV 0.8.5 is a development release for software and simulation testing. Real SO-101 acceptance and student onboarding trials remain pending. See the release notes for the exact package version installed by the commands below.
+[Connect an Agent](guides/mcp.md) · [Architecture](guides/architecture.md) · [SO-101 setup](guides/so101-setup.md) · [Assets](guides/assets.md) · [Roadmap](ROADMAP.md)
 
-<div align="center"><img src="assets/readme/diagrams/en/overview.svg" alt="NERV connects task setup, a user-selected control scheme and Runtime execution with shared observations and history" width="960"></div>
+This checkout is a **0.9.0 local acceptance candidate**, not a published release. The commands below install the latest public release; they do not fetch unpublished changes. Client-specific acceptance and physical SO-101 trials remain pending. Go2 motion is blocked until a complete, verifiable deployment contract is available.
 
-## Quick install & start
+<div align="center"><img src="assets/readme/diagrams/en/platform-090.svg" alt="External Agent and operator workbench share the NERV Host, which manages authority and routes tasks to local execution" width="960"></div>
 
-The GitHub installer manages uv, Python 3.12 and the prebuilt interface. No Node.js, Git or frontend build is needed. It installs the host first; robot and simulation components are installed separately from Settings.
+## Install and start
 
-Linux/macOS:
+The GitHub installer manages Python, uv and the prebuilt interface. End users do not need Node.js, a source checkout or a separate LeRobot terminal. Robot and simulation components are installed when needed.
+
+Linux / macOS:
 
 ```bash
 curl -fsSL https://github.com/Yanshi-Robotics/nerv/releases/latest/download/install.sh | sh
-```
-
-Open a new terminal, then start:
-
-```bash
-nerv
 ```
 
 Windows PowerShell (experimental):
@@ -34,160 +30,114 @@ Windows PowerShell (experimental):
 irm https://github.com/Yanshi-Robotics/nerv/releases/latest/download/install.ps1 | iex
 ```
 
-Open a new PowerShell window, then start:
+Open a new terminal and run `nerv`. The stable channel normally opens [http://127.0.0.1:8170](http://127.0.0.1:8170). Startup does not connect motors, authorize motion or resume interrupted tasks. Use `nerv serve --no-browser` for a terminal without a desktop; Ctrl+C requests orderly shutdown.
 
-```powershell
-nerv
-```
+An explicitly installed preview uses `nerv preview` and its own channel data. Candidate installation and repository development are described in [CONTRIBUTING.md](CONTRIBUTING.md). Preview is not a second source checkout, and publishing code does not activate a local installation.
 
-NERV serves its interface and API at [http://127.0.0.1:8170](http://127.0.0.1:8170) and opens a browser after startup. Configuration, sessions, environments and caches live under `~/.nerv`. Startup does not connect motors, enable motion or resume tasks. Press Ctrl+C and wait for shutdown before restarting.
+## Create a project and connect your Agent
 
-For remote terminals, use:
+1. Open the console. Install a simulation engine and World, or register a standard SO-101 from Robots.
+2. Create a Sim or Real Project, choose its robot, world and execution structure. A NERV chat key is not required. Projects are stored under the current channel in `.nerv`.
+3. Open Settings → Agent connections. Name the client, select the projects it may access and choose observation-only or task/action permissions.
+4. Configure your MCP client to launch the bridge with its paired client ID. For a preview candidate:
 
-```bash
-nerv serve --no-browser
-```
+   ```bash
+   nerv mcp --channel preview --client CLIENT_ID
+   ```
 
-Use `--port` to choose another port; NERV reports occupied ports without stopping other processes. See the [installation guide](guides/github-install.md) for diagnostics, extracted bundles and migration from older npm launchers.
+5. Start the world, inspect the selected control scheme and authorize motion separately. In the world controls, explicitly select the Agent that will receive control.
 
-SO-101 setup provides a six-step **Your Robots → SO-101 setup** flow: computer checks, runtime installation, arm discovery, prerequisite checks, camera confirmation and saving. Motor setup and calibration remain external; NERV only reads their current values after you click **Check device**. See [SO-101 setup](guides/so101-setup.md).
+The bridge connects to an already running Host. It does not start another robot service or prepare hardware. The [MCP guide](guides/mcp.md) explains configuration, observation acknowledgements, request IDs and revocation. Codex, DeepSeek Harness and Claude Code are intended clients; their names are not a claim that every client/version has passed acceptance.
 
-Installation provides **Settings → System and installation**, CPU/NVIDIA installation plans, complete dependency download totals and persistent pause/resume. See [recoverable installation](guides/recoverable-installation.md) for the installation workflow and platform limits.
+Without an Agent or model key, operators can still install resources, configure devices, view observations and use the permitted fixed-policy/manual controls. An optional managed visual decision service has its own credentials and budgets.
 
-## What you can do
+## Work in a world
 
-- **Connect a robot or simulation.** Save a standard SO-101's serial device, existing calibration and two cameras through guided setup. Install simulation as an optional module.
-- **Bring your own policies.** Import an externally trained ACT, check compatibility, and load and run it inside NERV.
-- **Choose the control route.** Use a fixed policy, let a visual model supervise allowed skills, or let it select bounded motion tools.
-- **Keep chat and tasks separate.** The chat model handles interaction; the selected scheme controls the task. Stop reply and Stop task are independent actions.
-- **Keep a local record.** Sessions, task events, settings and environments stay on your computer. Restart restores history without resuming motion.
+The console groups **Projects, Robots, Worlds, Policies, Assets and Settings**. Robot details keep the SO-101 profile and local 3D preview. Associated projects show real or simulated workspaces; an available robot asset is not treated as a registered physical device.
 
-## First use
+Inside a project, the main camera or simulated scene fills the workbench. The slim tool rail opens observation, execution, device and manual controls. Monitor frames can become the main view, change size, dock or hide; their layout is saved with the project. Camera display choices do not alter the images delivered to an Agent.
 
-New Session is the default page and the destination of the NERV logo. Your Robots manages the saved SO-101 profile; Sessions holds conversation history; Settings contains models, policies, components and preferences.
+Activity bubbles show attributed Agent statements, task state and execution feedback. They do not import an external conversation or turn an Agent statement into a verified robot result. Full history remains available from Activity. The console opens over the world; opening settings does not end its Run. Stop task and emergency stop remain separate operator controls.
 
-1. Choose a scene: register a standard SO-101 in Your Robots, or install the simulation component from Settings → Components and simulation, then choose a scene in My assets.
-2. Configure a chat model in Settings → Models and API keys. Saving a new key requires an explicit test with a built-in image, which may incur a provider charge. It does not send a camera frame.
-3. Select the robot or scene on New Session, describe the task, and start. A configured model and valid scene are required; missing items have direct setup links.
-4. Choose a compatible control scheme and separately authorize motion before running a robot task.
+## Projects, runs and task history
 
-Without an API key, you can still install components, configure the robot, view cameras and run fixed ACT through Your Robots → Device and fixed policy workspace. Policies are imported separately through Settings → Policy library.
+A Project is the saved configuration: robot, environment, execution structure, layout and revisions. A Run is one instance of that world or device workspace. A Task is a goal with frozen configuration and authority. An Execution is one policy or bounded action within that task.
 
-<div align="center"><img src="assets/readme/images/new-session-0.8.5.png" alt="NERV 0.8.5: New Session, setup checklist and unified sidebar" width="960"></div>
+<div align="center"><img src="assets/readme/diagrams/en/lifecycle-090.svg" alt="Project contains current and historical runs; a task in a run can contain multiple executions" width="960"></div>
 
-The robot detail page opens a local 3D model; its display pose is an illustration, not measured telemetry. Names, pictures and connection settings persist across restarts; motion permission does not. About displays the running version, while Updates contains the explicit update check. Navigating between pages preserves the active workspace and stop controls. Runtime preference changes apply to new Agent turns, not work already in progress.
+Reopening a project restores configuration and history and can reattach to a valid active instance. Host restart interrupts old work and clears motion authority. It does not replay actions. New project revisions apply to future runs/tasks; current tasks keep their locked references. Official weights and assets are referenced rather than copied into every project.
 
-## Three-layer architecture
+The 0.9 migration preserves robot sessions as projects and historical runs. Plain chat remains a read-only archive rather than becoming a fictitious robot project. Migration snapshots and idempotent records support recovery; use the candidate's recovery instructions before rolling an older binary back over its data.
 
-The layers describe responsibilities, not three mandatory models. System 2 labels the optional decision layer; System 1 labels local execution.
+## Supervise and execute
 
-<div align="center"><img src="assets/readme/diagrams/en/architecture.svg" alt="Interaction, optional decision and execution layers; fixed ACT bypasses the decision model, with shared Host and Runtime controls" width="960"></div>
+External Agents may request bounded visual actions or compatible motion skills. Existing ACT execution and optional managed visual decisions remain separate execution routes. Drivers and inference stay in Runtime environments; model output cannot directly write motor registers.
 
-The host manages sessions, tasks and authorization. An independent Runtime owns the robot and cameras. SO-101 uses one native LeRobot instance, with all motion passing through `robot.send_action()`. ACT and bounded tool execution share the scheduler. Models cannot expand a scheme's allowed action set. See the [architecture guide](guides/architecture.md) for lifecycle and protocol details.
+<div align="center"><img src="assets/readme/diagrams/en/supervision-090.svg" alt="Observation delivery, explicit acknowledgement, authorized execution and local stopping on supervision expiry" width="960"></div>
 
-## Choose a control scheme
+Observation delivery, acknowledgement and task success are different facts. Images carry instance and frame information. The client must acknowledge a delivered observation before requesting motion, then observe again after a bounded action. Polling task state or keeping a transport open does not renew supervision. Local expiry handling requests a stop and reports whether it was confirmed.
 
-<div align="center"><img src="assets/readme/diagrams/en/control-schemes.svg" alt="Fixed policy, policy group and visual direct control routes, with observation feedback" width="960"></div>
+Manual takeover revokes external motion control and waits for stopping to be confirmed. Agent observation can continue; resuming Agent control requires another explicit operator action. Stopping incoming requests, stopping a task, emergency stop, disconnect and torque release have distinct meanings. See [architecture and control](guides/architecture.md).
 
-| Scheme | Decision layer | Execution layer | Requirements |
-|---|---|---|---|
-| Fixed policy | Disabled | One selected ACT | Compatible imported policy; no API key for the Run button |
-| Policy group | Selected visual model | Allowed ACT skills, one at a time | Visual model credentials and compatible skills |
-| Visual direct control | Selected visual model | Bounded joint moves, increments and gripper commands | Visual model credentials; no ACT required |
+## Robots and current limits
 
-Fixed ACT runs inside NERV without a separate LeRobot terminal. A one-skill group adds visual supervision. Combining skills requires validated transitions; an unverified transition stops for operator intervention.
+| Route | Candidate scope | Acceptance limit |
+|---|---|---|
+| SO-101 Real | Guided setup, existing calibration checks, two cameras, ACT and bounded control | Physical connection and motion are operator-run; grasping reliability is not certified |
+| SO-101 Sim | Three workbench scenes, camera observations and bounded controllers | Real ACT exports are not assumed compatible with simulation |
+| G1 Sim | Managed scene and motion-policy path | Requires a compatible checked policy; candidate simulation acceptance is separate from earlier demos |
+| Go2 Sim | Adapter and capability work | Motion blocked by missing complete deployment contract; no public motion claim |
+| Sim2Real / Real2Sim combinations | Reserved capability types | Not runnable in this release |
+| Codex / DeepSeek Harness / Claude Code | Local stdio MCP bridge intended for these clients | Client/version-specific end-to-end acceptance still pending |
 
-The chat panel keeps the chat model and control scheme separate, shows the scheme's decision model and skills, and provides View structure and current-task controls. Running tasks retain their scheme revision and model settings. Stop reply, Stop task and Emergency stop have separate purposes. Stop the task before changing schemes or moving between Sim and Real.
+Standard SO-101 setup checks the computer, installs the runtime, identifies a follower, checks existing motor/calibration prerequisites, confirms cameras and saves configuration. Motor setup and new calibration remain external. Missing a calibration file means it was not found, not that the device has never been calibrated. Connecting may energize motors; follow the [SO-101 guide](guides/standard-so101.md).
 
-## Standard SO-101 and policy import
+Linux, Windows, WSL and macOS use separate dependency plans. Windows/WSL hardware passthrough and macOS camera support remain experimental. The current locked macOS Intel Host combination has no compatible package. The [installation guide](guides/github-install.md) and [acceptance guide](guides/release-acceptance.md) distinguish platform package checks, simulation, policy inference and hardware evidence.
 
-The real-device contract is one standard SO-101 follower with `lerobot[feetech]==0.6.1`: five arm joints in degrees, a gripper in LeRobot's 0–100 range, and `top`/`wrist` cameras at 640 × 480 and 30 FPS. Supply the serial device, robot ID, existing calibration and camera identities. A leader and custom joint mappings are unnecessary for inference.
+## Assets, policies and managed environments
 
-Import an externally trained ACT directory in Settings → Policy library. NERV checks weights, native processors, statistics, camera inputs, six-channel shapes and fingerprints. Missing unit/order metadata requires a fixed standard declaration recorded as user-provided. Original exports remain read-only; changed files require rechecking. Use the no-motion policy check before enabling actions. [ONNX motion policy imports](guides/motion-policies.md) use a separate deployment contract and a selected, fixed revision. The [SO-101 guide](guides/standard-so101.md) covers registration, camera confirmation and recovery.
+NERV keeps its managed Python environments, tools, cache and installed resources under `NERV_HOME`, normally `~/.nerv`. Host, LeRobot, simulation and build tools are isolated where dependencies differ. Stable and preview keep separate channel data. Neither installation nor updates modify a course environment or system Python; shared USB devices and GPUs still require coordinated ownership. See [environment management](guides/environments.md).
 
-Connecting can enable motor torque. Ordinary disconnect retains torque; explicit release requires supporting the arm. Software stop requests a hold, which cannot be confirmed after communication loss. Requested targets, sent targets and measured positions are separate records. Neither an execution ending nor a model saying “done” proves task success. Operator acceptance of an unverified binding does not certify the hardware integration.
+Simulation engines and scene packages update independently. The asset library supports official versions, data-only MJCF imports, personal copies, validation, saved revisions and export. Official updates do not overwrite a personal copy. Apartment, residence and robot assets remain part of NERV's simulation direction; [nerv-assets](https://github.com/Yanshi-Robotics/nerv-assets) holds their source. See [asset workflows](guides/assets.md).
 
-## Modules, updates and support
+Policies can come from local exports or pinned Hugging Face revisions. ACT retains its native processors and statistics; ONNX motion policies require an explicit deployment contract. A model's presence in an organization does not make it compatible or recommended. Unknown-origin historical weights remain excluded from new official distribution. See [motion policies](guides/motion-policies.md) and [publication rules](guides/policy-publishing.md).
 
-NERV uses uv-managed Python virtual environments under `~/.nerv`, separate from system Python and training environments. See [environment management and isolation](guides/environments.md) for directory ownership, preview profiles, updates and shared hardware limits.
+Downloads use verified files, persistent records and bounded retry/resume. Installations stage and check environments before activation. [Recoverable installation](guides/recoverable-installation.md) explains the progress display and limits. To check a published update use `nerv update --check`; stop tasks and exit before `nerv update` or `nerv rollback`. Preview has separate update/rollback commands.
 
-NERV 0.8.5 separates the simulation engine from scene packages. Install the engine in Components and simulation, then install pick-and-place, snack-sorting, Tower of Hanoi, the G1 apartment or the hillside residence from My assets. Scene packages do not include trained policies. Installed modules appear first in Settings; installation supports persistent progress, cancellation, integrity checks and retry. NERV 0.8.5 adds [data-only MJCF asset import, personal copies and saved revisions](guides/assets.md); it does not execute third-party simulator code. Real and Sim bindings remain separate; matching tensor dimensions do not make a real ACT usable in simulation. See the [module and scheme contract](guides/control-schemes.md).
+## Deployment direction
 
-Stop tasks, disconnect devices and exit NERV before updating or rolling back. Check for a published update:
+The local Agent-to-NERV workflow is the scope of 0.9.0. A future Brain can be an independent program that owns model API access, context and scheduling while using the same MCP contract. A future cloud Agent will need authenticated remote transport and device registration. Those products are not bundled with this candidate.
 
-```bash
-nerv update --check
-```
+<div align="center"><img src="assets/readme/diagrams/en/deployments-090.svg" alt="Solid local Agent and NERV deployment; dashed future edge Brain and cloud supervision deployments" width="960"></div>
 
-Install it, then start NERV again:
+The [roadmap](ROADMAP.md) retains Harness extensions, plugin management, Yanshifu integration and real/simulation transfer research. It states the next checks and completion criteria without promising dates.
 
-```bash
-nerv update
-```
+## Worlds and earlier demonstrations
 
-To return to the previous installation:
+These recordings and screenshots are preserved from earlier versions. They show simulation assets and earlier interfaces, not completed 0.9.0 client acceptance. The G1 recording uses a head camera and gait skill to follow “Walk to the living room.” It plays at 2.5× speed; [original-speed MP4](assets/readme/media/walk-to-the-living-room.mp4).
 
-```bash
-nerv rollback
-```
-
-Updates stage the host and installed official modules before activation. Failed updates restore prior pointers and configuration. Rollback preserves newer configuration copies; credentials and session histories stay current. See [update and recovery details](guides/github-install.md#user-data-and-updates).
-
-| Platform or route | Status |
-|---|---|
-| Linux host and SO-101 simulation | Local software and installation checks; hardware acceptance is separate |
-| SO-101 real / Linux | Adapter and guided setup implemented; physical grasping acceptance pending |
-| Windows native / WSL2 | Experimental; USB, camera backends and passthrough need hardware testing |
-| macOS Apple Silicon | Experimental CPU installation; camera permissions and hardware need validation |
-| macOS Intel | No 0.8.5 host package: the locked cryptography dependency has no compatible wheel |
-| G1 simulation | Managed scene and local ONNX imports in 0.8.5; a compatible, checked motion policy is required |
-| GR00T / SmolVLA | Planned policy backends; not delivered integrations |
-
-The [acceptance guide](guides/release-acceptance.md) separates software, simulation, physical tasks and novice onboarding. The [roadmap](ROADMAP.md) describes future Harness extensions, plugin management and Yanshifu integration; these are outside 0.8.2.
-
-## Demo and interface
-
-Version 0.8.5 manages installed components and saved asset revisions in separate settings pages. These screenshots show the tested 0.8.5 interface; file checks and software inference checks do not establish physical task success.
-
-<div align="center"><img src="assets/readme/images/components-0.8.5.png" alt="NERV 0.8.5: installed LeRobot and simulation environments" width="960"></div>
-<div align="center"><img src="assets/readme/images/assets-0.8.5.png" alt="NERV 0.8.5: a personal asset copy and its saved revisions" width="960"></div>
-
-The G1 recording below is from an earlier simulation version. It demonstrates head-camera observation and a gait skill; it is not SO-101 hardware evidence. The instruction is “Walk to the living room.” The unedited turn plays at 2.5× speed; an [original-speed MP4](assets/readme/media/walk-to-the-living-room.mp4) is available.
-
-<div align="center"><img src="assets/readme/images/walk-to-the-living-room.gif" alt="Earlier G1 simulation: camera observation and a gait skill used to walk to the living room" width="960"></div>
+<div align="center"><img src="assets/readme/images/walk-to-the-living-room.gif" alt="Earlier G1 apartment simulation with head-camera observation and a gait skill" width="960"></div>
+<div align="center"><img src="assets/readme/images/world-explore/house-west_pool-night.png" alt="Existing simulated residence pool terrace at night" width="960"></div>
 
 <details>
-<summary>Earlier interface and world views</summary>
-
-Control-scheme workspace from version 0.7:
-
-<div align="center"><img src="assets/readme/images/control-scheme-0.7.png" alt="SO-101 simulation with top and wrist views and a visual control scheme awaiting credentials" width="960"></div>
-
-These preserved screenshots show earlier navigation, observation and operator views. Model, task and device setup controls have since changed. The chase camera and World Explore views are operator-only.
-
-<div align="center"><img src="assets/readme/images/web-session.png" alt="Earlier session view" width="960"></div>
+<summary>Earlier interface and asset views</summary>
+<div align="center"><img src="assets/readme/images/new-session-0.8.5.png" alt="Archived 0.8.5 New Session interface" width="960"></div>
+<div align="center"><img src="assets/readme/images/components-0.8.5.png" alt="Archived 0.8.5 installed component list" width="960"></div>
+<div align="center"><img src="assets/readme/images/assets-0.8.5.png" alt="Archived 0.8.5 personal asset revisions" width="960"></div>
+<div align="center"><img src="assets/readme/images/control-scheme-0.7.png" alt="Archived 0.7 SO-101 workspace" width="960"></div>
+<div align="center"><img src="assets/readme/images/web-session.png" alt="Earlier session interface" width="960"></div>
 <div align="center"><img src="assets/readme/images/web-teleop.png" alt="Earlier operator controls" width="960"></div>
-<div align="center"><img src="assets/readme/images/web-dashboard.png" alt="Earlier registry and session dashboard" width="960"></div>
-<div align="center"><img src="assets/readme/images/world-explore/apt-scene-test.png" alt="Operator scene test in the apartment" width="960"></div>
-<div align="center"><img src="assets/readme/images/world-explore/apt-cutaway.png" alt="Apartment layout for operators" width="960"></div>
-<div align="center"><img src="assets/readme/images/world-explore/house-west_pool-night.png" alt="Simulated house pool terrace at night" width="960"></div>
-
-The [world-library tools](nerv-assets/docs/explore/README.md) cover scene testing and browser views. G1's flat-ground gait does not supply grasping, furniture manipulation, autonomous sitting or stair traversal. Scene checks do not certify autonomous task success.
-
-For development, the asset submodule is checked out at `nerv-assets/` (formerly `worlds/`). The application source stays in the Git checkout; installed assets, policies and environments live under `NERV_HOME`. See the [source directory guide](CONTRIBUTING.md#source-directories-and-installed-data). Old `worlds/` registry layouts require reinstallation; automatic migration is not provided.
-
-
+<div align="center"><img src="assets/readme/images/web-dashboard.png" alt="Earlier registry dashboard" width="960"></div>
+<div align="center"><img src="assets/readme/images/world-explore/apt-scene-test.png" alt="Apartment scene test" width="960"></div>
+<div align="center"><img src="assets/readme/images/world-explore/apt-cutaway.png" alt="Apartment cutaway" width="960"></div>
 </details>
 
-## Contributors and development
+The [world-library tools](nerv-assets/docs/explore/README.md) describe scene inspection. A flat-ground gait does not supply grasping, autonomous sitting or stair traversal. New candidate screenshots will be captured from the running build; diagrams are not screenshots.
 
-NERV is maintained by Yanshi Robotics. AI development contributors include:
+## Contribute
 
-- **DeepSeek Harness** — AI-assisted development.
-- **Codex** — AI-assisted development.
+NERV is maintained by Yanshi Robotics. **DeepSeek Harness** and **Codex** contribute AI-assisted development; maintainers review changes and decide what to merge and release.
 
-Maintainers review changes and decide what to merge and release.
+Read [CONTRIBUTING.md](CONTRIBUTING.md), the [Runtime SDK](packages/nerv-runtime-sdk/README.md) and [repository rules](AGENTS.md). Use [GitHub Issues](https://github.com/Yanshi-Robotics/nerv/issues) for reproducible problems and use cases. Remove credentials, personal data and private recordings from reports.
 
-See [CONTRIBUTING.md](CONTRIBUTING.md) for development setup and review guidance, the [Runtime SDK](packages/nerv-runtime-sdk/README.md) for extension interfaces, and [AGENTS.md](AGENTS.md) for repository conventions. Report problems through [GitHub Issues](https://github.com/Yanshi-Robotics/nerv/issues) with versions and sanitized reproduction steps; exclude credentials and private recordings.
-
-NERV uses the [MIT license](LICENSE). External SDKs, robot models and media retain their own licenses. Official policy releases have separate license and source requirements; see [policy publication](guides/policy-publishing.md).
+Application code uses the [MIT license](LICENSE). Robot assets, third-party packages and policy weights retain their own licenses. The [editable diagram sources](assets/readme/diagrams/README.md) accompany the figures above.

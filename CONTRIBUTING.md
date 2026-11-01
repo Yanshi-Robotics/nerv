@@ -1,6 +1,6 @@
 # Contributing to NERV
 
-NERV connects independently trained policies and model tools to robot runtimes. Training
+NERV connects external Agents to robot projects through MCP and local task services. Training
 and automatic calibration are outside its scope. The first real product contract is
 standard SO-101 with LeRobot 0.6.1; see the [student guide](guides/standard-so101.md).
 
@@ -46,7 +46,7 @@ repository first; the application then records that revision in its submodule po
 
 ## Build outside the checkout
 
-The 0.8.5 development workflow keeps Python environments, Node.js, frontend dependencies,
+The managed development workflow keeps Python environments, Node.js, frontend dependencies,
 caches and candidate packages under the NERV storage root. Edit the Git checkout in your
 project directory; do not create a venv or run npm install there. The managed build takes
 an indexed source snapshot, including edits to tracked files. Add new files to the index
@@ -68,7 +68,7 @@ nerv preview update --bundle /path/to/reported/bundle
 nerv preview
 ```
 
-Preview data belongs to its own profile. Device authorization and conversation history
+Preview data belongs to its own profile. Device authorization and project history
 are not copied from the stable channel. Stop the preview before updating or rolling it back;
 never stop another service to free a port.
 
@@ -137,3 +137,20 @@ available. Interrupted compaction can be retried with a fresh plan. Up to six
 builds may retain generated dependencies, allowing retries while a preview is
 running. At that limit, a new build requires review and compaction of eligible
 old builds. Stop both NERV channels before applying compaction.
+
+## Contributing to the 0.9 Project and MCP workflow
+
+The ordinary chat interface is retired. Keep external Agent context and credentials in
+that client; optional managed robot decision services remain separate. Projects and runs
+reuse the task/execution services rather than creating another action path. Changes to
+control ownership, observation freshness, idempotency or supervision need failure tests
+that show stale, revoked and late requests being refused.
+
+Use [the MCP guide](guides/mcp.md) for the paired stdio bridge. A local SDK fixture does not
+establish compatibility with a named Agent application. Record client versions and test
+image delivery, task status, stop, reconnect and supervision loss separately. Never use
+synthetic events or architecture illustrations as evidence of a real robot trial.
+
+Public figures live in `assets/readme/diagrams/`; update the editable Python/SVG sources
+and both languages together. Keep earlier world media with accurate version captions.
+The 0.9.0 candidate is local-only until its release is explicitly approved.
