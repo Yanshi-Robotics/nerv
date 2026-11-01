@@ -43,7 +43,7 @@ If not, it belongs in a family, a node or a registry entry — never in the plat
 the packaged interface shares the host port and uses same-origin API requests.
 
 ```
-nerv registry | doctor | chat | run | serve | node | conformance | session
+nerv registry | doctor | serve | mcp | node | conformance | session
 nerv preview build --source <checkout>
 nerv preview builds                         # review generated dependency retention
 ```
@@ -138,3 +138,25 @@ The 0.6 sections above describe prior development stages.
 ## Detailed English commits (0.8)
 
 Commit subjects and bodies must be written in English. Use a concise subject and a detailed, bulleted body covering development changes, relevant design decisions, compatibility or migration effects, and validation actually performed. State unverified areas explicitly. Do not add bilingual translations or Co-Authored-By trailers. This commit convention does not grant automatic push or release permission.
+
+## 0.9.0 Project and external Agent boundary
+
+The console and Project workbench replace ordinary built-in chat. Projects and Runs
+use the existing execution journal; do not introduce a second task engine. The Host
+MCP gateway is the external interface. Runtime nodes remain internal and never grant
+motion authority merely because a request originated on localhost.
+
+`nerv mcp --channel stable|preview --client ID` bridges to a paired, already-running
+Host. Project configuration, pairing, revocation, real connection and motion enablement
+are operator responsibilities. Browser polling must not renew external Agent supervision.
+A Project revision and a Run instance are immutable task inputs; opening the console
+must not stop, restart or implicitly authorize the world.
+
+The internal harness remains for an optional robot decision service. It does not
+provide ordinary chat or manage an external Agent's model keys, context or spending.
+Keep source, software tests, client-product acceptance, simulation and real hardware
+evidence separate. Go2 motion remains unavailable until its missing deployment metadata
+and stopping envelope are verified; loading ONNX or MJCF alone is not validation.
+
+0.9.0 is a local candidate in this development round. Do not push, deploy, tag or
+replace the stable installation without new explicit release authorization.
