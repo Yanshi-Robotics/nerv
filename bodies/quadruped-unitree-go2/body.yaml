@@ -1,0 +1,34 @@
+# Go2 model and policy identity; incomplete releases remain unavailable for motion.
+name: quadruped-unitree-go2
+family: quadruped
+policy_robot: unitree/go2
+label: Unitree Go2 quadruped
+version: "1"
+sensors:
+  - {name: "camera:head", camera: "head_front", description: "forward camera on the base"}
+skills:
+  move_forward: {policy: "managed:go2-velocity-flat", description: "move forward using measured odometry"}
+  turn_left: {policy: "managed:go2-velocity-flat", description: "turn left using measured heading"}
+  turn_right: {policy: "managed:go2-velocity-flat", description: "turn right using measured heading"}
+actuators:
+  source: contract
+  pd_mode: release
+  foot_bodies: [FL_calf, FR_calf, RL_calf, RR_calf]
+  chase_body: base
+  deployment_status: needs_validation
+  deployment_reason: "Historical policy lacks command ranges and deadband; motion/stop profile needs validation."
+# Deliberately empty: biped clearance and stopping values must not be inherited.
+locomotion: {}
+buses:
+  sim:
+    settings:
+      external_supervision:
+        timeout_s: 20
+        max_observation_age_s: 2
+        poll_s: 0.05
+    enabled: true
+    kind: zmq
+  real:
+    enabled: false
+    kind: unitree
+    verified: false

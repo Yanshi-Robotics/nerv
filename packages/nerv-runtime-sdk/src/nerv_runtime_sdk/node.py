@@ -112,7 +112,10 @@ class BodyNode:
                  "description": "Only an armed body carries out mutating actions.",
                  "choices": [{"value": "true", "label": "armed"}, {"value": "false", "label": "disarmed"}]}]
         opts += list(self.impl.config_options() or [])
-        return {"options": opts}
+        config = {"options": opts}
+        if hasattr(self.impl, "external_supervision_config"):
+            config["external_supervision"] = self.impl.external_supervision_config()
+        return config
 
     def set_config(self, key: str, value: str) -> dict:
         if key == "armed":

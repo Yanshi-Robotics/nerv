@@ -138,7 +138,8 @@ class PolicyRelease:
         self.action_scale = float(c["action"]["scale"])
         self.policy_dt = float(c["timing"]["policy_dt_s"])
         self.history = int(c.get("history_length", 1) or 1)
-        terms = [t["term"] if isinstance(t, dict) else str(t) for t in (c.get("obs_terms") or [])]
+        declared_terms = c.get("obs_terms") or c.get("term_order") or []
+        terms = [t["term"] if isinstance(t, dict) else str(t) for t in declared_terms]
         self.term_order: tuple[str, ...] = tuple(terms) or TERM_ORDER
         unknown = [t for t in self.term_order if t not in TERM_ORDER]
         if unknown:
@@ -199,7 +200,9 @@ class PolicyRelease:
 
 
 # ---- the body -----------------------------------------------------------------------------------------------------
-class HumanoidBody:
+class VelocityPolicyBody:
+    """Shared contract-driven locomotion for legged robot families."""
+
     family = "humanoid"
 
     def __init__(self, spec: dict, bus: MotorBus, runner: SkillRunner) -> None:
@@ -224,7 +227,7 @@ class HumanoidBody:
         dirs = {str((v or {}).get("policy", "")) for v in skills.values()}
         dirs.discard("")
         if len(dirs) != 1:
-            raise ValueError(f"the humanoid skills must share one policy release; body.yaml names {sorted(dirs)}")
+            raise ValueError(f"the locomotion skills must share one policy release; body.yaml names {sorted(dirs)}")
         self.policy = PolicyRelease(dirs.pop())
         for record in records:
             if inventory(record['path'])[1] != record['files']:
@@ -271,7 +274,7 @@ class HumanoidBody:
         self._hold_pending: tuple[str, float] | None = None      # (reason, sim deadline) while coming to a stand
         self._last_targets: list[float] = []                     # what the PD is tracking right now
         self._running = True
-        self._thread = threading.Thread(target=self._policy_loop, name="nerv-humanoid-policy", daemon=True)
+        self._thread = threading.Thread(target=self._policy_loop, name=f"nerv-{self.family}-policy", daemon=True)
         self._thread.start()
 
     @staticmethod
@@ -373,6 +376,8 @@ class HumanoidBody:
                     raise ValueError(f"assembled {obs.shape[0]} observation values, contract says {p.obs_dim}")
                 action = p.act(obs)
                 prev_action = action
+                if action.shape != (len(p.joint_names),) or not np.isfinite(action).all():
+                    raise ValueError("Policy returned invalid action dimensions or values")
                 targets = p.default_pos + action * p.action_scale
                 # A hold may latch while inference is outside this lock. The
                 # final actuator write must recheck the same hold state.
@@ -710,15 +715,15 @@ class HumanoidBody:
                     "data": {"reason": REASON_HELD, "held": True, "hold_reason": self._hold_reason}}
         if name == "move_forward":
             meters = float(args.get("meters", L["default_move_m"]))
-            if meters <= 0:
-                return {"ok": False, "message": "meters must be positive"}
+            if not math.isfinite(meters) or meters <= 0:
+                return {"ok": False, "message": "meters must be finite and positive"}
             capped = min(meters, float(L["max_move_m"]))
             note = "" if capped == meters else f" (you asked for {meters:g} m; at most {L['max_move_m']:g} m per call)"
             res = self.runner.run(name, lambda p, a: self._move_forward(capped, p, a), _progress)
         elif name in ("turn_left", "turn_right"):
             degrees = float(args.get("degrees", L["default_turn_deg"]))
-            if degrees <= 0:
-                return {"ok": False, "message": "degrees must be positive"}
+            if not math.isfinite(degrees) or degrees <= 0:
+                return {"ok": False, "message": "degrees must be finite and positive"}
             capped = min(degrees, float(L["max_turn_deg"]))
             note = "" if capped == degrees else f" (you asked for {degrees:g}°; at most {L['max_turn_deg']:g}° per call)"
             sign = 1 if name == "turn_left" else -1
@@ -776,3 +781,9 @@ class HumanoidBody:
             self.bus.close()
         except Exception:
             pass
+
+
+class HumanoidBody(VelocityPolicyBody):
+    """Biped specialization; its registry supplies physical limits and clearance."""
+
+    family = "humanoid"

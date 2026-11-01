@@ -24,6 +24,11 @@ actuators:
   settle_tol_deg: 2.0
 buses:
   sim:
+    settings:
+      external_supervision:
+        timeout_s: 20
+        max_observation_age_s: 2
+        poll_s: 0.05
     enabled: true                  # workbench scenes verified locally; no simulated ACT claim
     kind: zmq                      # runs in the same venv as NERV
   real:

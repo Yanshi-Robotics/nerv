@@ -49,7 +49,7 @@ def test_ambiguous_contract_and_missing_semantics_are_not_defaulted(tmp_path):
     release['turn_vx'] = None
     with pytest.raises(ValueError, match='turn_vx'):
         validate_contract(contract, release)
-    release['family'] = 'quadruped'
+    release['family'] = 'unsupported'
     with pytest.raises(ValueError, match='no installed motion controller'):
         validate_contract(contract, release)
 

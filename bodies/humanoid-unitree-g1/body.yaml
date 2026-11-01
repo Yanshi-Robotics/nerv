@@ -47,6 +47,11 @@ locomotion:
   hold_still_rad_s: 0.3            # all joints slower than this = standing, latch now (standing measures 0.02)
 buses:
   sim:
+    settings:
+      external_supervision:
+        timeout_s: 20
+        max_observation_age_s: 2
+        poll_s: 0.05
     kind: zmq                      # runs in the same venv as NERV
   real:
     enabled: false                 # real hardware integration is outside 0.6

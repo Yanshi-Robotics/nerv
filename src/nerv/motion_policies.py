@@ -83,8 +83,8 @@ def inspect(home, key, revision=None):
 
 
 def validate_contract(contract, release):
-    """Require the semantics actually consumed by the current humanoid controller."""
-    if release['family'] != 'humanoid':
+    """Require the semantics consumed by the shared legged motion controller."""
+    if release['family'] not in ('humanoid', 'quadruped'):
         raise ValueError('This ONNX family has no installed motion controller')
     names = contract.get('joint_names')
     if not isinstance(names, list) or not names or len(set(names)) != len(names) or not all(isinstance(v, str) and v for v in names):

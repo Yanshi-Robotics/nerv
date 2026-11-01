@@ -3,13 +3,14 @@
 Each family module exposes:
     build(spec: dict, bus: MotorBus, runner: SkillRunner) -> BodyImpl
 where `spec` is the body.yaml as a dict (env-expanded) and BodyImpl is the protocol in
-body.node. Family names are the robot's shape: humanoid, arm (quadruped later).
+body.node. Family names are the robot's shape: humanoid, quadruped, arm.
 """
 from __future__ import annotations
 
 import importlib
 
-FAMILIES = {"humanoid": "nerv.body.families.humanoid", "arm": "nerv.body.families.arm"}
+FAMILIES = {"humanoid": "nerv.body.families.humanoid", "arm": "nerv.body.families.arm",
+            "quadruped": "nerv.body.families.quadruped"}
 
 
 def load(name: str):
