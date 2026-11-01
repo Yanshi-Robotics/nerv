@@ -1183,7 +1183,9 @@ export const LOCALES: Record<string, Locale> = {
       "Decision service": "Decision service",
       "Saved. New managed decision turns use these settings; running tasks keep their limits.": "Saved. New managed decision turns use these settings; running tasks keep their limits.",
       "These settings apply only to the optional managed robot decision service. External Agents manage their own context and budgets. Robot task limits come from the control scheme.": "These settings apply only to the optional managed robot decision service. External Agents manage their own context and budgets. Robot task limits come from the control scheme.",
-      "NERV saved this credential for the local bridge. You can copy it once if your integration requires it; keep it private.": "NERV saved this credential for the local bridge. You can copy it once if your integration requires it; keep it private."
+      "NERV saved this credential for the local bridge. You can copy it once if your integration requires it; keep it private.": "NERV saved this credential for the local bridge. You can copy it once if your integration requires it; keep it private.",
+      "Project configuration": "Project configuration",
+      "Choose the missing robot or world, then save. Changing the target clears the selected control scheme.": "Choose the missing robot or world, then save. Changing the target clears the selected control scheme."
     }
   },
   "zh": {
@@ -2350,7 +2352,9 @@ export const LOCALES: Record<string, Locale> = {
       "Decision service": "机器人决策服务",
       "Saved. New managed decision turns use these settings; running tasks keep their limits.": "已保存。新的托管决策回合使用这些设置；运行中的任务保持原有限制。",
       "These settings apply only to the optional managed robot decision service. External Agents manage their own context and budgets. Robot task limits come from the control scheme.": "这些设置仅用于可选的托管机器人决策服务。外部 Agent 自行管理上下文和预算。机器人任务限制由控制方案设置。",
-      "NERV saved this credential for the local bridge. You can copy it once if your integration requires it; keep it private.": "NERV 已为本地桥接器保存此凭据。如接入程序需要，可在此复制一次；请妥善保管。"
+      "NERV saved this credential for the local bridge. You can copy it once if your integration requires it; keep it private.": "NERV 已为本地桥接器保存此凭据。如接入程序需要，可在此复制一次；请妥善保管。",
+      "Project configuration": "项目配置",
+      "Choose the missing robot or world, then save. Changing the target clears the selected control scheme.": "选择缺少的机器人或世界后保存。更换对象会清除已选控制方案。"
     }
   }
 };

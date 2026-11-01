@@ -364,3 +364,6 @@ html:not([data-theme="light"]) .console-brand img { filter:invert(1); }
  .project-standby { padding:24px 16px; }
 }
 @media(prefers-reduced-motion:reduce) { .project-shell *, .project-shell *::before, .project-shell *::after { animation:none!important; transition:none!important; scroll-behavior:auto!important; } }
+
+.project-configuration { width:min(100%,580px); text-align:left; padding:16px; border:1px solid var(--control-border); border-radius:12px; }
+.project-configuration .form-label { width:100%; margin:12px 0; }
