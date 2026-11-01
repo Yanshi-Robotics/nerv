@@ -85,7 +85,7 @@ Manual takeover revokes external motion control and waits for stopping to be con
 |---|---|---|
 | SO-101 Real | Guided setup, existing calibration checks, two cameras, ACT and bounded control | Physical connection and motion are operator-run; grasping reliability is not certified |
 | SO-101 Sim | Three workbench scenes, camera observations and bounded controllers | Real ACT exports are not assumed compatible with simulation |
-| G1 Sim | Managed scene and motion-policy path | Requires a compatible checked policy; candidate simulation acceptance is separate from earlier demos |
+| G1 Sim | Managed scene and motion-policy path | Apartment and house movement, turn and supervision-stop checks passed; distance tracking remains imprecise |
 | Go2 Sim | Adapter and capability work | Motion blocked by missing complete deployment contract; no public motion claim |
 | Sim2Real / Real2Sim combinations | Reserved capability types | Not runnable in this release |
 | Codex / DeepSeek Harness / Claude Code | Local stdio MCP bridge intended for these clients | Client/version-specific end-to-end acceptance still pending |

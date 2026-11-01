@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useMemo, useState, type ReactNode } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, type ReactNode } from "react";
 
 import { useI18n } from "@/lib/i18n";
 
@@ -78,11 +78,29 @@ export default function SensingArea({
   const [expanded, setExpanded] = useState<ViewId | null>(null); // 放大到整块中间区的那一格
 
   const [layout,setLayout] = useState<ProjectLayout>(project?.view_layout || {});
-  useEffect(()=>{setLayout(project?.view_layout || {});},[project?.id,project?.revision]);
-  async function changeLayout(patch:Partial<ProjectLayout>) {
+  const [layoutError,setLayoutError] = useState("");
+  const layoutProject=useRef(project);
+  const layoutSaves=useRef<Promise<void>>(Promise.resolve());
+  useEffect(()=>{
+    if(!project || project.id!==layoutProject.current?.id || project.revision>=(layoutProject.current?.revision||0)){
+      layoutProject.current=project;
+      setLayout(project?.view_layout || {});
+    }
+  },[project?.id,project?.revision]);
+  function changeLayout(patch:Partial<ProjectLayout>) {
     if (!project) return;
-    const next={...layout,...patch};
-    try {const saved=await saveProjectLayout(project.id,project.revision,next);setLayout(next);onLayoutSaved?.(saved);}catch(e){setErr((e as Error).message);}
+    const id=project.id;
+    layoutSaves.current=layoutSaves.current.then(async()=>{
+      const current=layoutProject.current;
+      if(!current || current.id!==id)return;
+      const next={...current.view_layout,...patch};
+      try {
+        const saved=await saveProjectLayout(id,current.revision,next);
+        if(layoutProject.current?.id!==id)return;
+        layoutProject.current=saved;
+        setLayout(saved.view_layout||next);setLayoutError("");onLayoutSaved?.(saved);
+      }catch(e){setLayoutError((e as Error).message);}
+    });
   }
   const sid = session?.id ?? "";
   const hasBody = !!session?.body;
@@ -220,7 +238,7 @@ export default function SensingArea({
       } else if (v === VIEW_BODY) {
         out.push({
           id: v,
-          label: `${t("Body live")} · ${bodyNode?.key ?? `body:${session.body}`}`,
+          label: t("Body live"),
           sub: t("what the body's own camera is streaming; the brain gets one snapshot per turn, not this"),
           body: (
             <Stream nonce={nonce} url={bodyOnline && bodyNode ? `${bodyNode.url}/stream` : null} alt={t("Body live")}
@@ -231,7 +249,7 @@ export default function SensingArea({
         if (!session.world) continue;
         out.push({
           id: v,
-          label: `${t("World chase (operator only)")} · ${worldNode?.key ?? `world:${session.world}/${session.body}`}`,
+          label: t("World chase (operator only)"),
           operatorOnly: true,
           muted: true,
           body: (
@@ -343,11 +361,12 @@ export default function SensingArea({
           这样视频流重连、观察刷新都不会把页面拉回顶部。 */}
       <RobotActivity session={session} onChanged={onStateChanged}>
       <div className="world-camera-layout">
-        <div className="world-camera-caption">
-          {session.body} · {session.world}
+        <div className="world-camera-caption" title={`${session.body} / ${session.world||""}`}>
+          {project?.name || session.body}
           {session.sensors.length ? ` · ${t("ambient")}: ${session.sensors.join(", ")}` : ""}
           {!active && <span className="ml-2 text-amber-400">{t("This run has ended. Recorded observations remain in project history.")}</span>}
         </div>
+        {layoutError&&<p className="error-text world-layout-error" role="alert">{layoutError}</p>}
         {wantObservation && err && (
           <div className="rounded-lg border border-amber-700/60 bg-amber-950/30 p-3 text-xs text-amber-300">
             {t("Could not perceive:")} {err}

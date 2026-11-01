@@ -29,3 +29,7 @@ external weight files and custom native operators are not enabled.
 A local import is not a redistribution license. See the [publication guide](policy-publishing.md)
 before sharing weights. Unknown-origin legacy weights are excluded from new official Hub
 publication until their redistribution terms can be established.
+
+## Candidate simulation evidence
+
+The installed 0.9.0 candidate completed G1 movement, turning, observation supervision and stop checks in the apartment and house scenes without a fall. In both scenes, a 0.15 m movement request reported 0.38 m travel; a 5° turn reported 4.4°. These checks demonstrate execution and supervision behavior, not precise arrival at a requested position. They are simulation results, not physical robot acceptance.
