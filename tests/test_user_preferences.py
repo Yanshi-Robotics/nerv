@@ -54,7 +54,7 @@ def test_portrait_and_name_preserve_device(home):
     assert robot_profile.read()['image'] is None
     assert json.loads((home / 'devices/standard.json').read_text()) == original
 
-def test_session_model_gate_has_no_side_effects(home, monkeypatch):
+def test_removed_session_entry_has_no_side_effects(home, monkeypatch):
     from fastapi.testclient import TestClient
     from nerv.platform import server
     from nerv.platform.hub import Nerv
@@ -66,7 +66,7 @@ def test_session_model_gate_has_no_side_effects(home, monkeypatch):
     monkeypatch.setattr(hub.launcher, 'ensure_runtime', launch)
     client = TestClient(server.app)
     for payload in ({}, {'brain': 'operator'}, {'brain': 'missing-model'}, {'brain': 'openai-sol'}):
-        assert client.post('/api/sessions', json={'body': 'fixture-arm', 'world': 'fixture-scene', **payload}).status_code == 400
+        assert client.post('/api/sessions', json={'body': 'fixture-arm', 'world': 'fixture-scene', **payload}).status_code == 410
     assert not hub.store.all()
     launch.assert_not_called()
     with pytest.raises(ValueError, match='configured chat model'):
@@ -122,7 +122,7 @@ def test_discovery_receipt_survives_profile_reload(home, monkeypatch):
     {'body': 'arm', 'world': 'scene', 'mode': 'real'},
     {'body': 'arm', 'world': None, 'mode': 'unknown'},
 ])
-def test_public_scene_requirement_precedes_creation(home, monkeypatch, payload):
+def test_removed_public_entry_and_internal_scene_validation(home, monkeypatch, payload):
     from fastapi.testclient import TestClient
     from nerv.platform import server, cli
     from unittest.mock import Mock
@@ -131,14 +131,14 @@ def test_public_scene_requirement_precedes_creation(home, monkeypatch, payload):
     monkeypatch.setattr(server.nerv, 'new_session', create)
     monkeypatch.setattr(server, 'list_brains', lambda: [{'name': 'fixture-model'}])
     response = TestClient(server.app).post('/api/sessions', json={'brain': 'fixture-model', **payload})
-    assert response.status_code == 400
+    assert response.status_code == 410
     with pytest.raises(ValueError):
         cli._new_session(SimpleNamespace(new_session=create), SimpleNamespace(**payload))
     create.assert_not_called()
 
 
 @pytest.mark.parametrize('mode,world', [('real', None), ('sim', 'fixture-scene')])
-def test_public_scene_selection_is_forwarded_unchanged(home, monkeypatch, mode, world):
+def test_removed_chat_entry_cannot_start_a_configured_robot(home, monkeypatch, mode, world):
     from fastapi.testclient import TestClient
     from nerv.platform import server
     from unittest.mock import Mock
@@ -146,6 +146,6 @@ def test_public_scene_selection_is_forwarded_unchanged(home, monkeypatch, mode, 
     monkeypatch.setattr(server.nerv, 'new_session', create)
     monkeypatch.setattr(server, 'list_brains', lambda: [{'name': 'fixture-model'}])
     response = TestClient(server.app).post('/api/sessions', json={'brain': 'fixture-model', 'body': 'fixture-arm', 'mode': mode, 'world': world})
-    assert response.status_code == 200
-    assert create.call_args.args[:3] == ('fixture-model', 'fixture-arm', world)
-    assert create.call_args.args[5] == mode
+    assert response.status_code == 410
+    assert 'Project' in response.json()['detail']
+    create.assert_not_called()

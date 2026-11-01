@@ -710,7 +710,8 @@ def node_refresh(key: str) -> dict:
 @app.post("/api/nodes/{key:path}/stop-simulation")
 def stop_simulation(key: str, inp: StopSimulationIn) -> dict:
     try:
-        return nerv.stop_simulation(key, inp.expected_world, inp.expected_epoch, inp.session_id)
+        from .project_api import services
+        return services(nerv)[0].stop_simulation(key, inp.expected_world, inp.expected_epoch, inp.session_id)
     except (ValueError, KeyError) as e:
         raise HTTPException(400, e.args[0] if e.args else str(e))
 
@@ -770,7 +771,8 @@ def get_session(sid: str) -> dict:
 
 @app.delete("/api/sessions/{sid}")
 def delete_session(sid: str) -> dict:
-    if nerv.store.exists(sid) and nerv.store.get(sid).project_id:
+    from .project_api import services
+    if (nerv.store.exists(sid) and nerv.store.get(sid).project_id) or services(nerv)[0].store.references_session(sid):
         raise HTTPException(409, "This execution history belongs to a Project and cannot be deleted separately")
     nerv.stop(sid) if nerv.store.exists(sid) else None
     if sid in nerv._runs:

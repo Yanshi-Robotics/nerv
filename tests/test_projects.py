@@ -48,6 +48,8 @@ def test_migration_verified_backup_and_idempotent_history(tmp_path):
     assert len(store.list()) == 1
     run = store.runs(store.list()[0]["id"])[0]
     assert run["session_id"] == robot.id and run["status"] == "interrupted"
+    assert store.references_session(robot.id)
+    assert not store.references_session(chat.id)
     for relative, content in source.items():
         assert (store.root / "migration-backup-v1" / relative).read_bytes() == content
         assert (tmp_path / "sessions" / relative).read_bytes() == content
@@ -167,3 +169,28 @@ def test_project_pins_scheme_revision_and_new_choice_resolves_its_own_version(tm
     assert updated["scheme_revision"] == 1
     hub.schemes.save(second.model_dump())
     assert service.store.get(project["id"])["scheme_revision"] == 1
+    pinned = service.update(project["id"], {"expected_revision": 2, "scheme_revision": 0})
+    assert pinned["scheme_revision"] == 2
+    for patch in ({"robot": "different"}, {"execution": "act"}):
+        with pytest.raises(ValueError, match="does not match"):
+            service.update(project["id"], {"expected_revision": 3, **patch})
+    assert service.store.get(project["id"])["revision"] == 3
+
+
+def test_legacy_stop_ends_project_and_uses_producer_epoch(tmp_path):
+    sessions = SessionStore(str(tmp_path / "sessions"))
+    hub = Mock(store=sessions)
+    hub.tasks.cancel.return_value = {"ok": True}
+    hub.launcher.nodes = {"body:fixture": SimpleNamespace(meta={"epoch": "producer-epoch"})}
+    service = ProjectService(hub, tmp_path / "projects")
+    project = service.store.create({"name": "Stop", "mode": "sim", "robot": "fixture", "world": "world"})
+    session, _ = sessions.new("operator", "fixture", "world", epoch="world-epoch",
+                              project_id=project["id"], run_id="r_one")
+    service.store.save_run(project["id"], {"id": "r_one", "status": "running", "created_at": 1,
+                                           "session_id": session.id})
+    with pytest.raises(ValueError, match="changed"):
+        service.stop_simulation("body:fixture", "world", "old-epoch", session.id)
+    hub.tasks.cancel.assert_not_called()
+    result = service.stop_simulation("body:fixture", "world", "producer-epoch", session.id)
+    assert result["run"]["status"] == "ended" and service.active_run(project["id"]) is None
+    hub.stop_simulation.assert_called_once_with("body:fixture", "world", "producer-epoch", session.id)

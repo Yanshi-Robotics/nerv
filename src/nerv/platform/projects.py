@@ -141,6 +141,11 @@ class ProjectStore:
             self.get(project_id)
             _write(self.root / _id(project_id) / "runs" / (_id(run["id"]) + ".json"), run)
 
+    def references_session(self, session_id):
+        return any(p.get("legacy_session") == session_id or
+                   any(r.get("session_id") == session_id for r in self.runs(p["id"]))
+                   for p in self.list())
+
     def migrate(self, sessions, schemes=None):
         """Verify a source backup before migration; preserve journals and pure chat."""
         with self.lock:
@@ -262,8 +267,8 @@ class ProjectService:
         with self._lock, self.store.lock:
             current = self.store.get(project_id)
             values = dict(payload)
-            if "scheme" in values:
-                if "scheme_revision" not in values:
+            if {"scheme", "scheme_revision", "robot", "mode", "execution"} & values.keys():
+                if "scheme" in values and "scheme_revision" not in values:
                     values["scheme_revision"] = 0
                 pinned = self._pin_scheme({**current, **values})
                 values["scheme_revision"] = pinned["scheme_revision"]
@@ -384,7 +389,13 @@ class ProjectService:
                 if not result.get("ok"):
                     raise ValueError("Stop has not been confirmed")
                 if session.mode == "sim":
-                    self.hub.stop_simulation("body:" + session.body, session.world, session.epoch, session.id)
+                    # Session epoch identifies the world; stop confirmation uses
+                    # the producer's distinct instance identity.
+                    handle = self.hub.launcher.nodes.get("body:" + session.body)
+                    if not handle:
+                        raise ValueError("Simulation producer is missing; stop is unconfirmed")
+                    self.hub.stop_simulation("body:" + session.body, session.world,
+                                             handle.meta.get("epoch", ""), session.id)
                 else:
                     self.hub.arm(session.id, False)
                     client = self.hub.body_client(session.body)
@@ -409,3 +420,21 @@ class ProjectService:
         if run is None:
             raise ValueError("No active run")
         return self.stop_run(project_id, run["id"])
+
+    def stop_simulation(self, key, world, epoch, session_id=None):
+        """Keep the legacy operator control on the same Project lifecycle."""
+        with self._lock:
+            for project in self.store.list():
+                run = self.active_run(project["id"])
+                if not run or not run.get("session_id"):
+                    continue
+                session = self.hub.store.get(run["session_id"])
+                if key != "body:" + session.body:
+                    continue
+                handle = self.hub.launcher.nodes.get(key)
+                if (not handle or not epoch or handle.meta.get("epoch") != epoch
+                        or session.world != world or session.mode != "sim"
+                        or (session_id and session_id != session.id)):
+                    raise ValueError("The simulation changed; refresh before stopping it")
+                return self.stop_run(project["id"], run["id"])
+            return self.hub.stop_simulation(key, world, epoch, session_id)
