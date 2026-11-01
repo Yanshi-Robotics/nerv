@@ -9,6 +9,29 @@ module = importlib.util.module_from_spec(spec)
 spec.loader.exec_module(module)
 
 
+def test_simulation_bundle_preserves_managed_motion_and_excludes_real_act():
+    import yaml
+    root = Path(__file__).parents[1]
+    g1 = yaml.safe_load((root / 'bodies/humanoid-unitree-g1/body.yaml').read_text())
+    arm = yaml.safe_load((root / 'bodies/arm-lerobot-so101/body.yaml').read_text())
+    packaged = module.simulation_profile(g1)
+    assert packaged['skills'] == g1['skills']
+    assert all(skill['policy'].startswith('managed:') for skill in packaged['skills'].values())
+    assert set(packaged['buses']) == {'sim'}
+    assert module.simulation_profile(arm)['skills'] == {}
+    assert 'real' in arm['buses']
+    assert arm['skills']['snack_into_box']['modes'] == ['real']
+
+
+def test_simulation_profile_respects_declared_modes_without_mutating_source():
+    source = {'buses': {'sim': {}, 'real': {}}, 'skills': {
+        'sim': {'modes': ['sim']}, 'both': {}, 'disabled': {'modes': []}}}
+    packaged = module.simulation_profile(source)
+    assert set(packaged['skills']) == {'sim', 'both'}
+    packaged['skills']['sim']['modes'].append('real')
+    assert source['skills']['sim']['modes'] == ['sim']
+
+
 def test_identical_payloads_reuse_identity_across_wheel_build_metadata(tmp_path):
     from nerv.managed import environment_identity
     digests = []

@@ -29,6 +29,18 @@ def canonical_wheel(source, target):
             write_member(wheel, name, content)
 
 
+def simulation_profile(body):
+    """Preserve simulation skills without promoting real-only deployments."""
+    import copy
+    body = copy.deepcopy(body)
+    body["buses"] = {"sim": body["buses"]["sim"]}
+    body["skills"] = {
+        name: skill for name, skill in body.get("skills", {}).items()
+        if "sim" in skill.get("modes", ["sim", "real"])
+    }
+    return body
+
+
 def bundle(output=None):
     OUT = Path(output) if output is not None else ROOT / "temp/release"
     import sys
@@ -57,8 +69,7 @@ def bundle(output=None):
         body_ids = simulation['bodies']
         for body_id in body_ids:
             body = yaml.safe_load((ROOT / "bodies" / body_id / "body.yaml").read_text())
-            body["buses"] = {"sim": body["buses"]["sim"]}
-            body["skills"] = {}
+            body = simulation_profile(body)
             write_member(z, f"bodies/{body_id}/body.yaml", json.dumps(body))
         write_member(z, 'module.json', json.dumps(simulation))
     sdk, host, device = (names[k] for k in ("nerv_runtime_sdk", "nerv", "nerv_runtime_lerobot"))
