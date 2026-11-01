@@ -120,43 +120,17 @@ def _print_events(evs) -> None:
 
 
 def cmd_chat(a) -> int:
-    hub = _hub()
-    try:
-        sid = _new_session(hub, a)
-        if a.arm:
-            print(hub.arm(sid, True))
-        print("type a message; 'arm' / 'disarm' / 'stop' / 'quit' are commands.")
-        while True:
-            try:
-                text = input("you> ").strip()
-            except (EOFError, KeyboardInterrupt):
-                break
-            if not text:
-                continue
-            if text == "quit":
-                break
-            if text in ("arm", "disarm"):
-                print(hub.arm(sid, text == "arm"))
-                continue
-            if text == "stop":
-                hub.stop(sid)
-                continue
-            _print_events(hub.handle_stream(sid, text))
-    finally:
-        hub.shutdown()
-    return 0
+    print("Built-in chat was removed in NERV 0.9.0. Open a Project in NERV and connect an external Agent with nerv mcp.", file=sys.stderr)
+    return 2
 
 
 def cmd_run(a) -> int:
-    hub = _hub()
-    try:
-        sid = _new_session(hub, a)
-        if a.arm:
-            hub.arm(sid, True)
-        _print_events(hub.handle_stream(sid, a.say))
-    finally:
-        hub.shutdown()
-    return 0
+    return cmd_chat(a)
+
+
+def cmd_mcp(a) -> int:
+    from .mcp_host import main
+    return main(a.channel, a.client)
 
 
 def cmd_serve(a) -> int:
@@ -165,7 +139,20 @@ def cmd_serve(a) -> int:
     def request_shutdown():
         from .server import request_shutdown as begin
         begin()
-    server = BrowserServer(uvicorn.Config(
+    class PairedHostServer(BrowserServer):
+        receipt = None
+
+        async def startup(self, sockets=None):
+            await super().startup(sockets=sockets)
+            if self.started and not self.should_exit:
+                from .mcp_host import publish_host
+                port = self.servers[0].sockets[0].getsockname()[1]
+                self.receipt = publish_host(paths.NERV_HOME, self.config.host, port)
+                if self.receipt:
+                    from .server import app
+                    app.state.agent_host_instance = self.receipt["instance_id"]
+
+    server = PairedHostServer(uvicorn.Config(
         "nerv.platform.server:app", host=a.host or config.SERVE_HOST,
         port=a.port or config.SERVE_PORT, log_level="info",
         timeout_graceful_shutdown=config.SERVE_SHUTDOWN_TIMEOUT_S),
@@ -178,7 +165,16 @@ def cmd_serve(a) -> int:
             lease(storage_root(paths.NERV_HOME), [sys.prefix]):
         if (Path(paths.NERV_HOME) / "update-pending.json").exists():
             raise ValueError("An update was interrupted. Run nerv rollback before starting NERV.")
-        server.run()
+        try:
+            server.run()
+        finally:
+            receipt_path = Path(paths.NERV_HOME) / "agent-host.json"
+            if server.receipt and receipt_path.exists():
+                current = json.loads(receipt_path.read_text())
+                if current.get("instance_id") == server.receipt["instance_id"]:
+                    # Retain the record as an explicit stopped state, not a live endpoint.
+                    from ..install_system import atomic_json
+                    atomic_json(receipt_path, {**current, "stopped": True})
     return 0
 
 
@@ -205,6 +201,9 @@ def cmd_conformance(a) -> int:
 
 
 def cmd_session(a) -> int:
+    if a.action == "new":
+        print("Create a Project in the NERV console. Ordinary chat sessions were removed in 0.9.0.", file=sys.stderr)
+        return 2
     hub = _hub()
     if a.action == "list":
         for s in hub.store.list():
@@ -463,6 +462,10 @@ def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(prog="nerv", description="NERV — a nervous system for robots")
     ap.add_argument("--version", action="version", version=f"nerv {__version__}")
     sub = ap.add_subparsers(dest="cmd", required=True)
+    p = sub.add_parser("mcp", help="connect a paired external Agent to the running Host")
+    p.add_argument("--channel", choices=["stable", "preview"], default="stable")
+    p.add_argument("--client", help="paired Agent connection ID from NERV Settings")
+    p.set_defaults(fn=cmd_mcp)
     p = sub.add_parser('assets', help='manage local data-only asset revisions')
     p.add_argument('action', choices=['list', 'catalog', 'install', 'update', 'import', 'inspect', 'clone', 'save', 'export', 'verify', 'check', 'remove', 'restore'])
     p.add_argument('--id', default='')
@@ -515,12 +518,12 @@ def main(argv: list[str] | None = None) -> int:
     p.add_argument('--revision', default='main', help='Hugging Face revision resolved to an immutable commit')
     p.set_defaults(fn=cmd_policy)
 
-    p = sub.add_parser("chat", help="a conversation in the terminal")
+    p = sub.add_parser("chat", help="removed: use Projects and nerv mcp")
 
     _sess_args(p)
 
     p.set_defaults(fn=cmd_chat)
-    p = sub.add_parser("run", help="one turn, scripted")
+    p = sub.add_parser("run", help="removed: use Projects and nerv mcp")
     _sess_args(p)
     p.add_argument("--say", required=True)
     p.set_defaults(fn=cmd_run)

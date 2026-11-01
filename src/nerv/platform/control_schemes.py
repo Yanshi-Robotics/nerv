@@ -25,7 +25,7 @@ class Scheme(BaseModel):
     name: str = Field(min_length=1, max_length=120)
     robot: str = Field(min_length=1)
     mode: Literal["sim", "real"]
-    template: Literal["fixed_policy", "policy_group", "visual_direct"]
+    template: Literal["fixed_policy", "policy_group", "visual_direct", "external_vlm", "external_skills"]
     decision_model: str | None = None
     effort: str | None = None
     actions: list[str] = Field(min_length=1)
@@ -40,12 +40,15 @@ class Scheme(BaseModel):
             if len(self.actions) != 1 or self.decision_model or self.effort:
                 raise ValueError("Fixed policy requires one skill and no decision model")
             self.action_budget = 1
+        elif self.template in ("external_vlm", "external_skills"):
+            if self.decision_model or self.effort:
+                raise ValueError("External decisions must not configure an internal model")
         elif not self.decision_model or self.decision_model == "operator":
             raise ValueError("Choose a decision model")
         return self
 
     def structure(self):
-        return {"interaction": "agent", "decision": self.decision_model,
+        return {"interaction": "agent", "decision": "external_agent" if self.template.startswith("external_") else self.decision_model,
                 "execution": list(self.actions), "template": self.template}
 
 
@@ -107,7 +110,7 @@ def resolve(hub, session, scheme):
     if robot is None:
         raise ValueError("Connect the robot before checking this scheme")
     operations = {op.name: op for op in robot.capabilities().operations}
-    kind = "primitive" if scheme.template == "visual_direct" else "skill"
+    kind = "primitive" if scheme.template in ("visual_direct", "external_vlm") else "skill"
     for action in scheme.actions:
         if action not in operations or operations[action].kind != kind:
             raise ValueError(f"Unavailable or incompatible action: {action}")
