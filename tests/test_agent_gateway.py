@@ -253,3 +253,54 @@ def test_stop_during_external_capability_loading_does_not_resurrect_task(gateway
     worker.join(2)
     assert hub.tasks.snapshot(session.id)["task"]["status"] == "cancelled"
     assert session.id not in hub.tasks._external_turns
+
+
+def test_control_and_receipts_do_not_survive_run_replacement(gateway):
+    gw, paired, hub, session, _ = gateway
+    acknowledge(gw, paired)
+    assert gw.control("project")["supervision_state"] == "confirmed"
+    # Deliberately keep the same session and Runtime epoch: Run identity is an
+    # independent authorization boundary, not inferred from either field.
+    gw.projects.active_run = lambda pid: {"id": "replacement", "session_id": session.id}
+    status = gw.control("project")
+    assert not status["accepting"] and status["owner_id"] is None
+    assert status["supervision"] is None and status["last_observation_at"] is None
+    assert status["last_acknowledged_at"] is None and status["supervision_state"] == "not_confirmed"
+    with pytest.raises(PermissionError):
+        gw.invoke(paired["token"], "task_start", {"project_id": "project", "request_id": "new-run-task", "goal": "Move"})
+    gw.set_control("project", accepting=True, owner_id=paired["connection"]["id"])
+    with pytest.raises(ValueError, match="fresh frame"):
+        gw.invoke(paired["token"], "task_start", {"project_id": "project", "request_id": "new-owner-task", "goal": "Move"})
+    hub.claim_robot.assert_not_called()
+
+
+def test_motion_checks_run_identity_without_a_prior_status_read(gateway):
+    gw, paired, _, session, _ = gateway
+    observation = acknowledge(gw, paired)
+    gw.projects.active_run = lambda pid: {"id": "replacement", "session_id": session.id}
+    with pytest.raises(PermissionError):
+        gw.invoke(paired["token"], "acknowledge", {"project_id": "project", "receipt_id": observation["receipt_id"]})
+    assert not gw._leases and not gw._receipts
+
+
+def test_control_assignment_requires_a_run_and_rechecks_after_stop(gateway):
+    gw, paired, hub, session, _ = gateway
+    gw.projects.active_run = lambda pid: None
+    with pytest.raises(ValueError, match="Start a Run"):
+        gw.set_control("project", accepting=True, owner_id=paired["connection"]["id"])
+    gw.projects.active_run = lambda pid: {"id": "before", "session_id": session.id}
+    def changed(*args, **kwargs):
+        gw.projects.active_run = lambda pid: {"id": "after", "session_id": session.id}
+        return {"ok": True}
+    hub.stop_robot.side_effect = changed
+    with pytest.raises(ValueError, match="Run changed"):
+        gw.set_control("project", accepting=True, owner_id=paired["connection"]["id"])
+    assert not gw.control("project")["accepting"]
+
+
+def test_revoking_stale_owner_does_not_stop_a_replacement_run(gateway):
+    gw, paired, hub, session, _ = gateway
+    hub.stop_robot.reset_mock()
+    gw.projects.active_run = lambda pid: {"id": "replacement", "session_id": session.id}
+    assert gw.revoke(paired["connection"]["id"])["ok"]
+    hub.stop_robot.assert_not_called()

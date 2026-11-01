@@ -140,12 +140,27 @@ class AgentGateway:
             record = json.loads(path.read_text())
             record["revoked"] = True
             atomic_json(path, record)
-            projects = [pid for pid, c in self._controls.items() if c.get("owner_id") == client_id]
+            projects = [pid for pid in list(self._controls) if self.control(pid).get("owner_id") == client_id]
         results = [self.set_control(pid, accepting=False, owner_id=None) for pid in projects]
         return {"ok": all(r.get("ok", False) for r in results), "connection": self._public(record), "stops": results}
 
+    def _run_identity(self, project_id):
+        run = self.projects.active_run(project_id)
+        return (run.get("id"), run.get("session_id")) if run else None
+
+    def _invalidate_control(self, project_id):
+        self._controls[project_id] = {"accepting": False, "owner_id": None}
+        self._leases.pop(project_id, None)
+        self._expired.discard(project_id)
+        for key in list(self._receipts):
+            if key[1] == project_id:
+                self._receipts.pop(key)
+
     def control(self, project_id):
         with self._lock:
+            binding = self._controls.get(project_id, {}).get("run_identity")
+            if binding is not None and binding != self._run_identity(project_id):
+                self._invalidate_control(project_id)
             value = dict(self._controls.get(project_id, {"accepting": False, "owner_id": None}))
             lease = self._leases.get(project_id)
             value["supervision"] = ({"acknowledged_at": lease["acknowledged_at"],
@@ -168,13 +183,11 @@ class AgentGateway:
             if record.get("revoked") or project_id not in record["projects"] or "control" not in record["permissions"]:
                 raise ValueError("Selected connection does not have project control permission")
         with self._lock:
-            self._controls[project_id] = {"accepting": False, "owner_id": None}
-            self._leases.pop(project_id, None)
-            self._expired.discard(project_id)
-            for key in list(self._receipts):
-                if key[1] == project_id:
-                    self._receipts.pop(key)
+            self._invalidate_control(project_id)
         run = self.projects.active_run(project_id)
+        identity = (run.get("id"), run.get("session_id")) if run else None
+        if accepting and not identity:
+            raise ValueError("Start a Run before assigning Agent control")
         if run:
             session = self.projects.require_session(project_id)
             result = self.hub.tasks.cancel(session.id, reason="Operator changed external control")
@@ -182,7 +195,10 @@ class AgentGateway:
                 return {"ok": False, "message": "Stop is unconfirmed; control remains disabled", "stop": result,
                         **self.control(project_id)}
         with self._lock:
-            self._controls[project_id] = {"accepting": bool(accepting), "owner_id": owner_id if accepting else None}
+            if accepting and identity != self._run_identity(project_id):
+                raise ValueError("Run changed during control transfer; review and assign control again")
+            self._controls[project_id] = {"accepting": bool(accepting), "owner_id": owner_id if accepting else None,
+                                          "run_identity": identity if accepting else None}
         return {"ok": True, **self.control(project_id)}
 
     def pause(self, project_id):
@@ -193,7 +209,7 @@ class AgentGateway:
         return {"ok": True, **self.control(project_id)}
 
     def _owns(self, record, project_id, *, allow_paused=False):
-        control = self._controls.get(project_id, {})
+        control = self.control(project_id)
         if (control.get("owner_id") != record["id"] or
                 (not allow_paused and not control.get("accepting"))):
             raise PermissionError("The operator has not assigned this Agent active control")
@@ -361,7 +377,7 @@ class AgentGateway:
 
     def _still_current(self, record, pid, lease):
         with self._lock:
-            control = self._controls.get(pid, {})
+            control = self.control(pid)
             latest = self._leases.get(pid, {})
             return (not self._stop.is_set() and control.get("owner_id") == record["id"] and
                     control.get("accepting", False) and latest.get("owner_id") == record["id"] and
