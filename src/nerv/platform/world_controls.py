@@ -33,6 +33,15 @@ class WorldControls:
         return descriptor
 
     def invoke(self, sid, name, arguments, *, instance_id=None, revision=None, current=lambda: True):
+        session = self.hub.store.get(sid)
+        if getattr(session, "project_id", ""):
+            from .project_api import services
+            # Consistent Project -> node lock ordering also used by run start/end.
+            with services(self.hub)[0]._lock:
+                return self._invoke(sid, name, arguments, instance_id=instance_id, revision=revision, current=current)
+        return self._invoke(sid, name, arguments, instance_id=instance_id, revision=revision, current=current)
+
+    def _invoke(self, sid, name, arguments, *, instance_id=None, revision=None, current=lambda: True):
         session, world = self._binding(sid)
         with self.hub._node_lock:
             if not current():
@@ -56,10 +65,16 @@ class WorldControls:
                 raise ValueError("World change cancelled before application")
             if name == "rebuild":
                 values = resolve_configuration(self.hub.registry.world(session.world).configuration, arguments)
-                handle = self.hub.launcher.nodes[f"body:{session.body}"]
-                self.hub.stop_simulation(handle.name, session.world, handle.meta["epoch"], sid)
-                created = self.hub.new_session(session.brain, session.body, session.world,
-                    session.sensors, session.agent_tools, "sim", values)
+                if getattr(session, "project_id", ""):
+                    from .project_api import services
+                    projects, gateway = services(self.hub)
+                    gateway.set_control(session.project_id, accepting=False, owner_id=None)
+                    created = projects.rebuild(session.project_id, values)["session"]
+                else:
+                    handle = self.hub.launcher.nodes[f"body:{session.body}"]
+                    self.hub.stop_simulation(handle.name, session.world, handle.meta["epoch"], sid)
+                    created = self.hub.new_session(session.brain, session.body, session.world,
+                        session.sensors, session.agent_tools, "sim", values, operator_workspace=session.brain == "operator")
                 result = {"ok": True, "message": "New instance created in standby", "session": created}
             else:
                 result = world.control_post({"instance_id": session.epoch,

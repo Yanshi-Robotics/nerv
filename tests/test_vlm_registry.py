@@ -111,5 +111,5 @@ def test_production_chat_rejects_a_legacy_mock_session(tmp_path, monkeypatch, en
     monkeypatch.setattr(server, "nerv", hub)
     with TestClient(server.app) as client:
         response = client.post(endpoint, json={"session":session.id, "text":"start"})
-    assert response.status_code == 400
+    assert response.status_code == 410
     assert not hub.store.get(session.id).messages

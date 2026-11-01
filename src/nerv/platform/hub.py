@@ -46,6 +46,10 @@ class Nerv:
                  gate: SafetyGate | None = None, launcher: Launcher | None = None) -> None:
         self.registry = registry or Registry()
         self.store = store or SessionStore()
+        from .projects import ProjectStore
+        self.project_store = ProjectStore()
+        from .control_schemes import SchemeStore
+        self.project_store.migrate(self.store, SchemeStore())
         self.gate = gate or SafetyGate()
         self.launcher = launcher or Launcher(self.registry)
         self._bodies: dict[str, RemoteBody] = {}
@@ -251,7 +255,8 @@ class Nerv:
     @_node_lifecycle
     def new_session(self, brain: str, body: str | None, world: str | None,
                     sensors: list[str] | None = None, tools: list[str] | None = None,
-                    mode: str = "sim", world_configuration: dict | None = None, *, operator_workspace=False) -> dict:
+                    mode: str = "sim", world_configuration: dict | None = None, *, operator_workspace=False,
+                    project_id="", run_id="", project_revision=0) -> dict:
         if brain == "operator" and not operator_workspace:
             raise ValueError("Select a configured chat model; use the operator workspace for device operations")
         if body:
@@ -325,8 +330,10 @@ class Nerv:
             except Exception as e:
                 slog.record("operator", {"event": "tool_launch_failed", "tool": t, "error": str(e)})
                 tool_names = [x for x in tool_names if x != t]
-        s, frozen = self.store.new(brain, body, world, sensors=sensors, tools=tool_names, epoch=epoch)
+        s, frozen = self.store.new(brain, body, world, sensors=sensors, tools=tool_names, epoch=epoch,
+            project_id=project_id, run_id=run_id, project_revision=project_revision, mode=mode)
         s.mode, s.binding, s.armed = mode, f"{body}:{mode}:{world or ''}" if body else "", enabled
+        s.project_id, s.run_id, s.project_revision = project_id, run_id, project_revision
         self.store.save(s)
         for sid in frozen:
             interrupt.request(sid)

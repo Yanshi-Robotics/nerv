@@ -24,12 +24,14 @@ from . import explore
 from .hub import Nerv
 from .session import log as slog
 from .storage_api import router as storage_router
+from .project_api import router as project_router
 
 nerv = Nerv()
 
 _shutdown_requested = threading.Event()
 app = FastAPI(title="NERV", version=__version__)
 app.include_router(storage_router)
+app.include_router(project_router(lambda: nerv))
 app.add_middleware(CORSMiddleware, allow_origins=config.CORS_ORIGINS, allow_methods=["*"], allow_headers=["*"])
 
 
@@ -57,6 +59,8 @@ async def private_validation_error(_request, error):
 def request_shutdown():
     """End observers and invalidate model decisions before HTTP request draining."""
     _shutdown_requested.set()
+    from .project_api import shutdown as shutdown_agents
+    shutdown_agents(nerv)
     from .setup_checks import checks
     checks.cancel()
     nerv.request_shutdown()
@@ -540,8 +544,10 @@ def runtime_operation(sid: str, operation: str, payload: dict):
     task = nerv.tasks.snapshot(sid)["task"] or {}
     active = task.get("status") in ("starting", "running", "updating", "stopping")
     if operation == "operator/supervise":
-        if active and task.get("scheme", {}).get("template") != "fixed_policy":
-            raise HTTPException(403, "Decision tasks use their own supervision")
+        try:
+            nerv.tasks.allow_operator_supervision(sid)
+        except ValueError as error:
+            raise HTTPException(403, str(error)) from error
     elif active or sid in nerv._runs:
         raise HTTPException(409, "Stop the task before preparing or loading")
     if operation not in ("prepare", "policies/load", "policies/check", "device/close", "device/torque-off", "operator/supervise"):
@@ -848,6 +854,9 @@ def save_control_scheme(payload: dict):
 @app.post("/api/sessions/{sid}/control-scheme")
 def select_control_scheme(sid: str, payload: dict):
     try:
+        if nerv.store.get(sid).project_id:
+            from .project_api import services
+            return services(nerv)[0].select_scheme(sid, payload["id"], payload.get("revision"))
         return nerv.tasks.select_scheme(sid, payload["id"], payload.get("revision"))
     except (KeyError, ValueError, OSError) as error:
         raise HTTPException(409, str(error))
@@ -1040,21 +1049,12 @@ def _chat_ready(sid):
 # ---- chat ------------------------------------------------------------------------------------
 @app.post("/api/chat")
 def chat(inp: ChatIn) -> dict:
-    _chat_ready(inp.session)
-    out = nerv.handle(inp.session, inp.text)
-    return {"reply": out["reply"], "stop_reason": out["stop_reason"], "error": out.get("error")}
+    raise HTTPException(410, "Built-in chat was removed. Open a Project and connect your Agent through MCP.")
 
 
 @app.post("/api/chat/stream")
-def chat_stream(inp: ChatIn) -> StreamingResponse:
-    _chat_ready(inp.session)
-
-    def gen():
-        for ev in slog.bound_stream(inp.session, nerv.handle_stream(inp.session, inp.text)):
-            yield f"data: {json.dumps(ev, ensure_ascii=False, default=str)}\n\n"
-
-    return StreamingResponse(gen(), media_type="text/event-stream",
-                             headers={"Cache-Control": "no-cache", "X-Accel-Buffering": "no"})
+def chat_stream(inp: ChatIn):
+    raise HTTPException(410, "Built-in chat was removed. Open a Project and connect your Agent through MCP.")
 
 
 @app.get("/api/perceive")

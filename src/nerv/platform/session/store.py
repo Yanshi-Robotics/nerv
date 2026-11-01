@@ -53,6 +53,9 @@ class Session:
     control_scheme_revision: int = 0
     task_model: str = ""
     task_effort: str | None = None
+    project_id: str = ""
+    run_id: str = ""
+    project_revision: int = 0
 
     def summary(self) -> dict:
         return {"id": self.id, "brain": self.brain, "body": self.body, "world": self.world,
@@ -61,7 +64,8 @@ class Session:
                 "epoch": self.epoch, "core_task": self.core_task, "notes": list(self.notes),
                 "mode": self.mode, "binding": self.binding,
                 "task_model": self.task_model, "task_effort": self.task_effort,
-                "control_scheme": self.control_scheme, "control_scheme_revision": self.control_scheme_revision}
+                "control_scheme": self.control_scheme, "control_scheme_revision": self.control_scheme_revision,
+                "project_id": self.project_id, "run_id": self.run_id, "project_revision": self.project_revision}
 
 
 def _decode_session(data):
@@ -162,7 +166,7 @@ class SessionStore:
         return out
 
     def new(self, brain: str, body: str | None, world: str | None, sensors: list | None = None,
-            tools: list | None = None, epoch: str = "") -> tuple[Session, list[str]]:
+            tools: list | None = None, epoch: str = "", *, project_id="", run_id="", project_revision=0, mode="sim") -> tuple[Session, list[str]]:
         frozen: list[str] = []
         if body:
             for s in self.all():
@@ -173,7 +177,8 @@ class SessionStore:
                     frozen.append(s.id)
         s = Session(id=_gen_id(), brain=brain, body=body, world=world, status=op.SESSION_ACTIVE,
                     created_at=_now(), title="(new session)", sensors=list(sensors or []),
-                    agent_tools=list(tools or []), epoch=epoch)
+                    agent_tools=list(tools or []), epoch=epoch, mode=mode,
+                    project_id=project_id, run_id=run_id, project_revision=project_revision)
         self.save(s)
         return s, frozen
 
