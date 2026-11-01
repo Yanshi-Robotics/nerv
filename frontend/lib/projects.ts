@@ -3,7 +3,7 @@ const BASE = process.env.NEXT_PUBLIC_API ?? 'http://localhost:8170';
 export type ProjectLayout = { primary?: string; hidden?: string[]; monitorSize?: string; dock?: string };
 export type ProjectRun = { id: string; session_id: string; status: string; created_at?: number | string; reason?: string };
 export type Project = { id: string; name: string; mode: 'sim'|'real'; robot: string; world?: string|null; execution: string; scheme?: string; revision: number; created_at: number | string; updated_at?: number | string; last_opened_at?: number | string; view_layout?: ProjectLayout; active_run?: ProjectRun|null; readiness?: {ready: boolean; reasons?: string[]} };
-export type ProjectDetail = { project: Project; runs: ProjectRun[]; active_run: ProjectRun|null };
+export type ProjectDetail = { project: Project; runs: ProjectRun[]; active_run: ProjectRun|null; readiness?: {ready: boolean; issues: {code: string; reason?: string; destination: string}[]} };
 export type ProjectDraft = { name: string; mode: 'sim'|'real'; robot: string; world: string; execution: string; scheme: string };
 export type AgentConnection = { id: string; name: string; projects: string[]; permissions: string[]; revoked?: boolean; last_seen?: string; supervision?: string };
 export async function projectRequest<T = any>(path: string, method = 'GET', body?: unknown): Promise<T> {

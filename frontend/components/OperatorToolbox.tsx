@@ -37,7 +37,7 @@ export default function OperatorToolbox({session, bodyNode, nodes, onChanged, ch
   const [clients,setClients] = useState<AgentConnection[]>([]);
   const [owner,setOwner] = useState("");
   const [manualReady,setManualReady] = useState(false);
-  useEffect(()=>{setManualReady(false);setOwner("");},[projectId]);
+  useEffect(()=>{setManualReady(false);setOwner("");},[projectId,session?.id]);
   useEffect(()=>{if(!projectId)return;projectRequest<AgentConnection[]>("agent-connections").then(items=>setClients(items.filter(item=>!item.revoked&&item.projects.includes(projectId)&&item.permissions.includes("control")))).catch(e=>setError(e.message));},[projectId,open]);
   async function changeControl(action:string) {
     if (!projectId) return;
@@ -98,7 +98,7 @@ export default function OperatorToolbox({session, bodyNode, nodes, onChanged, ch
               </div>}
               {open && group === "Execution" && chat}
               {open && group === "Robot controls" && robot && <div className="space-y-3">
-                {projectId && <div className="project-takeover"><label className="form-label">{t("Controlling Agent")}<select className="nerv-input" value={owner} onChange={e=>setOwner(e.target.value)}><option value="">{t("Choose an Agent")}</option>{clients.map(client=><option key={client.id} value={client.id}>{client.name}</option>)}</select></label><p>{t("Take control before using manual actions. The current Agent task will be stopped.")}</p><button className="nerv-control action" onClick={()=>perform("takeover",()=>changeControl("takeover"))}>{t("Take manual control")}</button><button disabled={!owner} className="nerv-control action" onClick={()=>perform("release",()=>changeControl("release"))}>{t("Return control to Agent")}</button><button className="nerv-control action" onClick={()=>perform("pause",()=>changeControl("pause"))}>{t("Pause Agent requests")}</button><button disabled={!owner} className="nerv-control action" onClick={()=>perform("resume",()=>changeControl("resume"))}>{t("Accept Agent requests")}</button></div>}
+                {projectId && <div className="project-takeover"><label className="form-label">{t("Controlling Agent")}<select className="nerv-input" value={owner} onChange={e=>setOwner(e.target.value)}><option value="">{t("Choose an Agent")}</option>{clients.map(client=><option key={client.id} value={client.id}>{client.name}</option>)}</select></label><p>{t("Take control before using manual actions. The current Agent task will be stopped.")}</p><button className="nerv-control action" onClick={()=>perform("takeover",()=>changeControl("takeover"))}>{t("Take manual control")}</button><button className="nerv-control action" onClick={()=>perform("pause",()=>changeControl("pause"))}>{t("Pause Agent requests")}</button><button disabled={!owner} className="nerv-control action" onClick={()=>perform("resume",()=>changeControl("resume"))}>{t(manualReady ? "Return control to Agent" : "Accept Agent requests")}</button></div>}
                 <button role="switch" aria-checked={session!.armed} disabled={pending.arm} onClick={arm} className={`nerv-control rounded border px-3 py-2 text-xs ${session!.armed ? "nerv-danger" : ""}`}>{t(session!.armed ? "Disarm robot" : "Authorize robot motion")}</button>
                 <TeleopPanel sessionId={session!.id} armed={session!.armed && (!projectId || manualReady)} hasWorld={false} bodyTrust={bodyNode?.online ? bodyNode.trust?.state ?? null : "offline"} />
               </div>}

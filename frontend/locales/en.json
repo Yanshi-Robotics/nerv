@@ -1154,6 +1154,14 @@
     "Choose an Agent": "Choose an Agent",
     "End this run? The current task will stop.": "End this run? The current task will stop.",
     "End run": "End run",
-    "Configure execution in Control schemes": "Configure execution in Control schemes"
+    "Configure execution in Control schemes": "Configure execution in Control schemes",
+    "Robot unavailable": "Robot unavailable",
+    "World unavailable": "World unavailable",
+    "Robot and world are incompatible": "Robot and world are incompatible",
+    "Review configuration": "Review configuration",
+    "Decision service": "Decision service",
+    "Saved. New managed decision turns use these settings; running tasks keep their limits.": "Saved. New managed decision turns use these settings; running tasks keep their limits.",
+    "These settings apply only to the optional managed robot decision service. External Agents manage their own context and budgets. Robot task limits come from the control scheme.": "These settings apply only to the optional managed robot decision service. External Agents manage their own context and budgets. Robot task limits come from the control scheme.",
+    "NERV saved this credential for the local bridge. You can copy it once if your integration requires it; keep it private.": "NERV saved this credential for the local bridge. You can copy it once if your integration requires it; keep it private."
   }
 }

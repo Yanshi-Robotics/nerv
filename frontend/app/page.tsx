@@ -33,7 +33,7 @@ export default function Home(){
   return <main className="project-shell">
     <GlobalTaskBar sessions={sessions} nodes={nodes} navigate={navigate} externalSessionIds={projects.map(p=>p.active_run?.session_id||'')}/>
     {error&&<p role="alert" className="error-text project-error">{t('Unable to refresh local state. Check the NERV service.')} {error}</p>}
-    {current&&<ProjectWorld key={current.id} project={current} session={session} nodes={nodes} registry={registry} refresh={refresh} onConsole={()=>navigate('projects')} onProjectChanged={updateProject}/>}
+    {current&&<ProjectWorld key={current.id} project={current} session={session} nodes={nodes} registry={registry} refresh={refresh} onConsole={()=>navigate('projects')} onNavigate={navigate} onProjectChanged={updateProject}/>}
     {!current&&!consoleOpen&&<div className="project-standby"><h1>{t('Project unavailable')}</h1><button className="nerv-control action" onClick={()=>navigate('projects')}>{t('Open console')}</button></div>}
     {consoleOpen&&<section className={`project-console ${current?'project-console-overlay':''}`} aria-label={t('Console')}>
       <header className="console-header"><button className="nerv-control console-brand" onClick={()=>navigate('projects')} aria-label={t('Console')}><img src="/brand/nerv-mark-dark.png" alt=""/>NERV</button><nav aria-label={t('Console')}>{tabs.map(([id,label])=><button key={id} className="nerv-control" aria-current={tabRoute===id||id.startsWith('settings/')&&tabRoute.startsWith('settings/')?'page':undefined} onClick={()=>navigate(id)}>{t(label)}</button>)}</nav>{current&&<button className="nerv-control action" onClick={()=>navigate(`project/${current.id}`)}>{t('Return to world')}</button>}</header>

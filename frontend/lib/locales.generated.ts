@@ -1175,7 +1175,15 @@ export const LOCALES: Record<string, Locale> = {
       "Choose an Agent": "Choose an Agent",
       "End this run? The current task will stop.": "End this run? The current task will stop.",
       "End run": "End run",
-      "Configure execution in Control schemes": "Configure execution in Control schemes"
+      "Configure execution in Control schemes": "Configure execution in Control schemes",
+      "Robot unavailable": "Robot unavailable",
+      "World unavailable": "World unavailable",
+      "Robot and world are incompatible": "Robot and world are incompatible",
+      "Review configuration": "Review configuration",
+      "Decision service": "Decision service",
+      "Saved. New managed decision turns use these settings; running tasks keep their limits.": "Saved. New managed decision turns use these settings; running tasks keep their limits.",
+      "These settings apply only to the optional managed robot decision service. External Agents manage their own context and budgets. Robot task limits come from the control scheme.": "These settings apply only to the optional managed robot decision service. External Agents manage their own context and budgets. Robot task limits come from the control scheme.",
+      "NERV saved this credential for the local bridge. You can copy it once if your integration requires it; keep it private.": "NERV saved this credential for the local bridge. You can copy it once if your integration requires it; keep it private."
     }
   },
   "zh": {
@@ -2334,7 +2342,15 @@ export const LOCALES: Record<string, Locale> = {
       "Choose an Agent": "选择 Agent",
       "End this run? The current task will stop.": "结束本次运行？当前任务将停止。",
       "End run": "结束运行",
-      "Configure execution in Control schemes": "在控制方案中配置执行方式"
+      "Configure execution in Control schemes": "在控制方案中配置执行方式",
+      "Robot unavailable": "机器人不可用",
+      "World unavailable": "世界不可用",
+      "Robot and world are incompatible": "机器人与世界不兼容",
+      "Review configuration": "检查配置",
+      "Decision service": "机器人决策服务",
+      "Saved. New managed decision turns use these settings; running tasks keep their limits.": "已保存。新的托管决策回合使用这些设置；运行中的任务保持原有限制。",
+      "These settings apply only to the optional managed robot decision service. External Agents manage their own context and budgets. Robot task limits come from the control scheme.": "这些设置仅用于可选的托管机器人决策服务。外部 Agent 自行管理上下文和预算。机器人任务限制由控制方案设置。",
+      "NERV saved this credential for the local bridge. You can copy it once if your integration requires it; keep it private.": "NERV 已为本地桥接器保存此凭据。如接入程序需要，可在此复制一次；请妥善保管。"
     }
   }
 };

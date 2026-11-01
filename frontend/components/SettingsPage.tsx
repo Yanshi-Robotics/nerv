@@ -29,7 +29,7 @@ const sections = [
   ["components", "Components and simulation"],
   ["assets", "My assets"],
   ["system", "System and installation"],
-  ["runtime", "Runtime parameters"],
+  ["runtime", "Decision service"],
   ["diagnostics", "Diagnostics and logs"],
   ["updates", "Updates"],
   ["about", "About"],
@@ -117,7 +117,7 @@ function RuntimeSettings() {
       );
       setMessage(
         t(
-          "Saved. Changes apply to new Agent turns; running tasks keep their limits.",
+          "Saved. New managed decision turns use these settings; running tasks keep their limits.",
         ),
       );
     } catch (e) {
@@ -126,10 +126,10 @@ function RuntimeSettings() {
   }
   return (
     <div className="settings-content space-y-5">
-      <h1>{t("Runtime parameters")}</h1>
+      <h1>{t("Decision service")}</h1>
       <p className="muted">
         {t(
-          "Changes apply to new Agent turns. Robot task limits are set by the control scheme.",
+          "These settings apply only to the optional managed robot decision service. External Agents manage their own context and budgets. Robot task limits come from the control scheme.",
         )}
       </p>
       {params.map((p) => (
