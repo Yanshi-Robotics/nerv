@@ -1,5 +1,5 @@
 "use client";
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { getRegistry,getNodes,listSessions,userApi,POLL_NODES_MS,type Registry,type NodeInfo,type SessionSummary,type RobotDisplay } from '@/lib/api';
 import { listProjects,projectRequest,projectRoute,projectForSession,type Project,type ProjectDraft } from '@/lib/projects';
 import ProjectConsole,{emptyProjectDraft} from '@/components/ProjectConsole';
@@ -15,8 +15,10 @@ import { useI18n } from '@/lib/i18n';
 const tabs = [['projects','Projects'],['robots','Robots'],['worlds','Worlds'],['policies','Policies'],['assets','Assets'],['settings/general','Settings']] as const;
 export default function Home(){
   const {t}=useI18n();
+  const consoleRef=useRef<HTMLElement>(null);
   const [route,setRoute]=useState('projects'),[registry,setRegistry]=useState<Registry|null>(null),[nodes,setNodes]=useState<NodeInfo[]>([]),[sessions,setSessions]=useState<SessionSummary[]>([]),[projects,setProjects]=useState<Project[]>([]),[robot,setRobot]=useState<RobotDisplay|null>(null),[version,setVersion]=useState(''),[versionError,setVersionError]=useState(false),[error,setError]=useState(''),[currentId,setCurrentId]=useState(''),[consoleOpen,setConsoleOpen]=useState(true);
   const [draft,setDraft]=useState<ProjectDraft>(emptyProjectDraft);
+  useEffect(()=>{if(consoleOpen)consoleRef.current?.focus();},[consoleOpen,route]);
   const refresh=useCallback(async()=>{try{const [r,n,s,p,d]=await Promise.all([getRegistry(),getNodes(),listSessions(),listProjects(),userApi<RobotDisplay>('robot')]);setRegistry(r);setNodes(n);setSessions(s);setProjects(p);setRobot(d);setError('');}catch(e){setError((e as Error).message);}},[]);
   const navigate=useCallback((value:string)=>{value=projectRoute(value);if(value.startsWith('session/')){const p=projectForSession(projects,value.slice(8));value=p?`project/${p.id}`:'settings/diagnostics';}window.location.hash=value;setRoute(value);if(value.startsWith('project/')){setCurrentId(value.slice(8));setConsoleOpen(false);}else setConsoleOpen(true);},[projects]);
   useEffect(()=>{const restore=()=>{const value=projectRoute(window.location.hash);if(window.location.hash!==`#${value}`)window.history.replaceState(null,'',`#${value}`);setRoute(value);if(value.startsWith('project/')){setCurrentId(value.slice(8));setConsoleOpen(false);}else setConsoleOpen(true);};restore();window.addEventListener('hashchange',restore);refresh();userApi('status').then(v=>{if(v.version)setVersion(v.version);else setVersionError(true);}).catch(()=>setVersionError(true));const timer=setInterval(refresh,POLL_NODES_MS);return()=>{window.removeEventListener('hashchange',restore);clearInterval(timer);};},[refresh]);
@@ -33,9 +35,9 @@ export default function Home(){
   return <main className="project-shell">
     <GlobalTaskBar sessions={sessions} nodes={nodes} navigate={navigate} externalSessionIds={projects.map(p=>p.active_run?.session_id||'')}/>
     {error&&<p role="alert" className="error-text project-error">{t('Unable to refresh local state. Check the NERV service.')} {error}</p>}
-    {current&&<ProjectWorld key={current.id} project={current} session={session} nodes={nodes} registry={registry} refresh={refresh} onConsole={()=>navigate('projects')} onNavigate={navigate} onProjectChanged={updateProject}/>}
+    {current&&<ProjectWorld inactive={consoleOpen} key={current.id} project={current} session={session} nodes={nodes} registry={registry} refresh={refresh} onConsole={()=>navigate('projects')} onNavigate={navigate} onProjectChanged={updateProject}/>}
     {!current&&!consoleOpen&&<div className="project-standby"><h1>{t('Project unavailable')}</h1><button className="nerv-control action" onClick={()=>navigate('projects')}>{t('Open console')}</button></div>}
-    {consoleOpen&&<section className={`project-console ${current?'project-console-overlay':''}`} aria-label={t('Console')}>
+    {consoleOpen&&<section ref={consoleRef} tabIndex={-1} className={`project-console ${current?'project-console-overlay':''}`} aria-label={t('Console')}>
       <header className="console-header"><button className="nerv-control console-brand" onClick={()=>navigate('projects')} aria-label={t('Console')}><img src="/brand/nerv-mark-dark.png" alt=""/>NERV</button><nav aria-label={t('Console')}>{tabs.map(([id,label])=><button key={id} className="nerv-control" aria-current={tabRoute===id||id.startsWith('settings/')&&tabRoute.startsWith('settings/')?'page':undefined} onClick={()=>navigate(id)}>{t(label)}</button>)}</nav>{current&&<button className="nerv-control action" onClick={()=>navigate(`project/${current.id}`)}>{t('Return to world')}</button>}</header>
       <div className="console-scroll">
       {tabRoute==='projects'&&<ProjectConsole projects={projects} registry={registry} draft={draft} setDraft={setDraft} openProject={openProject} navigate={navigate} onCreated={p=>{setProjects(old=>[...old,p]);setDraft(emptyProjectDraft);openProject(p.id);}}/>}

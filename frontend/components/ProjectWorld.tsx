@@ -6,8 +6,8 @@ import { useI18n } from '@/lib/i18n';
 import OperatorToolbox from './OperatorToolbox';
 import SensingArea from './SensingArea';
 import ControlSchemes from './ControlSchemes';
-export default function ProjectWorld({project,session,nodes,registry,refresh,onConsole,onNavigate,onProjectChanged}: {
-  project:Project;session:SessionSummary|null;nodes:NodeInfo[];registry:Registry|null;refresh:()=>void;onConsole:()=>void;onNavigate:(route:string)=>void;onProjectChanged:(p:Project)=>void;
+export default function ProjectWorld({project,session,nodes,registry,refresh,onConsole,onNavigate,onProjectChanged,inactive=false}: {
+  inactive?:boolean;project:Project;session:SessionSummary|null;nodes:NodeInfo[];registry:Registry|null;refresh:()=>void;onConsole:()=>void;onNavigate:(route:string)=>void;onProjectChanged:(p:Project)=>void;
 }){
   const {t}=useI18n();
   const [robotChoice,setRobotChoice]=useState(project.robot),[worldChoice,setWorldChoice]=useState(project.world||'');
@@ -21,7 +21,7 @@ export default function ProjectWorld({project,session,nodes,registry,refresh,onC
   async function endRun(){if(!project.active_run || !window.confirm(t('End this run? The current task will stop.')))return;setBusy(true);setError('');try{await projectRequest(`projects/${project.id}/runs/${project.active_run.id}/stop`,'POST',{});refresh();}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
   async function saveConfiguration(){setBusy(true);setError('');try{const result=await projectRequest<Project>(`projects/${project.id}`,'PATCH',{robot:robotChoice,world:project.mode==='sim'?worldChoice:'',scheme:'',scheme_revision:0,expected_revision:project.revision});onProjectChanged(result);refresh();}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
   async function chooseScheme(scheme:string){setBusy(true);setError('');try{const result=await projectRequest<Project>(`projects/${project.id}`,'PATCH',{scheme,expected_revision:project.revision});onProjectChanged(result);refresh();}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
-  return <section className="project-world" aria-label={project.name}>
+  return <section className="project-world" aria-label={project.name} inert={inactive} aria-hidden={inactive||undefined}>
     <header className="project-world-header"><div><strong>{project.name}</strong><span className="environment-badge">{project.mode}</span></div><span className="muted">{project.robot}{project.world?` / ${project.world}`:''}</span><span className="project-supervision" role="status">{t(supervision?.supervision_state==='confirmed'?'Observation acknowledged':supervision?.supervision_state==='expired'?'Supervision expired':'Supervision not confirmed')}{supervision?.last_acknowledged_at&&<small>{new Date(supervision.last_acknowledged_at*1000).toLocaleTimeString()}</small>}</span>{project.active_run&&<button className="nerv-control action" disabled={busy} onClick={endRun}>{t("End run")}</button>}</header>
     {error&&<p role="alert" className="error-text project-error">{error}</p>}
     {session?<OperatorToolbox session={session} bodyNode={body} nodes={nodes} onChanged={refresh} onConsole={onConsole} projectId={project.id} chat={<ControlSchemes session={session} bodyNode={body} brains={registry?.brains||[]} onChanged={refresh} onSetup={onConsole} onModels={onConsole}/>}>
