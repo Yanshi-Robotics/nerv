@@ -26,13 +26,17 @@ class LeRobotRuntime:
     guarded_dispatch = True
     def __init__(self, profile, binding):
         self.profile, self.binding = profile, binding
-        self.name, self.family, self.version = profile.id, profile.family, "0.8.1"
+        self.name, self.family, self.version = profile.id, profile.family, "0.8.3"
         self.settings = binding.configuration
         required = ("control_rate_hz", "max_runtime_s", "supervision_timeout_s", "cancel_timeout_s",
                     "watchdog_poll_s", "max_frame_age_s", "max_action_age_s", "policy_device", "jpeg_quality", "use_degrees")
         for key in required:
             if key not in self.settings:
                 raise ValueError(f"runtime configuration requires {key}")
+        for key in ("supervision_timeout_s", "cancel_timeout_s", "watchdog_poll_s", "max_frame_age_s", "max_action_age_s"):
+            value = self.settings[key]
+            if type(value) not in (int, float) or not math.isfinite(value) or value <= 0:
+                raise ValueError(f"runtime configuration requires a finite positive {key}")
         self.dispatch = DispatchAuthority()
         self.execution = ManagedExecutions(
             self.dispatch, supervision_timeout_s=float(self.settings["supervision_timeout_s"]),
@@ -48,6 +52,8 @@ class LeRobotRuntime:
         self._hold_writes = 0
         self._observations = deque(maxlen=64)  # Bounded receipts, not an image cache.
         self._sequence = 0
+        self._last_acknowledged_sequence = 0
+        self._observation_generation = 0
         self._instance = uuid.uuid4().hex
         self._decision_positions = {}
         self._last_action = None
@@ -101,6 +107,8 @@ class LeRobotRuntime:
         if self._robot is None:
             return {"prepared": False}, []
         from PIL import Image
+        with self._frames:
+            generation = self._observation_generation
         raw, stamps = self._capture()
         captured_monotonic = time.monotonic() - max(time.perf_counter() - stamp for stamp in stamps.values())
         images = []
@@ -109,6 +117,8 @@ class LeRobotRuntime:
             Image.fromarray(raw[name]).save(target, format="PNG")
             images.append((f"camera:{name}", target.getvalue()))
         with self._frames:
+            if generation != self._observation_generation:
+                raise RuntimeError("Observation was superseded by a stop; acquire a new frame")
             self._sequence += 1
             sequence = self._sequence
             self._observations.append((sequence, captured_monotonic))
@@ -243,6 +253,12 @@ class LeRobotRuntime:
                 self._hold_writes += 1
 
     def cancel_current(self, reason):
+        # The node revokes its grant before entering this hook. Invalidate every
+        # observation from that ownership interval, including captures in flight.
+        with self._frames:
+            self._observation_generation += 1
+            self._observations.clear()
+            self._decision_positions.clear()
         state = self.execution.cancel(reason=reason)
         return {"ok": True, "message": "Dispatch stopped; device session retained", "data": state}
 
@@ -255,13 +271,34 @@ class LeRobotRuntime:
         self.dispatch.release()
         return {"ok": True, "held": False, "message": "Hold released; enable control before a new task"}
 
+    def external_supervision_config(self):
+        """Software contract, not a certificate of real-device acceptance.
+
+        Camera capture freshness stays max_frame_age_s; model decision latency
+        uses the existing decision_max_age_s limit, capped by the watchdog.
+        """
+        age = self.settings.get("decision_max_age_s")
+        if type(age) not in (int, float) or not math.isfinite(age) or age <= 0:
+            raise ValueError("External supervision requires a finite positive decision_max_age_s")
+        timeout = self.execution.supervision_timeout_s
+        return {"validated": True, "validation_scope": "adapter_software",
+                "hardware_acceptance": "unverified", "timeout_s": timeout,
+                "max_observation_age_s": min(float(age), timeout),
+                "poll_s": self.execution.poll_s, "source": "registered_runtime_binding",
+                "acknowledgement": "fresh_monotonic_sensor_receipt",
+                "stop_behavior": "revoke_dispatch_and_request_measured_hold"}
+
     def supervise(self, frame_seq):
+        age = self.external_supervision_config()["max_observation_age_s"]
         with self._frames:
+            if type(frame_seq) is not int or frame_seq <= self._last_acknowledged_sequence:
+                return {"ok": False, "message": "supervision requires a new observation receipt"}
             receipt = next((stamp for seq, stamp in self._observations if seq == frame_seq), None)
-        if receipt is None or time.monotonic() - receipt > float(self.settings["supervision_timeout_s"]):
-            return {"ok": False, "message": "supervision requires a recent observation receipt"}
-        self.execution.supervise()
-        return {"ok": True}
+            if receipt is None or not 0 <= time.monotonic() - receipt <= age:
+                return {"ok": False, "message": "supervision requires a recent observation receipt"}
+            self._last_acknowledged_sequence = frame_seq
+            self.execution.supervise()
+        return {"ok": True, "frame_seq": frame_seq, "meaning": "client_confirmed_processing"}
 
     def execution_status(self):
         return self.execution.status()
