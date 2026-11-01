@@ -170,7 +170,22 @@ def test_observe_permission_cannot_control_or_forge_source(gateway):
     hub.store.memory(session.id).append("robot_activity", {"type": "thinking", "text": "private reasoning"})
     events = gw.invoke(paired["token"], "events", {"project_id": "project", "limit": 1})
     assert events["events"][0]["source"] == "external_agent"
+    assert events["events"][0]["instance_id"] == session.epoch
+    assert hub.tasks.snapshot(session.id)["events"][0]["instance_id"] == session.epoch
     assert "private reasoning" not in str(events)
+    session.epoch = "replacement-instance"
+    assert hub.tasks.snapshot(session.id)["events"][0]["instance_id"] != session.epoch
+
+
+def test_unconfirmed_supervision_stop_retains_expired_instance(gateway, monkeypatch):
+    gw, paired, hub, session, _ = gateway
+    start(gw, paired)
+    monkeypatch.setattr(hub.tasks, "cancel", Mock(side_effect=RuntimeError("offline")))
+    gw._leases["project"]["deadline"] = time.monotonic() - 1
+    gw.check_expired()
+    event = next(e for e in hub.tasks.snapshot(session.id)["events"]
+                 if e.get("type") == "supervision_stop_unconfirmed")
+    assert event["instance_id"] == session.epoch and event["ok"] is False
 
 
 def test_pause_does_not_claim_task_stopped_and_stop_still_works(gateway):
@@ -227,7 +242,8 @@ def test_operator_heartbeat_cannot_mask_external_task(gateway):
     with pytest.raises(ValueError, match="Agent observations"):
         hub.tasks.allow_operator_supervision(session.id)
     activity = hub.tasks.snapshot(session.id)["events"]
-    assert any(e.get("type") == "command_request" and e.get("text") == "Move" for e in activity)
+    command = next(e for e in activity if e.get("type") == "command_request" and e.get("text") == "Move")
+    assert command["instance_id"] == session.epoch
 
 
 def test_stop_during_external_capability_loading_does_not_resurrect_task(gateway, monkeypatch):

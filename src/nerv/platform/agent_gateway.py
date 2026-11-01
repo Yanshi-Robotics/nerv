@@ -61,7 +61,7 @@ OPERATIONS = {
 }
 CONTROL_OPERATIONS = frozenset({"run_start", "run_end", "task_start", "task_update", "task_cancel", "action"})
 IDEMPOTENT_OPERATIONS = CONTROL_OPERATIONS | {"activity"}
-EVENT_FIELDS = frozenset({"type", "text", "message", "ok", "status", "outcome", "task_id", "version",
+EVENT_FIELDS = frozenset({"type", "text", "message", "ok", "status", "outcome", "task_id", "version", "instance_id",
                           "execution_id", "end_reason", "source", "client_id", "client_name", "supervisor"})
 
 
@@ -280,6 +280,7 @@ class AgentGateway:
         if operation in {"task_start", "task_update", "task_cancel", "action", "run_end"}:
             self.hub.store.memory(session.id).append("external_agent_activity", {
                 "source": "external_agent", "client_id": record["id"], "client_name": record["name"],
+                "instance_id": session.epoch,
                 "type": "command_request", "text": args.get("goal") or args.get("action") or operation,
                 "operation": operation, "request_id": args["request_id"]})
         if operation == "capabilities":
@@ -346,6 +347,7 @@ class AgentGateway:
             return self._events(record, pid, session.id, args)
         if operation == "activity":
             event = {"source": "external_agent", "client_id": record["id"], "client_name": record["name"],
+                     "instance_id": session.epoch,
                      "type": "agent_statement", "text": args["text"]}
             self.hub.store.memory(session.id).append("external_agent_activity", event)
             return {"ok": True}
@@ -443,6 +445,7 @@ class AgentGateway:
                 try:
                     self.hub.store.memory(lease["session_id"]).append("robot_activity", {
                         "source": "host", "type": "supervision_stop_unconfirmed", "ok": False,
+                        "instance_id": lease["epoch"],
                         "task_id": lease.get("task_id"),
                         "message": "External supervision expired; stop could not be confirmed: " + type(error).__name__})
                 except Exception:
