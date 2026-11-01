@@ -5,6 +5,7 @@ import { useI18n } from "@/lib/i18n";
 
 import { ToolboxSlot } from "./OperatorToolbox";
 import RobotActivity from "./RobotActivity";
+import { type Project, type ProjectLayout, saveProjectLayout } from "@/lib/projects";
 
 
 
@@ -55,8 +56,12 @@ export default function SensingArea({
   worldNode,
   robotSensors = [],
   onStateChanged,
+  project,
+  onLayoutSaved,
 }: {
   session: SessionSummary | null;
+  project?: Project;
+  onLayoutSaved?: (p: Project) => void;
   bodyNode: NodeInfo | null;
   worldNode: NodeInfo | null;
   robotSensors?: SensorDecl[];
@@ -72,6 +77,13 @@ export default function SensingArea({
   const [worldSensors, setWorldSensors] = useState<string[]>([]);
   const [expanded, setExpanded] = useState<ViewId | null>(null); // 放大到整块中间区的那一格
 
+  const [layout,setLayout] = useState<ProjectLayout>(project?.view_layout || {});
+  useEffect(()=>{setLayout(project?.view_layout || {});},[project?.id,project?.revision]);
+  async function changeLayout(patch:Partial<ProjectLayout>) {
+    if (!project) return;
+    const next={...layout,...patch};
+    try {const saved=await saveProjectLayout(project.id,project.revision,next);setLayout(next);onLayoutSaved?.(saved);}catch(e){setErr((e as Error).message);}
+  }
   const sid = session?.id ?? "";
   const hasBody = !!session?.body;
   const active = session?.status === "active";
@@ -154,7 +166,7 @@ export default function SensingArea({
 
   useEffect(() => {
     if (!sid || !worldSensors.length || localStorage.getItem(viewsKey(sid))) return;
-    setViews(worldSensors.map(name => CAM_VIEW_PREFIX + name));
+    setViews([VIEW_WORLD,...worldSensors.map(name => CAM_VIEW_PREFIX + name)]);
   }, [sid, worldSensors.join("|")]);
 
   // Camera ownership and order come from the robot profile, never camera-name guesses.
@@ -164,12 +176,12 @@ export default function SensingArea({
   // 可选的视图清单
   const chips = useMemo(() => {
     const out: { id: ViewId; label: string; title?: string; group: "robot" | "third" }[] = [
-      { id: VIEW_OBSERVATION, label: `👁 ${t("Observation")}`, title: t("what the brain sees — one snapshot per turn"), group: "robot" },
-      { id: VIEW_BODY, label: `🎥 ${t("Body live")}`, title: t("the body's own camera, continuous — for you, not the brain"), group: "robot" },
+      { id: VIEW_OBSERVATION, label: t("Observation"), title: t("what the brain sees — one snapshot per turn"), group: "robot" },
+      { id: VIEW_BODY, label: t("Body live"), title: t("the body's own camera, continuous — for you, not the brain"), group: "robot" },
     ];
     if (session?.world) {
-      out.push({ id: VIEW_WORLD, label: `🛰 ${t("World chase (operator only)")}`, title: t("the brain never sees this"), group: "third" });
-      for (const s of worldSensors) out.push({ id: CAM_VIEW_PREFIX + s, label: `📷 ${s}`, group: robotCameras.includes(s) ? "robot" : "third" });
+      out.push({ id: VIEW_WORLD, label: t("World chase (operator only)"), title: t("the brain never sees this"), group: "third" });
+      for (const s of worldSensors) out.push({ id: CAM_VIEW_PREFIX + s, label: s, group: robotCameras.includes(s) ? "robot" : "third" });
     }
     return out;
   }, [session?.world, worldSensors, robotCameras, t]);
@@ -187,7 +199,7 @@ export default function SensingArea({
         if (!perc || images.length === 0) {
           out.push({
             id: v,
-            label: `👁 ${t("Observation")}`,
+            label: t("Observation"),
             sub: t("what the brain sees"),
             body: (
               <span className="p-4 text-[11px] text-neutral-500">
@@ -199,7 +211,7 @@ export default function SensingArea({
           for (const im of images)
             out.push({
               id: `${v}/${im.name}`,
-              label: `👁 ${t("Observation")} · ${im.name}`,
+              label: `${t("Observation")} · ${im.name}`,
               sub: t("what the brain sees"),
               // eslint-disable-next-line @next/next/no-img-element
               body: <img src={`data:image/png;base64,${im.b64}`} alt={im.name} className="max-h-full max-w-full object-contain" />,
@@ -208,7 +220,7 @@ export default function SensingArea({
       } else if (v === VIEW_BODY) {
         out.push({
           id: v,
-          label: `🎥 ${t("Body live")} · ${bodyNode?.key ?? `body:${session.body}`}`,
+          label: `${t("Body live")} · ${bodyNode?.key ?? `body:${session.body}`}`,
           sub: t("what the body's own camera is streaming; the brain gets one snapshot per turn, not this"),
           body: (
             <Stream nonce={nonce} url={bodyOnline && bodyNode ? `${bodyNode.url}/stream` : null} alt={t("Body live")}
@@ -219,7 +231,7 @@ export default function SensingArea({
         if (!session.world) continue;
         out.push({
           id: v,
-          label: `🛰 ${t("World chase (operator only)")} · ${worldNode?.key ?? `world:${session.world}/${session.body}`}`,
+          label: `${t("World chase (operator only)")} · ${worldNode?.key ?? `world:${session.world}/${session.body}`}`,
           operatorOnly: true,
           muted: true,
           body: (
@@ -234,7 +246,7 @@ export default function SensingArea({
         if (worldOnline && !worldSensors.includes(name)) continue; // Preserve offline camera tiles and their error state.
         out.push({
           id: v,
-          label: `📷 ${name}`,
+          label: name,
           operatorOnly: !robotCameras.includes(name),
           body: (
             <Stream nonce={nonce} url={worldOnline && worldNode ? worldCameraStreamUrl(worldNode.url, name) : null} alt={name}
@@ -258,6 +270,8 @@ export default function SensingArea({
     return () => window.removeEventListener("keydown", onKey);
   }, [expanded]);
 
+  const primaryTile = tiles.find(tile=>tile.id===layout.primary) || (session?.mode==='sim' ? tiles.find(tile=>tile.id===VIEW_WORLD) : tiles.find(tile=>tile.id===`runtime:${robotSensors[0]?.name}`)) || tiles[0];
+  const monitors=tiles.filter(tile=>tile.id!==primaryTile?.id && !layout.hidden?.includes(tile.id));
   const stateKeys = perc ? Object.keys(perc.state ?? {}) : [];
   const expandedTile = expanded ? tiles.find((x) => x.id === expanded) ?? null : null;
 
@@ -265,15 +279,20 @@ export default function SensingArea({
     return (
       <section className="flex min-w-0 flex-col overflow-hidden p-6">
         <div className="flex h-full items-center justify-center rounded-2xl border border-neutral-800 bg-neutral-900">
-          <span className="text-sm text-neutral-500">{t("Conversation only — no body, no world")}</span>
+          <span className="text-sm text-neutral-500">{t("No robot is bound to this run.")}</span>
         </div>
       </section>
     );
   }
 
   return (
-    <section className="relative flex min-w-0 flex-col overflow-hidden">
+    <section className="world-sensing relative flex min-w-0 flex-col overflow-hidden">
       <ToolboxSlot name="observation">
+        {project && <div className="monitor-settings">
+          <label className="form-label">{t("Monitor size")}<select className="nerv-input" value={layout.monitorSize||"medium"} onChange={e=>changeLayout({monitorSize:e.target.value})}><option value="small">{t("Small")}</option><option value="medium">{t("Medium")}</option><option value="large">{t("Large")}</option></select></label>
+          <label className="form-label">{t("Monitor position")}<select className="nerv-input" value={layout.dock||"left"} onChange={e=>changeLayout({dock:e.target.value})}><option value="left">{t("Left")}</option><option value="bottom">{t("Bottom")}</option></select></label>
+          {tiles.map(tile=><label key={tile.id} className="pairing-project"><input type="checkbox" checked={!layout.hidden?.includes(tile.id)} disabled={tile.id===primaryTile?.id} onChange={e=>changeLayout({hidden:e.target.checked?(layout.hidden||[]).filter(id=>id!==tile.id):[...(layout.hidden||[]),tile.id]})}/>{tile.label}</label>)}
+        </div>}
         {worldOnline && worldNode && <ChaseControls view={chase} onChange={setChase} />}
       {/* ---- 视图选择 ---- */}
       <div className="flex flex-wrap items-center gap-1.5 border-b border-neutral-800 bg-neutral-900/60 px-3 py-2">
@@ -323,11 +342,11 @@ export default function SensingArea({
       {/* 中间区不滚动：几路视图就分几格，行列按数量算，图像按比例缩进格子里。
           这样视频流重连、观察刷新都不会把页面拉回顶部。 */}
       <RobotActivity session={session} onChanged={onStateChanged}>
-      <div className="flex min-h-0 min-w-0 flex-1 flex-col gap-2 overflow-hidden p-3">
-        <div className="shrink-0 text-[11px] text-neutral-500">
+      <div className="world-camera-layout">
+        <div className="world-camera-caption">
           {session.body} · {session.world}
           {session.sensors.length ? ` · ${t("ambient")}: ${session.sensors.join(", ")}` : ""}
-          {!active && <span className="ml-2 text-amber-400">{t("Live views are unavailable for inactive sessions. Saved observations remain in the conversation.")}</span>}
+          {!active && <span className="ml-2 text-amber-400">{t("This run has ended. Recorded observations remain in project history.")}</span>}
         </div>
         {wantObservation && err && (
           <div className="rounded-lg border border-amber-700/60 bg-amber-950/30 p-3 text-xs text-amber-300">
@@ -337,17 +356,15 @@ export default function SensingArea({
 
         {tiles.length === 0 ? (
           <div className="flex flex-1 items-center justify-center rounded-2xl border border-dashed border-neutral-800 text-xs text-neutral-500">
-            {active ? session.world && !worldOnline ? t("World node unavailable. End this instance and create a new one.") : t("No view selected. Choose a camera in the toolbox.") : t("Open the conversation to view saved observations.")}
+            {active ? session.world && !worldOnline ? t("World node unavailable. End this instance and create a new one.") : t("No view selected. Choose a camera in the toolbox.") : t("Open project history to view recorded observations.")}
           </div>
         ) : (
-          <div className="grid min-h-0 flex-1 gap-3"
-            style={{ gridTemplateColumns: `repeat(${gridColumns(tiles.length)}, minmax(0, 1fr))`, gridAutoRows: "minmax(0, 1fr)" }}>
-            {tiles.map((tile) => (
-              <Tile key={tile.id} label={tile.label} operatorOnly={tile.operatorOnly} sub={tile.sub} muted={tile.muted} onExpand={() => setExpanded(tile.id)} fill>
-                {tile.body}
-              </Tile>
-            ))}
-          </div>
+          <>
+            {primaryTile && <div className="world-primary-camera"><Tile label={primaryTile.label} operatorOnly={primaryTile.operatorOnly} sub={primaryTile.sub} onExpand={()=>setExpanded(primaryTile.id)} fill>{primaryTile.body}</Tile></div>}
+            <div className={`world-monitors monitor-${layout.monitorSize||"medium"} dock-${layout.dock||"left"}`}>
+              {monitors.map(tile=><div key={tile.id} className="world-monitor"><Tile label={tile.label} operatorOnly={tile.operatorOnly} sub={tile.sub} onExpand={()=>changeLayout({primary:tile.id})} fill>{tile.body}</Tile><button className="nerv-control monitor-hide" onClick={()=>changeLayout({hidden:[...(layout.hidden||[]),tile.id]})} aria-label={t("Hide monitor")} title={t("Hide monitor")}>×</button></div>)}
+            </div>
+          </>
         )}
 
         <ToolboxSlot name="observation">        {wantObservation && perc && (

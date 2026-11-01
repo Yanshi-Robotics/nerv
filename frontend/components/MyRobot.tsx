@@ -20,6 +20,7 @@ export default function MyRobot({
   onChanged,
   navigate,
   openWorkspace,
+  onProject,
 }: {
   robot: RobotDisplay | null;
   registry: Registry | null;
@@ -27,6 +28,7 @@ export default function MyRobot({
   onChanged: () => void;
   navigate: (route: string) => void;
   openWorkspace: (id: string) => void;
+  onProject?: () => void;
 }) {
   const { t } = useI18n();
   const [name, setName] = useState(robot?.name || "SO-101"),
@@ -80,6 +82,7 @@ export default function MyRobot({
     }
   }
   async function workspace(connect = false) {
+    if (onProject) { onProject(); return; }
     if (!product) throw new Error(t("Install the robot runtime first."));
     if (!product.buses.real.verified && !acceptance)
       throw new Error(
@@ -297,7 +300,7 @@ export default function MyRobot({
                         )}
                       </p>
                     )}
-                    {!product?.buses.real?.verified && (
+                    {!onProject && !product?.buses.real?.verified && (
                       <label className="flex gap-2 text-sm">
                         <input
                           type="checkbox"
@@ -311,7 +314,7 @@ export default function MyRobot({
                     )}
                     <p className="text-sm text-amber-300">
                       {t(
-                        "Connecting may enable motor torque. Support the arm and clear the work area. Motion remains disabled.",
+                        onProject ? "Opening a workspace does not connect motors or authorize motion." : "Connecting may enable motor torque. Support the arm and clear the work area. Motion remains disabled.",
                       )}
                     </p>
                     <div className="flex flex-wrap gap-3">
@@ -320,15 +323,15 @@ export default function MyRobot({
                         disabled={busy}
                         onClick={() => perform(() => workspace(true))}
                       >
-                        {t("Connect robot")}
+                        {t(onProject ? "Open project" : "Connect robot")}
                       </button>
-                      <button
+                      {!onProject && <button
                         className="nerv-control action"
                         disabled={busy}
                         onClick={() => perform(() => workspace())}
                       >
                         {t("Device and fixed policy workspace")}
-                      </button>
+                      </button>}
                     </div>
                   </>
                 )}
@@ -360,10 +363,10 @@ export default function MyRobot({
             </div>
             <div className="settings-row">
               <div>
-                <h2>{t("Start an Agent session")}</h2>
+                <h2>{t("Create a robot project")}</h2>
                 <p className="muted">
                   {t(
-                    "A configured chat model is required. Fixed policies do not need a key.",
+                    "Connect your preferred Agent through MCP. A NERV chat model is not required.",
                   )}
                 </p>
               </div>
@@ -371,7 +374,7 @@ export default function MyRobot({
                 className="nerv-control action"
                 onClick={() => navigate("new")}
               >
-                {t("New session")}
+                {t("New project")}
               </button>
             </div>
             <details>

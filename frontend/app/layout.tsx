@@ -6,7 +6,7 @@ import { LOCALES, SOURCE_LANG } from "@/lib/locales.generated";
 
 export const metadata: Metadata = {
   title: "NERV",
-  description: "NERV — operator console: a session is brain × body × world",
+  description: "NERV — a robot and simulation platform for external Agents",
 };
 
 import { THEME_INIT } from "@/lib/theme";

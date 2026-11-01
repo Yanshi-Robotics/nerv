@@ -1,5 +1,5 @@
 import type { ReactNode } from "react";
-export type NavigationIconName = "new" | "robot" | "sessions" | "settings" | "panel" | "close";
+export type NavigationIconName = "new" | "robot" | "sessions" | "settings" | "panel" | "close" | "console" | "world" | "control" | "check";
 export default function NavigationIcon({ name, expanded = false }: { name: NavigationIconName; expanded?: boolean }) {
   const shapes: Record<NavigationIconName, ReactNode> = {
     new: <><path d="M12 4H6a2 2 0 0 0-2 2v12a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2v-6" /><path d="m16 3 5 5-9 9-5 1 1-5Z M14 5l5 5" /></>,
@@ -7,6 +7,10 @@ export default function NavigationIcon({ name, expanded = false }: { name: Navig
     sessions: <path d="M20 15a3 3 0 0 1-3 3H9l-5 3V7a3 3 0 0 1 3-3h10a3 3 0 0 1 3 3Z" />,
     settings: <><path d="m9 3-1 3-3 1-2 3 2 2-1 3 2 3 3-1 2 3h3l1-3 3-1 2-3-2-2 1-3-2-3-3 1-2-3Z" /><circle cx="11.5" cy="11.5" r="3" /></>,
     panel: <><rect x="3" y="4" width="18" height="16" rx="3" /><path d="M9 4v16" />{expanded && <path d="M5 7h2v10H5Z" fill="currentColor" stroke="none" />}</>,
+    console: <><rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/></>,
+    world: <><circle cx="12" cy="12" r="9"/><ellipse cx="12" cy="12" rx="4" ry="9"/><path d="M3 12h18"/></>,
+    control: <><path d="M4 7h16 M4 17h16"/><circle cx="9" cy="7" r="3"/><circle cx="15" cy="17" r="3"/></>,
+    check: <><circle cx="12" cy="12" r="9"/><path d="m8 12 3 3 5-6"/></>,
     close: <path d="m6 6 12 12 M18 6 6 18" />,
   };
   return <svg className="navigation-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">{shapes[name]}</svg>;

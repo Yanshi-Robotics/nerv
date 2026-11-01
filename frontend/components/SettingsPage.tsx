@@ -22,7 +22,8 @@ import SimulationLibrary from "./SimulationLibrary";
 import AssetLibrary from './AssetLibrary';
 const sections = [
   ["general", "General"],
-  ["models", "Models and API keys"],
+  ["agents", "Agent connections"],
+  ["models", "Robot decision models"],
   ["schemes", "Control schemes"],
   ["policies", "Policy library"],
   ["components", "Components and simulation"],

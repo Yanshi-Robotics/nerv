@@ -584,7 +584,7 @@ export type PropertyField = { type: string; title?: string; description?: string
 export type PropertySchema = { properties?: Record<string, PropertyField> };
 export type WorldDescriptor = { instance_id: string; revision: number; configuration: PropertySchema; state: {configuration?: Record<string, unknown>}; commands: { name: string; description: string; parameters: PropertySchema; effect: string }[] };
 export type RobotEvent = { seq: number; time: number; instance_id: string; task_id?: string; version?: number; source?: string; type?: string; text?: string; message?: string; status?: string; ok?: boolean };
-export type RobotTask = { task_id: string; instance_id: string; version: number; status: string; goal: string; model: string | null; effort?: string; message?: string; scheme?: ControlScheme };
+export type RobotTask = { supervisor?: {kind: string; client_id?: string}; task_id: string; instance_id: string; version: number; status: string; goal: string; model: string | null; effort?: string; message?: string; scheme?: ControlScheme };
 export type RobotSnapshot = { task: RobotTask | null; events: RobotEvent[]; cursor: number };
 export function robotEventUrl(sid: string, cursor = 0) { return `${BASE}/api/sessions/${encodeURIComponent(sid)}/robot-events?after=${cursor}`; }
 async function domainRequest(path: string, payload?: unknown) {
@@ -613,7 +613,7 @@ export async function runtimeInstallations(): Promise<Array<{provider: string; p
 
 export type ControlScheme = {
   id: string; revision: number; name: string; robot: string; mode: "sim" | "real";
-  template: "fixed_policy" | "policy_group" | "visual_direct";
+  template: "fixed_policy" | "policy_group" | "visual_direct" | "external_vlm" | "external_skills";
   decision_model: string | null; effort: string | null; actions: string[];
   max_runtime_s: number; action_budget: number; ready?: boolean; reason?: string; structure?: unknown;
 };

@@ -153,32 +153,7 @@ export default function VlmPanel({ onChanged }: { onChanged: () => void }) {
             )}
           </p>
         )}
-        <label className="form-label mt-5">
-          {t("Default chat model")}
-          <select
-            className="form-field"
-            onChange={(e) => {
-              selectVlm(e.target.value, null)
-                .then(() => {
-                  setDefaultModel(e.target.value);
-                  onChanged();
-                })
-                .catch(() => setResult("failed"));
-            }}
-            value={defaultModel}
-          >
-            <option value="" disabled>
-              {t("Choose a configured model")}
-            </option>
-            {models
-              .filter((m) => m.available)
-              .map((m) => (
-                <option key={m.id} value={m.id}>
-                  {m.label}
-                </option>
-              ))}
-          </select>
-        </label>
+        <p className="muted mt-5">{t("These models are used only by managed robot decision services. External Agents manage their own models.")}</p>
         <div className="mt-6 grid gap-6 lg:grid-cols-[220px_minmax(0,1fr)]">
           <nav
             aria-label={t("Model providers")}

@@ -18,6 +18,8 @@ import { NodeTrust } from "./NodeTrust";
 import { useI18n } from "@/lib/i18n";
 
 const labels = {
+  external_vlm: "External Agent direct control",
+  external_skills: "External Agent skill control",
   fixed_policy: "Fixed policy",
   policy_group: "Policy group",
   visual_direct: "Visual direct control",
@@ -109,7 +111,7 @@ export default function ControlSchemes({
   async function save() {
     const robot = session?.body || offline?.robot;
     if (!robot) return;
-    const fixed = draft.template === "fixed_policy";
+    const fixed = draft.template === "fixed_policy" || ["external_vlm", "external_skills"].includes(draft.template || "");
     const result = await saveControlScheme({
       ...draft,
       robot,
@@ -177,7 +179,7 @@ export default function ControlSchemes({
           </select>
           {selected && (
             <p className="text-xs text-neutral-400">
-              {modelLabel(selected.decision_model)} ·{" "}
+              {["external_vlm", "external_skills"].includes(selected.template) ? t("External Agent") : modelLabel(selected.decision_model)} ·{" "}
               {selected.actions.join(", ")}
             </p>
           )}
@@ -355,7 +357,7 @@ export default function ControlSchemes({
                   ))}
                 </select>
               </label>
-              {draft.template !== "fixed_policy" && (
+              {!["fixed_policy", "external_vlm", "external_skills"].includes(draft.template || "") && (
                 <label className="block text-xs">
                   {t("Decision model")}
                   <select
@@ -386,7 +388,7 @@ export default function ControlSchemes({
                   .filter(
                     (a) =>
                       a.kind ===
-                      (draft.template === "visual_direct"
+                      (["visual_direct", "external_vlm"].includes(draft.template || "")
                         ? "primitive"
                         : "skill"),
                   )
@@ -422,7 +424,7 @@ export default function ControlSchemes({
                 {!(offline?.actions || options.actions).some(
                   (a) =>
                     a.kind ===
-                    (draft.template === "visual_direct"
+                    (["visual_direct", "external_vlm"].includes(draft.template || "")
                       ? "primitive"
                       : "skill"),
                 ) && (
@@ -497,7 +499,7 @@ export default function ControlSchemes({
               <div className="rounded border border-neutral-700 p-2">
                 {t("Interaction layer")}
                 <br />
-                {t("NERV Agent")}
+                {t("External Agent")}
                 {graph.template === "fixed_policy"
                   ? ` / ${t("Run selected policy")}`
                   : ""}
@@ -507,7 +509,7 @@ export default function ControlSchemes({
                 <>
                   <div className="rounded border border-neutral-700 p-2">
                     {t("Decision layer")} · System 2<br />
-                    {modelLabel(graph.decision_model)}
+                    {["external_vlm", "external_skills"].includes(graph.template || "") ? t("External Agent") : modelLabel(graph.decision_model)}
                   </div>
                   <div aria-hidden>↓</div>
                 </>

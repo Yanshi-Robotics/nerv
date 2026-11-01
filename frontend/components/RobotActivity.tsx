@@ -15,6 +15,8 @@ export default function RobotActivity({session, onChanged, children}: {session: 
   const [updated, setUpdated] = useState<number>();
   const [collapsed, setCollapsed] = useState(false);
   const [history, setHistory] = useState(false);
+  const [now,setNow] = useState(Date.now());
+  useEffect(()=>{const show=()=>{setHistory(true);setCollapsed(false);};window.addEventListener("nerv-show-activity",show);const timer=setInterval(()=>setNow(Date.now()),1000);return()=>{window.removeEventListener("nerv-show-activity",show);clearInterval(timer);};},[]);
 
 
   useEffect(() => {
@@ -39,21 +41,21 @@ export default function RobotActivity({session, onChanged, children}: {session: 
     return () => stream.close();
   }, [session.id, session.epoch, session.status]);
   const lastFault = [...events].reverse().find(e => e.ok === false || e.status === "failed");
-  const visible = history ? events : events.slice(-RECENT_EVENTS);
-  return <div className="relative flex min-h-0 flex-1 flex-col overflow-hidden rounded-xl border border-neutral-700 bg-neutral-950">
+  const visible = history ? events : events.filter(event=>event.ok===false || event.status==="failed" || now-event.time*1000<30000).slice(-RECENT_EVENTS);
+  return <div className="world-activity-root relative flex min-h-0 flex-1 flex-col overflow-hidden">
     <ToolboxSlot name="task"><div className="z-10 flex shrink-0 flex-wrap items-center gap-2 border-b border-neutral-700 bg-neutral-900 px-3 py-2 text-xs">
       <div className="min-w-0 flex-1"><div className="font-medium text-neutral-100">{t("Robot workspace")} · {t(task?.status || "Standby")}</div><p className="truncate text-[11px] text-neutral-400" title={task?.goal}>{task?.goal || t("No active robot task")}</p></div>
-      <p className="text-neutral-400">{t("Choose the decision model in Control schemes")}</p>
+      <p className="text-neutral-400">{t("Configure execution in Control schemes")}</p>
     </div>
     </ToolboxSlot>
     <div className="relative flex min-h-0 flex-1 flex-col">{children}
-      <aside className="pointer-events-none absolute right-2 top-2 z-10 flex max-h-[75%] w-[min(20rem,75%)] flex-col items-end gap-2" aria-label={t("Robot activity")}>
+      <aside className={`world-activity ${history ? "activity-history-open" : ""}`} aria-label={t("Robot activity")}>
         <button onClick={() => setCollapsed(!collapsed)} aria-expanded={!collapsed} className="nerv-control pointer-events-auto rounded-full border border-neutral-600 bg-neutral-950/90 px-3 py-1 text-[11px] text-neutral-300">{t(collapsed ? "Show robot activity" : "Collapse robot activity")}</button>
         {!collapsed && <div className="flex max-h-full w-full flex-col gap-2 overflow-y-auto">
           <div className="self-end rounded bg-neutral-950/90 px-2 text-[10px] text-neutral-400">{t(session.status !== "active" ? "Historical session" : connected ? "Task event stream connected" : "Task event stream disconnected")}{updated && ` · ${new Date(updated).toLocaleTimeString()}`}</div>
           {lastFault && !visible.includes(lastFault) && <p role="alert" className="rounded-xl border border-red-700 bg-neutral-950/95 p-3 text-xs text-[var(--control-danger-text)]">{t(lastFault.text || lastFault.message || "")}</p>}
-          {visible.map((event, i) => <article key={event.seq} className={`nerv-activity-bubble rounded-2xl rounded-tr-sm border bg-neutral-950/95 p-3 shadow-lg ${event.ok === false || event.status === "failed" ? "border-red-700 text-[var(--control-danger-text)]" : i === visible.length-1 ? "border-[var(--control-focus)] text-neutral-100" : "border-neutral-700 text-neutral-400"}`}>
-            <div className="mb-1 text-[10px] text-neutral-400">{event.source === "system2" ? t("Decision layer") : event.source === "system1" ? t("Execution layer") : t("Host")} · {new Date(event.time*1000).toLocaleTimeString()}</div>
+          {visible.map((event, i) => <article key={event.seq} className={`nerv-activity-bubble rounded-2xl border p-3 ${event.ok === false || event.status === "failed" ? "border-red-700 text-[var(--control-danger-text)]" : i === visible.length-1 ? "border-[var(--control-focus)] text-neutral-100" : "border-neutral-700 text-neutral-400"}`}>
+            <div className="mb-1 text-[10px] text-neutral-400">{event.source === "external_agent" ? t("External Agent") : event.source === "operator" ? t("Operator") : event.source === "system2" ? t("Decision layer") : event.source === "system1" ? t("Execution layer") : t("Host")} · {new Date(event.time*1000).toLocaleTimeString()}</div>
             <details className="pointer-events-auto text-xs leading-relaxed"><summary className="line-clamp-3 cursor-pointer">{t(event.text || event.message || "")}</summary><p className="mt-2 whitespace-pre-wrap">{t(event.text || event.message || "")}</p></details>
           </article>)}
           {events.length > RECENT_EVENTS && <button onClick={() => setHistory(!history)} className="nerv-control pointer-events-auto self-end rounded bg-neutral-950/90 px-2 py-1 text-[11px] text-neutral-300">{t(history ? "Recent activity" : "Activity history")}</button>}

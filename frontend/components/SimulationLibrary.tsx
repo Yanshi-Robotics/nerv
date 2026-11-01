@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
 import { userApi, type Registry, type SessionSummary } from "@/lib/api";
+import { projectRequest, type Project } from "@/lib/projects";
 import { useI18n } from "@/lib/i18n";
 export default function SimulationLibrary({
   registry,
@@ -14,14 +15,11 @@ export default function SimulationLibrary({
     setBusy(true);
     setError("");
     try {
-      const session = await userApi<SessionSummary>(
-        "operator/workspace",
-        "POST",
-        { body, world, mode: "sim" },
-      );
-      window.dispatchEvent(
-        new CustomEvent("nerv-instance-created", { detail: session.id }),
-      );
+      const project = await projectRequest<Project>("projects", "POST", {
+        name: registry?.worlds.find(item=>item.name===world)?.label || world,
+        robot: body, world, mode: "sim", execution: "external_vlm",
+      });
+      window.dispatchEvent(new CustomEvent("nerv-project-created", {detail: project}));
     } catch (e) {
       setError((e as Error).message);
     } finally {
@@ -34,7 +32,7 @@ export default function SimulationLibrary({
       <h1>{t("Installed simulation scenes")}</h1>
       <p className="muted">
         {t(
-          "Open a scene without a chat model. Motion stays disabled until you authorize it.",
+          "Create a project for this scene. Start its world when you are ready.",
         )}
       </p>
       {worlds.map((w) => {
@@ -50,7 +48,7 @@ export default function SimulationLibrary({
               className="nerv-control action"
               onClick={() => match && open(match.body, w.name)}
             >
-              {t("Open workspace")}
+              {t("Create project")}
             </button>
           </article>
         );

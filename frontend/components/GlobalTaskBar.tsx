@@ -16,8 +16,10 @@ export default function GlobalTaskBar({
   sessions,
   nodes,
   navigate,
+  externalSessionIds = [],
 }: {
   sessions: SessionSummary[];
+  externalSessionIds?: string[];
   nodes: NodeInfo[];
   navigate: (r: string) => void;
 }) {
@@ -25,6 +27,8 @@ export default function GlobalTaskBar({
   const [task, setTask] = useState<any>(null),
     [error, setError] = useState(""),
     [trust, setTrust] = useState(false);
+  const [manualSessions,setManualSessions] = useState<string[]>([]);
+  useEffect(()=>{const changed=(e:Event)=>{const {sessionId,manual}=(e as CustomEvent<{sessionId:string;manual:boolean}>).detail;setManualSessions(old=>manual?[...new Set([...old,sessionId])]:old.filter(id=>id!==sessionId));};window.addEventListener("nerv-manual-control",changed);return()=>window.removeEventListener("nerv-manual-control",changed);},[]);
   const robot = sessions.find((s) => s.body && s.status === "active");
   useEffect(() => {
     userApi("config")
@@ -51,6 +55,7 @@ export default function GlobalTaskBar({
         if (
           !gone &&
           robot.armed &&
+          (result.task?.supervisor?.kind === "operator" || (!result.task && manualSessions.includes(robot.id))) &&
           node?.online &&
           !modelTask &&
           document.visibilityState === "visible"
@@ -76,6 +81,8 @@ export default function GlobalTaskBar({
   }, [
     robot?.id,
     robot?.armed,
+    externalSessionIds.join(","),
+    manualSessions.join(","),
     nodes.some((n) => n.key === `body:${robot?.body}` && n.online),
   ]);
   async function stop(emergency = false) {

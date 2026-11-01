@@ -1,0 +1,19 @@
+"use client";
+import { useEffect, useState } from 'react';
+import { useI18n } from '@/lib/i18n';
+import { projectRequest, type AgentConnection, type Project } from '@/lib/projects';
+export default function AgentConnections({projects}: {projects: Project[]}) {
+  const {t} = useI18n();
+  const [items,setItems] = useState<AgentConnection[]>([]), [name,setName] = useState(''), [selected,setSelected] = useState<string[]>([]), [control,setControl] = useState(false), [token,setToken] = useState(''), [error,setError] = useState(''), [busy,setBusy] = useState(false);
+  const refresh = async () => {const result = await projectRequest('agent-connections'); setItems(Array.isArray(result) ? result : result.connections);};
+  useEffect(() => {refresh().catch(e => setError(e.message));}, []);
+  async function pair() {setBusy(true);setError('');setToken('');try {const result = await projectRequest('agent-connections','POST',{name,projects:selected,permissions:control?['observe','control']:['observe']});setToken(result.token || '');await refresh();}catch(e){setError((e as Error).message);}finally{setBusy(false);}}
+  return <section className="settings-content space-y-5"><h1>{t('Agent connections')}</h1><p className="muted">{t('Connect your Agent to selected projects. Motion still requires operator authorization.')}</p>
+    <div className="project-pairing"><label className="form-label">{t('Client name')}<input className="nerv-input" value={name} maxLength={80} onChange={e=>setName(e.target.value)} placeholder="Codex / DeepSeek Harness / Claude Code" /></label>
+    <fieldset><legend>{t('Allowed projects')}</legend>{projects.map(p=><label key={p.id} className="pairing-project"><input type="checkbox" checked={selected.includes(p.id)} onChange={e=>setSelected(e.target.checked?[...selected,p.id]:selected.filter(id=>id!==p.id))}/>{p.name} <span className="environment-badge">{p.mode}</span></label>)}{!projects.length&&<p>{t('Create a project before connecting an Agent.')}</p>}</fieldset>
+    <label className="pairing-project"><input type="checkbox" checked={control} onChange={e=>setControl(e.target.checked)}/>{t('Allow task and action requests')}</label><button className="nerv-control nerv-primary action" disabled={busy||!name.trim()||!selected.length} onClick={pair}>{t('Create connection')}</button></div>
+    {token&&<div role="status" className="project-secret"><p>{t('Copy this token now. It is shown only once; keep it in your client secret settings.')}</p><input className="nerv-input" aria-label={t('Connection token')} readOnly type="password" value={token}/><button className="nerv-control action" onClick={()=>navigator.clipboard.writeText(token).catch(e=>setError(e.message))}>{t('Copy token')}</button><button className="nerv-control action" onClick={()=>setToken('')}>{t('Hide token')}</button></div>}
+    <h2>{t('MCP connection')}</h2><p>{t('Run the bridge from your MCP client. NERV must already be running in the same channel.')}</p><pre className="project-code">{'nerv mcp --channel stable --client CLIENT_ID\nnerv mcp --channel preview --client CLIENT_ID'}</pre><p className="muted">{t('A connected client is not proof of active supervision. Check observation acknowledgements in the project.')}</p>
+    <div className="project-list">{items.map(item=><article className="project-list-row" key={item.id}><div><h3>{item.name}</h3><code>{`nerv mcp --channel stable --client ${item.id}`}</code><p className="muted">{item.permissions.map(p=>t(p)).join(' · ')} · {t(item.revoked?'Revoked':'Paired')}</p></div><button disabled={item.revoked||busy} className="nerv-control action" onClick={async()=>{try{await projectRequest(`agent-connections/${item.id}/revoke`,'POST',{});await refresh();}catch(e){setError((e as Error).message);}}}>{t('Revoke')}</button></article>)}</div>{error&&<p role="alert" className="error-text">{error}</p>}
+  </section>;
+}
