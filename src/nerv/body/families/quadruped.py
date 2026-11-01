@@ -34,7 +34,7 @@ class QuadrupedBody(VelocityPolicyBody):
         loco = self._locomotion_knobs(spec)
         required = ("walk_speed", "turn_rate", "max_move_m", "max_turn_deg", "settle_s",
                     "brake_margin_m", "fall_tilt_rad", "fall_height_m", "hold_settle_s",
-                    "hold_still_rad_s")
+                    "hold_still_rad_s", "hold_still_s")
         missing = [key for key in required if type(loco.get(key)) not in (int, float)
                    or not math.isfinite(loco[key]) or loco[key] <= 0]
         if missing or not loco.get("clearance"):

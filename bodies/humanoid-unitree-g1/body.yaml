@@ -44,7 +44,8 @@ locomotion:
   fall_tilt_rad: 0.8
   fall_height_m: 0.18
   hold_settle_s: 1.5               # emergency stop: up to this long (sim s) to come to a stand before latching
-  hold_still_rad_s: 0.3            # all joints slower than this = standing, latch now (standing measures 0.02)
+  hold_still_rad_s: 0.3            # every joint must remain below this during the quiet interval
+  hold_still_s: 0.2                # ten 50 Hz policy frames below the velocity bound before latching
 buses:
   sim:
     settings:

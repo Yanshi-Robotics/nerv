@@ -70,7 +70,8 @@ DEFAULT_LOCOMOTION: dict = {
     "hold_settle_s": 1.5,          # emergency stop: let the gait come to a stand for at most this (sim s)
                                    # before latching the joints — freezing legs mid-stride topples a biped
                                    # (measured 2026-09-06: the g1-29dof-turn gait needs ~1.2 s to stop)
-    "hold_still_rad_s": 0.3,       # every joint slower than this = standing still, latch now
+    "hold_still_rad_s": 0.3,       # every joint must stay below this during the quiet interval
+    "hold_still_s": 0.2,          # require a sustained quiet interval, not one gait turning point
                                    # (a standing G1 measures 0.02 rad/s; mid-stride 3–8 rad/s)
 }
 
@@ -272,6 +273,7 @@ class VelocityPolicyBody:
         self._hold_reason = ""
         self._hold_targets: list[float] = []
         self._hold_pending: tuple[str, float] | None = None      # (reason, sim deadline) while coming to a stand
+        self._hold_still_since: float | None = None
         self._last_targets: list[float] = []                     # what the PD is tracking right now
         self._running = True
         self._thread = threading.Thread(target=self._policy_loop, name=f"nerv-{self.family}-policy", daemon=True)
@@ -358,8 +360,7 @@ class VelocityPolicyBody:
             pend = self._hold_pending
             if pend is not None and not self._held:                # emergency stop: latch once still
                 reason, deadline = pend
-                fastest = max((abs(float(v)) for v in st.joint_vel), default=0.0)
-                if fastest < float(self.loco["hold_still_rad_s"]) or st.t >= deadline:
+                if self._quiet_hold_ready(st) or st.t >= deadline:
                     self._hold(reason, st)
             with self._hold_lock:
                 hold = list(self._hold_targets) if self._held else None
@@ -403,20 +404,31 @@ class VelocityPolicyBody:
         return self._tilt(st) > float(self.loco["fall_tilt_rad"]) or st.base_height < float(self.loco["fall_height_m"])
 
     # ---- hold (emergency stop that keeps the pose) --------------------------------------------------------
+    def _quiet_hold_ready(self, st: BusState) -> bool:
+        speeds = [abs(float(v)) for v in st.joint_vel]
+        if (not speeds or not all(math.isfinite(v) for v in speeds)
+                or max(speeds) >= float(self.loco["hold_still_rad_s"])):
+            self._hold_still_since = None
+            return False
+        if self._hold_still_since is None:
+            self._hold_still_since = st.t
+        return st.t - self._hold_still_since >= float(self.loco["hold_still_s"])
+
     def _hold(self, reason: str, st: BusState | None = None) -> dict:
-        """Latch the current joint positions as the targets and stop the policy. Idempotent."""
+        """Latch the last commanded targets and stop the policy. Idempotent."""
         self.runner.stop.request()                              # any running skill ends on its next tick
         self._set_command(0.0, 0.0, 0.0)
         with self._hold_lock:
             self._hold_pending = None
+            self._hold_still_since = None
             if self._held:
                 return {"ok": True, "message": f"already holding the pose ({self._hold_reason})",
                         "held": True, "reason": self._hold_reason}
             if st is None:
                 st = self._state or self.bus.read()
-            # Freeze the command stream, not the measured angles: the PD is already at equilibrium
-            # for the last targets (they carry the gravity offset the policy learned), so nothing
-            # sags or jumps. Only a body that never got a command latches its measured pose.
+            # Preserve the policy's gravity compensation offset. A measured pose
+            # alone discards it. The quiet interval reduces settling drift but
+            # does not prove static stability, especially on timeout or a fall.
             self._hold_targets = [float(v) for v in (self._last_targets or st.joint_pos)]
             self._held, self._hold_reason = True, reason
             targets = list(self._hold_targets)
@@ -430,6 +442,7 @@ class VelocityPolicyBody:
     def _release(self, after_reset: bool = False) -> dict:
         with self._hold_lock:
             self._hold_pending = None
+            self._hold_still_since = None
             if not self._held:
                 return {"ok": True, "message": "not holding", "held": False, "reason": ""}
             was = self._hold_reason
@@ -449,6 +462,7 @@ class VelocityPolicyBody:
         self.runner.stop.request()
         self._set_command(0.0, 0.0, 0.0)
         with self._hold_lock:
+            self._hold_still_since = None
             self._hold_pending = (reason, st.t + settle)
         wall_limit = time.perf_counter() + settle + float(self.loco["sim_dead_wall_s"])
         while not self._held and time.perf_counter() < wall_limit:

@@ -40,3 +40,16 @@ def test_inference_started_before_hold_cannot_overwrite_latched_targets():
     worker.join(2)
     assert not worker.is_alive()
     assert writes == [[0.0]], "late policy inference overwrote the emergency hold"
+
+
+def test_hold_requires_sustained_quiet_not_one_gait_turning_point():
+    body = HumanoidBody.__new__(HumanoidBody)
+    body.loco = {"hold_still_rad_s": .3, "hold_still_s": .2}
+    body._hold_still_since = None
+    assert not body._quiet_hold_ready(SimpleNamespace(t=1., joint_vel=[.29]))
+    assert not body._quiet_hold_ready(SimpleNamespace(t=1.1, joint_vel=[.4]))
+    assert not body._quiet_hold_ready(SimpleNamespace(t=1.2, joint_vel=[.02]))
+    assert not body._quiet_hold_ready(SimpleNamespace(t=1.3, joint_vel=[.02]))
+    assert body._quiet_hold_ready(SimpleNamespace(t=1.41, joint_vel=[.02]))
+    assert not body._quiet_hold_ready(SimpleNamespace(t=1.42, joint_vel=[float('nan')]))
+    assert not body._quiet_hold_ready(SimpleNamespace(t=1.43, joint_vel=[]))
