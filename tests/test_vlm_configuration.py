@@ -120,7 +120,7 @@ def test_http_configuration_and_missing_session_key(registry, monkeypatch):
     client = TestClient(server.app)
     before = len(server.nerv.store.all())
     missing = client.post("/api/sessions", json={"brain": "openai-sol", "body": "unresolved-body", "world": "unresolved-world"})
-    assert missing.status_code == 400 and missing.json()["detail"]["code"] == "key_missing"
+    assert missing.status_code == 410 and "Project" in missing.json()["detail"]
     assert len(server.nerv.store.all()) == before
     result = client.post("/api/vlm/openai-sol/configure", json={"value": "candidate-fixture"})
     assert result.status_code == 200 and result.json()["saved"]

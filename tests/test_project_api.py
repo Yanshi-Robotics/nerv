@@ -67,3 +67,25 @@ def test_agent_pairing_redaction_revocation_and_scope(api):
     assert client.post(f"/api/agent-connections/{cid}/revoke").status_code == 200
     assert client.post("/api/agent/invoke", headers=headers,
                        json={"operation": "projects_list", "arguments": {}}).status_code == 403
+
+
+def test_invalid_agent_arguments_do_not_echo_secrets(api):
+    client, _ = api
+    project = client.post("/api/projects", json={"name": "Private", "mode": "sim"}).json()
+    paired = client.post("/api/agent-connections", json={"name": "Fixture", "projects": [project["id"]]}).json()
+    response = client.post("/api/agent/invoke", headers={"Authorization": "Bearer " + paired["token"]},
+        json={"operation": "projects_list", "arguments": {"unknown": "private-fixture-secret"}})
+    assert response.status_code == 400
+    assert "private-fixture-secret" not in response.text
+
+
+def test_host_instance_nonce_required(api):
+    client, _ = api
+    client.app.state.agent_host_instance = "current-instance"
+    project = client.post("/api/projects", json={"name": "Bound", "mode": "sim"}).json()
+    paired = client.post("/api/agent-connections", json={"name": "Fixture", "projects": [project["id"]]}).json()
+    headers = {"Authorization": "Bearer " + paired["token"]}
+    payload = {"operation": "projects_list", "arguments": {}}
+    assert client.post("/api/agent/invoke", headers=headers, json=payload).status_code == 409
+    headers["X-Nerv-Host-Instance"] = "current-instance"
+    assert client.post("/api/agent/invoke", headers=headers, json=payload).status_code == 200

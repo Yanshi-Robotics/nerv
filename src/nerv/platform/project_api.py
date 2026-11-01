@@ -83,7 +83,7 @@ def router(get_hub):
     @api.post("/api/projects")
     def project_create(request: Request, payload: ProjectInput):
         operator(request)
-        return call(services(get_hub())[0].store.create, payload.model_dump())
+        return call(services(get_hub())[0].create, payload.model_dump())
 
     @api.get("/api/projects/{pid}")
     def project_get(pid: str):
@@ -92,7 +92,7 @@ def router(get_hub):
     @api.patch("/api/projects/{pid}")
     def project_update(pid: str, request: Request, payload: dict):
         operator(request)
-        return call(services(get_hub())[0].store.update, pid, payload)
+        return call(services(get_hub())[0].update, pid, payload)
 
     @api.post("/api/projects/{pid}/open")
     def project_open(pid: str, request: Request):

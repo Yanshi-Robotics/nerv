@@ -152,3 +152,18 @@ def test_project_fields_written_in_initial_session_metadata(tmp_path):
     session, _ = store.new("operator", "fixture", None, project_id="p_test", run_id="r_test", project_revision=3, mode="real")
     first = store.memory(session.id).events()[0]["data"]
     assert (first["project_id"], first["run_id"], first["project_revision"], first["mode"]) == ("p_test", "r_test", 3, "real")
+
+
+def test_project_pins_scheme_revision_and_new_choice_resolves_its_own_version(tmp_path):
+    from nerv.platform.control_schemes import SchemeStore
+    hub = Mock(schemes=SchemeStore(tmp_path / "schemes"))
+    first = hub.schemes.save({"name": "First", "robot": "fixture", "mode": "sim", "template": "external_vlm", "actions": ["move"]})
+    first = hub.schemes.save(first.model_dump())
+    service = ProjectService(hub, tmp_path / "projects")
+    project = service.create({"name": "Pinned", "mode": "sim", "robot": "fixture", "scheme": first.id})
+    assert project["scheme_revision"] == 2
+    second = hub.schemes.save({"name": "Second", "robot": "fixture", "mode": "sim", "template": "external_vlm", "actions": ["move"]})
+    updated = service.update(project["id"], {"expected_revision": 1, "scheme": second.id})
+    assert updated["scheme_revision"] == 1
+    hub.schemes.save(second.model_dump())
+    assert service.store.get(project["id"])["scheme_revision"] == 1

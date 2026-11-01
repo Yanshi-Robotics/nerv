@@ -241,6 +241,34 @@ class ProjectService:
                     run.update(status="interrupted", ended_at=time.time(), reason="Host restarted; reconnect explicitly")
                     self.store.save_run(project["id"], run)
 
+    def _pin_scheme(self, value):
+        value = dict(value)
+        if value.get("scheme"):
+            scheme = self.hub.schemes.get(value["scheme"], value.get("scheme_revision") or None)
+            if scheme.robot != value.get("robot") or scheme.mode != value.get("mode"):
+                raise ValueError("Control scheme does not match this project")
+            expected = {"external_vlm": "external_vlm", "external_skills": "external_skills", "act": "fixed_policy"}.get(value.get("execution", "external_vlm"))
+            if expected and scheme.template != expected:
+                raise ValueError("Control scheme does not match the execution structure")
+            value["scheme_revision"] = scheme.revision
+        else:
+            value["scheme_revision"] = 0
+        return value
+
+    def create(self, payload):
+        return self.store.create(self._pin_scheme(payload))
+
+    def update(self, project_id, payload):
+        with self._lock, self.store.lock:
+            current = self.store.get(project_id)
+            values = dict(payload)
+            if "scheme" in values:
+                if "scheme_revision" not in values:
+                    values["scheme_revision"] = 0
+                pinned = self._pin_scheme({**current, **values})
+                values["scheme_revision"] = pinned["scheme_revision"]
+            return self.store.update(project_id, values)
+
     def active_run(self, project_id):
         return next((r for r in self.store.runs(project_id) if r["status"] in ACTIVE_RUNS), None)
 

@@ -752,15 +752,7 @@ def node_status(key: str) -> dict:
 # ---- sessions -------------------------------------------------------------------------------
 @app.post("/api/sessions")
 def new_session(inp: NewSessionIn) -> dict:
-    try:
-        from .session import require_scene
-        require_scene(inp.body, inp.world, inp.mode)
-        if not inp.brain or inp.brain == "operator" or inp.brain not in {b["name"] for b in list_brains()}:
-            raise ValueError("select a registered visual model")
-        return nerv.new_session(inp.brain or _default_brain(), inp.body, inp.world, inp.sensors, inp.agent_tools, inp.mode, inp.world_configuration)
-    except (ValueError, KeyError, RuntimeError, TimeoutError, FileNotFoundError) as e:
-        from ..vlm.errors import ModelError
-        raise HTTPException(400, e.public() if isinstance(e, ModelError) else e.args[0] if e.args else str(e))
+    raise HTTPException(410, "Create a Project and start a Run. Ordinary chat sessions were removed in 0.9.0.")
 
 
 @app.get("/api/sessions")
@@ -778,6 +770,8 @@ def get_session(sid: str) -> dict:
 
 @app.delete("/api/sessions/{sid}")
 def delete_session(sid: str) -> dict:
+    if nerv.store.exists(sid) and nerv.store.get(sid).project_id:
+        raise HTTPException(409, "This execution history belongs to a Project and cannot be deleted separately")
     nerv.stop(sid) if nerv.store.exists(sid) else None
     if sid in nerv._runs:
         raise HTTPException(409, "Wait for the interrupted model request to exit before deleting its session")
@@ -1149,17 +1143,7 @@ def robot_image_reset():
 
 @app.post("/api/operator/workspace")
 def operator_workspace(inp: NewSessionIn):
-    if not inp.body:
-        raise HTTPException(400, "Select a robot for the operator workspace")
-    try:
-        from .session import require_scene
-        require_scene(inp.body, inp.world, inp.mode)
-        for session in nerv.store.all():
-            if session.brain == "operator" and session.body == inp.body and session.mode == inp.mode and session.world == inp.world and session.status == "active":
-                return session.summary()
-        return nerv.new_session("operator", inp.body, inp.world, [], [], inp.mode, inp.world_configuration, operator_workspace=True)
-    except (ValueError, RuntimeError, KeyError) as error:
-        raise HTTPException(400, str(error))
+    raise HTTPException(410, "Open a Project for device and fixed-policy operations; no chat model is required.")
 
 
 @app.get("/api/config")
