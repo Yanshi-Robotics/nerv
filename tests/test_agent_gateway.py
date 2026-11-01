@@ -322,3 +322,28 @@ def test_restarted_body_rejects_receipt_even_when_world_epoch_unchanged(gateway)
     with pytest.raises(ValueError, match="Runtime instance changed"):
         gw.invoke(paired["token"], "acknowledge", {"project_id": "project", "receipt_id": observation["receipt_id"]})
     robot.post.assert_not_called()
+
+
+def test_run_end_cannot_stop_replacement_after_ownership_check(gateway, monkeypatch):
+    gw, paired, _, session, _ = gateway
+    session.run_id = "run"
+    owns = gw._owns
+    replacement = {"id": "replacement", "session_id": "new-session"}
+
+    def replace_after_check(*args, **kwargs):
+        result = owns(*args, **kwargs)
+        gw.projects.active_run = lambda pid: replacement
+        return result
+
+    def stop(pid, run_id):
+        if run_id != gw.projects.active_run(pid)["id"]:
+            raise ValueError("Run is no longer active")
+        replacement["stopped"] = True
+        return {"ok": True}
+
+    monkeypatch.setattr(gw, "_owns", replace_after_check)
+    gw.projects.stop_run.side_effect = stop
+    with pytest.raises(ValueError, match="no longer active"):
+        gw.invoke(paired["token"], "run_end", {"project_id": "project", "request_id": "end-race"})
+    gw.projects.stop_run.assert_called_once_with("project", "run")
+    assert "stopped" not in replacement

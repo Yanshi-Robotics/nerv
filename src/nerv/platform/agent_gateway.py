@@ -356,7 +356,7 @@ class AgentGateway:
             self._owns(record, pid, allow_paused=True)
             if session.mode != "sim":
                 raise PermissionError("Real device lifecycle belongs to the operator")
-            return self.projects.stop_run(pid, self.projects.active_run(pid)["id"])
+            return self.projects.stop_run(pid, session.run_id)
         lease = self._fresh(record, pid, session)
         if operation == "task_start":
             result = self.hub.tasks.start(session.id, args["goal"], args.get("constraints", ""),
