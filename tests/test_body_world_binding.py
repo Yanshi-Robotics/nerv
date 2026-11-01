@@ -112,3 +112,31 @@ def test_attached_node_rebound_at_same_url_is_not_trusted(hub, monkeypatch):
     with pytest.raises(ValueError, match="cannot reuse"):
         hub.new_session("mock", body.name, "apt", tools=[])
     assert hub.store.list() == []
+
+
+def test_invalid_sensor_rolls_back_only_new_nodes_and_cached_clients(hub, monkeypatch):
+    body = hub.registry.body('humanoid-unitree-g1')
+    world_key = f'world:apt/{body.name}'
+    body_key = f'body:{body.name}'
+    existing = object()
+    hub.launcher.nodes['tool:kept'] = existing
+    def world(*args):
+        handle = NodeHandle('world', world_key, 'http://unused')
+        hub.launcher.nodes[world_key] = handle
+        return handle
+    def robot(*args):
+        hub.launcher.nodes[body_key] = NodeHandle('body', body_key, 'http://unused')
+        hub._bodies[body.name] = object()
+    def client(*args):
+        value = SimpleNamespace(epoch=lambda: 'world-epoch', sensors=lambda: ['front'])
+        hub._worlds[f'apt/{body.name}'] = value
+        return value
+    monkeypatch.setattr(hub.launcher, 'ensure_world', world)
+    monkeypatch.setattr(hub.launcher, 'ensure_body', robot)
+    monkeypatch.setattr(hub, 'world_client', client)
+    monkeypatch.setattr(hub.launcher, 'stop', lambda key: hub.launcher.nodes.pop(key))
+    with pytest.raises(ValueError, match='does not publish'):
+        hub.new_session('mock', body.name, 'apt', sensors=['missing'], tools=[])
+    assert hub.launcher.nodes == {'tool:kept': existing}
+    assert not hub._worlds and not hub._bodies
+    assert hub._bound_runtime is None and hub.store.list() == []

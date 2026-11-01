@@ -2,6 +2,7 @@
 import hashlib
 import json
 import zipfile
+from pathlib import Path
 
 import pytest
 from nerv import installation as i
@@ -336,3 +337,58 @@ def test_engine_only_module_does_not_require_bundled_worlds(tmp_path, monkeypatc
     assert not _needs_repair('sim', {'sim': record})
     (root / 'bodies/test/body.yaml').unlink()
     assert _needs_repair('sim', {'sim': record})
+
+
+def test_project_history_snapshot_restores_prior_generation_and_preserves_newer(tmp_path, monkeypatch):
+    monkeypatch.setenv('NERV_HOME', str(tmp_path))
+    old = tmp_path / 'memory/sessions/old/events.jsonl'
+    old.parent.mkdir(parents=True)
+    old.write_text('original journal')
+    project = tmp_path / 'projects/p_old/project.json'
+    project.parent.mkdir(parents=True)
+    project.write_text('original project')
+    snapshot = i._snapshot()
+    old.write_text('new project fields')
+    project.write_text('new revision')
+    (tmp_path / 'credentials.json').write_text('private unchanged')
+    newer = Path(i._restore(snapshot, interrupted=False))
+    assert old.read_text() == 'original journal'
+    assert project.read_text() == 'original project'
+    assert (newer / 'memory/sessions/old/events.jsonl').read_text() == 'new project fields'
+    assert (newer / 'projects/p_old/project.json').read_text() == 'new revision'
+    assert (tmp_path / 'credentials.json').read_text() == 'private unchanged'
+
+
+def test_legacy_snapshot_restores_verified_pre_project_journal(tmp_path, monkeypatch):
+    monkeypatch.setenv('NERV_HOME', str(tmp_path))
+    snapshot = tmp_path / 'backups/old'
+    i.write_json(snapshot / 'snapshot.json', {'paths': list(i.RESTORE_PATHS), 'schema': 1, 'rollback_depth': 1})
+    i.write_json(snapshot / 'active.json', {'version': '0.8.5'})
+    backup = tmp_path / 'projects/migration-backup-v1'
+    backup.mkdir(parents=True)
+    original = b'{"id":"old"}\n'
+    (backup / 'old.json').write_bytes(original)
+    i.write_json(backup / 'checksums.json', {'old.json': hashlib.sha256(original).hexdigest()})
+    journal = tmp_path / 'memory/sessions/new.json'
+    journal.parent.mkdir(parents=True)
+    journal.write_text('{"project_id":"p_new"}')
+    newer = Path(i._restore(snapshot, interrupted=False))
+    assert (tmp_path / 'memory/sessions/old.json').read_bytes() == original
+    assert not journal.exists() and not (tmp_path / 'projects').exists()
+    assert (newer / 'memory/sessions/new.json').read_text() == '{"project_id":"p_new"}'
+    assert (newer / 'projects/migration-backup-v1/old.json').read_bytes() == original
+    # Repeating recovery after interruption uses the completed snapshot, not live projects.
+    i._restore(snapshot, interrupted=False)
+    assert (tmp_path / 'memory/sessions/old.json').read_bytes() == original
+
+
+def test_corrupt_history_snapshot_fails_before_moving_live_data(tmp_path, monkeypatch):
+    monkeypatch.setenv('NERV_HOME', str(tmp_path))
+    original = tmp_path / 'memory/sessions/old.json'
+    original.parent.mkdir(parents=True)
+    original.write_text('original')
+    snapshot = i._snapshot()
+    (snapshot / 'memory/sessions/old.json').write_text('corrupt')
+    with pytest.raises(ValueError, match='verification'):
+        i._restore(snapshot)
+    assert original.read_text() == 'original'

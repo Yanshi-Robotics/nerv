@@ -42,10 +42,11 @@ INSTALL_NETWORK_ENV = ("HTTP_PROXY", "HTTPS_PROXY", "ALL_PROXY", "NO_PROXY", "SS
                        "UV_HTTP_RETRIES", "UV_OFFLINE", "UV_NO_INDEX")
 POLL_S = 0.2
 CONFIG_SCHEMA = 1  # Current on-disk configuration format; unknown formats fail before activation.
-# Credentials and append-only histories survive a downgrade. These versioned
-# settings are restored from a snapshot; newer copies remain in its recovery archive.
+# Credentials stay in place across a downgrade. Versioned settings and history
+# restore together; newer copies remain in the snapshot's recovery archive.
 RESTORE_PATHS = ("active.json", "previous.json", "release.json", "runtimes", "bodies",
                  "devices", "schemes", "artifacts", "vlm.json", "config-schema.json")
+HISTORY_PATHS = ("memory/sessions", "projects")
 
 
 def home():
@@ -350,6 +351,20 @@ def install(product="host", *, manifest=None, cancelled=lambda: False, progress=
         lock.release()
 
 
+def _history_hashes(directory):
+    result = {}
+    for name in HISTORY_PATHS:
+        source = directory / name
+        if source.is_symlink():
+            raise ValueError("History snapshots cannot follow symbolic links")
+        for path in sorted(source.rglob("*")) if source.is_dir() else []:
+            if path.is_symlink():
+                raise ValueError("History snapshots cannot follow symbolic links")
+            if path.is_file():
+                result[str(path.relative_to(directory))] = hashlib.sha256(path.read_bytes()).hexdigest()
+    return result
+
+
 def _snapshot():
     root = home()
     destination = root / "backups" / (time.strftime("%Y%m%d-%H%M%S") + "-" + uuid.uuid4().hex[:8])
@@ -360,8 +375,44 @@ def _snapshot():
             shutil.copytree(source, destination / name)
         elif source.is_file():
             shutil.copy2(source, destination / name)
-    write_json(destination / "snapshot.json", {"paths": list(RESTORE_PATHS), "schema": CONFIG_SCHEMA, "rollback_depth": 1})
+    hashes = _history_hashes(root)
+    for name in HISTORY_PATHS:
+        if (root / name).is_dir():
+            shutil.copytree(root / name, destination / name)
+    if _history_hashes(destination) != hashes:
+        raise ValueError("History snapshot verification failed")
+    write_json(destination / "snapshot.json", {"paths": list(RESTORE_PATHS), "schema": CONFIG_SCHEMA,
+               "rollback_depth": 1, "history": {"paths": list(HISTORY_PATHS), "sha256": hashes}})
     return destination
+
+
+def _legacy_history_snapshot(root, snapshot, metadata):
+    """Complete a pre-Project installer snapshot from the verified migration source."""
+    active = snapshot / "active.json"
+    version = json.loads(active.read_text()).get("version", "") if active.exists() else ""
+    if not version.startswith(("0.8.", "0.7.", "0.6.")):
+        return metadata
+    backup = root / "projects/migration-backup-v1"
+    manifest = backup / "checksums.json"
+    if not manifest.exists():
+        if (root / "projects").exists():
+            raise ValueError("Cannot restore legacy history without its verified migration backup")
+        return metadata
+    hashes = json.loads(manifest.read_text())
+    for relative, digest in hashes.items():
+        path = backup / relative
+        if Path(relative).is_absolute() or ".." in Path(relative).parts or not path.resolve().is_relative_to(backup.resolve()):
+            raise ValueError("Invalid migration backup path")
+        if not path.is_file() or hashlib.sha256(path.read_bytes()).hexdigest() != digest:
+            raise ValueError("Session backup verification failed")
+    for relative in hashes:
+        target = snapshot / "memory/sessions" / relative
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(backup / relative, target)
+    metadata = {**metadata, "history": {"paths": list(HISTORY_PATHS),
+                "sha256": {"memory/sessions/" + name: digest for name, digest in hashes.items()}}}
+    write_json(snapshot / "snapshot.json", metadata)
+    return metadata
 
 
 def _restore(snapshot, *, interrupted=True):
@@ -372,17 +423,24 @@ def _restore(snapshot, *, interrupted=True):
     metadata = json.loads((snapshot / "snapshot.json").read_text(encoding="utf-8"))
     if metadata.get("paths") != list(RESTORE_PATHS):
         raise ValueError("Unsupported recovery snapshot")
+    if "history" not in metadata:
+        metadata = _legacy_history_snapshot(root, snapshot, metadata)
+    history = metadata.get("history")
+    if history and (history.get("paths") != list(HISTORY_PATHS) or history.get("sha256") != _history_hashes(snapshot)):
+        raise ValueError("History snapshot verification failed")
     # Preserve configurations created since the update, including new policy
     # references. Never overwrite a student's later work without a recoverable copy.
     saved = snapshot / ("replaced-" + uuid.uuid4().hex[:8])
     saved.mkdir(mode=0o700)
-    for name in RESTORE_PATHS:
+    for name in (*RESTORE_PATHS, *(HISTORY_PATHS if history else ())):
         target, source = root / name, snapshot / name
         if target.exists():
+            (saved / name).parent.mkdir(parents=True, exist_ok=True)
             shutil.move(str(target), str(saved / name))
         if name == "previous.json" and not interrupted and metadata.get("rollback_depth") == 1:
             continue
         if source.is_dir():
+            target.parent.mkdir(parents=True, exist_ok=True)
             shutil.copytree(source, target)
         elif source.is_file():
             shutil.copy2(source, target)

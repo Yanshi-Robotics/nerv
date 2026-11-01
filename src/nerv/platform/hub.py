@@ -301,17 +301,21 @@ class Nerv:
             try:
                 wh = self.launcher.ensure_world(wspec, bspec, values)
                 self.launcher.ensure_body(bspec, wspec, wh)
+                wc = self.world_client(world, body)
+                epoch = wc.epoch() if wc else ""
+                offered = set(wc.sensors()) if wc else set()
+                bad = [s for s in (sensors or []) if s not in offered]
+                if bad:
+                    raise ValueError(f"world `{world}` does not publish sensor streams {bad}; it offers {sorted(offered)}")
             except Exception:
                 for key in list(self.launcher.nodes):
                     if key not in old_nodes:
                         self.launcher.stop(key)
+                        if key.startswith("world:"):
+                            self._worlds.pop(key.removeprefix("world:"), None)
+                        elif key.startswith("body:"):
+                            self._bodies.pop(key.removeprefix("body:"), None)
                 raise
-            wc = self.world_client(world, body)
-            epoch = wc.epoch() if wc else ""
-            offered = set(wc.sensors()) if wc else set()
-            bad = [s for s in (sensors or []) if s not in offered]
-            if bad:
-                raise ValueError(f"world `{world}` does not publish sensor streams {bad}; it offers {sorted(offered)}")
         elif body:
             spec = self.registry.body(body)
             if mode not in spec.buses:
