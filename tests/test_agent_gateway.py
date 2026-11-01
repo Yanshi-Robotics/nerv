@@ -304,3 +304,21 @@ def test_revoking_stale_owner_does_not_stop_a_replacement_run(gateway):
     gw.projects.active_run = lambda pid: {"id": "replacement", "session_id": session.id}
     assert gw.revoke(paired["connection"]["id"])["ok"]
     hub.stop_robot.assert_not_called()
+
+
+def test_acknowledgement_targets_body_epoch_not_world_epoch(gateway):
+    gw, paired, _, session, robot = gateway
+    session.epoch = "world-epoch"
+    robot.health = lambda: {"epoch": "body-epoch", "supervision_sensors": ["camera"]}
+    acknowledge(gw, paired)
+    robot.post.assert_called_with("/supervision", {"epoch": "body-epoch", "frame_seq": 1})
+
+
+def test_restarted_body_rejects_receipt_even_when_world_epoch_unchanged(gateway):
+    gw, paired, _, _, robot = gateway
+    observation = gw.invoke(paired["token"], "observe", {"project_id": "project"})
+    robot.health = lambda: {"epoch": "new-body", "supervision_sensors": ["camera"]}
+    robot.post.reset_mock()
+    with pytest.raises(ValueError, match="Runtime instance changed"):
+        gw.invoke(paired["token"], "acknowledge", {"project_id": "project", "receipt_id": observation["receipt_id"]})
+    robot.post.assert_not_called()

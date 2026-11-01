@@ -292,10 +292,15 @@ class AgentGateway:
                     "sensors": caps.sensors, "external_supervision": (caps.config or {}).get("external_supervision"),
                     "control": self.control(pid)}
         if operation == "observe":
+            robot = self.hub.body_client(session.body)
+            body_epoch = (robot.health() or {}).get("epoch") if robot else None
             observed = self.hub.perceive(session.id)
             if observed is None:
                 raise ValueError("No observation is available for this run")
-            receipt = {"id": "obs_" + uuid.uuid4().hex, "epoch": session.epoch, "state": dict(observed.state),
+            if not body_epoch or (robot.health() or {}).get("epoch") != body_epoch:
+                raise ValueError("Runtime changed while collecting observations; observe again")
+            receipt = {"id": "obs_" + uuid.uuid4().hex, "epoch": session.epoch, "body_epoch": body_epoch,
+                       "state": dict(observed.state),
                        "delivered_at": time.time(), "delivered_mono": time.monotonic(),
                        "images": [i["name"] for i in observed.images if i.get("png")], "acknowledged": False}
             with self._lock:
@@ -316,10 +321,13 @@ class AgentGateway:
                 state = receipt["state"]
                 if time.monotonic() - receipt["delivered_mono"] > contract["max_observation_age_s"]:
                     raise ValueError("Observation receipt expired")
-                required = (robot.health() or {}).get("supervision_sensors", [])
+                health = robot.health() or {}
+                if health.get("epoch") != receipt["body_epoch"]:
+                    raise ValueError("Runtime instance changed; observe again")
+                required = health.get("supervision_sensors", [])
                 if not receipt["images"] or not set(required) <= set(receipt["images"]) or not state.get("frame_seq"):
                     raise ValueError("Required visual sensor frames are unavailable")
-                result = robot.post("/supervision", {"epoch": session.epoch, "frame_seq": state["frame_seq"]})
+                result = robot.post("/supervision", {"epoch": receipt["body_epoch"], "frame_seq": state["frame_seq"]})
                 if not result.get("ok"):
                     raise ValueError("Runtime rejected stale or incompatible supervision")
                 receipt["acknowledged"] = True
