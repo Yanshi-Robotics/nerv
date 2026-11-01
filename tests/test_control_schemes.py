@@ -1,5 +1,4 @@
 """Offline contract tests; no physical or model competence claims."""
-import time
 from types import SimpleNamespace
 from unittest.mock import Mock
 
