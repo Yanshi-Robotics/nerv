@@ -19,6 +19,7 @@ import contextlib
 import functools
 import io
 import json
+import os
 import time
 import math
 import uuid
@@ -297,6 +298,7 @@ def build_app(node: BodyNode, cors_origins: list[str]) -> FastAPI:
     @app.get("/health")
     def health() -> dict:
         return {"ok": True, "node": "body", "body": impl.name, "family": impl.family,
+                "launch_token": os.environ.get("NERV_LAUNCH_TOKEN", ""),
                 "version": impl.version, "world": node.world, "bus": node.bus_kind,
                 "armed": node.armed, "held": bool(impl.held), "epoch": node.epoch,
                 "protocol_major": PROTOCOL_MAJOR, "protocol_minor": PROTOCOL_MINOR, "runtime_manifest": getattr(node, "manifest", {}),

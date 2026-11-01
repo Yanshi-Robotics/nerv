@@ -12,15 +12,28 @@ import sys
 import time
 import json
 import uuid
+import threading
+from functools import wraps
 from pathlib import Path
 from dataclasses import dataclass, field
 from contextlib import ExitStack
 
 import httpx
+from filelock import FileLock
 
 from .. import config, paths
 from .registry import BodySpec, Registry, ToolNodeSpec, WorldSpec
 from .registry.schema import KIND_SIM
+
+
+def _serialized_launch(method):
+    @wraps(method)
+    def wrapped(self, *args, **kwargs):
+        # Hold through health/preparation: probing a free port alone does not
+        # reserve it while another Host is starting its own child process.
+        with self._launch_lock, self._allocation_lock:
+            return method(self, *args, **kwargs)
+    return wrapped
 
 
 @dataclass
@@ -35,6 +48,7 @@ class NodeHandle:
     attached: bool = False
     meta: dict = field(default_factory=dict)
     resources: ExitStack | None = field(default=None, repr=False)
+    launch_token: str = field(default="", repr=False)
 
     def alive(self) -> bool:
         if self.attached:
@@ -52,6 +66,10 @@ class Launcher:
         self.nodes: dict[str, NodeHandle] = {}
         self.log_dir = os.path.join(paths.LOGS_DIR, "nodes")
         os.makedirs(self.log_dir, exist_ok=True)
+        coordination = Path(paths.node_coordination_dir())
+        coordination.mkdir(parents=True, exist_ok=True, mode=0o700)
+        self._launch_lock = threading.RLock()
+        self._allocation_lock = FileLock(str(coordination / "node-allocation.lock"))
 
     # -- ports ----------------------------------------------------------------------------
     def _free_port(self) -> int:
@@ -106,6 +124,8 @@ class Launcher:
                 "LIBGL_ALWAYS_SOFTWARE", "__EGL_VENDOR_LIBRARY_FILENAMES", "MUJOCO_EGL_DEVICE_ID", "EGL_PLATFORM")
         env = {k: v for k, v in os.environ.items() if k in safe or k.startswith("LC_")}
         env.update(extra_env or {})
+        launch_token = uuid.uuid4().hex
+        env["NERV_LAUNCH_TOKEN"] = launch_token
         env.setdefault("PYTHONUNBUFFERED", "1")
         env["PYTHONUTF8"] = "1"
         env["NERV_HOME"] = paths.NERV_HOME
@@ -123,7 +143,7 @@ class Launcher:
             raise
         reservation.started(proc.pid)
         h = NodeHandle(kind=kind, name=key, url=url, bus_url=bus_url, python=python, proc=proc,
-                       log_path=log_path, resources=resources)
+                       log_path=log_path, resources=resources, launch_token=launch_token)
         self.nodes[key] = h
         try:
             self._wait_health(h)
@@ -142,9 +162,18 @@ class Launcher:
             try:
                 r = httpx.get(h.url + "/health", timeout=config.NODE_PROBE_TIMEOUT)
                 if r.status_code == 200:
-                    h.meta = r.json()
-                    return h.meta
-                last = f"HTTP {r.status_code}"
+                    metadata = r.json()
+                    if h.launch_token and metadata.get("launch_token") != h.launch_token:
+                        last = "health belongs to another launch"
+                    elif metadata.get("ok") is False:
+                        last = "node reports not ready"
+                    elif h.proc is not None and h.proc.poll() is not None:
+                        last = "owned process exited during health check"
+                    else:
+                        h.meta = metadata
+                        return h.meta
+                else:
+                    last = f"HTTP {r.status_code}"
             except Exception as e:
                 last = type(e).__name__
             time.sleep(0.3)
@@ -182,6 +211,7 @@ class Launcher:
             raise ValueError(f"body `{body.name}` is connected to an earlier world bus; "
                              "stop that body node explicitly before reconnecting")
 
+    @_serialized_launch
     def ensure_world(self, world: WorldSpec, body: BodySpec, configuration=None) -> NodeHandle | None:
         if world.kind != KIND_SIM:
             return None                     # reality needs no process
@@ -200,8 +230,10 @@ class Launcher:
         # reserve http first so bus gets a different port
         placeholder = NodeHandle(kind="world", name=key, url=f"http://{config.NODE_BIND_HOST}:{http_port}")
         self.nodes[key] = placeholder
-        bus_port = self._free_port()
-        del self.nodes[key]
+        try:
+            bus_port = self._free_port()
+        finally:
+            del self.nodes[key]
         from ..world.configuration import resolve_configuration
         values = resolve_configuration(world.configuration, configuration or {})
         directory = Path(paths.CACHE_DIR) / "instances" / uuid.uuid4().hex
@@ -217,10 +249,12 @@ class Launcher:
                             "--host", config.NODE_BIND_HOST, "--instance-config", str(request)], url, bus_url=bus,
                            resource_paths=[world.assets_root] if world.asset else [])
 
+    @_serialized_launch
     def ensure_body(self, body: BodySpec, world: WorldSpec, world_handle: NodeHandle | None) -> NodeHandle:
         self.check_body_binding(body, world, world_handle)
         return self.ensure_runtime(body, world.kind, world, world_handle)
 
+    @_serialized_launch
     def ensure_runtime(self, body: BodySpec, mode: str, world=None, world_handle=None) -> NodeHandle:
         key = f"body:{body.name}"
         handle = self.nodes.get(key)
@@ -290,6 +324,7 @@ class Launcher:
         if handle.meta.get("protocol_major") != PROTOCOL_MAJOR:
             raise ValueError("incompatible or undeclared runtime protocol; refusing preparation")
 
+    @_serialized_launch
     def ensure_tool(self, tool: ToolNodeSpec) -> NodeHandle:
         key = f"tool:{tool.name}"
         h = self.nodes.get(key)

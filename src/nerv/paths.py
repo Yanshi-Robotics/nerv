@@ -15,6 +15,11 @@ REPO_ROOT = os.path.dirname(_SRC)                          # repository root in 
 NERV_HOME = os.environ.get("NERV_HOME") or os.path.join(os.path.expanduser("~"), ".nerv")
 TRUST_FILE = os.path.join(NERV_HOME, "trust.json")
 
+
+def node_coordination_dir() -> str:
+    """All channels/custom homes of this OS user share one TCP allocation lock."""
+    return os.path.join(os.path.expanduser("~"), ".nerv", "coordination")
+
 _IN_CHECKOUT = os.path.isfile(os.path.join(REPO_ROOT, "pyproject.toml"))
 DATA_ROOT = NERV_HOME
 

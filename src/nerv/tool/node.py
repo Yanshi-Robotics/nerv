@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import contextlib
 import functools
+import os
 
 import anyio
 import anyio.to_thread
@@ -45,6 +46,7 @@ def build_tool_app(name: str, tools: list[dict], call, version: str = "0") -> Fa
     @app.get("/health")
     def health() -> dict:
         return {"ok": True, "node": "tool", "tool": name, "version": version,
+                "launch_token": os.environ.get("NERV_LAUNCH_TOKEN", ""),
                 "tools": [td["name"] for td in tools]}
 
     return app

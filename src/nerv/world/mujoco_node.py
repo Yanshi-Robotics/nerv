@@ -886,6 +886,7 @@ def build_app(sim: WorldSim, cors_origins: list[str]):
     @app.get("/health")
     def health() -> dict:
         return {"ok": sim.physics_alive(), "node": "world", "world": sim.world_name, "body": sim.body_name,
+                "launch_token": os.environ.get("NERV_LAUNCH_TOKEN", ""),
                 "configuration": getattr(sim, "instance_receipt", {}),
                 "epoch": sim.epoch, "sim_time": round(float(sim.data.time), 3),
                 "realtime_factor": float(sim.phys["realtime_factor"]),
