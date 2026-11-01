@@ -2,7 +2,9 @@
 from concurrent.futures import ThreadPoolExecutor
 from types import SimpleNamespace
 import threading
+import sys
 
+import httpx
 import pytest
 
 from nerv import config, paths
@@ -120,3 +122,42 @@ def test_all_local_node_health_routes_report_launch_identity(monkeypatch):
     for app in apps:
         endpoint = next(route.endpoint for route in app.routes if route.path == '/health')
         assert endpoint()['launch_token'] == 'isolated-fixture-launch'
+
+
+@pytest.mark.parametrize('failure', ['http', 'transport', 'json', 'refused', 'protocol'])
+def test_failed_runtime_preparation_is_actionable_and_stops_owned_child(launchers, monkeypatch, tmp_path, failure):
+    from nerv.platform.registry.schema import BodySpec
+    from nerv_runtime_sdk.contracts import PROTOCOL_MAJOR
+    launcher, _ = launchers
+    monkeypatch.setattr(paths, 'CACHE_DIR', str(tmp_path / 'cache'))
+    monkeypatch.setattr(launcher, '_free_port', lambda: 1)
+    body = BodySpec(name='fixture', family='fixture', buses={'sim': {'kind': 'zmq', 'verified': True, 'python': sys.executable}})
+    handle = NodeHandle('body', 'body:fixture', 'http://unused', meta={'protocol_major': PROTOCOL_MAJOR})
+    if failure == 'protocol':
+        handle.meta = {}
+    def spawn(*args, **kwargs):
+        launcher.nodes[handle.name] = handle
+        return handle
+    stopped = []
+    def stop(key):
+        stopped.append(key)
+        launcher.nodes.pop(key)
+    monkeypatch.setattr(launcher, '_spawn', spawn)
+    monkeypatch.setattr(launcher, 'stop', stop)
+    def prepare(*args, **kwargs):
+        request = httpx.Request('POST', 'http://unused/prepare')
+        if failure == 'transport':
+            raise httpx.ReadTimeout('did not respond', request=request)
+        if failure == 'http':
+            return httpx.Response(500, request=request)
+        if failure == 'json':
+            return httpx.Response(200, text='invalid', request=request)
+        return httpx.Response(200, json={'ok': False, 'message': 'fixture not ready'}, request=request)
+    monkeypatch.setattr('nerv.platform.launcher.httpx.post', prepare)
+    with pytest.raises((RuntimeError, ValueError)) as error:
+        launcher.ensure_runtime(body, 'sim', world_handle=SimpleNamespace(bus_url='tcp://unused'))
+    assert 'protocol' in str(error.value) if failure == 'protocol' else 'preparation' in str(error.value)
+    assert stopped == ['body:fixture'] and not launcher.nodes
+    # The failure also relinquishes allocation ownership for the other Host.
+    with launchers[1]._allocation_lock.acquire(timeout=0):
+        pass

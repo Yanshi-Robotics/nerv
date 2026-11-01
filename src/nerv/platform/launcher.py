@@ -310,13 +310,34 @@ class Launcher:
         handle = self._spawn(key, "body", py, args, f"http://{config.NODE_BIND_HOST}:{port}",
                              bus_url=bus_url, extra_env=declared_env,
                              resource_paths=[skill.policy for skill in body.skills.values() if skill.policy_record])
-        self._runtime_protocol(handle)
-        if mode == KIND_SIM:
+        try:
+            self._runtime_protocol(handle)
+            if mode == KIND_SIM:
+                self._prepare_runtime(handle)
+        except BaseException as error:
+            try:
+                self.stop(key)
+            except Exception as cleanup_error:
+                error.add_note(f"Runtime shutdown is unconfirmed: {cleanup_error}")
+            raise
+        return handle
+
+    def _prepare_runtime(self, handle):
+        try:
             response = httpx.post(handle.url + "/prepare", timeout=config.NODE_HEALTH_WAIT_S)
             response.raise_for_status()
-            if not response.json().get("ok"):
-                raise RuntimeError("simulated runtime preparation failed")
-        return handle
+        except httpx.HTTPError as error:
+            status = f"HTTP {error.response.status_code}" if isinstance(error, httpx.HTTPStatusError) else type(error).__name__
+            detail = self._tail(handle.log_path, n=1).strip()
+            raise RuntimeError(f"Simulation runtime preparation failed ({status}). "
+                               f"Inspect the node log before retrying. {detail}".rstrip()) from error
+        try:
+            result = response.json()
+        except ValueError as error:
+            raise RuntimeError("Simulation runtime preparation returned invalid JSON; inspect the node log") from error
+        if not isinstance(result, dict) or result.get("ok") is not True:
+            reason = result.get("message", "readiness was not confirmed") if isinstance(result, dict) else "invalid response"
+            raise RuntimeError(f"Simulation runtime preparation failed: {reason}")
 
     @staticmethod
     def _runtime_protocol(handle):
