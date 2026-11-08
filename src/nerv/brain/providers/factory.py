@@ -17,7 +17,7 @@ def _ollama_tags(base_url: str) -> set[str]:
         with urllib.request.urlopen(base_url.rstrip("/") + "/models",
                                     timeout=config.OLLAMA_PROBE_TIMEOUT) as r:
             return {m.get("id", "") for m in json.load(r).get("data", [])}
-    except Exception:
+    except (OSError, ValueError, AttributeError):
         return set()
 
 
