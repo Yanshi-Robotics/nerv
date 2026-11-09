@@ -1,4 +1,4 @@
-import type { Registry, RobotDisplay } from "./api";
+import type { Registry, RobotDisplay, SessionSummary } from "./api";
 
 export type SessionTarget = {
   id: string;
@@ -77,4 +77,10 @@ export function adjacentTarget(
   return targets[
     (Math.max(index, 0) + direction + targets.length) % targets.length
   ];
+}
+
+/** Never fall back to another robot when a selected project has no active run. */
+export function taskBarSessions(sessions: SessionSummary[], selectedSessionId?: string | null) {
+  const active = sessions.filter(session => session.body && session.status === "active");
+  return selectedSessionId === undefined ? active : active.filter(session => session.id === selectedSessionId);
 }

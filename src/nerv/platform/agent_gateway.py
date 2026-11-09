@@ -372,6 +372,8 @@ class AgentGateway:
         if operation == "activity":
             event = {"source": "external_agent", "client_id": record["id"], "client_name": record["name"],
                      "instance_id": session.epoch,
+                     **{key: getattr(session, key, None) for key in ("brain_instance_id", "run_id", "robot_instance_id", "world_instance_id", "binding_generation", "world_generation", "robot_epoch")},
+                     "world_epoch": session.epoch, "control_generation": self.control(pid).get("control_generation"),
                      "type": "agent_statement", "text": args["text"]}
             self.hub.store.memory(session.id).append("external_agent_activity", event)
             return {"ok": True}

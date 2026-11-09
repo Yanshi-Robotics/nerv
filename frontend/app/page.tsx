@@ -33,7 +33,7 @@ export default function Home(){
   const updateProject=(p:Project)=>setProjects(old=>old.map(item=>item.id===p.id?{...item,...p}:item));
   const createForWorld=(world:string,bodyName:string)=>{setDraft({...emptyProjectDraft,name:registry?.worlds.find(w=>w.name===world)?.label||world,robot:bodyName,world});navigate('projects');};
   return <main className="project-shell">
-    <GlobalTaskBar sessions={sessions} nodes={nodes} navigate={navigate} externalSessionIds={projects.map(p=>p.active_run?.session_id||'')}/>
+    <GlobalTaskBar selectedSessionId={consoleOpen ? undefined : session?.id ?? null} sessions={sessions} nodes={nodes} navigate={navigate} externalSessionIds={projects.map(p=>p.active_run?.session_id||'')}/>
     {error&&<p role="alert" className="error-text project-error">{t('Unable to refresh local state. Check the NERV service.')} {error}</p>}
     {current&&<ProjectWorld inactive={consoleOpen} key={current.id} project={current} session={session} nodes={nodes} registry={registry} refresh={refresh} onConsole={()=>navigate('projects')} onNavigate={navigate} onProjectChanged={updateProject}/>}
     {!current&&!consoleOpen&&<div className="project-standby"><h1>{t('Project unavailable')}</h1><button className="nerv-control action" onClick={()=>navigate('projects')}>{t('Open console')}</button></div>}

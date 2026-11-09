@@ -73,3 +73,21 @@ def test_operator_geometry_is_separate_from_sensor_bus(world):
     assert ga['bounds'][1][0] < gb['bounds'][0][0]
     assert ga['robot_instance_id']=='A' and gb['robot_instance_id']=='B'
     assert 'bounds' not in a.read() and 'status' not in a.read()
+
+
+def test_shared_robot_view_uses_host_cors_origins(world, monkeypatch):
+    from fastapi import FastAPI
+    from fastapi.testclient import TestClient
+    from nerv.world.shared_node import robot_app
+    monkeypatch.setenv("NERV_CORS_ORIGINS", "http://127.0.0.1:8100,http://localhost:8100")
+    app = FastAPI()
+    app.mount("/robots/A", robot_app(world.view("A")))
+    with TestClient(app) as client:
+        response = client.options("/robots/A/control", headers={
+            "Origin": "http://127.0.0.1:8100", "Access-Control-Request-Method": "POST",
+            "Access-Control-Request-Headers": "content-type"})
+        assert response.status_code == 200
+        assert response.headers["access-control-allow-origin"] == "http://127.0.0.1:8100"
+        denied = client.options("/robots/A/control", headers={
+            "Origin": "http://unapproved.example", "Access-Control-Request-Method": "POST"})
+        assert denied.status_code == 400

@@ -2,6 +2,7 @@ import { test } from "node:test";
 import assert from "node:assert/strict";
 import {
   sessionTargets,
+  taskBarSessions,
   selectedTarget,
   adjacentTarget,
 } from "../lib/session-targets.ts";
@@ -70,4 +71,13 @@ test("removed scenes never resolve to a different active target silently", () =>
     ),
     [],
   );
+});
+
+test("task controls remain bound to the viewed robot and never fall back to its peer", () => {
+  const a = {id:"a", body:"G1-A", status:"active"}, b = {id:"b", body:"G1-B", status:"active"};
+  assert.deepEqual(taskBarSessions([b,a], "a"), [a]);
+  assert.deepEqual(taskBarSessions([b,a], "b"), [b]);
+  assert.deepEqual(taskBarSessions([b], "a"), []);
+  assert.deepEqual(taskBarSessions([b,a], null), []);
+  assert.deepEqual(taskBarSessions([b,a]), [b,a]);
 });

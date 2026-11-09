@@ -1,12 +1,18 @@
 """Process entry point for an operator-configured shared physical World."""
 import argparse
 import json
+import os
 
 from fastapi import FastAPI
 
 from .composition import SharedWorld
 from .mujoco_node import build_app, make_bus_handler
 from .bus_server import BusServer
+
+
+def robot_app(view):
+    origins = [value.strip() for value in os.environ.get("NERV_CORS_ORIGINS", "http://localhost:8100").split(",") if value.strip()]
+    return build_app(view, origins)
 
 
 def main():
@@ -54,7 +60,7 @@ def main():
             bus = BusServer(record['bus_url'], make_bus_handler(view))
             bus.start()
             buses.append(bus)
-            app.mount('/robots/' + rid, build_app(view, []))
+            app.mount('/robots/' + rid, robot_app(view))
         import uvicorn
         uvicorn.run(app, host=args.host, port=args.port, log_level='warning')
     finally:

@@ -12,7 +12,18 @@ import {
   type NodeInfo,
 } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
-export default function GlobalTaskBar({
+import { taskBarSessions } from "@/lib/session-targets";
+
+export default function GlobalTaskBar({sessions, nodes, navigate, externalSessionIds = [], selectedSessionId}: {
+  sessions: SessionSummary[]; nodes: NodeInfo[]; navigate: (r: string) => void;
+  externalSessionIds?: string[]; selectedSessionId?: string | null;
+}) {
+  return <>{taskBarSessions(sessions, selectedSessionId).map(robot =>
+    <InstanceTaskBar key={robot.id} sessions={[robot]} nodes={nodes} navigate={navigate} externalSessionIds={externalSessionIds}/>
+  )}</>;
+}
+
+function InstanceTaskBar({
   sessions,
   nodes,
   navigate,
@@ -98,7 +109,7 @@ export default function GlobalTaskBar({
   }
   if (!robot && !trust) return null;
   return (
-    <div className="global-task-bar">
+    <div className="global-task-bar" data-session-id={robot?.id}>
       {trust && (
         <span className="error-text">
           {t("NERV_TRUST_ALL is on — development only")}
@@ -107,7 +118,7 @@ export default function GlobalTaskBar({
       {robot && (
         <>
           <span className="min-w-0 flex-1 truncate">
-            {robot.mode === "real" ? "Real" : "Sim"} ·{" "}
+            {robot.title || robot.robot_instance_id || robot.id} · {robot.mode === "real" ? "Real" : "Sim"} ·{" "}
             {task ? t(task.status) : t("Robot workspace")} {task?.goal || ""}
           </span>
           <button
