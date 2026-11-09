@@ -223,7 +223,7 @@ def _jpeg(rgb: np.ndarray, quality: int) -> bytes:
     return buf.getvalue()
 
 
-def robot_root(model: mujoco.MjModel) -> tuple[int, int | None]:
+def robot_root(model: mujoco.MjModel, root_name: str | None = None) -> tuple[int, int | None]:
     """Locate the controlled tree without mistaking passive props for a robot.
 
     An arena hosts one actuated body tree. Scene objects may have passive hinge,
@@ -233,6 +233,11 @@ def robot_root(model: mujoco.MjModel) -> tuple[int, int | None]:
              for a in range(model.nu)
              if int(model.actuator_trntype[a]) in (int(mujoco.mjtTrn.mjTRN_JOINT),
                                                   int(mujoco.mjtTrn.mjTRN_JOINTINPARENT))}
+    if root_name is not None:
+        selected = mujoco.mj_name2id(model, mujoco.mjtObj.mjOBJ_BODY, root_name)
+        if selected not in roots:
+            raise ValueError("Unknown actuated robot root")
+        roots = {selected}
     if len(roots) != 1:
         raise ValueError(f'Expected one actuated body tree; found {len(roots)}')
     root = roots.pop()
@@ -250,7 +255,8 @@ class WorldSim:
 
     def __init__(self, arena_xml: str, *, physics: dict | None = None, world_name: str = "",
                  body_name: str = "", layout: SceneLayout | None = None, spawn: dict | None = None,
-                 ambient: list[dict] | None = None, body_defaults: dict | None = None) -> None:
+                 ambient: list[dict] | None = None, body_defaults: dict | None = None,
+                 shared_model=None, shared_data=None, shared_lock=None, root_name=None) -> None:
         self.phys = dict(DEFAULT_PHYSICS)
         self.phys.update(physics or {})
         self.world_name = world_name
@@ -262,8 +268,8 @@ class WorldSim:
         self.body_defaults = dict(body_defaults or {})    # start_height / chase_* / fall_* from body.yaml
         self.epoch = uuid.uuid4().hex
 
-        self.model = mujoco.MjModel.from_xml_path(arena_xml)
-        self.data = mujoco.MjData(self.model)
+        self.model = shared_model if shared_model is not None else mujoco.MjModel.from_xml_path(arena_xml)
+        self.data = shared_data if shared_data is not None else mujoco.MjData(self.model)
         self.model.opt.timestep = float(self.phys["dt"])
         # A world may prescribe a named joint pose without changing model calibration.
         self._initial_qpos = np.array(self.model.qpos0)
@@ -278,9 +284,9 @@ class WorldSim:
             if not math.isfinite(value) or (self.model.jnt_limited[jid] and not lo <= value <= hi):
                 raise ValueError(f"spawn.initial_joints value outside joint limits: {name!r}")
             self._initial_qpos[self.model.jnt_qposadr[jid]] = value
-        self._lock = threading.RLock()
+        self._lock = shared_lock if shared_lock is not None else threading.RLock()
 
-        self.base_body, free = robot_root(self.model)
+        self.base_body, free = robot_root(self.model, root_name)
         self.has_free_base = free is not None
         self.free_qadr = int(self.model.jnt_qposadr[free]) if free is not None else -1
         self.free_dadr = int(self.model.jnt_dofadr[free]) if free is not None else -1
@@ -322,7 +328,8 @@ class WorldSim:
         self._last_advance_wall = time.perf_counter()
         self._running = False
         self._thread: threading.Thread | None = None
-        self._reset_data()
+        if shared_model is None:
+            self._reset_data()
         runtime = layout.operator_runtime(self.model, self.data) if layout is not None else None
         self.scene_operator = SceneOperator(self, runtime) if runtime is not None else None
 

@@ -17,14 +17,16 @@ from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
 from .. import __version__, config, paths
-from ..brain.providers import list_brains
-from ..vlm.store import ModelRegistry, VisualModel
-from . import messages, trust
+from . import trust
 from . import explore
 from .hub import Nerv
 from .session import log as slog
 from .storage_api import router as storage_router
 from .project_api import router as project_router
+
+def list_brains():
+    return []
+
 
 nerv = Nerv()
 
@@ -127,7 +129,7 @@ class StopSimulationIn(BaseModel):
 
 
 def _default_brain() -> str:
-    return ModelRegistry().selection() or "deepseek-flash"
+    return "operator"
 
 
 def _models_idle():
@@ -424,22 +426,12 @@ def setup_camera(provider: str, operation: str, payload: dict):
 
 @app.get("/api/vlm")
 def vlm_models():
-    registry = ModelRegistry()
-    binding = nerv.binding_signature()
-    return {"models": registry.list(binding), "providers": registry.providers(),
-            "credential_path": str(registry.credentials.path),
-            "binding_signature": binding,
-            "selection": registry.selection(), "task_locked": bool(nerv._runs)}
+    raise HTTPException(410, "Internal model services were retired; configure your external Agent")
 
 
 @app.put("/api/vlm/{model_id}")
-def vlm_save(model_id: str, model: VisualModel):
-    _models_idle()
-    if model.id != model_id:
-        raise HTTPException(400, "model id does not match the URL")
-    ModelRegistry().upsert(model.model_dump())
-    nerv._brains.clear()
-    return {"ok": True}
+def vlm_save(model_id: str, model: dict):
+    raise HTTPException(410, "Internal model services were retired; configure your external Agent")
 
 
 class CredentialIn(BaseModel):
@@ -448,46 +440,12 @@ class CredentialIn(BaseModel):
 
 @app.put("/api/credentials/{reference}")
 def credential_save(reference: str, payload: CredentialIn):
-    _models_idle()
-    if payload.value is not None:
-        raise HTTPException(400, "Use the model configuration test to register a key")
-    registry = ModelRegistry()
-    try:
-        registry.credentials.set(reference, payload.value)
-        registry.invalidate_credential(reference)
-        nerv._brains.clear()
-        return {"ok": True, **registry.credentials.describe(reference)}
-    except (ValueError, PermissionError) as error:
-        raise HTTPException(400, str(error))
+    raise HTTPException(410, "Internal model services were retired; configure your external Agent")
 
 
 @app.post("/api/vlm/{model_id}/configure")
 async def vlm_configure(model_id: str, payload: CredentialIn, request: Request):
-    import asyncio
-    import threading
-    from ..vlm.errors import ModelError
-    _models_idle()
-    cancelled = threading.Event()
-    async def watch_disconnect():
-        while not cancelled.is_set():
-            if await request.is_disconnected():
-                cancelled.set()
-                return
-            await asyncio.sleep(0.1)
-    watcher = asyncio.create_task(watch_disconnect())
-    try:
-        result = await asyncio.to_thread(ModelRegistry().configure, model_id, payload.value,
-                                         cancelled=cancelled.is_set)
-        if result["saved"]:
-            nerv._brains.clear()
-        return result
-    except ModelError as error:
-        raise HTTPException(400, error.public()) from None
-    except (ValueError, KeyError):
-        raise HTTPException(400, "Select a registered visual model") from None
-    finally:
-        cancelled.set()
-        watcher.cancel()
+    raise HTTPException(410, "Internal model services were retired; configure your external Agent")
 
 
 class SelectionIn(BaseModel):
@@ -496,13 +454,7 @@ class SelectionIn(BaseModel):
 
 @app.post("/api/vlm/{model_id}/select")
 def vlm_select(model_id: str, payload: SelectionIn):
-    _models_idle()
-    try:
-        ModelRegistry().select(model_id, payload.effort)
-        nerv._brains.clear()
-        return {"ok": True}
-    except (ValueError, KeyError) as error:
-        raise HTTPException(400, str(error))
+    raise HTTPException(410, "Internal model services were retired; configure your external Agent")
 
 
 class PhysicalAcceptanceIn(BaseModel):
@@ -514,24 +466,12 @@ class PhysicalAcceptanceIn(BaseModel):
 
 @app.post("/api/vlm/{model_id}/acceptance")
 def vlm_acceptance(model_id: str, payload: PhysicalAcceptanceIn):
-    _models_idle()
-    try:
-        if not payload.binding_signature or payload.binding_signature != nerv.binding_signature():
-            raise ValueError("physical evidence does not match the current prepared robot binding")
-        ModelRegistry().record_acceptance(model_id, payload.signature, payload.status, payload.evidence,
-                                          payload.binding_signature)
-        return {"ok": True}
-    except (ValueError, KeyError) as error:
-        raise HTTPException(400, str(error))
+    raise HTTPException(410, "Internal model services were retired; configure your external Agent")
 
 
 @app.post("/api/vlm/{model_id}/validate")
 def vlm_validate(model_id: str):
-    _models_idle()
-    try:
-        return ModelRegistry().validate(model_id)
-    except (ValueError, KeyError) as error:
-        raise HTTPException(400, str(error))
+    raise HTTPException(410, "Internal model services were retired; configure your external Agent")
 
 
 @app.post("/api/sessions/{sid}/runtime/{operation:path}")
@@ -627,14 +567,7 @@ def world_explore_asset(world: str, filename: str):
 
 @app.get("/api/check")
 def check(brain: str = Query(...)) -> dict:
-    try:
-        b = nerv.brain(brain)
-    except KeyError:
-        return {"ok": False, "message": messages.UNKNOWN_BRAIN_REPLY}
-    spec = {x["name"]: x for x in list_brains()}.get(brain, {})
-    if not spec.get("available", False):
-        return {"ok": False, "message": messages.BRAIN_NOT_CONFIGURED_REPLY}
-    return {"ok": True, "model": b.model, "vision": b.vision}
+    raise HTTPException(410, "Internal model services were retired; configure your external Agent")
 
 
 # ---- nodes (control plane) ----------------------------------------------------------------
@@ -974,22 +907,7 @@ def scene_test_operation(sid: str, operation: str, payload: dict):
 
 @app.post("/api/sessions/{sid}/brain")
 def set_brain(sid: str, inp: BrainIn) -> dict:
-    if not nerv.store.exists(sid):
-        raise HTTPException(404, "no such session")
-    if inp.brain == "operator" or inp.brain not in {b["name"] for b in list_brains()}:
-        raise HTTPException(400, messages.UNKNOWN_BRAIN_REPLY)
-    if sid in nerv._runs:
-        raise HTTPException(409, "Finish the Agent reply before changing its model")
-    try:
-        ModelRegistry().require_key(inp.brain)
-    except (ValueError, KeyError) as error:
-        raise HTTPException(400, str(error)) from error
-    if nerv.store.get(sid).brain == "operator":
-        raise HTTPException(409, "Create a separate Agent session from Home")
-    ModelRegistry().remember(inp.brain)
-    nerv.store.set_brain(sid, inp.brain)
-    nerv.store.append(sid, {"role": "brain_divider", "brain": inp.brain})
-    return {"ok": True}
+    raise HTTPException(410, "Internal model services were retired; configure your external Agent")
 
 
 @app.post("/api/sessions/{sid}/arm")
@@ -1030,16 +948,7 @@ def teleop(sid: str, inp: TeleopIn) -> StreamingResponse:
 
 
 def _chat_ready(sid):
-    if not nerv.store.exists(sid):
-        raise HTTPException(404, "no such session")
-    selected = nerv.store.get(sid).brain
-    from ..vlm.errors import ModelError
-    try:
-        ModelRegistry().require_key(selected)
-    except ModelError as error:
-        raise HTTPException(400, error.public()) from None
-    except KeyError:
-        raise HTTPException(400, messages.BRAIN_NOT_CONFIGURED_REPLY) from None
+    raise HTTPException(410, "Internal model services were retired; configure your external Agent")
 
 
 # ---- chat ------------------------------------------------------------------------------------

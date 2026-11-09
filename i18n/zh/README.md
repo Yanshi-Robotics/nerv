@@ -1,18 +1,18 @@
 # NERV
 
-[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB)](../../pyproject.toml) [![Status](https://img.shields.io/badge/0.9.0-local_candidate-c59b42)](../../CHANGELOG.md) [![License](https://img.shields.io/badge/License-MIT-blue)](../../LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB)](../../pyproject.toml) [![Status](https://img.shields.io/badge/0.9.1-in_development-c59b42)](../../CHANGELOG.md) [![License](https://img.shields.io/badge/License-MIT-blue)](../../LICENSE)
 
 [English](../../README.md) · [简体中文](README.md)
 
 **NERV 是供不同 Agent 使用的机器人基础平台**，连接本地执行、真实设备与虚拟世界。 你可以继续使用熟悉的 Agent，由 NERV 提供项目、观测、有限动作、策略执行、人工控制和运行记录。
 
-NERV 0.9.0 用 Project 控制台和 MCP 接入替代内部普通聊天。外部 Agent 管理对话与模型上下文，NERV 管理机器人生命周期和本地停止。项目也可以选用独立的机器人决策服务，或由操作者直接运行固定策略。
+NERV 0.9.1 引入 **Brain Core**：它随 NERV 安装，管理实例身份、观测、授权、任务与执行回执，不包含 AI Agent、模型 Provider、提示词循环或模型密钥管理。外部 Agent 负责理解、推理和上下文；Runtime 负责驱动、ACT／步态策略、高频控制与本地停止。沿用 0.9.1 版本号，但这是架构与兼容性升级。
 
 [接入 Agent](mcp.md) · [架构](architecture.md) · [SO-101 设置](so101-setup.md) · [资产](../../guides/assets.md) · [路线图](ROADMAP.md)
 
-本仓库目前是 **0.9.0 本地验收候选版**，尚未公开发布。下方命令安装最新公开版本，不会取得尚未发布的修改。具体 Agent 客户端与 SO-101 真机验收仍待完成；Go2 缺少完整、可核验的部署契约，暂不能开放运动。
+本仓库目前是 **0.9.1 开发工作区**，尚未公开发布。下方命令安装最新公开版本，不会取得尚未发布的修改。固定安装候选包、共享世界双 G1 独立验收与 SO-101 真机验收仍待完成；Go2 缺少完整、可核验的部署契约，暂不能开放运动。
 
-<div align="center"><img src="../../assets/readme/diagrams/zh/platform-090.svg" alt="外部 Agent 和操作者工作台共用 NERV Host，由 Host 管理授权并将任务交给本地执行器" width="960"></div>
+<div align="center"><img src="../../assets/readme/diagrams/zh/platform-091.svg" alt="外部 Agent 和操作者工作台共用 NERV Host，由 Host 管理授权并将任务交给本地执行器" width="960"></div>
 
 ## 安装与启动
 
@@ -49,7 +49,7 @@ irm https://github.com/Yanshi-Robotics/nerv/releases/latest/download/install.ps1
 
 桥接器连接已经运行的 Host，不另起一套机器人服务，也不自动准备硬件。[MCP 指南](mcp.md) 介绍配置、观测确认、请求 ID 和撤销方式。Codex、DeepSeek Harness、Claude Code 是计划接入的客户端；列出名称不代表所有客户端及版本均已通过验收。
 
-没有 Agent 或模型密钥，操作者仍可安装资源、配置设备、查看观测，以及使用允许的固定策略和人工控制。可选的托管视觉决策服务单独管理凭据与预算。
+没有 Agent 或模型密钥，操作者仍可安装资源、配置设备、查看观测，以及使用允许的固定策略和人工控制。NERV 不再运行内部视觉决策服务。
 
 ## 在世界中工作
 
@@ -67,7 +67,7 @@ irm https://github.com/Yanshi-Robotics/nerv/releases/latest/download/install.ps1
 
 Project 保存机器人、环境、执行结构、布局和修订。Run 表示一次世界或设备工作区实例。Task 是锁定配置与授权的目标任务，Execution 是任务中的一次策略或有限动作执行。
 
-<div align="center"><img src="../../assets/readme/diagrams/zh/lifecycle-090.svg" alt="Project 包含当前与历史 Run，Run 中的 Task 可以包含多个 Execution" width="960"></div>
+<div align="center"><img src="../../assets/readme/diagrams/zh/lifecycle-091.svg" alt="Project 包含当前与历史 Run，Run 中的 Task 可以包含多个 Execution" width="960"></div>
 
 再次打开项目会恢复配置和历史，并可重新附着到身份有效的活动实例。Host 重启后旧任务中断，运动授权清除，不重放动作。新项目修订用于后续运行与任务，当前任务继续使用锁定的引用。官方权重与资产通过引用复用，不为每个项目复制一份。
 
@@ -75,9 +75,9 @@ Project 保存机器人、环境、执行结构、布局和修订。Run 表示�
 
 ## 监督与执行
 
-外部 Agent 可以请求有限视觉动作或兼容的运动技能。原有 ACT 和可选的托管视觉决策继续作为独立执行路线。驱动和推理留在 Runtime 环境，模型输出不能直接写电机寄存器。
+外部 Agent 可以请求有限视觉动作或兼容的运动技能。ACT 与运动策略继续作为无内部模型决策的执行路线。驱动和推理留在 Runtime 环境，模型输出不能直接写电机寄存器。
 
-<div align="center"><img src="../../assets/readme/diagrams/zh/supervision-090.svg" alt="观测交付、明确确认、授权执行和监督过期后的本地停止" width="960"></div>
+<div align="center"><img src="../../assets/readme/diagrams/zh/supervision-091.svg" alt="观测交付、明确确认、授权执行和监督过期后的本地停止" width="960"></div>
 
 观测交付、观测确认和任务成功是不同事实。图像附带实例与帧信息，客户端在请求运动前需要确认收到的观测，有限动作结束后重新观察。轮询任务状态或保持连接不会续期监督。监督过期时，本地机制请求停止，并报告停止是否已确认。
 
@@ -110,9 +110,9 @@ NERV 的 Python 环境、工具、缓存和已安装资源统一保存在 `NERV_
 
 ## 部署方向
 
-0.9.0 交付同机 Agent 与 NERV 的使用链路。未来 Brain 可以作为独立程序管理模型 API、上下文和调度，通过相同 MCP 契约使用 NERV。未来云端 Agent 还需要带认证的远程传输和设备注册；本候选版不包含这两个产品。
+0.9.1 面向同机外部 Agent 接入。未来可由独立本地 Agent 项目管理模型 API、上下文与规划，再连接 NERV Brain Core 和 Runtime；Brain Core 仍属于 NERV。未来云端 Agent 还需要带认证的远程传输和设备注册；本候选版不包含这两个产品。
 
-<div align="center"><img src="../../assets/readme/diagrams/zh/deployments-090.svg" alt="实线为同机 Agent 与 NERV，虚线为未来边缘 Brain 和云端监督部署" width="960"></div>
+<div align="center"><img src="../../assets/readme/diagrams/zh/deployments-091.svg" alt="实线为同机 Agent 与 NERV，虚线为未来边缘 Brain 和云端监督部署" width="960"></div>
 
 [路线图](ROADMAP.md) 保留 Harness 扩展、插件管理、Yanshifu 集成和真实／仿真迁移研究，列出下一步与完成判据，不承诺日期。
 

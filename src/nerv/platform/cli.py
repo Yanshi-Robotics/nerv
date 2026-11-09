@@ -18,7 +18,8 @@ def _hub():
 
 def cmd_registry(a) -> int:
     from .registry import Registry
-    from ..brain.providers import list_brains
+    def list_brains():
+        return []
     reg = Registry()
     print("brains:")
     for b in list_brains():
@@ -41,7 +42,8 @@ def cmd_registry(a) -> int:
 
 def cmd_doctor(a) -> int:
     from .registry import Registry
-    from ..brain.providers import list_brains
+    def list_brains():
+        return []
     print(f"nerv {__version__}")
     print(f"data root      {paths.DATA_ROOT}")
     print(f".env           {paths.ENV_FILE} {'(present)' if os.path.isfile(paths.ENV_FILE) else '(missing)'}")
@@ -94,9 +96,7 @@ def _review_trust(hub, s: dict) -> None:
 def _new_session(hub, a) -> str:
     from .session import require_scene
     require_scene(a.body, a.world, a.mode)
-    from ..vlm.store import ModelRegistry
-    selected = ModelRegistry().selection() or config.DEFAULT_BRAIN
-    s = hub.new_session(a.brain or selected, a.body, a.world, a.sensors or [], None, a.mode)
+    s = hub.new_session("operator", a.body, a.world, a.sensors or [], [], a.mode, operator_workspace=True)
     print(f"session {s['id']}  brain={s['brain']} body={s['body']} world={s['world']} armed={s['armed']}")
     _review_trust(hub, s)
     return s["id"]
@@ -130,7 +130,7 @@ def cmd_run(a) -> int:
 
 def cmd_mcp(a) -> int:
     from .mcp_host import main
-    return main(a.channel, a.client)
+    return main(a.channel, a.client, a.brain)
 
 
 def cmd_serve(a) -> int:
@@ -465,6 +465,7 @@ def main(argv: list[str] | None = None) -> int:
     p = sub.add_parser("mcp", help="connect a paired external Agent to the running Host")
     p.add_argument("--channel", choices=["stable", "preview"], default="stable")
     p.add_argument("--client", help="paired Agent connection ID from NERV Settings")
+    p.add_argument("--brain", help="operator-bound Brain instance ID")
     p.set_defaults(fn=cmd_mcp)
     p = sub.add_parser('assets', help='manage local data-only asset revisions')
     p.add_argument('action', choices=['list', 'catalog', 'install', 'update', 'import', 'inspect', 'clone', 'save', 'export', 'verify', 'check', 'remove', 'restore'])

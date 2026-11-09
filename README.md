@@ -1,18 +1,18 @@
 # NERV
 
-[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB)](pyproject.toml) [![Status](https://img.shields.io/badge/0.9.0-local_candidate-c59b42)](CHANGELOG.md) [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB)](pyproject.toml) [![Status](https://img.shields.io/badge/0.9.1-in_development-c59b42)](CHANGELOG.md) [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
 
 [English](README.md) · [简体中文](i18n/zh/README.md)
 
 **NERV is a robot platform for Agents, connecting local execution to real devices and simulated worlds.** Bring an Agent that you already use; NERV provides projects, observations, bounded actions, policy execution, operator controls and a record of what happened.
 
-NERV 0.9.0 replaces its ordinary chat interface with a Project console and an MCP connection. Your Agent owns the conversation and model context. NERV owns the robot lifecycle and local stopping. A project can also use an optional robot decision service or run a fixed policy through operator controls.
+NERV 0.9.1 introduces **Brain Core**, the internal identity and control module used by external Agents. It ships with NERV and contains no AI Agent, model provider, prompt loop or model credential manager. External Agents own reasoning and context; Runtime owns device drivers, ACT and gait policies, high-frequency control and stopping. Despite the version number, this is an architecture and compatibility change.
 
 [Connect an Agent](guides/mcp.md) · [Architecture](guides/architecture.md) · [SO-101 setup](guides/so101-setup.md) · [Assets](guides/assets.md) · [Roadmap](ROADMAP.md)
 
-This checkout is a **0.9.0 local acceptance candidate**, not a published release. The commands below install the latest public release; they do not fetch unpublished changes. Client-specific acceptance and physical SO-101 trials remain pending. Go2 motion is blocked until a complete, verifiable deployment contract is available.
+This checkout is a **0.9.1 development checkout**, not a published release. The commands below install the latest public release; they do not fetch unpublished changes. The fixed installed-candidate, shared-world two-G1 acceptance and physical SO-101 trials remain pending. Go2 motion is blocked until a complete, verifiable deployment contract is available.
 
-<div align="center"><img src="assets/readme/diagrams/en/platform-090.svg" alt="External Agent and operator workbench share the NERV Host, which manages authority and routes tasks to local execution" width="960"></div>
+<div align="center"><img src="assets/readme/diagrams/en/platform-091.svg" alt="External Agent and operator workbench share the NERV Host, which manages authority and routes tasks to local execution" width="960"></div>
 
 ## Install and start
 
@@ -49,7 +49,7 @@ An explicitly installed preview uses `nerv preview` and its own channel data. Ca
 
 The bridge connects to an already running Host. It does not start another robot service or prepare hardware. The [MCP guide](guides/mcp.md) explains configuration, observation acknowledgements, request IDs and revocation. Codex, DeepSeek Harness and Claude Code are intended clients; their names are not a claim that every client/version has passed acceptance.
 
-Without an Agent or model key, operators can still install resources, configure devices, view observations and use the permitted fixed-policy/manual controls. An optional managed visual decision service has its own credentials and budgets.
+Without an Agent or model key, operators can still install resources, configure devices, view observations and use the permitted fixed-policy/manual controls. There is no internal visual decision service.
 
 ## Work in a world
 
@@ -67,7 +67,7 @@ Installed candidate: an unarmed SO-101 simulation Run with an observation-only M
 
 A Project is the saved configuration: robot, environment, execution structure, layout and revisions. A Run is one instance of that world or device workspace. A Task is a goal with frozen configuration and authority. An Execution is one policy or bounded action within that task.
 
-<div align="center"><img src="assets/readme/diagrams/en/lifecycle-090.svg" alt="Project contains current and historical runs; a task in a run can contain multiple executions" width="960"></div>
+<div align="center"><img src="assets/readme/diagrams/en/lifecycle-091.svg" alt="Project contains current and historical runs; a task in a run can contain multiple executions" width="960"></div>
 
 Reopening a project restores configuration and history and can reattach to a valid active instance. Host restart interrupts old work and clears motion authority. It does not replay actions. New project revisions apply to future runs/tasks; current tasks keep their locked references. Official weights and assets are referenced rather than copied into every project.
 
@@ -75,9 +75,9 @@ The 0.9 migration preserves robot sessions as projects and historical runs. Plai
 
 ## Supervise and execute
 
-External Agents may request bounded visual actions or compatible motion skills. Existing ACT execution and optional managed visual decisions remain separate execution routes. Drivers and inference stay in Runtime environments; model output cannot directly write motor registers.
+External Agents may request bounded visual actions or compatible motion skills. Existing ACT execution and external skill selection remain separate execution routes. Drivers and inference stay in Runtime environments; model output cannot directly write motor registers.
 
-<div align="center"><img src="assets/readme/diagrams/en/supervision-090.svg" alt="Observation delivery, explicit acknowledgement, authorized execution and local stopping on supervision expiry" width="960"></div>
+<div align="center"><img src="assets/readme/diagrams/en/supervision-091.svg" alt="Observation delivery, explicit acknowledgement, authorized execution and local stopping on supervision expiry" width="960"></div>
 
 Observation delivery, acknowledgement and task success are different facts. Images carry instance and frame information. The client must acknowledge a delivered observation before requesting motion, then observe again after a bounded action. Polling task state or keeping a transport open does not renew supervision. Local expiry handling requests a stop and reports whether it was confirmed.
 
@@ -110,9 +110,9 @@ Downloads use verified files, persistent records and bounded retry/resume. Insta
 
 ## Deployment direction
 
-The local Agent-to-NERV workflow is the scope of 0.9.0. A future Brain can be an independent program that owns model API access, context and scheduling while using the same MCP contract. A future cloud Agent will need authenticated remote transport and device registration. Those products are not bundled with this candidate.
+The local Agent-to-NERV workflow is the scope of 0.9.1. A future independent local Agent project can own model APIs, context and planning, then connect to NERV Brain Core and Runtime. Brain Core remains part of NERV. A future cloud Agent will need authenticated remote transport and device registration. Those products are not bundled with this candidate.
 
-<div align="center"><img src="assets/readme/diagrams/en/deployments-090.svg" alt="Solid local Agent and NERV deployment; dashed future edge Brain and cloud supervision deployments" width="960"></div>
+<div align="center"><img src="assets/readme/diagrams/en/deployments-091.svg" alt="Solid local Agent and NERV deployment; dashed future edge Brain and cloud supervision deployments" width="960"></div>
 
 The [roadmap](ROADMAP.md) retains Harness extensions, plugin management, Yanshifu integration and real/simulation transfer research. It states the next checks and completion criteria without promising dates.
 

@@ -1,5 +1,14 @@
 # Changelog
 
+## 0.9.1 — in development; compatibility change
+
+- Introduce NERV Brain Core and explicitly allocated Agent/Run/robot/world identities. Add scoped MCP `--brain` and `brain_get`.
+- Retire internal model services and provider packaging; preserve historical source and journals. Fixed policies remain Runtime capabilities.
+- Add generated shared-world robot namespaces, per-robot buses and separate Run lifetimes.
+- Record actual displacement, braking travel and stable stopping; navigation qualification remains pending.
+- This is an architecture upgrade despite the retained 0.9.1 version number. Installed candidate, UI, migration and six independent navigation trials must pass before release. No release is implied by this entry.
+
+
 Versions are managed from 0.2.0 on: every release gets an entry here and a `v<version>` tag.
 The 0.1.x entries below are the pre-release trail.
 

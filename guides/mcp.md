@@ -2,7 +2,7 @@
 
 [中文](../i18n/zh/mcp.md) · [NERV](../README.md)
 
-The 0.9.0 candidate exposes a local stdio MCP bridge to an already running Host. The bridge uses a paired credential and grants access only to selected projects. It does not launch another Host, connect motors, install resources or reveal model keys.
+The 0.9.1 candidate exposes a local stdio MCP bridge to an already running Host. The bridge uses a paired credential and grants access only to selected projects. It does not launch another Host, connect motors, install resources or reveal model keys.
 
 ## Pair a client
 
@@ -14,7 +14,7 @@ The 0.9.0 candidate exposes a local stdio MCP bridge to an already running Host.
 ```json
 {
   "command": "nerv",
-  "args": ["mcp", "--channel", "preview", "--client", "CLIENT_ID"]
+  "args": ["mcp", "--channel", "preview", "--brain", "BRAIN_ID", "--client", "CLIENT_ID"]
 }
 ```
 
@@ -23,7 +23,7 @@ Replace `CLIENT_ID` with the paired ID. Use `stable` only when connecting to a s
 The corresponding terminal command is:
 
 ```bash
-nerv mcp --channel preview --client CLIENT_ID
+nerv mcp --channel preview --brain BRAIN_ID --client CLIENT_ID
 ```
 
 The process waits for MCP protocol messages on stdio; it is not a chat shell. Client errors are written to stderr. If NERV restarts, reconnect the bridge, inspect current project/task state and obtain fresh observations before resuming work.
@@ -67,4 +67,11 @@ Protocol fixtures and a local SDK client are useful software checks; they do not
 
 ## Scope
 
-This release is same-machine only. The bridge rejects non-loopback Host receipts and detects Host instance changes. Browser operator APIs and Runtime node APIs are not general Agent interfaces. Remote authenticated transport and an independent Brain are future work; see the [deployment diagram](../assets/readme/diagrams/en/deployments-090.svg).
+This release is same-machine only. The bridge rejects non-loopback Host receipts and detects Host instance changes. Browser operator APIs and Runtime node APIs are not general Agent interfaces. Remote authenticated transport and independent external Agent deployments are future work; see the [deployment diagram](../assets/readme/diagrams/en/deployments-091.svg).
+
+
+## 0.9.1 Brain binding
+
+Allocate a Brain in Agent connections before starting the bridge. One connection is scoped to one Brain; omitting `--brain` is accepted only when one active binding is unambiguous. `brain_get` is the fifteenth tool and returns the Run, robot, world, binding and control state. `run_start` starts only the allocated Run. `task_update` returns a retirement error: cancel and start a new task instead.
+
+Observation, event and action envelopes include `brain_instance_id`, `run_id`, `robot_instance_id`, `world_instance_id` and `binding_generation`. Use receipt/task/request IDs only in their originating Brain. Reconnection never restores movement or replays a request. A completed retry returns its old receipt; an unknown outcome requires inspection. A shared-world Agent cannot reset the world or alter its roster.

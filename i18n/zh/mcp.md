@@ -2,7 +2,7 @@
 
 [English](../../guides/mcp.md) · [NERV](README.md)
 
-0.9.0 候选版通过本地 stdio MCP 桥接器连接已经运行的 Host。桥接器使用配对凭据，仅允许访问指定项目，不另起 Host、不连接电机、不安装资源，也不读取模型密钥。
+0.9.1 候选版通过本地 stdio MCP 桥接器连接已经运行的 Host。桥接器使用配对凭据，仅允许访问指定项目，不另起 Host、不连接电机、不安装资源，也不读取模型密钥。
 
 ## 配对客户端
 
@@ -14,7 +14,7 @@
 ```json
 {
   "command": "nerv",
-  "args": ["mcp", "--channel", "preview", "--client", "CLIENT_ID"]
+  "args": ["mcp", "--channel", "preview", "--brain", "BRAIN_ID", "--client", "CLIENT_ID"]
 }
 ```
 
@@ -23,7 +23,7 @@
 对应的终端命令是：
 
 ```bash
-nerv mcp --channel preview --client CLIENT_ID
+nerv mcp --channel preview --brain BRAIN_ID --client CLIENT_ID
 ```
 
 该进程等待 stdio 中的 MCP 协议消息，不提供聊天终端。错误输出到 stderr。NERV 重启后，需要重新连接桥接器，读取当前项目与任务状态，获得新观测后再继续。
@@ -67,4 +67,11 @@ nerv mcp --channel preview --client CLIENT_ID
 
 ## 范围
 
-本版仅支持同机连接。桥接器拒绝非本机 Host 地址，并检测 Host 实例变化。浏览器操作者接口与 Runtime 节点接口不是通用 Agent 接口。带认证的远程连接和独立 Brain 留待后续开发，见[部署图](../../assets/readme/diagrams/zh/deployments-090.svg)。
+本版仅支持同机连接。桥接器拒绝非本机 Host 地址，并检测 Host 实例变化。浏览器操作者接口与 Runtime 节点接口不是通用 Agent 接口。带认证的远程连接和独立 Brain 留待后续开发，见[部署图](../../assets/readme/diagrams/zh/deployments-091.svg)。
+
+
+## 0.9.1 Brain 绑定
+
+启动桥接前，在 Agent 连接页分配 Brain。一条连接只操作一个 Brain；仅当活动绑定唯一时才兼容省略 --brain。第十五个工具 brain_get 返回 Run、机器人、世界、绑定与控制状态。run_start 只能启动已分配的 Run。task_update 返回退役错误；更换目标需取消旧任务并创建新任务。
+
+观测、事件和动作回执包含 brain_instance_id、run_id、robot_instance_id、world_instance_id 和 binding_generation。回执、任务及重试 ID 仅在原 Brain 内有效。重连不恢复运动，不重放请求；已完成的重试返回旧回执，结果未知时必须先检查状态。共享世界 Agent 不能重置世界或改变组成。

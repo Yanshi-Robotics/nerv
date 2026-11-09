@@ -5,16 +5,11 @@ import threading
 import time
 import uuid
 
-from .role_turn import RoleTurn, object_schema
+from ..brain_core.execution import ExternalExecution, object_schema
 from .task_store import TaskStore
 
 ACTIVE = frozenset({"starting", "running", "updating", "stopping"})
 TERMINAL = frozenset({"finished", "cancelled", "failed", "interrupted"})
-
-
-class _ExternalTurn(RoleTurn):
-    def is_current(self):
-        return super().is_current() and getattr(self, "external_current", lambda: False)()
 
 
 class RobotTasks:
@@ -22,6 +17,7 @@ class RobotTasks:
         self.hub = hub
         self._lock = threading.RLock()
         self._operations = threading.RLock()
+        self._session_operations = {}
         self._jobs = {}
         self._tokens = {}
         self._threads = {}
@@ -36,6 +32,10 @@ class RobotTasks:
                 if state["status"] in ACTIVE:
                     self._save(session.id, status="interrupted", outcome="unknown",
                                message="Host restarted; no task or action was replayed.")
+
+    def _session_operation(self, sid):
+        with self._operations:
+            return self._session_operations.setdefault(sid, threading.RLock())
 
     @staticmethod
     def capabilities():
@@ -53,7 +53,9 @@ class RobotTasks:
 
     def _save(self, sid, **fields):
         with self._lock:
-            state = {**self._jobs.get(sid, {}), **fields, "updated_at": time.time()}
+            session = self.hub.store.get(sid)
+            identity = {key: getattr(session, key, "") for key in ("brain_instance_id", "robot_instance_id", "world_instance_id", "run_id")}
+            state = {**self._jobs.get(sid, {}), **fields, **identity, "updated_at": time.time()}
             # Durable before it becomes visible or may authorize an action.
             self.hub.store.memory(sid).append("robot_task", state)
             self._jobs[sid] = state
@@ -106,7 +108,7 @@ class RobotTasks:
         raise ValueError("unknown robot task operation")
 
     def start(self, sid, goal, constraints="", current=lambda: True, supervisor=None):
-        with self._operations:
+        with self._session_operation(sid):
             if self.hub._shutting_down:
                 raise ValueError("NERV is shutting down")
             session = self.hub.store.get(sid)
@@ -127,7 +129,7 @@ class RobotTasks:
                 raise ValueError("Select a control scheme before starting a task")
             scheme = resolve(self.hub, session, self.hub.schemes.get(session.control_scheme, session.control_scheme_revision))
             model = scheme["decision_model"]
-            brain = self.hub.new_role_model(model, scheme["effort"]) if model else None
+            brain = None
             spec = getattr(getattr(brain, "llm", None), "spec", None)
             state = self._save(sid, model_config=spec.model_dump() if spec else None, task_id="task_" + uuid.uuid4().hex, instance_id=session.epoch,
                                goal=goal, constraints=constraints, supervisor=supervisor or {"kind": "operator"}, version=1, status="starting",
@@ -161,49 +163,14 @@ class RobotTasks:
                 stopped = self._stop_execution(sid, token)
                 self._save(sid, status="failed", outcome="unknown", message=str(error), stop_result=stopped)
                 return
-        if brain is None:
-            return self._launch_fixed(sid, state, token)
-        store = TaskStore(self.hub.store, sid, state["task_id"], state["model"], state["goal"])
-        turn = RoleTurn(self.hub, store.get(sid), brain,
-                        lambda event: self.event(sid, state["task_id"], state["version"], event),
-                        token, role="system2", store=store)
-        turn.deadline = time.monotonic() + state["scheme"]["max_runtime_s"]
-
-        def work():
-            try:
-                with self._lock:
-                    if token.is_set() or self._tokens.get(sid) is not token:
-                        return
-                    self._save(sid, status="running", message="Decision layer is observing and planning")
-                from .session import log
-                with log.session_scope(sid), log.role_scope("system2", state["task_id"]):
-                    outcome = turn.run(state["goal"] + "\nConstraints: " + state["constraints"])
-                if not token.is_set():
-                    # Finishing narration is not an independent task-success judgement.
-                    stopped = self._stop_execution(sid, token)
-                    with self._lock:
-                        if not token.is_set() and self._tokens.get(sid) is token:
-                            self._save(sid, status="finished" if stopped.get("ok") and not outcome.get("error") else "failed",
-                                       outcome="model_report" if stopped.get("ok") and not outcome.get("error") else "unknown",
-                                       message=outcome.get("reply", "") or "Task controller ended",
-                                       stop_result=stopped)
-            except Exception as error:
-                if not token.is_set():
-                    self._stop_execution(sid, token)
-                    with self._lock:
-                        if not token.is_set() and self._tokens.get(sid) is token:
-                            self._save(sid, status="failed", outcome="unknown", message=str(error))
-        thread = threading.Thread(target=work, name=state["task_id"], daemon=True)
-        with self._lock:
-            self._threads[sid] = thread
-        thread.start()
+        return self._launch_fixed(sid, state, token)
 
     def _launch_external(self, sid, state, token):
         """Reuse task grants and the existing gated dispatcher, with no model loop."""
         from . import interrupt
         interrupt.clear(sid)
         store = TaskStore(self.hub.store, sid, state["task_id"], "operator", state["goal"])
-        turn = _ExternalTurn(self.hub, store.get(sid), None,
+        turn = ExternalExecution(self.hub, store.get(sid), None,
                         lambda event: self.event(sid, state["task_id"], state["version"], event),
                         token, role="system2", store=store)
         turn.deadline = time.monotonic() + state["scheme"]["max_runtime_s"]
@@ -228,7 +195,7 @@ class RobotTasks:
         """Only the authenticated gateway calls this after checking its receipt."""
         from dataclasses import asdict
         from ..nerve.brain import CallTool
-        with self._operations:
+        with self._session_operation(sid):
             state = self._jobs.get(sid, {})
             turn = self._external_turns.get(sid)
             if (state.get("task_id") != task_id or state.get("version") != version
@@ -259,7 +226,7 @@ class RobotTasks:
         return result
 
     def _launch_fixed(self, sid, state, token):
-        from .router import Turn
+        from ..brain_core.execution import ExecutionTurn as Turn
         from ..nerve.brain import CallTool
         session = self.hub.store.get(sid)
         robot = self.hub.body_client(session.body)
@@ -310,14 +277,14 @@ class RobotTasks:
         thread.start()
 
     def select_scheme(self, sid, scheme_id, revision=None):
-        with self._operations:
+        with self._session_operation(sid):
             if self._jobs.get(sid, {}).get("status") in ACTIVE or sid in self._stopping:
                 raise ValueError("Stop the task and confirm termination before switching schemes")
             session = self.hub.store.get(sid)
             if session.status != "active":
                 raise ValueError("Select an active session")
             scheme = self.hub.schemes.get(scheme_id, revision)
-            if scheme.robot != session.body or scheme.mode != session.mode:
+            if scheme.robot != (getattr(session, "robot_profile", "") or session.body) or scheme.mode != session.mode:
                 raise ValueError("Scheme belongs to a different robot or environment")
             session.control_scheme, session.control_scheme_revision = scheme.id, scheme.revision
             self.hub.store.save(session)
@@ -355,22 +322,4 @@ class RobotTasks:
         return {**result, "task": self._jobs.get(sid)}
 
     def update(self, sid, expected_version, goal=None, constraints=None, current=lambda: True):
-        with self._operations:
-            state = dict(self._jobs.get(sid, {}))
-            if not state or state["version"] != expected_version or state["status"] not in ACTIVE:
-                raise ValueError("Task version changed or the task is no longer active")
-            if goal is not None and not goal.strip():
-                raise ValueError("A task goal is required")
-            if state["scheme"]["template"] == "fixed_policy" or state["scheme"]["template"].startswith("external_"):
-                raise ValueError("A fixed policy cannot be retargeted; stop it before starting again")
-            self.cancel(sid, reason="Stopping for task update", strict=True)
-            with self._lock:
-                generation = self._generation[sid]
-            brain = (self.hub.new_role_model(state["model"], state["effort"], frozen_spec=state["model_config"])
-                     if state.get("model_config") else self.hub.new_role_model(state["model"], state["effort"]))
-            state = self._save(sid, goal=goal if goal is not None else state["goal"],
-                               constraints=constraints if constraints is not None else state["constraints"],
-                               version=expected_version + 1, status="updating", message="Task update applied")
-            self._launch(sid, state, brain, generation, current)
-            state = dict(self._jobs[sid])
-            return {"ok": state["status"] not in {"cancelled", "failed"}, "message": state["message"], "data": state}
+        raise ValueError("Task goals are immutable; stop the task before starting a new one")

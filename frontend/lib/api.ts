@@ -179,6 +179,7 @@ export async function getNodeStatus(key: string): Promise<Record<string, unknown
 // ---- sessions ---------------------------------------------------------------------------
 export type SessionStatus = "active" | "frozen" | "reconnect_required";
 export type SessionSummary = {
+  robot_profile?: string; brain_instance_id?: string; robot_instance_id?: string; world_instance_id?: string;
   control_scheme?: string; control_scheme_revision?: number;
   task_model?: string; task_effort?: string | null;
   id: string;

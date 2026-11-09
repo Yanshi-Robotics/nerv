@@ -2,25 +2,25 @@
 
 [中文](i18n/zh/ROADMAP.md) · [Project overview](README.md)
 
-NERV is a robot foundation for different Agents, covering real devices and simulated worlds. The 0.9.0 local candidate introduces Projects and same-machine MCP while retaining environment, asset, policy and device management. Its [support matrix](README.md#robots-and-current-limits) distinguishes implementation from client, simulation and hardware acceptance.
+NERV is a robot foundation for different Agents, covering real devices and simulated worlds. The 0.9.1 local candidate introduces Projects and same-machine MCP while retaining environment, asset, policy and device management. Its [support matrix](README.md#robots-and-current-limits) distinguishes implementation from client, simulation and hardware acceptance.
 
-The work below has no promised release date. Entries describe user value, the available foundation, the next step and evidence needed for completion. None of the future products below is delivered merely by adding an interface to 0.9.0.
+The work below has no promised release date. Entries describe user value, the available foundation, the next step and evidence needed for completion. None of the future products below is delivered merely by adding an interface to 0.9.1.
 
 ## Agent and Harness integration
 
 **Status: local MCP foundation available; client acceptance and extensions planned.**
 
-Users should be able to use their preferred Agent without replacing robot drivers. The internal Harness already provides execution loops, context, compaction and memory for managed decisions. The external bridge adds project permissions, observations and bounded tasks.
+Users should be able to use their preferred Agent without replacing robot drivers. Brain Core provides model-free identity, observation, permission and execution services; internal model loops are retired. The external bridge adds project permissions, observations and bounded tasks.
 
 Next: test named client versions, document configuration and observability, and validate another Harness integration. Completion requires tool discovery, image handling, continuous supervision, task/stop behavior and reconnect tests in the actual client. Protocol fixtures alone do not establish arbitrary third-party compatibility.
 
-## Independent edge Brain and remote supervision
+## Independent local Agent and remote supervision
 
 **Status: planned.**
 
-A separate Brain could own model APIs or local models, context and scheduling while NERV owns devices and execution. The current MCP/task boundaries provide the starting point. A remote Agent additionally needs authenticated encrypted transport, device registration and connection management.
+An independent local Agent project could own models, context and planning, connecting to NERV Brain Core and Runtime. Brain Core stays bundled with NERV. The current MCP/task boundaries provide the starting point. A remote Agent additionally needs authenticated encrypted transport, device registration and connection management.
 
-Next: define a bounded Brain lifecycle and remote threat/connection model. Completion requires reconnect without action replay, explicit budgets and stopping conditions, and local failure handling when the cloud or model is unavailable. Being always online must not be described as complete autonomy. Neither product is included in 0.9.0.
+Next: qualify external Agent deployment and remote threat/connection model. Completion requires reconnect without action replay, explicit budgets and stopping conditions, and local failure handling when the cloud or model is unavailable. Being always online must not be described as complete autonomy. Neither product is included in 0.9.1.
 
 ## Real and simulation transfer
 

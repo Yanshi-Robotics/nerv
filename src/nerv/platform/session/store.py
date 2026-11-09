@@ -18,7 +18,7 @@ from dataclasses import asdict, dataclass, field
 
 from ... import config, paths
 from ...nerve import operator as op
-from ...harness.memory import SessionMemory
+from ...brain_core.journal import SessionMemory
 
 _ROOT = os.getenv("NERV_SESSION_ROOT", paths.SESSIONS_DIR)
 
@@ -56,6 +56,10 @@ class Session:
     project_id: str = ""
     run_id: str = ""
     project_revision: int = 0
+    robot_profile: str = ""
+    world_instance_id: str = ""
+    robot_instance_id: str = ""
+    brain_instance_id: str = ""
 
     def summary(self) -> dict:
         return {"id": self.id, "brain": self.brain, "body": self.body, "world": self.world,
@@ -65,7 +69,9 @@ class Session:
                 "mode": self.mode, "binding": self.binding,
                 "task_model": self.task_model, "task_effort": self.task_effort,
                 "control_scheme": self.control_scheme, "control_scheme_revision": self.control_scheme_revision,
-                "project_id": self.project_id, "run_id": self.run_id, "project_revision": self.project_revision}
+                "project_id": self.project_id, "run_id": self.run_id, "project_revision": self.project_revision, "robot_profile": self.robot_profile,
+                "world_instance_id": self.world_instance_id, "robot_instance_id": self.robot_instance_id,
+                "brain_instance_id": self.brain_instance_id}
 
 
 def _decode_session(data):
@@ -170,7 +176,7 @@ class SessionStore:
         frozen: list[str] = []
         if body:
             for s in self.all():
-                if s.body and s.status == op.SESSION_ACTIVE:
+                if s.body == body and s.status == op.SESSION_ACTIVE:
                     s.status = op.SESSION_FROZEN
                     s.armed = False
                     self.save(s)

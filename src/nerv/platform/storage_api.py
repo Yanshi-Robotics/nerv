@@ -37,7 +37,7 @@ class AssetInstall(BaseModel):
 
 @router.get('/hub/credential')
 def hub_credential_status():
-    from ..vlm.store import CredentialStore
+    from ..asset_credentials import CredentialStore
     return CredentialStore(Path(paths.NERV_HOME)).describe('HUGGINGFACE_TOKEN')
 
 
@@ -54,7 +54,7 @@ def policy_catalog():
 
 @router.post('/hub/credential')
 def hub_credential(body: HubCredential):
-    from ..vlm.store import CredentialStore
+    from ..asset_credentials import CredentialStore
     try:
         CredentialStore(Path(paths.NERV_HOME)).set('HUGGINGFACE_TOKEN', body.token)
         return {'configured': bool(body.token)}

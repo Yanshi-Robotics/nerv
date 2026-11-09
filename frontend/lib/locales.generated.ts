@@ -1185,7 +1185,19 @@ export const LOCALES: Record<string, Locale> = {
       "These settings apply only to the optional managed robot decision service. External Agents manage their own context and budgets. Robot task limits come from the control scheme.": "These settings apply only to the optional managed robot decision service. External Agents manage their own context and budgets. Robot task limits come from the control scheme.",
       "NERV saved this credential for the local bridge. You can copy it once if your integration requires it; keep it private.": "NERV saved this credential for the local bridge. You can copy it once if your integration requires it; keep it private.",
       "Project configuration": "Project configuration",
-      "Choose the missing robot or world, then save. Changing the target clears the selected control scheme.": "Choose the missing robot or world, then save. Changing the target clears the selected control scheme."
+      "Choose the missing robot or world, then save. Changing the target clears the selected control scheme.": "Choose the missing robot or world, then save. Changing the target clears the selected control scheme.",
+      "Compose a shared world": "Compose a shared world",
+      "Allocate a Brain for each project first. Robot composition and spawn poses are fixed until this world ends.": "Allocate a Brain for each project first. Robot composition and spawn poses are fixed until this world ends.",
+      "Choose two allocated projects and enter their spawn poses.": "Choose two allocated projects and enter their spawn poses.",
+      "Choose a project": "Choose a project",
+      "Heading (radians)": "Heading (radians)",
+      "Freeze world composition": "Freeze world composition",
+      "World configured": "World configured",
+      "Allocate Brain": "Allocate Brain",
+      "Changing the view does not transfer control.": "Changing the view does not transfer control.",
+      "Stop the shared world and all its robots?": "Stop the shared world and all its robots?",
+      "Stop shared world": "Stop shared world",
+      "Project": "Project"
     }
   },
   "zh": {
@@ -2354,7 +2366,19 @@ export const LOCALES: Record<string, Locale> = {
       "These settings apply only to the optional managed robot decision service. External Agents manage their own context and budgets. Robot task limits come from the control scheme.": "这些设置仅用于可选的托管机器人决策服务。外部 Agent 自行管理上下文和预算。机器人任务限制由控制方案设置。",
       "NERV saved this credential for the local bridge. You can copy it once if your integration requires it; keep it private.": "NERV 已为本地桥接器保存此凭据。如接入程序需要，可在此复制一次；请妥善保管。",
       "Project configuration": "项目配置",
-      "Choose the missing robot or world, then save. Changing the target clears the selected control scheme.": "选择缺少的机器人或世界后保存。更换对象会清除已选控制方案。"
+      "Choose the missing robot or world, then save. Changing the target clears the selected control scheme.": "选择缺少的机器人或世界后保存。更换对象会清除已选控制方案。",
+      "Compose a shared world": "组合共享世界",
+      "Allocate a Brain for each project first. Robot composition and spawn poses are fixed until this world ends.": "先为每个项目分配 Brain。机器人组成与出生位置在世界结束前保持固定。",
+      "Choose two allocated projects and enter their spawn poses.": "请选择两个已分配的项目，并填写出生位置与朝向。",
+      "Choose a project": "选择项目",
+      "Heading (radians)": "朝向（弧度）",
+      "Freeze world composition": "确认世界组成",
+      "World configured": "世界已配置",
+      "Allocate Brain": "分配 Brain",
+      "Changing the view does not transfer control.": "切换视图不会转移控制权。",
+      "Stop the shared world and all its robots?": "停止共享世界及其中的全部机器人？",
+      "Stop shared world": "停止共享世界",
+      "Project": "项目"
     }
   }
 };

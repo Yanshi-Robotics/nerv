@@ -22,9 +22,9 @@ from .. import paths
 
 PROJECT_TYPES = tuple({"id": name, "available": name in {"sim", "real"}}
                       for name in ("sim", "real", "sim2real", "real2sim", "sim2real2sim", "real2sim2real"))
-EXECUTIONS = tuple({"id": name, "available": name in {"external_vlm", "external_skills", "act", "managed"}}
+EXECUTIONS = tuple({"id": name, "available": name in {"external_vlm", "external_skills", "act"}}
                    for name in ("external_vlm", "external_skills", "act", "managed", "vla", "wam", "geometric"))
-ACTIVE_RUNS = frozenset({"starting", "running", "stopping", "stop_unconfirmed"})
+ACTIVE_RUNS = frozenset({"reserved", "starting", "running", "stopping", "stop_unconfirmed"})
 
 
 def _id(value):
@@ -66,7 +66,7 @@ class ProjectInput(BaseModel):
             raise ValueError("Enter a project name")
         if self.mode not in {"sim", "real"}:
             raise ValueError("This project type is in development")
-        if self.execution not in {"external_vlm", "external_skills", "act", "managed"}:
+        if self.execution not in {"external_vlm", "external_skills", "act"}:
             raise ValueError("This execution capability is in development")
         if self.mode == "real" and self.world_configuration:
             raise ValueError("World configuration is simulation-only")
@@ -93,7 +93,8 @@ class ProjectStore:
         return sorted(projects, key=lambda p: p["last_opened_at"], reverse=True)
 
     def create(self, payload, *, project_id=None, legacy_session=None):
-        value = ProjectInput.model_validate(payload).checked().model_dump()
+        parsed = ProjectInput.model_validate(payload)
+        value = (parsed if legacy_session else parsed.checked()).model_dump()
         with self.lock:
             pid = _id(project_id or "p_" + uuid.uuid4().hex)
             if (self.root / pid / "project.json").exists():
@@ -246,6 +247,9 @@ class ProjectService:
                     run.update(status="interrupted", ended_at=time.time(), reason="Host restarted; reconnect explicitly")
                     self.store.save_run(project["id"], run)
 
+        from ..brain_core.worlds import WorldInstances
+        self.worlds = WorldInstances(self)
+
     def _pin_scheme(self, value):
         value = dict(value)
         if value.get("scheme"):
@@ -287,6 +291,8 @@ class ProjectService:
     def readiness(self, project_id):
         project = self.store.get(project_id)
         issues = []
+        if project["execution"] == "managed":
+            issues.append({"code": "legacy_internal_model", "reason": "Choose an external control scheme", "destination": "projects"})
         if project["robot"] not in self.hub.registry.bodies:
             issues.append({"code": "robot_missing", "destination": "robots"})
         if project["world"] in self.hub.registry.worlds and self.hub.registry.world(project["world"]).kind != project["mode"]:
@@ -314,15 +320,17 @@ class ProjectService:
         with self._lock:
             project = self.store.get(project_id)
             current = self.active_run(project_id)
-            if current:
+            if current and current["status"] != "reserved":
                 if current["status"] != "running":
                     raise ValueError("Resolve the current run before starting another")
                 session = self.require_session(project_id)
                 return {"run": current, "session": session.summary()}
             if project["mode"] == "real" and not operator:
                 raise ValueError("A person must connect the real robot in NERV")
-            if any(self.active_run(p["id"]) for p in self.store.list()):
+            if not self.worlds.for_run(current) and any(self.active_run(p["id"]) for p in self.store.list() if p["id"] != project_id):
                 raise ValueError("End the active world before starting another project")
+            if current and current["project_revision"] != project["revision"]:
+                raise ValueError("Project changed after Brain allocation; end the reserved Run")
             ready = self.readiness(project_id)
             if not ready["ready"]:
                 raise ValueError("Project needs configuration: " + ", ".join(i["code"] for i in ready["issues"]))
@@ -333,14 +341,20 @@ class ProjectService:
                 expected = {"external_vlm": "external_vlm", "external_skills": "external_skills", "act": "fixed_policy"}.get(project["execution"])
                 if expected and scheme.template != expected:
                     raise ValueError("Control scheme does not match the execution structure")
-            run = {"id": "r_" + uuid.uuid4().hex, "project_id": project_id,
+            run = current or {"id": "r_" + uuid.uuid4().hex, "project_id": project_id,
                    "project_revision": project["revision"], "snapshot": project,
                    "status": "starting", "session_id": "", "created_at": time.time()}
+            run["status"] = "starting"
             self.store.save_run(project_id, run)
             try:
-                session = self.hub.new_session("operator", project["robot"], project["world"] or None,
+                session = self.worlds.attach(run) if self.worlds.for_run(run) else self.hub.new_session("operator", project["robot"], project["world"] or None,
                     project["sensors"], [], project["mode"], project["world_configuration"], operator_workspace=True,
                     project_id=project_id, run_id=run["id"], project_revision=project["revision"])
+                bound_session = self.hub.store.get(session["id"])
+                for key in ("brain_instance_id", "robot_instance_id", "world_instance_id"):
+                    setattr(bound_session, key, run.get(key, ""))
+                bound_session.robot_profile = project["robot"]
+                self.hub.store.save(bound_session)
                 run.update(session_id=session["id"], status="running")
                 self.store.save_run(project_id, run)
                 if project["scheme"]:
@@ -381,6 +395,10 @@ class ProjectService:
             run = self.active_run(project_id)
             if not run or run["id"] != run_id:
                 raise ValueError("This run is no longer active")
+            if run["status"] == "reserved":
+                run.update(status="ended", ended_at=time.time(), reason="Reservation cancelled")
+                self.store.save_run(project_id, run)
+                return {"ok": True, "run": run}
             session = self.hub.store.get(run["session_id"])
             run.update(status="stopping")
             self.store.save_run(project_id, run)
@@ -388,7 +406,11 @@ class ProjectService:
                 result = self.hub.tasks.cancel(session.id, reason="Project run ended")
                 if not result.get("ok"):
                     raise ValueError("Stop has not been confirmed")
-                if session.mode == "sim":
+                if run.get("shared_world"):
+                    self.hub.arm(session.id, False)
+                    self.hub.store.set_status(session.id, "frozen")
+                    # Runtime remains in supervised hold; shared physics stays alive.
+                elif session.mode == "sim":
                     # Session epoch identifies the world; stop confirmation uses
                     # the producer's distinct instance identity.
                     handle = self.hub.launcher.nodes.get("body:" + session.body)

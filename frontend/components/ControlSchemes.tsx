@@ -89,7 +89,7 @@ export default function ControlSchemes({
     ["starting", "running", "updating", "stopping"].includes(task.status);
   const candidates = options.schemes.filter(
     (s) =>
-      !session?.body || (s.robot === session.body && s.mode === session.mode),
+      !session?.body || (s.robot === (session.robot_profile || session.body) && s.mode === session.mode),
   );
   const modelLabel = (id: string | null | undefined) =>
     brains.find((b) => b.name === id)?.label ||
@@ -109,7 +109,7 @@ export default function ControlSchemes({
     }
   }
   async function save() {
-    const robot = session?.body || offline?.robot;
+    const robot = session?.robot_profile || session?.body || offline?.robot;
     if (!robot) return;
     const fixed = draft.template === "fixed_policy" || ["external_vlm", "external_skills"].includes(draft.template || "");
     const result = await saveControlScheme({
@@ -350,7 +350,7 @@ export default function ControlSchemes({
                     })
                   }
                 >
-                  {Object.entries(labels).map(([key, label]) => (
+                  {Object.entries(labels).filter(([key])=>["fixed_policy","external_vlm","external_skills"].includes(key)).map(([key, label]) => (
                     <option key={key} value={key}>
                       {t(label)}
                     </option>

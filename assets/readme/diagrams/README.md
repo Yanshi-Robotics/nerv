@@ -1,6 +1,12 @@
+# NERV 0.9.1 architecture figures
+
+Current editable SVGs are `platform-091`, `lifecycle-091`, `supervision-091` and `deployments-091`, in `en/` and `zh/`. Run `python3 assets/readme/diagrams/build_091.py`. They describe Brain Core inside NERV, separately bound robots in one shared World, execution receipts and future independent local Agent deployment. Independent navigation acceptance remains pending.
+
+## Retained 0.9.0 figures
+
 # NERV architecture figures
 
-The current figures describe the NERV 0.9.0 local candidate. English and Chinese share
+The historical 0.9.0 figures describe the NERV 0.9.0 local candidate. English and Chinese share
 geometry, use editable SVG text and shapes, and distinguish current interfaces from
 future deployment work. They are architecture illustrations, not screenshots or test evidence.
 

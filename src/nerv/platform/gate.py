@@ -16,7 +16,6 @@ from __future__ import annotations
 
 from typing import Any
 
-from ..brain import prompts
 from ..nerve.body import MUTATING_KINDS, ToolSpec
 
 ALLOW, APPROVE, DENY = "allow", "approve", "deny"
@@ -49,15 +48,15 @@ class SafetyGate:
                spec: ToolSpec | None = None) -> tuple[str, str]:
         """origin: 'body' | 'tool' | 'meta'. Returns (decision, reason)."""
         if name in self._blocked:
-            return DENY, prompts.SAFETY_RULE_MATCHED
+            return DENY, 'a deterministic safety rule matched this action'
         if name in self._needs_approval:
-            return APPROVE, prompts.SAFETY_NEEDS_APPROVAL
+            return APPROVE, 'this action needs a person to approve it before it can run'
         if origin == "body":
             bad = _range_violations(spec, args)
             if bad:
-                return DENY, prompts.SAFETY_ARG_OUT_OF_RANGE.format(detail="; ".join(bad))
+                return DENY, 'argument outside what the body declared: {detail}'.format(detail="; ".join(bad))
             if kind in MUTATING_KINDS and not armed:
-                return DENY, prompts.SAFETY_NOT_ARMED
+                return DENY, 'the session is not armed, so the body may not move. Only the operator can arm it from the NERV interface; tell the user and wait'
         return ALLOW, ""
 
     def check(self, name: str, args: dict[str, Any], **kw) -> tuple[bool, str]:

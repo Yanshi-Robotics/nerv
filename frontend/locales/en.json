@@ -1164,6 +1164,18 @@
     "These settings apply only to the optional managed robot decision service. External Agents manage their own context and budgets. Robot task limits come from the control scheme.": "These settings apply only to the optional managed robot decision service. External Agents manage their own context and budgets. Robot task limits come from the control scheme.",
     "NERV saved this credential for the local bridge. You can copy it once if your integration requires it; keep it private.": "NERV saved this credential for the local bridge. You can copy it once if your integration requires it; keep it private.",
     "Project configuration": "Project configuration",
-    "Choose the missing robot or world, then save. Changing the target clears the selected control scheme.": "Choose the missing robot or world, then save. Changing the target clears the selected control scheme."
+    "Choose the missing robot or world, then save. Changing the target clears the selected control scheme.": "Choose the missing robot or world, then save. Changing the target clears the selected control scheme.",
+    "Compose a shared world": "Compose a shared world",
+    "Allocate a Brain for each project first. Robot composition and spawn poses are fixed until this world ends.": "Allocate a Brain for each project first. Robot composition and spawn poses are fixed until this world ends.",
+    "Choose two allocated projects and enter their spawn poses.": "Choose two allocated projects and enter their spawn poses.",
+    "Choose a project": "Choose a project",
+    "Heading (radians)": "Heading (radians)",
+    "Freeze world composition": "Freeze world composition",
+    "World configured": "World configured",
+    "Allocate Brain": "Allocate Brain",
+    "Changing the view does not transfer control.": "Changing the view does not transfer control.",
+    "Stop the shared world and all its robots?": "Stop the shared world and all its robots?",
+    "Stop shared world": "Stop shared world",
+    "Project": "Project"
   }
 }

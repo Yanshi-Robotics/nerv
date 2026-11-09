@@ -1,7 +1,7 @@
 import type { SessionSummary } from './api';
 const BASE = process.env.NEXT_PUBLIC_API ?? 'http://localhost:8170';
 export type ProjectLayout = { primary?: string; hidden?: string[]; monitorSize?: string; dock?: string };
-export type ProjectRun = { id: string; session_id: string; status: string; created_at?: number | string; reason?: string };
+export type ProjectRun = { brain_instance_id?: string; robot_instance_id?: string; world_instance_id?: string; client_id?: string; shared_world?: boolean; id: string; session_id: string; status: string; created_at?: number | string; reason?: string };
 export type Project = { id: string; name: string; mode: 'sim'|'real'; robot: string; world?: string|null; execution: string; scheme?: string; revision: number; created_at: number | string; updated_at?: number | string; last_opened_at?: number | string; view_layout?: ProjectLayout; active_run?: ProjectRun|null; readiness?: {ready: boolean; reasons?: string[]} };
 export type ProjectDetail = { project: Project; runs: ProjectRun[]; active_run: ProjectRun|null; readiness?: {ready: boolean; issues: {code: string; reason?: string; destination: string}[]} };
 export type ProjectDraft = { name: string; mode: 'sim'|'real'; robot: string; world: string; execution: string; scheme: string };
@@ -28,7 +28,7 @@ export function projectForSession(projects: Project[], sid: string): Project|und
 /** Filter by actual execution contract, not matching robot dimensions alone. */
 export function schemeMatchesExecution(execution: string, template: string): boolean {
   if (execution === 'act') return template === 'fixed_policy';
-  if (execution === 'managed') return template === 'policy_group' || template === 'visual_direct';
+  if (execution === 'managed') return false;
   return (execution === 'external_vlm' || execution === 'external_skills') && template === execution;
 }
 

@@ -72,6 +72,8 @@ class SchemeStore:
 
     def save(self, value):
         scheme = Scheme.model_validate(value)
+        if scheme.template not in {"fixed_policy", "external_vlm", "external_skills"} or scheme.decision_model:
+            raise ValueError("Internal model schemes are retired")
         self.root.mkdir(parents=True, exist_ok=True)
         with FileLock(str(self.root / ".lock")):
             directory = self.root / scheme.id
@@ -96,16 +98,10 @@ class SchemeStore:
 
 def resolve(hub, session, scheme):
     """Resolve against the live capability manifest, fail closed before control."""
-    if scheme.robot != session.body or scheme.mode != session.mode:
+    if scheme.robot != (getattr(session, "robot_profile", "") or session.body) or scheme.mode != session.mode:
         raise ValueError("Scheme belongs to a different robot or environment")
-    from ..harness.agent import AgentHarness
-    injected = getattr(hub, "_brains", {}).get(scheme.decision_model)
-    if scheme.decision_model and (injected is None or isinstance(injected, AgentHarness)):
-        from ..vlm.store import ModelRegistry
-        try:
-            ModelRegistry().require_key(scheme.decision_model)
-        except KeyError as error:
-            raise ValueError("Select an available decision model") from error
+    if scheme.template not in {"fixed_policy", "external_vlm", "external_skills"} or scheme.decision_model:
+        raise ValueError("Legacy internal decision scheme: choose an external control scheme")
     robot = hub.body_client(session.body)
     if robot is None:
         raise ValueError("Connect the robot before checking this scheme")
@@ -115,7 +111,7 @@ def resolve(hub, session, scheme):
         if action not in operations or operations[action].kind != kind:
             raise ValueError(f"Unavailable or incompatible action: {action}")
     fingerprints = {}
-    body = hub.registry.bodies.get(session.body)
+    body = hub.registry.bodies.get(getattr(session, "robot_profile", "") or session.body)
     for action in scheme.actions:
         skill = (body.skills if body else {}).get(action, {})
         if hasattr(skill, "model_dump"):

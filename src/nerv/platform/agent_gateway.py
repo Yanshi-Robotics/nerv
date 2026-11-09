@@ -45,7 +45,7 @@ OPERATIONS = {
                            ["project_id", "request_id", "goal"])),
     "task_status": ("Read the current task without changing it.", _object(PROJECT, PROJECT)),
     "task_cancel": ("Stop the task locally. A failed result means stopping is unconfirmed.", _object(REQUEST, REQUEST)),
-    "task_update": ("Update a model-managed task goal. Fixed and external schemes require stop and restart.",
+    "task_update": ("Retired update operation: stop the task and start a new task with a fresh goal.",
                     _object({**REQUEST, "goal": TEXT, "expected_version": {"type": "integer", "minimum": 1}},
                             ["project_id", "request_id", "goal", "expected_version"])),
     "action": ("Execute one allowed action in the current external task, then observe again.",
@@ -76,6 +76,7 @@ class AgentGateway:
         self._leases = {}
         self._seen = {}
         self._expired = set()
+        self._control_generations = {}
         self._stop = threading.Event()
         self._thread = threading.Thread(target=self._watch, name="nerv-agent-supervision", daemon=True)
         self._thread.start()
@@ -149,7 +150,8 @@ class AgentGateway:
         return (run.get("id"), run.get("session_id")) if run else None
 
     def _invalidate_control(self, project_id):
-        self._controls[project_id] = {"accepting": False, "owner_id": None}
+        self._control_generations[project_id] = self._control_generations.get(project_id, 0) + 1
+        self._controls[project_id] = {"accepting": False, "owner_id": None, "control_generation": self._control_generations[project_id]}
         self._leases.pop(project_id, None)
         self._expired.discard(project_id)
         for key in list(self._receipts):
@@ -198,7 +200,8 @@ class AgentGateway:
             if accepting and identity != self._run_identity(project_id):
                 raise ValueError("Run changed during control transfer; review and assign control again")
             self._controls[project_id] = {"accepting": bool(accepting), "owner_id": owner_id if accepting else None,
-                                          "run_identity": identity if accepting else None}
+                                          "run_identity": identity if accepting else None,
+                                          "control_generation": self._control_generations[project_id]}
         return {"ok": True, **self.control(project_id)}
 
     def pause(self, project_id):
@@ -335,7 +338,7 @@ class AgentGateway:
                 previous = self._leases.get(pid, {})
                 self._expired.discard(pid)
                 self._leases[pid] = {"owner_id": record["id"], "epoch": session.epoch, "session_id": session.id,
-                                     "state": state, "acknowledged_at": time.time(),
+                                     "state": state, "control_generation": self.control(pid).get("control_generation"), "acknowledged_at": time.time(),
                                      "expires_at": time.time() + contract["timeout_s"],
                                      "deadline": time.monotonic() + contract["timeout_s"],
                                      "action_consumed": False, "task_id": previous.get("task_id")}
@@ -391,6 +394,7 @@ class AgentGateway:
             latest = self._leases.get(pid, {})
             return (not self._stop.is_set() and control.get("owner_id") == record["id"] and
                     control.get("accepting", False) and latest.get("owner_id") == record["id"] and
+                    control.get("control_generation") == lease.get("control_generation") == latest.get("control_generation") and
                     latest.get("epoch") == lease["epoch"] and time.monotonic() < latest.get("deadline", 0))
 
     @staticmethod

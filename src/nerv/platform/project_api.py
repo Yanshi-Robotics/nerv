@@ -18,9 +18,9 @@ _lock = threading.RLock()
 def services(hub):
     with _lock:
         if hub not in _services:
-            from .agent_gateway import AgentGateway
+            from ..brain_core.core import BrainCore
             projects = ProjectService(hub)
-            _services[hub] = (projects, AgentGateway(hub, projects))
+            _services[hub] = (projects, BrainCore(hub, projects))
         return _services[hub]
 
 
@@ -41,6 +41,7 @@ class ConnectionInput(BaseModel):
 class InvokeInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
     operation: str
+    brain_instance_id: str | None = None
     arguments: dict = Field(default_factory=dict)
 
 
@@ -131,6 +132,29 @@ def router(get_hub):
             return call(gateway.set_control, pid, accepting=True, owner_id=payload.owner_id)
         raise HTTPException(400, "Unknown operator action")
 
+    @api.post("/api/projects/{pid}/brain")
+    def reserve_brain(pid: str, request: Request, payload: dict):
+        operator(request)
+        if set(payload) != {"client_id"}:
+            raise HTTPException(400, "Provide exactly client_id")
+        return call(services(get_hub())[1].reserve, pid, payload["client_id"])
+
+    @api.post("/api/world-instances")
+    def world_create(request: Request, payload: dict):
+        operator(request)
+        if set(payload) != {"robots"}:
+            raise HTTPException(400, "Provide exactly robots")
+        return call(services(get_hub())[0].worlds.configure, payload["robots"])
+
+    @api.get("/api/world-instances/{wid}")
+    def world_get(wid: str):
+        return call(services(get_hub())[0].worlds.get, wid)
+
+    @api.post("/api/world-instances/{wid}/stop")
+    def world_stop(wid: str, request: Request):
+        operator(request)
+        return call(services(get_hub())[0].worlds.stop, wid)
+
     @api.get("/api/agent-connections")
     def connection_list():
         return services(get_hub())[1].list()
@@ -155,7 +179,7 @@ def router(get_hub):
         if instance and not secrets.compare_digest(instance, supplied):
             raise HTTPException(409, "Host instance changed; reconnect the MCP client")
         try:
-            return services(get_hub())[1].invoke(header[7:], payload.operation, payload.arguments)
+            return services(get_hub())[1].invoke(header[7:], payload.operation, payload.arguments, payload.brain_instance_id)
         except ValidationError as error:
             raise HTTPException(400, "Invalid Agent operation arguments") from error
         except PermissionError as error:

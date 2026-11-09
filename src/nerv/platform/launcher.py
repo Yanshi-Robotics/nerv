@@ -250,12 +250,49 @@ class Launcher:
                            resource_paths=[world.assets_root] if world.asset else [])
 
     @_serialized_launch
+    def ensure_shared_world(self, world, body, request):
+        """One owned process; child endpoints have no process teardown authority."""
+        key = 'shared_world:' + request['world_instance_id']
+        if key in self.nodes and self.nodes[key].alive():
+            return self.nodes[key]
+        reserved = []
+        try:
+            http_port = self._free_port()
+            self.nodes[key] = NodeHandle(kind='world', name=key, url=f'http://{config.NODE_BIND_HOST}:{http_port}')
+            reserved.append(key)
+            for record in request['roster']:
+                port = self._free_port()
+                record['bus_url'] = f'tcp://{config.NODE_BIND_HOST}:{port}'
+                slot = key + ':' + record['robot_instance_id']
+                self.nodes[slot] = NodeHandle(kind='world', name=slot, url='', bus_url=record['bus_url'])
+                reserved.append(slot)
+            directory = Path(paths.CACHE_DIR) / 'shared-worlds' / request['world_instance_id']
+            directory.mkdir(parents=True, exist_ok=True)
+            filename = directory / 'configuration.json'
+            filename.write_text(json.dumps(request))
+        finally:
+            for slot in reserved:
+                self.nodes.pop(slot, None)
+        handle = self._spawn(key, 'world', self._python(world.python),
+            ['-m', 'nerv.world.shared_node', '--configuration', str(filename),
+             '--host', config.NODE_BIND_HOST, '--port', str(http_port)],
+            f'http://{config.NODE_BIND_HOST}:{http_port}',
+            resource_paths=[world.assets_root] if world.asset else [])
+        for record in request['roster']:
+            rid = record['robot_instance_id']
+            alias = f"world:{request['world_instance_id']}/{rid}"
+            self.nodes[alias] = NodeHandle(kind='world', name=alias,
+                url=handle.url + '/robots/' + rid, bus_url=record['bus_url'], attached=True,
+                meta={**handle.meta, 'shared_owner': key})
+        return handle
+
+    @_serialized_launch
     def ensure_body(self, body: BodySpec, world: WorldSpec, world_handle: NodeHandle | None) -> NodeHandle:
         self.check_body_binding(body, world, world_handle)
         return self.ensure_runtime(body, world.kind, world, world_handle)
 
     @_serialized_launch
-    def ensure_runtime(self, body: BodySpec, mode: str, world=None, world_handle=None) -> NodeHandle:
+    def ensure_runtime(self, body: BodySpec, mode: str, world=None, world_handle=None, *, defer_prepare=False) -> NodeHandle:
         key = f"body:{body.name}"
         handle = self.nodes.get(key)
         if handle and handle.alive():
@@ -312,7 +349,7 @@ class Launcher:
                              resource_paths=[skill.policy for skill in body.skills.values() if skill.policy_record])
         try:
             self._runtime_protocol(handle)
-            if mode == KIND_SIM:
+            if mode == KIND_SIM and not defer_prepare:
                 self._prepare_runtime(handle)
         except BaseException as error:
             try:

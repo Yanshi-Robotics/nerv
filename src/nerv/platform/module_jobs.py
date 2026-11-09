@@ -309,7 +309,7 @@ def _work(job_id):
             return
         if state.get('kind') == 'policy':
             from .. import policy_sources
-            from ..vlm.store import CredentialStore
+            from ..asset_credentials import CredentialStore
             token = CredentialStore(installation.home()).resolve('HUGGINGFACE_TOKEN') or None
             if not state.get('plan_snapshot'):
                 progress(phase='resolving')

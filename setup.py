@@ -14,6 +14,13 @@ class IsolatedBuild(build):
 
 
 class BuildWithResources(build_py):
+    retired = {'nerv.platform.router', 'nerv.platform.role_turn', 'nerv.platform.role_prompts',
+               'nerv.platform.session.context'}
+
+    def find_package_modules(self, package, package_dir):
+        return [row for row in super().find_package_modules(package, package_dir)
+                if row[0] + '.' + row[1] not in self.retired]
+
     def run(self):
         super().run()
         root = Path(__file__).parent

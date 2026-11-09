@@ -528,6 +528,27 @@ class VelocityPolicyBody:
                 return
             time.sleep(float(self.loco["poll_s"]))
 
+    def _settle_motion(self):
+        """Confirm a quiet interval using the existing policy stopping contract."""
+        start = self.bus.read()
+        last_t, last_wall = start.t, time.perf_counter()
+        quiet_since = None
+        while True:
+            state = self.bus.read()
+            if self._fallen(state):
+                return False, state
+            quiet = max((abs(v) for v in state.joint_vel), default=math.inf) <= float(self.loco['hold_still_rad_s'])
+            quiet_since = (state.t if quiet_since is None else quiet_since) if quiet else None
+            if quiet_since is not None and state.t - quiet_since >= float(self.loco['hold_still_s']):
+                return True, state
+            if state.t-start.t >= float(self.loco['hold_settle_s']):
+                return False, state
+            if state.t > last_t:
+                last_t, last_wall = state.t, time.perf_counter()
+            elif time.perf_counter()-last_wall >= float(self.loco['sim_dead_wall_s']):
+                return False, state
+            time.sleep(float(self.loco['poll_s']))
+
     def _drive_until(self, vx: float, vy: float, wz: float, budget_s: float, kind: str, target: float,
                      progress, should_abort) -> dict:
         """Hold a velocity command until the MEASURED quantity reaches the target, or stall /
@@ -581,6 +602,13 @@ class VelocityPolicyBody:
                 if prog >= target:
                     reason = REASON_REACHED
                     break
+                if kind == 'dist' and prog > float(L['stall_eps_m']):
+                    # Approach using the measured remainder and the existing stop
+                    # settling horizon. Stay strictly above the release deadband;
+                    # no untrained tiny command and no distance offset is used.
+                    minimum = math.nextafter(self.policy.lin_deadband, math.inf)
+                    approach = max(minimum, min(vx, (target-prog) / float(L['hold_settle_s'])))
+                    self._set_command(approach, vy, wz)
                 if prog > best + float(L["stall_eps_m"]):
                     best, t_stall = prog, st.t
                 elif st.t - t_stall > float(L["stall_timeout_s"]):
@@ -592,12 +620,14 @@ class VelocityPolicyBody:
                 time.sleep(float(L["poll_s"]))
         finally:
             self._set_command(0.0, 0.0, 0.0)
-        self._sleep_sim(float(L["settle_s"]), should_abort)
-        st = self.bus.read()
+        braking_start = self.bus.read()
+        settled, st = self._settle_motion()
         x1, y1 = (st.odom_xy + [0.0, 0.0])[:2]
         acc_yaw += _wrap(st.odom_yaw - prev_yaw)
         return {"moved_m": round(math.hypot(x1 - x0, y1 - y0), 3), "turned_deg": round(math.degrees(acc_yaw), 1),
                 "fallen": self._fallen(st), "reason": reason,
+                "stop_confirmed": settled, "timed_out": reason == REASON_BUDGET,
+                "braking_m": round(math.hypot(x1-braking_start.odom_xy[0], y1-braking_start.odom_xy[1]), 3),
                 "front_m": round(braked_at, 2) if braked_at is not None else None,
                 "motion_clearance": clearance,
                 "braked": reason == REASON_BRAKED, "stalled": reason == REASON_STALLED,
@@ -612,6 +642,10 @@ class VelocityPolicyBody:
         r = self._drive_until(speed, 0.0, 0.0, budget, "dist", meters, progress, should_abort)
         moved = r["moved_m"]
         r["target_m"] = meters
+        r["target_error_m"] = round(moved-meters, 3)
+        r["target_reached"] = r["reason"] == REASON_REACHED and r["stop_confirmed"] and not r["fallen"]
+        if not r["stop_confirmed"]:
+            return {"ok": False, "message": "Motion ended; stable stop is unconfirmed", "data": r}
         if r["fallen"]:
             return {"ok": False, "message": f"fell while walking forward (moved {moved:.2f} m)", "data": r}
         if r["reason"] == REASON_STOPPED:
@@ -641,6 +675,10 @@ class VelocityPolicyBody:
         r = self._drive_until(self.policy.turn_vx, 0.0, sign * rate, budget, "yaw", rad, progress, should_abort)
         turned = abs(r["turned_deg"])
         r["target_deg"] = degrees
+        r["target_error_deg"] = round(turned-degrees, 1)
+        r["target_reached"] = r["reason"] == REASON_REACHED and r["stop_confirmed"] and not r["fallen"]
+        if not r["stop_confirmed"]:
+            return {"ok": False, "message": "Turn ended; stable stop is unconfirmed", "data": r}
         if r["fallen"]:
             return {"ok": False, "message": f"fell while turning {side} (turned {turned:.0f}°)", "data": r}
         if r["reason"] == REASON_STOPPED:

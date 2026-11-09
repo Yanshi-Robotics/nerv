@@ -6,7 +6,7 @@ import time
 import uuid
 from pathlib import Path
 
-from ..harness.scoped_memory import ScopedMemory
+from ..brain_core.task_journal import ScopedMemory
 
 
 class TaskStore:

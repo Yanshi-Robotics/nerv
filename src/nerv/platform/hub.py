@@ -13,10 +13,9 @@ import hashlib
 import json
 from functools import wraps
 from typing import Callable, Iterator
-from types import SimpleNamespace
 
 from .. import config
-from ..brain import plugin as brain_plugin
+
 from ..nerve import operator as op
 from . import interrupt, messages
 from .client import RemoteBody, RemoteTool, WorldControl
@@ -24,7 +23,7 @@ from .gate import SafetyGate
 from .launcher import Launcher
 from .registry import Registry
 from .registry.compat import check as compat_check
-from .router import Turn
+from ..brain_core.execution import ExecutionTurn as Turn
 from .session import SessionStore
 from .session import log as slog
 from .scene_tests import SceneTests
@@ -88,25 +87,7 @@ class Nerv:
         self._agent_serial: dict[str, threading.Lock] = {}
 
     def new_role_model(self, name, effort=..., frozen_spec=None):
-        """Fresh role-local provider/continuation; fixtures may inject an explicit model."""
-        from ..harness.agent import AgentHarness
-        if name == "operator":
-            raise ValueError("Select a visual model before starting an Agent task")
-        if name in self._brains and not isinstance(self._brains[name], AgentHarness):
-            return self._brains[name]
-        if effort is ...:
-            return brain_plugin.load(name, wrap=lambda llm: slog.LoggingLLM(llm, name))
-        from ..vlm.store import ModelRegistry
-        from ..harness.context import ContextManager
-        from .. import config
-        registry = ModelRegistry()
-        if frozen_spec is None and not any(m["id"] == name and m["available"] for m in registry.list()):
-            raise ValueError("Select an available visual model")
-        llm = registry.provider(name, effort=effort, frozen_spec=frozen_spec)
-        return AgentHarness(slog.LoggingLLM(llm, name), name,
-                            ContextManager(min(config.REQUEST_TOKEN_BUDGET, getattr(llm, "context_window", None) or config.REQUEST_TOKEN_BUDGET),
-                                           getattr(llm, "max_output_tokens", config.MAX_TOKENS),
-                                           config.IMAGE_TOKEN_ALLOWANCE))
+        raise ValueError("Internal AI agents were retired in 0.9.1; connect an external Agent through Brain Core")
 
     def claim_robot(self, sid, *, allowed_actions=None, max_runtime_s=None, action_budget=None):
         session = self.store.get(sid)
@@ -192,11 +173,7 @@ class Nerv:
         return None
 
     def brain(self, name: str):
-        b = self._brains.get(name)
-        if b is None:
-            b = brain_plugin.load(name, wrap=lambda llm: slog.LoggingLLM(llm, name))
-            self._brains[name] = b
-        return b
+        raise ValueError("Internal AI agents were retired in 0.9.1; connect an external Agent through Brain Core")
 
     @_node_lifecycle
     def stop_simulation(self, key: str, expected_world: str, expected_epoch: str,
@@ -267,11 +244,8 @@ class Nerv:
             from .module_jobs import jobs
             if any(job["state"] in ("queued", "running") for job in jobs()):
                 raise ValueError("Wait for component installation before creating a robot instance")
-        # Explicit injected test brains are not part of the production catalogue.
-        from ..harness.agent import AgentHarness
-        from ..vlm.store import ModelRegistry
-        if brain != "operator" and (brain not in self._brains or isinstance(self._brains[brain], AgentHarness)):
-            ModelRegistry().require_key(brain)
+        if brain != "operator":
+            raise ValueError("Internal model sessions are retired; use a Brain instance")
         if world and not body:
             raise ValueError("a simulated world requires a robot profile")
         if world:
@@ -511,23 +485,15 @@ class Nerv:
 
     # -- turns ------------------------------------------------------------------------------
     def _turn(self, sid: str, emit, token=None, operator=False) -> Turn:
+        if not operator:
+            raise ValueError("Internal AI agents are retired")
         s = self.store.get(sid)
         body = self.body_client(s.body) if s.body else None
-        world = self.world_client(s.world, s.body) if (s.world and s.body) else None
-        tools = [c for c in (self.tool_client(t) for t in s.agent_tools) if c is not None]
-        brain = SimpleNamespace(name="operator", model="operator", vision=False) if operator else self.new_role_model(s.brain)
-        if not operator and isinstance(brain, __import__("nerv.harness.agent", fromlist=["AgentHarness"]).AgentHarness):
-            from .role_turn import RoleTurn
-            from .user_settings import snapshot
-            limits = snapshot()
-            brain.context_manager.token_budget = min(limits["request_token_budget"], getattr(brain.llm, "context_window", None) or limits["request_token_budget"])
-            turn = RoleTurn(self, s, brain, emit, token or threading.Event())
-            turn.max_steps = limits["max_steps"]
-            turn.deadline = time.monotonic() + limits["turn_time_budget_s"]
-            turn.notes_max = limits["notes_max"]
-            return turn
-        return Turn(self.store, s, brain, body, world, tools, self.gate, emit,
-                    world_name=s.world or "", current=(lambda: not token.is_set()) if token else None, guard=self._runs_lock, control_token=getattr(token, "control_token", None))
+        world = self.world_client(s.world, s.body) if s.world and s.body else None
+        nodes = [self.tool_client(name) for name in s.agent_tools]
+        return Turn(self.store, s, None, body, world, [n for n in nodes if n is not None], self.gate, emit,
+                    world_name=s.world or "", current=(lambda: not token.is_set()) if token else None,
+                    guard=self._runs_lock, control_token=getattr(token, "control_token", None))
 
     def _claim_run(self, sid, session, robot=True):
         with self._runs_lock:
@@ -552,46 +518,7 @@ class Nerv:
         return token
 
     def handle_stream(self, sid: str, text: str) -> Iterator[dict]:
-        s = self.store.get(sid)
-        if s.status != op.SESSION_ACTIVE:
-            yield {"type": op.EV_REPLY, "text": messages.SESSION_NOT_ACTIVE.format(status=s.status)}
-            yield {"type": op.EV_DONE}
-            return
-        if not self._epoch_ok(s):
-            yield {"type": op.EV_REPLY, "text": messages.SESSION_NOT_ACTIVE.format(status=op.SESSION_RECONNECT)}
-            yield {"type": op.EV_DONE}
-            return
-        try:
-            self.brain(s.brain)
-        except KeyError:
-            yield {"type": op.EV_REPLY, "text": messages.UNKNOWN_BRAIN_REPLY}
-            yield {"type": op.EV_DONE}
-            return
-        from ..harness.agent import AgentHarness
-        self.store.append(sid, {"role": "user", "text": text})
-        token = self._claim_run(sid, s, robot=not isinstance(self.brain(s.brain), AgentHarness))
-        q: queue.Queue = queue.Queue()
-        turn = self._turn(sid, q.put, token)
-
-        def _run():
-            with slog.session_scope(sid), slog.role_scope("agent"):
-                try:
-                    with self._agent_serial.setdefault(sid, threading.Lock()):
-                        turn.run(text, recorded=True)
-                finally:
-                    with self._runs_lock:
-                        if self._runs.get(sid) is token:
-                            self._runs.pop(sid, None)
-                    q.put(None)
-
-        th = threading.Thread(target=_run, daemon=True)
-        th.start()
-        while True:
-            ev = q.get()
-            if ev is None:
-                break
-            yield ev
-        th.join()
+        raise ValueError("Internal AI agents were retired in 0.9.1; connect an external Agent through Brain Core")
 
     def handle(self, sid: str, text: str) -> dict:
         events = list(self.handle_stream(sid, text))
@@ -620,7 +547,7 @@ class Nerv:
     def teleop_stream(self, sid: str, name: str, arguments: dict) -> Iterator[dict]:
         """The operator calls one tool directly. Same gate, same nodes, same log as the brain —
         recorded in the session as a step taken by the operator so the brain sees it next turn."""
-        from ..nerve.brain import CallTool, Think
+        from ..nerve.brain import CallTool
         s = self.store.get(sid)
         if s.body and self.scene_tests.blocks(s.body):
             yield {"type": op.EV_TOOL_RESULT, "name": name, "ok": False,
@@ -667,7 +594,6 @@ class Nerv:
                     turn.session.brain = "operator"
                     if route and route[0] == "body" and route[2].kind in ("primitive", "skill"):
                         turn.observe()
-                    turn.think(Think(messages.TELEOP_STEP.format(name=name), [CallTool(call_id, name, arguments)]))
                     turn.call_tool(CallTool(call_id, name, arguments))
                 except Exception as error:
                     q.put({"type": op.EV_TOOL_RESULT, "name": name, "ok": False, "message": str(error)})

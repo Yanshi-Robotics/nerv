@@ -11,7 +11,7 @@ import httpx
 
 from ..install_system import atomic_json
 from ..managed import channel_home, storage_root
-from .agent_gateway import OPERATIONS
+from ..brain_core.core import OPERATIONS
 
 
 def publish_host(home, host, port):
@@ -30,7 +30,8 @@ def publish_host(home, host, port):
 
 
 class HostBridge:
-    def __init__(self, channel="stable", client_id=None, *, root=None, transport=None):
+    def __init__(self, channel="stable", client_id=None, *, root=None, transport=None, brain_id=None):
+        self.brain_id = brain_id
         home = channel_home(channel, storage_root(root))
         self.path = home / "agent-host.json"
         try:
@@ -73,7 +74,7 @@ class HostBridge:
         if current.get("stopped") or current.get("instance_id") != self.host["instance_id"]:
             raise ValueError("NERV Host changed; reconnect and inspect the project before continuing")
         try:
-            response = await self.client.post("/api/agent/invoke", json={"operation": operation, "arguments": arguments},
+            response = await self.client.post("/api/agent/invoke", json={"operation": operation, "arguments": arguments, "brain_instance_id": self.brain_id},
                 headers={"Authorization": "Bearer " + self.token, "X-Nerv-Host-Instance": self.host["instance_id"]})
         except httpx.HTTPError:
             raise ValueError("NERV Host is unavailable; request outcome may be unknown. Inspect task state before retrying.") from None
@@ -104,14 +105,14 @@ def content_blocks(result):
     return blocks
 
 
-async def serve(channel="stable", client_id=None):
+async def serve(channel="stable", client_id=None, brain_id=None):
     from mcp.server import Server
     from mcp.server.stdio import stdio_server
     from mcp.types import Tool
     from jsonschema import validate
     from jsonschema.exceptions import ValidationError
 
-    bridge = HostBridge(channel, client_id)
+    bridge = HostBridge(channel, client_id, brain_id=brain_id)
     server = Server("nerv-host")
 
     @server.list_tools()
@@ -141,11 +142,11 @@ async def serve(channel="stable", client_id=None):
         await bridge.close()
 
 
-def main(channel="stable", client_id=None):
+def main(channel="stable", client_id=None, brain_id=None):
     # MCP stdout is reserved for protocol frames.
     import sys
     try:
-        asyncio.run(serve(channel, client_id))
+        asyncio.run(serve(channel, client_id, brain_id))
         return 0
     except KeyboardInterrupt:
         return 0
