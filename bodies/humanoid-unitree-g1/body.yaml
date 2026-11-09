@@ -21,6 +21,7 @@ actuators:
 locomotion:
   walk_speed: 0.6                  # vx (m/s) for move_forward — the policy was tuned at 0.6
   turn_rate: 0.8                   # wz (rad/s) for turns — inside the trained ±0.8
+  min_move_m: 0.5                 # 0.9.1 CPU probes: smaller steps are not qualified
   max_move_m: 3.0
   max_turn_deg: 180
   default_move_m: 1.0
@@ -53,6 +54,16 @@ buses:
         timeout_s: 20
         max_observation_age_s: 2
         poll_s: 0.05
+      skill_transitions:
+        version: g1-apt-cpu-091-1
+        validated: true
+        scope: simulation-software
+        scenes: [apt]
+        pairs: [[move_forward, turn_left], [move_forward, turn_right], [turn_left, move_forward], [turn_left, turn_right], [turn_right, move_forward], [turn_right, turn_left]]
+        policy_sha256:
+          policy.onnx: 07400671a8fffae172d261688bc84f0e60d3d656156b564dbdc0a4638fb695c6
+          contract.json: 1fdbe2ecc5d60945b5b630074425b053dbbca058b6a55be91833697083c8d6ef
+          release.yaml: 139f756341d744416b6823b9d99f6811dd1f9d85c6ca926a01729a2838c19ff8
     kind: zmq                      # runs in the same venv as NERV
   real:
     enabled: false                 # real hardware integration is outside 0.6

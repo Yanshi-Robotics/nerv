@@ -369,3 +369,11 @@ html:not([data-theme="light"]) .console-brand img { filter:invert(1); }
 .project-configuration .form-label { width:100%; margin:12px 0; }
 
 .world-layout-error { position:absolute; z-index:8; top:60px; left:24px; right:24px; padding:12px; background:var(--color-neutral-900); border:1px solid currentColor; border-radius:10px; }
+
+/* Complete instance identifiers remain readable at narrow workbench widths. */
+.instance-bindings { display:grid; grid-template-columns:repeat(auto-fit,minmax(220px,1fr)); gap:16px; margin:0; padding:20px 24px; border-bottom:1px solid var(--color-neutral-800); }
+.instance-bindings > div { min-width:0; }
+.instance-bindings dt { font-size:12px; opacity:.7; margin-bottom:5px; }
+.instance-bindings dd { margin:0; font-size:13px; overflow-wrap:anywhere; line-height:1.5; }
+.instance-view-controls { padding:16px 24px; flex-wrap:wrap; }
+.instance-view-controls select { max-width:min(100%,520px); }

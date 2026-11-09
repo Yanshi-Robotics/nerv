@@ -112,7 +112,7 @@ Downloads use verified files, persistent records and bounded retry/resume. Insta
 
 The local Agent-to-NERV workflow is the scope of 0.9.1. A future independent local Agent project can own model APIs, context and planning, then connect to NERV Brain Core and Runtime. Brain Core remains part of NERV. A future cloud Agent will need authenticated remote transport and device registration. Those products are not bundled with this candidate.
 
-<div align="center"><img src="assets/readme/diagrams/en/deployments-091.svg" alt="Solid local Agent and NERV deployment; dashed future edge Brain and cloud supervision deployments" width="960"></div>
+<div align="center"><img src="assets/readme/diagrams/en/deployments-091.svg" alt="Solid local Agent and NERV deployment; dashed future local Agent and remote transport deployments" width="960"></div>
 
 The [roadmap](ROADMAP.md) retains Harness extensions, plugin management, Yanshifu integration and real/simulation transfer research. It states the next checks and completion criteria without promising dates.
 

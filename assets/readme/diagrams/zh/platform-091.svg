@@ -21,7 +21,7 @@
 <text x="682" y="201" font-size="16" style="fill:#5c7078" font-weight="400" text-anchor="start">理解 · 视觉判断 · 模型上下文</text>
 <path d="M895,220 L895,300" fill="none" stroke="#356a85" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
 <text x="915" y="270" font-size="18" style="fill:#356a85" font-weight="400" text-anchor="start">MCP B</text>
-<rect x="40" y="300" width="1120" height="330" rx="14" fill="#edf2f3" stroke="#ccd8dc" stroke-width="1.3"/>
+<rect x="40" y="300" width="1120" height="485" rx="14" fill="#edf2f3" stroke="#ccd8dc" stroke-width="1.3"/>
 <text x="65" y="336" font-size="23" style="fill:#356a85" font-weight="700" text-anchor="start">NERV / BRAIN CORE</text>
 <text x="1100" y="336" font-size="19" style="fill:#247a71" font-weight="400" text-anchor="end">操作者控制台 → 绑定与授权</text>
 <text x="65" y="370" font-size="21" style="fill:#23343b" font-weight="400" text-anchor="start">身份 · 观测 · 任务 · 授权 · 回执</text>

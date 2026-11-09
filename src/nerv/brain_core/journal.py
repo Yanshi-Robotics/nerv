@@ -108,17 +108,7 @@ class SessionMemory:
 
     def commit_summary(self, start: int, end: int, text: str, fingerprint: str,
                        model: str, usage: dict | None, cancelled=lambda: False) -> bool:
-        with self.transaction():
-            events = self.events()
-            source = [e for e in events if start <= e["seq"] <= end]
-            if cancelled() or not text.strip() or self.fingerprint(source) != fingerprint:
-                return False
-            original = json.dumps(source, ensure_ascii=False)
-            if len(text.encode()) >= len(original.encode()):
-                return False
-            self._append(events, "compaction", {"start": start, "end": end, "text": text,
-                                               "model": model, "usage": usage})
-            return True
+        raise ValueError("Internal context compaction is retired; history is read-only")
 
     def flush(self) -> None:
         # Every append is durable already. Exposed for the host's dispatch barrier.

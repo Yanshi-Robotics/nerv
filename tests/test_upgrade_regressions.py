@@ -35,9 +35,11 @@ def test_unknown_interrupted_tool_result_keeps_source_for_compaction(tmp_path):
     store.append(session.id, {"role": "assistant", "text": "current"})
     history = context.build(store.get(session.id).messages, token_budget=100000)
     assert all("seq" in message for message in history)
-    manager = ContextManager(1200, 100, 100)
-    _, compacted = manager.prepare("system", history, [], [], store.memory(session.id), lambda *_: ("Old action outcome unknown.", "fixture", {}))
-    assert compacted[0]["role"] == "user" and "unknown" in store.memory(session.id).summary()["text"]
+    before = store.memory(session.id).events()
+    with pytest.raises(ValueError, match='compaction is retired'):
+        store.memory(session.id).commit_summary(1, 2, 'new summary', '', 'fixture', {})
+    assert store.memory(session.id).events() == before
+    assert store.memory(session.id).summary() is None
 
 
 def test_stale_exception_cannot_stop_the_current_robot(tmp_path):

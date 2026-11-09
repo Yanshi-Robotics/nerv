@@ -14,7 +14,7 @@ def platform(zh):
         f.box(x,140,490,80,c('External Agent ','外部 Agent ')+letter,c('Reasoning · vision · model context','理解 · 视觉判断 · 模型上下文'))
         f.path([(x+245,220),(x+245,300)])
         f.text(x+265,270,'MCP '+letter,18,BLUE)
-    f.rect(40,300,1120,330,'#edf2f3')
+    f.rect(40,300,1120,485,'#edf2f3')
     f.text(65,336,'NERV / BRAIN CORE',23,BLUE,700)
     f.text(1100,336,c('Operator console → bindings and authority','操作者控制台 → 绑定与授权'),19,TEAL,anchor='end')
     f.text(65,370,c('Identity · observations · tasks · authority · receipts','身份 · 观测 · 任务 · 授权 · 回执'),21)

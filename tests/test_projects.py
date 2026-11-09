@@ -89,6 +89,7 @@ def test_real_start_requires_operator_before_any_side_effect(tmp_path):
 def test_start_pins_revision_and_repeated_start_reattaches(tmp_path):
     sessions = SessionStore(str(tmp_path / "sessions"))
     hub = Mock(store=sessions)
+    hub.launcher.nodes = {}
     hub.registry = SimpleNamespace(bodies={"fixture": object()}, worlds={})
     hub._control_error.return_value = None
     def create(*args, **kwargs):

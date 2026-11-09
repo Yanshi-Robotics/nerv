@@ -26,7 +26,7 @@ Control transfers revoke the previous generation before a confirmed stop. Restar
 
 ## Qualification and results
 
-Different skill transitions are closed unless the adapter declares a qualified pair. The 0.9.1 G1 transition qualification and installed-candidate independent navigation acceptance are still pending. Development probes are not release qualification. No ACT skill transition or real-device validation is implied.
+Different skill transitions are closed unless the adapter declares a qualified pair. The scoped G1 apt transition contract checks the exact policy files; installed-candidate independent navigation acceptance and final timing qualification remain pending. Development probes are not release qualification. No ACT skill transition or real-device validation is implied.
 
 Action results distinguish measured displacement, target error, obstruction, fall, timeout and stable-stop confirmation. Crossing a requested travel threshold is not independent task success. `target_reached=null` means no qualified target tolerance has established arrival. An Agent statement is stored with its author, separately from Runtime results and operator-side scoring.
 

@@ -707,7 +707,7 @@ class VelocityPolicyBody:
                              f"went and how much room is left ahead. It never steers around obstacles: "
                              f"where to go, and what to do when blocked, is your decision."),
              "parameters": {"type": "object",
-                            "properties": {"meters": {"type": "number", "minimum": 0,
+                            "properties": {"meters": {"type": "number", "minimum": float(L.get("min_move_m", 0)),
                                                       "maximum": float(L["max_move_m"]),
                                                       "default": float(L["default_move_m"]),
                                                       "description": "distance to walk forward, metres"}},
@@ -771,6 +771,9 @@ class VelocityPolicyBody:
             meters = float(args.get("meters", L["default_move_m"]))
             if not math.isfinite(meters) or meters <= 0:
                 return {"ok": False, "message": "meters must be finite and positive"}
+            if meters < float(L.get('min_move_m', 0)):
+                return {'ok':False, 'message':'Requested distance is below the qualified motion scale',
+                        'data':{'requested_m':meters, 'minimum_m':float(L['min_move_m']), 'executed':False}}
             capped = min(meters, float(L["max_move_m"]))
             note = "" if capped == meters else f" (you asked for {meters:g} m; at most {L['max_move_m']:g} m per call)"
             res = self.runner.run(name, lambda p, a: self._move_forward(capped, p, a), _progress)

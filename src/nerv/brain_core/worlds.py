@@ -82,7 +82,7 @@ class WorldInstances:
                 projects.append(project)
                 runs.append(run)
                 roster.append({'robot_instance_id': run['robot_instance_id'], 'project_id': project['id'],
-                               'run_id': run['id'], 'spawn': dict(pose)})
+                               'run_id': run['id'], 'project_name':project['name'], 'spawn': dict(pose)})
             if len({p['id'] for p in projects}) != len(projects):
                 raise ValueError('A Project controls exactly one robot')
             if len({(p['world'], p['robot'], json.dumps(p['world_configuration'], sort_keys=True)) for p in projects}) != 1:
@@ -127,7 +127,7 @@ class WorldInstances:
                     rid = slot['robot_instance_id']
                     profile = body.model_copy(update={'name': rid})
                     wh = hub.launcher.nodes[f"world:{world['world_instance_id']}/{rid}"]
-                    runtime = hub.launcher.ensure_runtime(profile, 'sim', shared_spec, wh, defer_prepare=True)
+                    runtime = hub.launcher.ensure_runtime(profile, 'sim', shared_spec, wh, defer_prepare=True, scene_profile=world['world'])
                     runtimes.append(runtime)
                 # Preparation needs every bus to spawn before the shared clock advances.
                 # These are IO workers, not AI Agents or model calls.

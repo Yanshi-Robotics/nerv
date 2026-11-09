@@ -116,6 +116,8 @@ class BodyNode:
         config = {"options": opts}
         if hasattr(self.impl, "external_supervision_config"):
             config["external_supervision"] = self.impl.external_supervision_config()
+        if hasattr(self.impl, "skill_transition_config"):
+            config["skill_transitions"] = self.impl.skill_transition_config()
         return config
 
     def set_config(self, key: str, value: str) -> dict:

@@ -292,7 +292,7 @@ class Launcher:
         return self.ensure_runtime(body, world.kind, world, world_handle)
 
     @_serialized_launch
-    def ensure_runtime(self, body: BodySpec, mode: str, world=None, world_handle=None, *, defer_prepare=False) -> NodeHandle:
+    def ensure_runtime(self, body: BodySpec, mode: str, world=None, world_handle=None, *, defer_prepare=False, scene_profile=None) -> NodeHandle:
         key = f"body:{body.name}"
         handle = self.nodes.get(key)
         if handle and handle.alive():
@@ -317,7 +317,7 @@ class Launcher:
         bus_url = world_handle.bus_url if world_handle else ""
         binding = EnvironmentBinding(id=f"{body.name}:{mode}:{world_name}", profile_id=body.name,
                                      mode=mode, provider=ep.provider, world=world_name,
-                                     configuration={**ep.settings, "bus_url": bus_url})
+                                     configuration={**ep.settings, "bus_url": bus_url, "scene_profile": scene_profile or world_name})
         profile = RobotProfile(id=body.name, family=body.family, label=body.label,
                                configuration={**body.model_dump(), "skills": {name: skill.model_dump() for name, skill in body.skills.items() if mode in skill.modes}})
         directory = Path(paths.CACHE_DIR) / "runtime-config"

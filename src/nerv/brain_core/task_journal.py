@@ -26,15 +26,7 @@ class ScopedMemory:
     fingerprint = staticmethod(SessionMemory.fingerprint)
 
     def commit_summary(self, start, end, text, fingerprint, model, usage, cancelled=lambda: False):
-        import json
-        with self.journal.transaction():
-            source = [e for e in self.events() if start <= e["seq"] <= end]
-            if (cancelled() or not text.strip() or self.fingerprint(source) != fingerprint
-                    or len(text.encode()) >= len(json.dumps(source, ensure_ascii=False).encode())):
-                return False
-            self.journal._append(self.journal.events(), "scoped_event", {"scope": self.scope,
-                "kind": "compaction", "data": dict(start=start, end=end, text=text, model=model, usage=usage)})
-            return True
+        raise ValueError("Internal context compaction is retired; history is read-only")
 
     def read_range(self, start=1, limit=20):
         if start < 1 or not 1 <= limit <= 100:

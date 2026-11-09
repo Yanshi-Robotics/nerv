@@ -26,6 +26,8 @@ class BuiltinRuntime:
         self.profile, self.binding = profile, binding
         self.name, self.family, self.version = profile.id, profile.family, "0.7.1"
         self._impl = None
+        self._last_skill = None
+        self._last_skill_stopped = True
         self._sensor_bus = None
         self._sensor_lock = threading.Lock()
         self._supervision_lock = threading.RLock()
@@ -49,6 +51,25 @@ class BuiltinRuntime:
         if not self._supervision_config:
             return {"validated": False, "reason": "No simulation supervision profile"}
         return {**self._supervision_config, "validated": True, "scope": "simulation-software"}
+
+    def skill_transition_config(self):
+        """Only the measured profile/scene/policy combination may chain skills."""
+        from pathlib import Path
+        import hashlib
+        value = dict(self.binding.configuration.get('skill_transitions') or {})
+        if (not self._impl or value.get('validated') is not True or self.binding.mode != 'sim'
+                or self.binding.configuration.get('scene_profile') not in value.get('scenes', [])):
+            return {'validated':False, 'pairs':[]}
+        policy = getattr(self._impl, 'policy', None)
+        files = value.get('policy_sha256', {})
+        if not policy or set(files) != {'policy.onnx','contract.json','release.yaml'}:
+            return {'validated':False, 'pairs':[]}
+        try:
+            matches = all(hashlib.sha256((Path(policy.dir)/name).read_bytes()).hexdigest() == digest
+                          for name,digest in files.items())
+        except OSError:
+            matches = False
+        return {**value, 'validated':matches, 'pairs':value.get('pairs', []) if matches else []}
 
     def _record_observation(self, started, state, images):
         # Acquisition begins before the bus camera call. A delayed read therefore
@@ -163,9 +184,23 @@ class BuiltinRuntime:
                 with _control_guard():
                     yield
 
+        is_skill = bool(getattr(self.binding, 'configuration', {}).get('skill_transitions')) and any(
+            action['name'] == name and action.get('kind') == 'skill' for action in self._impl.tools())
+        if is_skill and not self._last_skill_stopped:
+            return {'ok':False, 'message':'Previous motion stop is unconfirmed; operator recovery is required'}
+        if is_skill and self._last_skill is not None and self._last_skill != name:
+            contract = self.skill_transition_config()
+            if (not self._last_skill_stopped or not contract.get('validated')
+                    or [self._last_skill, name] not in contract.get('pairs', [])):
+                return {'ok':False, 'message':'Runtime skill transition is unqualified or stopping is unconfirmed'}
         self._impl.runner._control.guard = supervised_guard
         try:
-            return self._impl.invoke(name, **kwargs)
+            if is_skill:
+                self._last_skill, self._last_skill_stopped = name, False
+            result = self._impl.invoke(name, **kwargs)
+            if is_skill:
+                self._last_skill_stopped = result.get('data', {}).get('stop_confirmed') is True
+            return result
         finally:
             self._impl.runner._control.guard = nullcontext
 

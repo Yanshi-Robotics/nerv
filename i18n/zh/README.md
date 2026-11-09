@@ -112,7 +112,7 @@ NERV 的 Python 环境、工具、缓存和已安装资源统一保存在 `NERV_
 
 0.9.1 面向同机外部 Agent 接入。未来可由独立本地 Agent 项目管理模型 API、上下文与规划，再连接 NERV Brain Core 和 Runtime；Brain Core 仍属于 NERV。未来云端 Agent 还需要带认证的远程传输和设备注册；本候选版不包含这两个产品。
 
-<div align="center"><img src="../../assets/readme/diagrams/zh/deployments-091.svg" alt="实线为同机 Agent 与 NERV，虚线为未来边缘 Brain 和云端监督部署" width="960"></div>
+<div align="center"><img src="../../assets/readme/diagrams/zh/deployments-091.svg" alt="实线为同机 Agent 与 NERV，虚线为未来本地 Agent 与远程传输部署" width="960"></div>
 
 [路线图](ROADMAP.md) 保留 Harness 扩展、插件管理、Yanshifu 集成和真实／仿真迁移研究，列出下一步与完成判据，不承诺日期。
 

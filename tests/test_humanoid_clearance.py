@@ -72,3 +72,12 @@ def test_flat_motion_uses_measured_progress_and_rechecks():
     result = body._drive_until(.6, 0, 0, 3, "dist", .6, None, lambda: False)
     assert result["reason"] == "reached" and .6 <= result["moved_m"] < .7
     assert len(queries) > 5 and commands[-1] == (0, 0, 0)
+
+
+def test_subscale_request_is_rejected_before_motion():
+    body, commands, _ = body_with_scans([CLEAR])
+    body._held = False
+    body.loco['min_move_m'] = .5
+    result = body.invoke('move_forward', meters=.1)
+    assert not result['ok'] and result['data']['executed'] is False
+    assert not commands

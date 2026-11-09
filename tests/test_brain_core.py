@@ -129,3 +129,40 @@ def test_scene_revision_covers_geometry_and_ignores_private_rules(tmp_path):
     assert source_revision(spec)==first
     (tmp_path/'mesh.obj').write_text('v 1 0 0')
     assert source_revision(spec)!=first
+
+
+def test_shared_runtime_failure_is_local_and_world_failure_invalidates_peers(integrated, monkeypatch):  # noqa: F811
+    from types import SimpleNamespace
+    f = integrated
+    core = BrainCore(f.hub, f.projects, f.gw.root)
+    try:
+        second=f.projects.store.create({'name':'Peer','mode':'sim','robot':f.project['robot'],'world':f.project['world']})
+        slots=[]
+        for i,p in enumerate([f.project,second]):
+            pair=core.create(p['name'],[p['id']],['observe','control'])
+            core.reserve(p['id'],pair['connection']['id'])
+            slots.append({'project_id':p['id'],'spawn':{'x':float(i),'y':0.,'z':1.,'yaw':0.}})
+        world=f.projects.worlds.configure(slots)
+        world.update(status='ready',epoch='world_epoch')
+        f.projects.worlds.save(world)
+        owner=SimpleNamespace(url='http://fixture.invalid',alive=lambda:True)
+        f.launcher.nodes['shared_world:'+world['world_instance_id']]=owner
+        for slot in world['roster']:
+            run=f.projects.active_run(slot['project_id'])
+            session,_=f.hub.store.new('operator',slot['robot_instance_id'],world['world_instance_id'],epoch='world_epoch')
+            run.update(status='running',session_id=session.id)
+            f.projects.store.save_run(run['project_id'],run)
+            f.launcher.nodes['body:'+slot['robot_instance_id']]=SimpleNamespace(alive=lambda:True)
+        monkeypatch.setattr('httpx.get',lambda *a,**k:SimpleNamespace(json=lambda:{'ok':True,'epoch':'world_epoch'}))
+        first,peer=world['roster']
+        f.launcher.nodes.pop('body:'+first['robot_instance_id'])
+        assert f.projects.worlds.check_health()==[first['project_id']]
+        assert f.projects.active_run(first['project_id']) is None
+        assert f.projects.active_run(peer['project_id'])['status']=='running'
+        owner.alive=lambda:False
+        f.projects.worlds._last_health=0
+        assert f.projects.worlds.check_health()==[peer['project_id']]
+        assert f.projects.active_run(peer['project_id']) is None
+        assert f.projects.worlds.get(world['world_instance_id'])['status']=='failed'
+    finally:
+        core.shutdown()

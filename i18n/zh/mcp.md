@@ -75,3 +75,5 @@ nerv mcp --channel preview --brain BRAIN_ID --client CLIENT_ID
 启动桥接前，在 Agent 连接页分配 Brain。一条连接只操作一个 Brain；仅当活动绑定唯一时才兼容省略 --brain。第十五个工具 brain_get 返回 Run、机器人、世界、绑定与控制状态。run_start 只能启动已分配的 Run。task_update 返回退役错误；更换目标需取消旧任务并创建新任务。
 
 观测、事件和动作回执包含 brain_instance_id、run_id、robot_instance_id、world_instance_id 和 binding_generation。回执、任务及重试 ID 仅在原 Brain 内有效。重连不恢复运动，不重放请求；已完成的重试返回旧回执，结果未知时必须先检查状态。共享世界 Agent 不能重置世界或改变组成。
+
+MCP 桥接先登记连接代次，再提供工具。心跳只证明连接仍在，不确认图像。断线或超时撤销对应 Brain 的控制；重连后须由操作者重新分配控制权。外部任务可以在静止状态等待 Agent 思考，旧观测失效后必须重新观察并确认，才能继续动作。安装候选包的独立导航验收和最终时序验证仍待完成。
