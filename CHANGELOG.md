@@ -5,7 +5,7 @@
 - Introduce NERV Brain Core and explicitly allocated Agent/Run/robot/world identities. Add scoped MCP `--brain` and `brain_get`.
 - Retire internal model services and provider packaging; preserve historical source and journals. Fixed policies remain Runtime capabilities.
 - Add generated shared-world robot namespaces, per-robot buses and separate Run lifetimes.
-- Record actual displacement, braking travel and stable stopping; navigation qualification remains pending.
+- Record actual displacement, braking travel and stable stopping. Candidate 08 passed 713 CPU software tests (two retired-provider skips) and managed frontend/install/recovery checks. Its three paired navigation rounds produced 0/6 successes, three false arrival claims and no falls; navigation qualification failed.
 - This is an architecture upgrade despite the retained 0.9.1 version number. Installed candidate, UI, migration and six independent navigation trials must pass before release. No release is implied by this entry.
 
 

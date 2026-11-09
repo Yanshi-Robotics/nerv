@@ -10,7 +10,7 @@ NERV 0.9.1 introduces **Brain Core**, the internal identity and control module u
 
 [Connect an Agent](guides/mcp.md) · [Architecture](guides/architecture.md) · [SO-101 setup](guides/so101-setup.md) · [Assets](guides/assets.md) · [Roadmap](ROADMAP.md)
 
-This checkout is a **0.9.1 development checkout**, not a published release. The commands below install the latest public release; they do not fetch unpublished changes. The fixed installed-candidate, shared-world two-G1 acceptance and physical SO-101 trials remain pending. Go2 motion is blocked until a complete, verifiable deployment contract is available.
+This checkout is a **0.9.1 development checkout**, not a published release. The commands below install the latest public release; they do not fetch unpublished changes. Candidate 08 passed its Linux CPU software and installation checks, but its fixed shared-world two-G1 trial achieved 0/6 independently scored navigation successes, with three false arrival claims and no falls. Navigation qualification and physical SO-101 trials remain incomplete. See the [candidate findings](guides/brain-core-091.md#installed-candidate-findings). Go2 motion is blocked until a complete, verifiable deployment contract is available.
 
 <div align="center"><img src="assets/readme/diagrams/en/platform-091.svg" alt="External Agent and operator workbench share the NERV Host, which manages authority and routes tasks to local execution" width="960"></div>
 

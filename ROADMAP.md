@@ -8,7 +8,9 @@ The work below has no promised release date. Entries describe user value, the av
 
 ## Agent and Harness integration
 
-**Status: local MCP foundation available; client acceptance and extensions planned.**
+**Status: local MCP exercised by two independent Codex subagents; fixed shared-world navigation acceptance failed.**
+
+Candidate 08 completed three paired rounds with 0/6 scored successes, three false arrival claims and no falls. Protocol isolation and reconnect checks passed. Next work must address sustained stopping, short-motion stalls, capability refresh after World failure and evidence of complete target entry before repeating the frozen acceptance design.
 
 Users should be able to use their preferred Agent without replacing robot drivers. Brain Core provides model-free identity, observation, permission and execution services; internal model loops are retired. The external bridge adds project permissions, observations and bounded tasks.
 
