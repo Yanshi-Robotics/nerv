@@ -44,6 +44,9 @@ locomotion:
   stall_timeout_s: 1.5
   fall_tilt_rad: 0.8
   fall_height_m: 0.18
+  # Candidate-06 turn needed ~1.79 s including the unchanged quiet interval.
+  # Ceil(2 * 1.79) = 4 s; normal action settling only, still bounded by supervision.
+  motion_settle_s: 4.0
   hold_settle_s: 1.5               # emergency stop: up to this long (sim s) to come to a stand before latching
   hold_still_rad_s: 0.3            # every joint must remain below this during the quiet interval
   hold_still_s: 0.2                # ten 50 Hz policy frames below the velocity bound before latching
@@ -51,7 +54,7 @@ buses:
   sim:
     settings:
       external_supervision:
-        version: g1-apt-cpu-mcp-091-1
+        version: g1-apt-cpu-mcp-091-2
         scenes: [apt]
         timeout_s: 20
         max_observation_age_s: 40  # six MCP visual-processing samples; twice observed maximum, rounded up to 5 s

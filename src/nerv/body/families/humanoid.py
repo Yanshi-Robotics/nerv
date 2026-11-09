@@ -537,11 +537,12 @@ class VelocityPolicyBody:
             state = self.bus.read()
             if self._fallen(state):
                 return False, state
-            quiet = max((abs(v) for v in state.joint_vel), default=math.inf) <= float(self.loco['hold_still_rad_s'])
+            speeds = [abs(float(value)) for value in state.joint_vel]
+            quiet = bool(speeds) and all(math.isfinite(value) for value in speeds) and max(speeds) <= float(self.loco['hold_still_rad_s'])
             quiet_since = (state.t if quiet_since is None else quiet_since) if quiet else None
             if quiet_since is not None and state.t - quiet_since >= float(self.loco['hold_still_s']):
                 return True, state
-            if state.t-start.t >= float(self.loco['hold_settle_s']):
+            if state.t-start.t >= float(self.loco.get('motion_settle_s', self.loco['hold_settle_s'])):
                 return False, state
             if state.t > last_t:
                 last_t, last_wall = state.t, time.perf_counter()

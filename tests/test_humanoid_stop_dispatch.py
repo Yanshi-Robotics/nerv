@@ -53,3 +53,23 @@ def test_hold_requires_sustained_quiet_not_one_gait_turning_point():
     assert body._quiet_hold_ready(SimpleNamespace(t=1.41, joint_vel=[.02]))
     assert not body._quiet_hold_ready(SimpleNamespace(t=1.42, joint_vel=[float('nan')]))
     assert not body._quiet_hold_ready(SimpleNamespace(t=1.43, joint_vel=[]))
+
+
+def test_normal_settling_waits_for_quiet_without_extending_emergency_hold():
+    body = HumanoidBody.__new__(HumanoidBody)
+    body.loco = dict(hold_still_rad_s=.3, hold_still_s=.2, hold_settle_s=1.5,
+                     motion_settle_s=4., sim_dead_wall_s=1., poll_s=0.)
+    body._fallen = lambda _: False
+    stamp = 0.
+    def read():
+        nonlocal stamp
+        stamp += .05
+        return SimpleNamespace(t=stamp, joint_vel=[.4 if stamp<1.7 else .02])
+    body.bus = SimpleNamespace(read=read)
+    ok, state = body._settle_motion()
+    assert ok and 1.9 <= state.t < 2.1
+    assert body.loco['hold_settle_s'] == 1.5
+    stamp = 0.
+    body.bus.read = lambda: SimpleNamespace(t=read().t, joint_vel=[.02,float('nan')])
+    ok, state = body._settle_motion()
+    assert not ok and state.t >= 4.
