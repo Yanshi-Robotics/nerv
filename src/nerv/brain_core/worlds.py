@@ -1,5 +1,6 @@
 """Operator-owned frozen World composition, separate from individual Run lifetimes."""
 from concurrent.futures import ThreadPoolExecutor
+import hashlib
 import json
 from pathlib import Path
 import threading
@@ -9,11 +10,38 @@ import uuid
 from ..platform.projects import _write, _id
 
 
+def source_revision(spec):
+    """Pin scene inputs before launch, including meshes/textures and generators."""
+    root = Path(spec.assets_root).resolve()
+    if not root.is_dir():
+        raise ValueError('Registered scene assets are unavailable')
+    digest = hashlib.sha256()
+    count = 0
+    extensions = {'.xml', '.obj', '.stl', '.png', '.jpg', '.jpeg', '.webp', '.yaml', '.yml', '.json', '.py'}
+    for path in sorted(root.rglob('*')):
+        relative = path.relative_to(root)
+        if any(part.startswith('.') or part == '__pycache__' for part in relative.parts):
+            continue
+        if path.suffix.lower() not in extensions or not path.is_file():
+            continue
+        if not path.resolve().is_relative_to(root):
+            raise ValueError('Scene input escapes its registered asset root')
+        digest.update(relative.as_posix().encode() + b'\0')
+        with path.open('rb') as stream:
+            file_hash = hashlib.file_digest(stream, 'sha256').digest()
+        digest.update(file_hash)
+        count += 1
+    if not count:
+        raise ValueError('Registered scene has no revisionable inputs')
+    return {'sha256':digest.hexdigest(), 'files':count}
+
+
 class WorldInstances:
     def __init__(self, projects):
         self.projects, self.hub = projects, projects.hub
         self.root = projects.store.root.parent / 'world-instances'
         self.lock = threading.RLock()
+        self._last_health = 0.0
         # No process resurrection or movement after Host recovery.
         for path in self.root.glob('world_*.json'):
             value = json.loads(path.read_text())
@@ -64,10 +92,11 @@ class WorldInstances:
             wid = 'world_' + uuid.uuid4().hex
             world = {'world_instance_id': wid, 'status': 'configured', 'generation': 1,
                      'world': projects[0]['world'], 'robot_profile': projects[0]['robot'],
-                     'roster': roster, 'created_at': time.time()}
+                     'roster': roster, 'created_at': time.time(),
+                     'source_revision':source_revision(self.hub.registry.world(projects[0]['world']))}
             self.save(world)
             for run in runs:
-                run.update(world_instance_id=wid, shared_world=True)
+                run.update(world_instance_id=wid, world_generation=world["generation"], shared_world=True)
                 self.projects.store.save_run(run['project_id'], run)
             return world
 
@@ -81,9 +110,11 @@ class WorldInstances:
             hub = self.hub
             spec = hub.registry.world(world['world'])
             body = hub.registry.body(world['robot_profile'])
+            if source_revision(spec) != world['source_revision']:
+                raise ValueError('Scene inputs changed after World allocation; compose a new World')
             request = {'world_instance_id': world['world_instance_id'],
                        'arena': str(Path(spec.assets_root) / spec.supports[body.name]),
-                       'physics': dict(spec.physics),
+                       'physics': dict(spec.physics), 'source_revision':world['source_revision'],
                        'body_profile': {'actuators': body.actuators, 'dir': body.dir},
                        'roster': [dict(r) for r in world['roster']]}
             world['status'] = 'preparing'
@@ -125,12 +156,58 @@ class WorldInstances:
         self.hub.store.save(s)
         return s.summary()
 
+    def check_health(self):
+        """Observe child-process loss; never restart or reclaim a lost instance."""
+        from .. import config
+        if time.monotonic() - self._last_health < config.NODE_PROBE_TIMEOUT:
+            return []
+        self._last_health = time.monotonic()
+        failures = []
+        for path in self.root.glob('world_*.json'):
+            world = json.loads(path.read_text())
+            if world['status'] != 'ready':
+                continue
+            owner = self.hub.launcher.nodes.get('shared_world:' + world['world_instance_id'])
+            # Process liveness and the physics thread health are separate facts.
+            import httpx
+            try:
+                healthy = owner and owner.alive()
+                health = httpx.get(owner.url + '/health', timeout=config.NODE_PROBE_TIMEOUT).json() if healthy else {}
+                healthy = healthy and health.get('ok') and health.get('epoch') == world.get('epoch')
+            except (httpx.HTTPError, ValueError):
+                healthy = False
+            for slot in world['roster']:
+                run = self.projects.active_run(slot['project_id'])
+                if not run or run['id'] != slot['run_id'] or run['status'] != 'running':
+                    continue
+                runtime = self.hub.launcher.nodes.get('body:' + slot['robot_instance_id'])
+                if healthy and runtime and runtime.alive():
+                    continue
+                reason = 'Shared World unavailable' if not healthy else 'Robot Runtime unavailable'
+                run.update(status='failed', reason=reason, ended_at=time.time())
+                self.projects.store.save_run(run['project_id'], run)
+                self.hub.store.set_armed(run['session_id'], False)
+                self.hub.store.set_status(run['session_id'], 'reconnect_required')
+                failures.append((run, reason))
+            if not healthy:
+                world.update(status='failed', reason='Shared World unavailable', generation=world['generation']+1)
+                self.save(world)
+        def stop_failed(item):
+            run, reason = item
+            return self.hub.tasks.cancel(run['session_id'], reason=reason)
+        if failures:
+            with ThreadPoolExecutor(max_workers=len(failures)) as pool:
+                list(pool.map(stop_failed, failures))
+        return [run['project_id'] for run, _ in failures]
+
     def stop(self, wid):
         with self.lock:
             world = self.get(wid)
             stops = []
             for slot in world['roster']:
                 run = self.projects.active_run(slot['project_id'])
+                if run and run['id'] != slot['run_id']:
+                    run = None
                 if run and run.get('session_id'):
                     result = self.hub.tasks.cancel(run['session_id'], reason='Operator stopped shared World')
                     stops.append(result)

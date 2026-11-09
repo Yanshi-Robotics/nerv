@@ -18,7 +18,7 @@ def test_manual_session_needs_no_model_credentials(tmp_path, monkeypatch):
     assert session["brain"] == "operator"
     assert not session["armed"]
     require.assert_not_called()
-    with pytest.raises(ValueError, match="visual model"):
+    with pytest.raises(ValueError, match="retired"):
         hub.new_role_model("operator")
 
 
@@ -46,7 +46,7 @@ def test_manual_dispatch_observes_before_motion(tmp_path, monkeypatch):
     monkeypatch.setattr(hub.tasks, "cancel", lambda *a, **k: {"ok": True})
     monkeypatch.setattr(hub, "claim_robot", lambda sid, **kwargs: "token")
     list(hub.teleop_stream(session.id, "move", {}))
-    assert order == ["observe", "think", "call"]
+    assert order == ["observe", "call"]
 
 
 def test_manual_dispatch_never_calls_motion_without_observation(tmp_path, monkeypatch):

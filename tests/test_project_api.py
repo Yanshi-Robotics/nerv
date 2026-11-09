@@ -57,6 +57,7 @@ def test_agent_pairing_redaction_revocation_and_scope(api):
     value = paired.json()
     token = value["token"]
     assert token not in client.get("/api/agent-connections").text
+    assert client.post(f"/api/projects/{project['id']}/brain", json={"client_id":value["connection"]["id"]}).status_code == 200
     headers = {"Authorization": "Bearer " + token}
     assert client.post("/api/agent/invoke", headers=headers,
                        json={"operation": "projects_list", "arguments": {}}).status_code == 200
@@ -84,6 +85,7 @@ def test_host_instance_nonce_required(api):
     client.app.state.agent_host_instance = "current-instance"
     project = client.post("/api/projects", json={"name": "Bound", "mode": "sim"}).json()
     paired = client.post("/api/agent-connections", json={"name": "Fixture", "projects": [project["id"]]}).json()
+    assert client.post(f"/api/projects/{project['id']}/brain", json={"client_id":paired["connection"]["id"]}).status_code == 200
     headers = {"Authorization": "Bearer " + paired["token"]}
     payload = {"operation": "projects_list", "arguments": {}}
     assert client.post("/api/agent/invoke", headers=headers, json=payload).status_code == 409

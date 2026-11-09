@@ -84,7 +84,7 @@ def test_receipt_only_published_for_loopback(tmp_path):
 
 
 def test_real_stdio_handshake_and_tool_schemas(tmp_path):
-    """An SDK client actually initializes the stdio process; no model or socket."""
+    """SDK stdio protocol with an inert transport heartbeat fixture; no robot/model."""
     import os
     import sys
     from mcp import ClientSession, StdioServerParameters
@@ -95,8 +95,15 @@ def test_real_stdio_handshake_and_tool_schemas(tmp_path):
     from pathlib import Path
     env["PYTHONPATH"] = os.pathsep.join(str(Path(p).resolve()) for p in env.get("PYTHONPATH", "").split(os.pathsep) if p)
     env.update(NERV_HOME=str(tmp_path), NERV_STORAGE_HOME=str(tmp_path), PYTHONDONTWRITEBYTECODE="1")
-    params = StdioServerParameters(command=sys.executable,
-        args=["-m", "nerv.platform.cli", "mcp", "--channel", "stable", "--client", "agent_123"], env=env)
+    program = """
+import asyncio
+from nerv.platform import mcp_host
+async def inert_transport(self, action):
+    return {'transport_id':'fixture', 'brain_instance_id':'brain_fixture', 'heartbeat_s':1}
+mcp_host.HostBridge.transport = inert_transport
+asyncio.run(mcp_host.serve('stable', 'agent_123', 'brain_fixture'))
+"""
+    params = StdioServerParameters(command=sys.executable, args=["-c", program], env=env)
     async def run():
         async with stdio_client(params) as (read, write):
             async with ClientSession(read, write) as session:

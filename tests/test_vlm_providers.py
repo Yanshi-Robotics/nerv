@@ -122,7 +122,7 @@ def sse(events):
 
 
 def test_gemini_native_sdk_stream_tool_signature_and_followup(tmp_path):
-    from google import genai
+    genai = pytest.importorskip("google.genai", reason="Historical provider excluded from 0.9.1")
     requests = []
     def handle(request):
         requests.append(json.loads(request.content))
@@ -170,7 +170,7 @@ def test_gemini_native_sdk_stream_tool_signature_and_followup(tmp_path):
 
 
 def test_anthropic_native_sdk_preserves_signed_blocks_and_rejects_truncation(tmp_path):
-    from anthropic import Anthropic
+    Anthropic = pytest.importorskip("anthropic", reason="Historical provider excluded from 0.9.1").Anthropic
     import httpx2
     requests = []
     payload = {"id": "msg", "type": "message", "role": "assistant", "model": "claude-opus-5-5",
@@ -234,20 +234,9 @@ def test_native_stream_cancel_closes_and_never_returns_tools(tmp_path, model_id,
 def test_settings_endpoint_does_not_leak_keys_or_trigger_model_requests(tmp_path, monkeypatch):
     from fastapi.testclient import TestClient
     from nerv.platform import server
-    monkeypatch.setenv("NERV_HOME", str(tmp_path / "private"))
-    monkeypatch.setenv("OPENAI_API_KEY", "legacy-must-not-be-used")
-    monkeypatch.setattr(ModelRegistry, "provider", lambda *_: pytest.fail("unexpected paid request"))
-    with TestClient(server.app) as client:
-        result = client.put("/api/credentials/OPENAI_API_KEY", json={"value": "fixture-secret"})
-        assert result.status_code == 400
-        # Existing credentials remain usable without a new probe on discovery.
-        ModelRegistry().credentials.set("OPENAI_API_KEY", "fixture-secret")
-        listing = client.get("/api/vlm")
-        assert listing.status_code == 200
-        assert "fixture-secret" not in listing.text and "legacy-must-not-be-used" not in listing.text
-        assert len(listing.json()["providers"]) == 5
-        assert any(m["available"] for m in listing.json()["models"])
-        assert client.post("/api/vlm/openai-sol/select", json={"effort": "high"}).status_code == 200
-        assert client.delete("/api/credentials/OPENAI_API_KEY").status_code == 405
-        assert client.put("/api/credentials/OPENAI_API_KEY", json={"value": None}).status_code == 200
-        assert not ModelRegistry().credentials.resolve("OPENAI_API_KEY")
+    client = TestClient(server.app)
+    for method, url, payload in [('put','/api/credentials/OPENAI_API_KEY',{'value':'fixture-secret'}),
+                                 ('get','/api/vlm',None), ('post','/api/vlm/openai-sol/select',{})]:
+        result = client.request(method,url,json=payload)
+        assert result.status_code == 410
+        assert 'fixture-secret' not in result.text

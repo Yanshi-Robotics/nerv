@@ -63,7 +63,7 @@ def test_old_turn_never_inherits_replacement_token(tmp_path):
     hub = Nerv(store=store)
     old, new = threading.Event(), threading.Event()
     hub._runs[session.id] = new
-    turn = hub._turn(session.id, lambda _: None, old)
+    turn = hub._turn(session.id, lambda _: None, old, operator=True)
     old.set()
     assert not turn.is_current()
 

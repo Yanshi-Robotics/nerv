@@ -120,8 +120,8 @@ def test_teleop_uses_the_same_gate_and_records_the_step(tmp_path):
         res = next(e for e in evs if e["type"] == "tool_result")
         assert res["ok"] and impl.angle == 15
         roles = [m["role"] for m in store.get(s.id).messages]
-        assert roles[-2:] == ["assistant", "tool"]        # the operator's step is in the history
-        assert store.get(s.id).messages[-2]["brain"] == "operator"
+        assert roles[-2:] == ["perception", "tool"]        # the operator's step is in the history
+        assert any(e["kind"] == "robot_activity" and e["data"].get("requested_by") == "operator" for e in store.memory(s.id).events())
     finally:
         _stop(servers)
 

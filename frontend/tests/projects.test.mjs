@@ -22,7 +22,7 @@ test('execution filters cannot mix external direct control with skills or manage
   assert.equal(schemeMatchesExecution('external_vlm','fixed_policy'),false);
   assert.equal(schemeMatchesExecution('external_skills','external_vlm'),false);
   assert.equal(schemeMatchesExecution('act','fixed_policy'),true);
-  assert.equal(schemeMatchesExecution('managed','policy_group'),true);
+  assert.equal(schemeMatchesExecution('managed','policy_group'),false);
   assert.equal(schemeMatchesExecution('future','future'),false);
 });
 

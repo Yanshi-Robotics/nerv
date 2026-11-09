@@ -144,6 +144,7 @@ def test_unknown_outcome_is_not_replayed(gateway, monkeypatch):
 def test_expiry_cancels_matching_task_and_revokes_commands(gateway):
     gw, paired, hub, session, _ = gateway
     start(gw, paired)
+    gw._active_actions.add("project")
     gw._leases["project"]["deadline"] = time.monotonic() - 1
     gw.check_expired()
     assert not gw.control("project")["accepting"]
@@ -181,6 +182,7 @@ def test_unconfirmed_supervision_stop_retains_expired_instance(gateway, monkeypa
     gw, paired, hub, session, _ = gateway
     start(gw, paired)
     monkeypatch.setattr(hub.tasks, "cancel", Mock(side_effect=RuntimeError("offline")))
+    gw._active_actions.add("project")
     gw._leases["project"]["deadline"] = time.monotonic() - 1
     gw.check_expired()
     event = next(e for e in hub.tasks.snapshot(session.id)["events"]
@@ -363,3 +365,71 @@ def test_run_end_cannot_stop_replacement_after_ownership_check(gateway, monkeypa
         gw.invoke(paired["token"], "run_end", {"project_id": "project", "request_id": "end-race"})
     gw.projects.stop_run.assert_called_once_with("project", "run")
     assert "stopped" not in replacement
+
+
+def test_slow_acknowledgement_does_not_hold_global_control_lock(gateway, monkeypatch):
+    gw, paired, _, _, robot = gateway
+    obs = gw.invoke(paired['token'], 'observe', {'project_id': 'project'})
+    entered, release = threading.Event(), threading.Event()
+    errors = []
+    def delayed_post(*args):
+        entered.set()
+        assert release.wait(3)
+        return {'ok': True}
+    monkeypatch.setattr(robot, 'post', delayed_post)
+    def acknowledge_slow():
+        try:
+            gw.invoke(paired['token'], 'acknowledge', {'project_id': 'project', 'receipt_id': obs['receipt_id']})
+        except ValueError as error:
+            errors.append(str(error))
+    thread = threading.Thread(target=acknowledge_slow)
+    thread.start()
+    try:
+        assert entered.wait(1)
+        acquired = gw._lock.acquire(timeout=.5)
+        assert acquired, 'A Runtime request blocked global control state'
+        try:
+            gw._invalidate_control('project')
+        finally:
+            gw._lock.release()
+    finally:
+        release.set()
+        thread.join(3)
+    assert errors and 'changed during acknowledgement' in errors[0]
+    assert 'project' not in gw._leases
+    assert not gw.control('project')['accepting']
+
+
+def test_thinking_wait_expires_observation_without_cancelling_idle_task(gateway):
+    gw, paired, hub, session, _ = gateway
+    task = start(gw, paired)
+    gw._leases['project']['deadline'] = time.monotonic() - 1
+    gw.check_expired()
+    assert gw.control('project')['accepting']
+    assert hub.tasks.snapshot(session.id)['task']['task_id'] == task['task_id']
+    assert hub.tasks.snapshot(session.id)['task']['status'] == 'running'
+    with pytest.raises(ValueError, match='fresh frame'):
+        gw._fresh(paired['connection'], 'project', session)
+    acknowledge(gw, paired)
+    assert gw.control('project')['supervision_state'] == 'confirmed'
+
+
+def test_new_task_cannot_bypass_unqualified_skill_transition(gateway):
+    gw, paired, hub, session, robot = gateway
+    original = robot.capabilities()
+    original.robot_actions[0].kind = 'skill'
+    original.robot_actions[1].kind = 'skill'
+    robot.capabilities = lambda: original
+    scheme = hub.schemes.save(dict(name='Two skills', robot='fixture', mode='sim',
+                                  template='external_skills', actions=['move', 'other']))
+    hub.tasks.select_scheme(session.id, scheme.id)
+    task = start(gw, paired)
+    action = dict(project_id='project', request_id='first', task_id=task['task_id'], version=1,
+                  action='move', arguments={})
+    assert gw.invoke(paired['token'], 'action', action)['ok']
+    assert gw.invoke(paired['token'], 'task_cancel', dict(project_id='project', request_id='stop'))['ok']
+    acknowledge(gw, paired)
+    next_task = gw.invoke(paired['token'], 'task_start', dict(project_id='project', request_id='next', goal='Another skill'))['data']
+    result = gw.invoke(paired['token'], 'action', {**action, 'request_id':'second', 'task_id':next_task['task_id'], 'action':'other'})
+    assert not result['ok'] and 'unverified' in result['message']
+    robot.invoke.assert_called_once()

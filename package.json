@@ -1,12 +1,16 @@
 {
   "name": "@yanshi-robotics/nerv",
-  "version": "0.9.0",
+  "version": "0.9.1",
   "private": true,
   "description": "GitHub-distributed launcher for the NERV robot platform",
   "license": "MIT",
   "type": "module",
-  "engines": {"node": ">=22"},
-  "bin": {"nerv": "launcher/nerv.mjs"},
+  "engines": {
+    "node": ">=22"
+  },
+  "bin": {
+    "nerv": "launcher/nerv.mjs"
+  },
   "scripts": {
     "prepare": "node launcher/prepare.mjs",
     "prepack": "node launcher/prepare.mjs --force",
@@ -14,10 +18,27 @@
     "test": "node --test launcher/*.test.mjs"
   },
   "files": [
-    "launcher/nerv.mjs", "launcher/prepare.mjs", "launcher/products.json",
-    "src/nerv/**/*.py", "src/nerv/vlm/catalog.json", "pyproject.toml", "setup.py", "MANIFEST.in",
-    "frontend/out", "packages/nerv-runtime-sdk/pyproject.toml", "packages/nerv-runtime-sdk/src/**/*.py",
-    "packages/nerv-runtime-lerobot/pyproject.toml", "packages/nerv-runtime-lerobot/src/**/*.py",
-    "packages/nerv-runtime-lerobot/src/nerv_runtime_lerobot/product.json", "guides", "i18n/zh/standard-so101.md"
+    "launcher/nerv.mjs",
+    "launcher/prepare.mjs",
+    "launcher/products.json",
+    "src/nerv/**/*.py",
+    "pyproject.toml",
+    "setup.py",
+    "MANIFEST.in",
+    "frontend/out",
+    "packages/nerv-runtime-sdk/pyproject.toml",
+    "packages/nerv-runtime-sdk/src/**/*.py",
+    "packages/nerv-runtime-lerobot/pyproject.toml",
+    "packages/nerv-runtime-lerobot/src/**/*.py",
+    "packages/nerv-runtime-lerobot/src/nerv_runtime_lerobot/product.json",
+    "guides",
+    "i18n/zh/standard-so101.md",
+    "!src/nerv/brain/**",
+    "!src/nerv/harness/**",
+    "!src/nerv/vlm/**",
+    "!src/nerv/platform/router.py",
+    "!src/nerv/platform/role_turn.py",
+    "!src/nerv/platform/role_prompts.py",
+    "!src/nerv/platform/session/context.py"
   ]
 }

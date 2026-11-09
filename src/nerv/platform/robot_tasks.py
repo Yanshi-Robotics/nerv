@@ -22,6 +22,7 @@ class RobotTasks:
         self._tokens = {}
         self._threads = {}
         self._external_turns = {}
+        self._skill_history = {}  # (robot node, world epoch), independent of task restarts.
         self._generation = {}
         self._stopping = set()
         for session in hub.store.all():

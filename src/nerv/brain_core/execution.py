@@ -231,7 +231,8 @@ class ExternalExecution(ExecutionTurn):
                 raise ValueError("Request was superseded")
             if self.token.action_budget <= 0:
                 raise ValueError("Selected scheme action budget exhausted")
-            previous = self.token.last_skill
+            instance = (self.session.body, self.session.epoch)
+            previous = self.hub.tasks._skill_history.get(instance)
             if route[2].kind == "skill" and previous not in (None, call.name):
                 # An adapter must explicitly qualify each transition for this mode.
                 transitions = (self.robot.capabilities().config or {}).get("skill_transitions", {})
@@ -241,6 +242,7 @@ class ExternalExecution(ExecutionTurn):
             self.token.action_budget -= 1
             if route[2].kind == "skill":
                 self.token.last_skill = call.name
+                self.hub.tasks._skill_history[instance] = call.name
             return super().call_tool(call)
         except Exception as error:
             return self._finish(call, ActionResult(False, str(error)))

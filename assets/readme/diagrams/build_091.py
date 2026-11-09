@@ -13,9 +13,10 @@ def platform(zh):
     for x,letter in [(60,'A'),(650,'B')]:
         f.box(x,140,490,80,c('External Agent ','外部 Agent ')+letter,c('Reasoning · vision · model context','理解 · 视觉判断 · 模型上下文'))
         f.path([(x+245,220),(x+245,300)])
-        f.text(x+245,270,'MCP '+letter,18,BLUE,anchor='middle')
+        f.text(x+265,270,'MCP '+letter,18,BLUE)
     f.rect(40,300,1120,330,'#edf2f3')
     f.text(65,336,'NERV / BRAIN CORE',23,BLUE,700)
+    f.text(1100,336,c('Operator console → bindings and authority','操作者控制台 → 绑定与授权'),19,TEAL,anchor='end')
     f.text(65,370,c('Identity · observations · tasks · authority · receipts','身份 · 观测 · 任务 · 授权 · 回执'),21)
     for x,letter in [(65,'A'),(655,'B')]:
         f.box(x,400,480,82,'Brain '+letter+' / Run '+letter,c('One bound Agent and robot instance','固定绑定一个 Agent 与机器人实例'))
@@ -49,7 +50,9 @@ def supervision(zh):
         f.path([(x,225),(x,730)],MUTED,dashed=True,arrow=False)
     messages=[(275,1010,190,'Sensor frames + identity + sequence','传感器图像 + 身份 + 序号'),(365,190,600,'Acknowledge inspected observation','确认已检查的观测'),(455,190,600,'Bounded action + task identity','有限动作 + 任务身份'),(545,600,1010,'Validate binding, grant and budget','核对绑定、控制权与预算'),(635,1010,190,'Measured outcome + stop confirmation','实测结果 + 停止确认')]
     for y,a,b,en,cn in messages:
-        f.text((a+b)/2,y-20,c(en,cn),18,BLUE,anchor='middle');f.path([(a,y),(b,y)],TEAL)
+        f.rect(min(a,b)+8,y-45,abs(b-a)-16,32,'#ffffff')
+        f.text((a+b)/2,y-20,c(en,cn),18,BLUE,anchor='middle')
+        f.path([(a,y),(b,y)],TEAL)
     f.text(600,770,c('Agent statement ≠ execution completion ≠ independently scored task success','Agent 自述 ≠ 执行完成 ≠ 独立评分成功'),21,GOLD,anchor='middle')
     f.save('supervision-091')
 
@@ -72,4 +75,5 @@ def deployments(zh):
 
 if __name__=='__main__':
     for language in [False,True]:
-        for draw in [platform,lifecycle,supervision,deployments]: draw(language)
+        for draw in [platform,lifecycle,supervision,deployments]:
+            draw(language)

@@ -19,7 +19,10 @@ def integrated(tmp_path, monkeypatch):
     monkeypatch.setattr(paths, "NERV_HOME", str(tmp_path))
     monkeypatch.setattr("nerv.platform.module_jobs.jobs", lambda: [])
     body = SimpleNamespace(name="fixture", buses={"sim": SimpleNamespace(enabled=True)}, policy_error=None, skills={})
-    world = SimpleNamespace(name="fixture-world", kind="sim", supports={"fixture": "fixture.xml"}, configuration={})
+    assets=tmp_path / 'fixture-assets'
+    assets.mkdir()
+    (assets / 'fixture.xml').write_text('<mujoco/>')
+    world = SimpleNamespace(name="fixture-world", kind="sim", supports={"fixture": "fixture.xml"}, configuration={}, assets_root=str(assets))
     registry = SimpleNamespace(bodies={body.name: body}, worlds={world.name: world}, tools={},
                                body=lambda _: body, world=lambda _: world)
     launcher = Mock(nodes={})

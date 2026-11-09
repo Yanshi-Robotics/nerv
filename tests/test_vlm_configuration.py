@@ -71,7 +71,7 @@ def test_empty_key_prevents_all_session_side_effects(tmp_path, monkeypatch):
     from nerv.platform.session import SessionStore
     hub = Nerv(store=SessionStore(str(tmp_path / "sessions")))
     monkeypatch.setattr(hub.launcher, "ensure_world", lambda *_: pytest.fail("launched before key check"))
-    with pytest.raises(ModelError, match="Configure an API key"):
+    with pytest.raises(ValueError, match="retired"):
         hub.new_session("openai-sol", "unresolved-body", "unresolved-world")
     assert not hub.store.all() and hub._bound_runtime is None
 
@@ -83,8 +83,8 @@ def test_registered_key_creates_session_without_diagnostics(tmp_path, monkeypatc
     registry.credentials.set("OPENAI_API_KEY", "expired-but-registered-fixture")
     monkeypatch.setattr(registry, "validate", lambda *_: pytest.fail("unexpected paid validation"))
     hub = Nerv(store=SessionStore(str(tmp_path / "sessions")))
-    created = hub.new_session("openai-sol", None, None, tools=[])
-    assert created["brain"] == "openai-sol"
+    with pytest.raises(ValueError, match="retired"):
+        hub.new_session("openai-sol", None, None, tools=[])
     assert registry.list()[0]["checks"] == {}
 
 
@@ -107,7 +107,7 @@ def test_http_rejects_direct_key_write(monkeypatch):
     from nerv.platform import server
     monkeypatch.setattr(server, "_models_idle", lambda: None)
     response = TestClient(server.app).put("/api/credentials/OPENAI_API_KEY", json={"value": "fixture-secret"})
-    assert response.status_code == 400
+    assert response.status_code == 410
     assert not ModelRegistry().credentials.describe("OPENAI_API_KEY")["configured"]
 
 
@@ -115,7 +115,6 @@ def test_http_configuration_and_missing_session_key(registry, monkeypatch):
     from fastapi.testclient import TestClient
     from nerv.platform import server
     monkeypatch.setattr(server, "_models_idle", lambda: None)
-    monkeypatch.setattr(server, "ModelRegistry", lambda: registry)
     monkeypatch.setattr(registry, "provider", provider(registry))
     client = TestClient(server.app)
     before = len(server.nerv.store.all())
@@ -123,7 +122,7 @@ def test_http_configuration_and_missing_session_key(registry, monkeypatch):
     assert missing.status_code == 410 and "Project" in missing.json()["detail"]
     assert len(server.nerv.store.all()) == before
     result = client.post("/api/vlm/openai-sol/configure", json={"value": "candidate-fixture"})
-    assert result.status_code == 200 and result.json()["saved"]
+    assert result.status_code == 410
     assert "candidate-fixture" not in result.text
 
 

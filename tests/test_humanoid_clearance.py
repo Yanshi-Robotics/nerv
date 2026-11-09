@@ -14,6 +14,7 @@ def body_with_scans(scans):
     body.loco = dict(DEFAULT_LOCOMOTION, poll_s=0, settle_s=0)
     body._clearance_query, body._clearance_period = {}, .1
     body.has_free_base = False
+    body.policy = SimpleNamespace(lin_deadband=.2)  # Released policy command floor fixture.
     commands, queries = [], []
     state = {"t": 0., "x": 0., "yaw": 0., "cmd": (0., 0., 0.)}
     def command(vx, vy, wz):

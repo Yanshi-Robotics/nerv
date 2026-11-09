@@ -355,7 +355,9 @@ class ProjectService:
                     setattr(bound_session, key, run.get(key, ""))
                 bound_session.robot_profile = project["robot"]
                 self.hub.store.save(bound_session)
-                run.update(session_id=session["id"], status="running")
+                handle = self.hub.launcher.nodes.get('body:' + bound_session.body)
+                run.update(session_id=session["id"], status="running", world_epoch=bound_session.epoch,
+                           robot_epoch=handle.meta.get('epoch', '') if handle else '')
                 self.store.save_run(project_id, run)
                 if project["scheme"]:
                     self.hub.tasks.select_scheme(session["id"], project["scheme"], scheme.revision)
@@ -407,7 +409,9 @@ class ProjectService:
                 if not result.get("ok"):
                     raise ValueError("Stop has not been confirmed")
                 if run.get("shared_world"):
-                    self.hub.arm(session.id, False)
+                    disarmed = self.hub.arm(session.id, False)
+                    if not disarmed.get('ok'):
+                        raise ValueError('Shared robot disarm was not confirmed')
                     self.hub.store.set_status(session.id, "frozen")
                     # Runtime remains in supervised hold; shared physics stays alive.
                 elif session.mode == "sim":

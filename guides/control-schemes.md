@@ -1,31 +1,35 @@
-# Control schemes and module contracts
+# Control schemes and execution contracts
 
-[NERV](../README.md) · [Architecture](architecture.md)
+[NERV](../README.md) · [Architecture](architecture.md) · [MCP](mcp.md) · [中文](../i18n/zh/control-schemes.md)
 
-A scheme is an operator-selected template bound to one robot and one environment. Its immutable revision contains a display name, route, decision model and effort (or none), allowed actions, time limit and action budget. It references registered skills; it contains neither credentials nor device paths nor policy tensors.
+NERV 0.9.1 changes the control architecture. Brain Core is part of NERV and binds an external Agent to a Run and robot instance. It contains no decision model. A scheme is an operator-selected, immutable revision of allowed actions, task duration and action budget for a robot profile and environment.
 
-## Scheme and task API
+## Supported execution routes
 
-`GET /api/control-schemes?sid=SESSION` returns saved latest revisions, the session's pinned revision, live action choices and readiness reasons. `POST /api/control-schemes` saves a new revision; editing an obsolete revision is refused. `POST /api/sessions/SESSION/control-scheme` chooses an ID/revision only when the previous task has stopped.
+| Template | Decision owner | Execution |
+|---|---|---|
+| `external_vlm` | External Agent | Bounded primitive actions |
+| `external_skills` | External Agent | Registered motion skills |
+| `fixed_policy` | Operator selects one skill | Runtime executes the fixed policy |
 
-The three templates are `fixed_policy`, `policy_group` and `visual_direct`. Fixed policy permits one skill and no decision model. Policy group permits skills; visual direct permits primitives. Compatibility is checked against the live runtime capability manifest and the session's robot/environment. UI diagrams are generated from the same scheme fields.
+Historical `policy_group`, `visual_direct` and managed model configurations remain readable but cannot start internal inference. Select and authorize a new external scheme explicitly. Existing model credentials are neither copied nor read. ACT and gait inference are Runtime execution functions, not an internal AI Agent.
 
-The existing `/api/sessions/SESSION/robot-tasks` endpoint starts, inspects, updates or cancels tasks. Start freezes the scheme, model settings, policy fingerprints and instance identity. Fixed-policy launch never constructs a decision model. Model-based tasks have their own context and cancellation. Fixed tasks cannot be retargeted mid-execution.
+`GET /api/control-schemes?sid=SESSION` reports the pinned revision and live compatibility. `POST /api/control-schemes` saves a revision. `POST /api/sessions/SESSION/control-scheme` selects it only after the previous task stops. `task_start` freezes the goal, scheme revision, policy fingerprints and instance. `task_update` is retired; cancel before starting a different task.
 
-Host filtering and Runtime protocol 3 grants both restrict actions. Expiry, cancellation, superseding generations and replaced instances reject late dispatch. The Agent can manage tasks but cannot directly invoke mutating robot capabilities. Operator test controls are separate, visible actions; they revoke old task control before claiming a bounded manual action.
+## Observations and authority
 
-Read-only status and wait operations remain available to the decision layer. A completed decision turn ends through the Host's scoped stop; operator cancellation uses the task interface. A runtime capability labelled `control` does not bypass the selected allowlist.
+The operator allocates the Brain and Run, starts the simulation and explicitly assigns control. Starting a Run does not arm it. Each MCP connection addresses one Brain. A shared World contains separate Runtime instances; a profile name is not an instance identity.
 
-The current release supplies no verified automatic transitions between different ACT skills. A group may choose among its listed skills; switching to another skill within the same task stops for operator intervention. Extending this requires validated transition preconditions and physical evidence, not a prompt claiming that the next skill is safe.
+The external Agent inspects the actual sensor images, acknowledges a fresh receipt, and supplies a bounded action. Receipts, task IDs and retries cannot transfer to another Brain. A completed action consumes its observation authorization: observe again before another action. Polling events or submitting an Agent statement does not renew supervision. Runtime enforces local stopping independently of model latency.
 
-## Feedback
+Control transfers revoke the previous generation before a confirmed stop. Restart or reconnection does not replay motion. A failed stop is reported as unconfirmed and blocks replacement execution. A single Run ending keeps its robot in the shared scene; only the operator can stop the whole World.
 
-An execution record, a model's completion judgment and independently verified task success are different states. Fixed tasks without a success evaluator report their execution state and `outcome=unknown`. Preserve requested targets, driver-returned targets and later measurements separately. Do not replace actual capture times with model request times.
+## Qualification and results
 
-## Official optional modules
+Different skill transitions are closed unless the adapter declares a qualified pair. The 0.9.1 G1 transition qualification and installed-candidate independent navigation acceptance are still pending. Development probes are not release qualification. No ACT skill transition or real-device validation is implied.
 
-`release.json` schema 1 lists product IDs, packages, extras, optional resources, dependency locks and asset SHA-256 hashes. Module installation uses a new environment, validates dependencies and runs its verification command before adding a runtime record. Scene-bearing module roots use `bodies/`, `nerv-assets/` and `assets/`; runtime-only modules declare separately installed assets. Old `worlds/` registry directories are rejected and must be reinstalled. A real-device profile merges with the simulation binding instead of replacing it.
+Action results distinguish measured displacement, target error, obstruction, fall, timeout and stable-stop confirmation. Crossing a requested travel threshold is not independent task success. `target_reached=null` means no qualified target tolerance has established arrival. An Agent statement is stored with its author, separately from Runtime results and operator-side scoring.
 
-`GET /api/modules`, `POST /api/modules/MODULE/install` and `POST /api/modules/JOB/cancel` are operator endpoints. Jobs persist under the user home and survive browser refresh. They are not exposed as Agent shell tools. This release accepts only official module IDs and the official release origin. Arbitrary simulator ZIP or repository imports are intentionally not offered.
+## Modules
 
-For developers, the existing registry and Runtime SDK remain the extension interface. A new simulator must supply versioned descriptors, robot capabilities, resource provenance/licenses, observation semantics, supported scenes and protocol compatibility. Validate it as a source plugin first. A package importing successfully does not establish rendering, action correctness or task performance.
+`release.json` identifies modules, dependency locks and asset hashes. Installation creates and validates a new environment before registering it. Runtime dependencies stay outside the Host. Module installation, resource management, motion authorization and shared-world changes remain operator operations; MCP exposes no shell or installation tool.

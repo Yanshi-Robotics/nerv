@@ -66,7 +66,7 @@ def test_hub_refuses_incompatible_session(tmp_path):
     from types import SimpleNamespace
     hub._brains["mock"] = SimpleNamespace(model="offline-fixture")
     try:
-        hub.new_session("mock", "arm-lerobot-so101", "apt")
+        hub.new_session("operator", "arm-lerobot-so101", "apt", operator_workspace=True)
     except ValueError as e:
         assert "no arena" in str(e)
     else:

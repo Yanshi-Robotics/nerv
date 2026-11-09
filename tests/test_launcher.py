@@ -6,9 +6,8 @@ from nerv.platform.registry import Registry
 
 
 def test_launch_calculator_tool_node(monkeypatch, tmp_path):
-    monkeypatch.setenv("NERV_NODE_PORTS", "8112-8131")
     from nerv import config
-    monkeypatch.setattr(config, "NODE_PORTS", "8112-8131")
+    monkeypatch.setattr(config, "NODE_PORTS", os.environ.get("NERV_NODE_PORTS", config.NODE_PORTS))
     reg = Registry()
     lau = Launcher(reg)
     lau.log_dir = str(tmp_path)

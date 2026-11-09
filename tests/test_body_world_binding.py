@@ -41,7 +41,7 @@ def test_different_world_refused_before_launch_or_session_changes(hub, monkeypat
     ensure_world = Mock(side_effect=AssertionError("world must not start"))
     monkeypatch.setattr(hub.launcher, "ensure_world", ensure_world)
     with pytest.raises(ValueError, match="cannot reuse"):
-        hub.new_session("mock", body.name, "house", tools=[])
+        hub.new_session("operator", body.name, "house", tools=[], operator_workspace=True)
     ensure_world.assert_not_called()
     assert hub.store.get(old.id).summary() == before
     assert len(hub.store.list()) == 1
@@ -91,15 +91,16 @@ def test_attached_endpoint_checked_before_world_launch(hub, monkeypatch):
         return node.meta
     monkeypatch.setattr(hub.launcher, "_wait_health", health)
     with pytest.raises(ValueError, match="cannot reuse"):
-        hub.new_session("mock", body.name, "apt", tools=[])
+        hub.new_session("operator", body.name, "apt", tools=[], operator_workspace=True)
     assert hub.store.list() == []
     assert hub.launcher.nodes == {}
 
 
 def test_conversation_only_ignores_body_binding(hub):
     live_body(hub)
-    session = hub.new_session("mock", None, None, tools=[])
-    assert session["world"] is None and session["body"] is None
+    with pytest.raises(ValueError, match='retired'):
+        hub.new_session('mock', None, None, tools=[])
+    assert not hub.store.all()
 
 
 def test_attached_node_rebound_at_same_url_is_not_trusted(hub, monkeypatch):
@@ -110,7 +111,7 @@ def test_attached_node_rebound_at_same_url_is_not_trusted(hub, monkeypatch):
         return node.meta
     monkeypatch.setattr(hub.launcher, "_wait_health", health)
     with pytest.raises(ValueError, match="cannot reuse"):
-        hub.new_session("mock", body.name, "apt", tools=[])
+        hub.new_session("operator", body.name, "apt", tools=[], operator_workspace=True)
     assert hub.store.list() == []
 
 
@@ -136,7 +137,7 @@ def test_invalid_sensor_rolls_back_only_new_nodes_and_cached_clients(hub, monkey
     monkeypatch.setattr(hub, 'world_client', client)
     monkeypatch.setattr(hub.launcher, 'stop', lambda key: hub.launcher.nodes.pop(key))
     with pytest.raises(ValueError, match='does not publish'):
-        hub.new_session('mock', body.name, 'apt', sensors=['missing'], tools=[])
+        hub.new_session('operator', body.name, 'apt', sensors=['missing'], tools=[], operator_workspace=True)
     assert hub.launcher.nodes == {'tool:kept': existing}
     assert not hub._worlds and not hub._bodies
     assert hub._bound_runtime is None and hub.store.list() == []

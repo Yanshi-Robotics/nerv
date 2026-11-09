@@ -643,7 +643,8 @@ class VelocityPolicyBody:
         moved = r["moved_m"]
         r["target_m"] = meters
         r["target_error_m"] = round(moved-meters, 3)
-        r["target_reached"] = r["reason"] == REASON_REACHED and r["stop_confirmed"] and not r["fallen"]
+        r["travel_threshold_crossed"] = r["reason"] == REASON_REACHED
+        r["target_reached"] = None  # Requires a qualified tolerance or independent task evaluator.
         if not r["stop_confirmed"]:
             return {"ok": False, "message": "Motion ended; stable stop is unconfirmed", "data": r}
         if r["fallen"]:
@@ -676,7 +677,8 @@ class VelocityPolicyBody:
         turned = abs(r["turned_deg"])
         r["target_deg"] = degrees
         r["target_error_deg"] = round(turned-degrees, 1)
-        r["target_reached"] = r["reason"] == REASON_REACHED and r["stop_confirmed"] and not r["fallen"]
+        r["travel_threshold_crossed"] = r["reason"] == REASON_REACHED
+        r["target_reached"] = None  # Requires a qualified tolerance or independent task evaluator.
         if not r["stop_confirmed"]:
             return {"ok": False, "message": "Turn ended; stable stop is unconfirmed", "data": r}
         if r["fallen"]:

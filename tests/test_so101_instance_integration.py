@@ -18,7 +18,7 @@ def test_tabletop_instances_reset_rebuild_and_reject_stale_control(tmp_path):
     epochs = set()
     try:
         for world, values in cases:
-            session = hub.new_session("mock", "arm-lerobot-so101", world, tools=[], world_configuration=values)
+            session = hub.new_session("operator", "arm-lerobot-so101", world, tools=[], world_configuration=values, operator_workspace=True)
             sid = session["id"]
             assert session["epoch"] not in epochs
             epochs.add(session["epoch"])

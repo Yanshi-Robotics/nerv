@@ -42,6 +42,7 @@ class InvokeInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
     operation: str
     brain_instance_id: str | None = None
+    transport_id: str | None = None
     arguments: dict = Field(default_factory=dict)
 
 
@@ -169,6 +170,24 @@ def router(get_hub):
         operator(request)
         return call(services(get_hub())[1].revoke, connection_id)
 
+    @api.post("/api/agent/transport")
+    def transport(request: Request, payload: dict):
+        header = request.headers.get("authorization", "")
+        if not header.startswith("Bearer "):
+            raise HTTPException(401, "Agent pairing is required")
+        instance = getattr(request.app.state, "agent_host_instance", None)
+        if instance and not secrets.compare_digest(instance, request.headers.get("x-nerv-host-instance", "")):
+            raise HTTPException(409, "Host instance changed")
+        if set(payload) - {"action", "brain_instance_id", "transport_id"}:
+            raise HTTPException(400, "Invalid transport arguments")
+        try:
+            return services(get_hub())[1].transport(header[7:], payload.get("action"),
+                payload.get("brain_instance_id"), payload.get("transport_id"))
+        except PermissionError as error:
+            raise HTTPException(403, "Agent permission denied") from error
+        except (ValueError, KeyError) as error:
+            raise HTTPException(409, str(error)) from error
+
     @api.post("/api/agent/invoke")
     def invoke(request: Request, payload: InvokeInput):
         header = request.headers.get("authorization", "")
@@ -179,7 +198,7 @@ def router(get_hub):
         if instance and not secrets.compare_digest(instance, supplied):
             raise HTTPException(409, "Host instance changed; reconnect the MCP client")
         try:
-            return services(get_hub())[1].invoke(header[7:], payload.operation, payload.arguments, payload.brain_instance_id)
+            return services(get_hub())[1].invoke(header[7:], payload.operation, payload.arguments, payload.brain_instance_id, payload.transport_id)
         except ValidationError as error:
             raise HTTPException(400, "Invalid Agent operation arguments") from error
         except PermissionError as error:

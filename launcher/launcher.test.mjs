@@ -57,7 +57,8 @@ test("distribution contains built UI and Python sources without private or gener
   });
   assert.equal(result.status, 0, result.stderr);
   const files = JSON.parse(result.stdout)[0].files.map(item => item.path);
-  for (const expected of ["frontend/out/index.html", "launcher/nerv.mjs", "src/nerv/vlm/catalog.json",
+  assert.deepEqual(files.filter(path => /^src\/nerv\/(brain|harness|vlm)\//.test(path)), []);
+  for (const expected of ["frontend/out/index.html", "launcher/nerv.mjs", "src/nerv/brain_core/core.py",
     "packages/nerv-runtime-sdk/src/nerv_runtime_sdk/__init__.py",
     "packages/nerv-runtime-lerobot/src/nerv_runtime_lerobot/product.json"]) {
     assert.ok(files.includes(expected), `Missing package resource: ${expected}; build the UI before testing`);

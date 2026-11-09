@@ -78,6 +78,13 @@ class RobotView(WorldSim):
     def reset(self):
         raise ValueError('Shared World reset requires the operator')
 
+    def _resolve_spawn_pose(self):
+        # Frozen operator geometry wins over the single-robot policy default.
+        pose = super()._resolve_spawn_pose()
+        if pose is not None:
+            return pose[0], pose[1], float(self.spawn_cfg['z']), pose[3]
+        return None
+
     def _place(self):
         # Initial attachment only. Never reset another robot or a scene prop.
         if self.spawn_pose is not None:

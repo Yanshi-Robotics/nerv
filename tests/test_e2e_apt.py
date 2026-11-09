@@ -8,7 +8,6 @@ import os
 
 import pytest
 
-from nerv import config
 from nerv.nerve.brain import CallTool, Say, Think, UserMessage
 from nerv.platform.hub import Nerv
 from nerv.platform.session import SessionStore
@@ -40,37 +39,12 @@ class ScriptedBrain:
 
 @pytest.mark.skipif(any(not os.path.isfile(k) for k in NEEDS), reason="needs the worlds and policies submodules")
 def test_scripted_brain_walks_one_metre(tmp_path, monkeypatch):
-    monkeypatch.setenv("NERV_TRUST_ALL", "1")
-    monkeypatch.setattr(config, "NODE_PORTS", "8112-8131")
-    from nerv.motion_policies import import_policy, check
-    import_policy(paths.NERV_HOME, "g1-29dof-turn", os.path.dirname(NEEDS[1]))
-    check(paths.NERV_HOME, "g1-29dof-turn")
-    hub = Nerv(store=SessionStore(str(tmp_path / "s")))
-    brain = ScriptedBrain()
-    hub._brains["scripted"] = brain
-    try:
-        s = hub.new_session("scripted", "humanoid-unitree-g1", "apt")
-        sid = s["id"]
-        from nerv.platform.control_schemes import SchemeStore
-        hub.schemes = SchemeStore(tmp_path / "schemes")
-        plan = hub.schemes.save(dict(name="Scripted regression", robot=s["body"], mode="sim",
-            template="policy_group", decision_model="scripted", actions=["move_forward"]))
-        hub.tasks.select_scheme(sid, plan.id)
-        # disarmed: the gate refuses the skill and the brain is told why
-        out = hub.handle(sid, "walk")
-        assert brain.results, out
-        r = brain.results[0]
-        assert not r.ok and "not armed" in r.message and out["reply"] == "done"
-        # armed: the skill really runs and comes back measured
-        brain.results.clear()
-        assert hub.arm(sid, True)["armed"] is True
-        hub.handle(sid, "walk")
-        r, calc = brain.results
-        assert r.ok, r.message
-        assert r.data.get("moved_m", 0) > 0.5 and not r.data.get("fallen"), r.data
-        assert calc.ok and calc.data["value"] == 391
-        print(f"[e2e] move_forward(1.0) via NERV: moved {r.data['moved_m']:.3f} m, reason={r.data.get('reason')}")
-        msgs = hub.store.get(sid).messages
-        assert [m["role"] for m in msgs].count("perception") == 2
-    finally:
-        hub.shutdown()
+    # Historical scripted brains are no longer an admitted control path. Real
+    # locomotion is covered by humanoid-family CPU tests; independent navigation
+    # must use an installed candidate and separate external Agent contexts.
+    hub = Nerv(store=SessionStore(str(tmp_path / 'sessions')))
+    launch = []
+    monkeypatch.setattr(hub.launcher, 'ensure_world', lambda *a: launch.append(a))
+    with pytest.raises(ValueError, match='retired'):
+        hub.new_session('scripted', 'humanoid-unitree-g1', 'apt')
+    assert not launch and not hub.store.all()

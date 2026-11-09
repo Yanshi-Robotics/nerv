@@ -77,6 +77,7 @@ class AgentGateway:
         self._seen = {}
         self._expired = set()
         self._control_generations = {}
+        self._active_actions = set()
         self._stop = threading.Event()
         self._thread = threading.Thread(target=self._watch, name="nerv-agent-supervision", daemon=True)
         self._thread.start()
@@ -306,7 +307,8 @@ class AgentGateway:
             receipt = {"id": "obs_" + uuid.uuid4().hex, "epoch": session.epoch, "body_epoch": body_epoch,
                        "state": dict(observed.state),
                        "delivered_at": time.time(), "delivered_mono": time.monotonic(),
-                       "images": [i["name"] for i in observed.images if i.get("png")], "acknowledged": False}
+                       "images": [i["name"] for i in observed.images if i.get("png")], "acknowledged": False,
+                       "control_generation": self.control(pid).get("control_generation")}
             with self._lock:
                 self._receipts[(record["id"], pid)] = receipt
             self.hub.store.append_perception(session.id, observed.state, observed.images)
@@ -319,12 +321,18 @@ class AgentGateway:
             robot, contract = self._supervision_contract(session)
             with self._lock:
                 receipt = self._receipts.get((record["id"], pid))
+                generation = self.control(pid).get("control_generation")
                 if (not receipt or receipt["id"] != args["receipt_id"] or receipt["epoch"] != session.epoch
-                        or receipt["acknowledged"]):
+                        or receipt["acknowledged"] or receipt.get("confirming")
+                        or receipt.get("control_generation") != generation):
                     raise ValueError("Unknown, consumed or old-instance observation receipt")
-                state = receipt["state"]
                 if time.monotonic() - receipt["delivered_mono"] > contract["max_observation_age_s"]:
                     raise ValueError("Observation receipt expired")
+                receipt["confirming"] = True
+            # Never hold the global state lock while waiting on a Runtime. A slow
+            # camera/acknowledgement cannot delay another robot's stop or watchdog.
+            try:
+                state = receipt["state"]
                 health = robot.health() or {}
                 if health.get("epoch") != receipt["body_epoch"]:
                     raise ValueError("Runtime instance changed; observe again")
@@ -334,14 +342,23 @@ class AgentGateway:
                 result = robot.post("/supervision", {"epoch": receipt["body_epoch"], "frame_seq": state["frame_seq"]})
                 if not result.get("ok"):
                     raise ValueError("Runtime rejected stale or incompatible supervision")
-                receipt["acknowledged"] = True
-                previous = self._leases.get(pid, {})
-                self._expired.discard(pid)
-                self._leases[pid] = {"owner_id": record["id"], "epoch": session.epoch, "session_id": session.id,
-                                     "state": state, "control_generation": self.control(pid).get("control_generation"), "acknowledged_at": time.time(),
-                                     "expires_at": time.time() + contract["timeout_s"],
-                                     "deadline": time.monotonic() + contract["timeout_s"],
-                                     "action_consumed": False, "task_id": previous.get("task_id")}
+                with self._lock:
+                    control = self.control(pid)
+                    if (control.get("owner_id") != record["id"] or control.get("control_generation") != generation
+                            or self._receipts.get((record["id"], pid)) is not receipt
+                            or time.monotonic() - receipt["delivered_mono"] > contract["max_observation_age_s"]):
+                        raise ValueError("Control or observation changed during acknowledgement; observe again")
+                    receipt["acknowledged"] = True
+                    previous = self._leases.get(pid, {})
+                    self._expired.discard(pid)
+                    self._leases[pid] = {"owner_id": record["id"], "epoch": session.epoch, "session_id": session.id,
+                                         "state": state, "control_generation": generation, "acknowledged_at": time.time(),
+                                         "expires_at": time.time() + contract["timeout_s"],
+                                         "deadline": time.monotonic() + contract["timeout_s"],
+                                         "action_consumed": False, "task_id": previous.get("task_id")}
+            finally:
+                with self._lock:
+                    receipt.pop("confirming", None)
             return {"ok": True, "receipt_id": receipt["id"], "meaning": "client_confirmed_processing", **self.control(pid)}
         if operation == "task_status":
             snapshot = self.hub.tasks.snapshot(session.id)
@@ -383,9 +400,14 @@ class AgentGateway:
                 if lease["action_consumed"]:
                     raise ValueError("Observe and acknowledge again after each action")
                 lease["action_consumed"] = True
-            return self.hub.tasks.external_action(session.id, args["task_id"], args["version"], args["action"],
-                                                   args["arguments"], lease["state"],
-                                                   current=lambda: self._still_current(record, pid, lease))
+                self._active_actions.add(pid)
+            try:
+                return self.hub.tasks.external_action(session.id, args["task_id"], args["version"], args["action"],
+                                                       args["arguments"], lease["state"],
+                                                       current=lambda: self._still_current(record, pid, lease))
+            finally:
+                with self._lock:
+                    self._active_actions.discard(pid)
         raise ValueError("Unsupported operation")
 
     def _still_current(self, record, pid, lease):
@@ -429,31 +451,48 @@ class AgentGateway:
 
     def _watch(self):
         while not self._stop.wait(0.2):
-            self.check_expired()
+            try:
+                self.check_expired()
+            except Exception:
+                import logging
+                logging.getLogger(__name__).exception('Supervision check failed; Runtime watchdog remains independent')
 
     def check_expired(self):
+        stops = []
         with self._lock:
             expired = [(pid, lease) for pid, lease in self._leases.items()
                        if time.monotonic() >= lease["deadline"]]
-            for pid, _ in expired:
-                self._leases.pop(pid, None)
-                self._expired.add(pid)
-                self._controls[pid] = {"accepting": False, "owner_id": None}
-        for pid, lease in expired:
-            try:
+            for pid, lease in expired:
                 state = self.hub.tasks.snapshot(lease["session_id"]).get("task") or {}
-                if state.get("task_id") == lease.get("task_id") and state.get("status") in {"running", "starting", "updating"}:
-                    self.hub.tasks.cancel(lease["session_id"], reason="External observation supervision expired")
-            except Exception as error:
-                # Report the uncertainty; Runtime's watchdog is independent of this transport.
-                try:
-                    self.hub.store.memory(lease["session_id"]).append("robot_activity", {
-                        "source": "host", "type": "supervision_stop_unconfirmed", "ok": False,
-                        "instance_id": lease["epoch"],
-                        "task_id": lease.get("task_id"),
-                        "message": "External supervision expired; stop could not be confirmed: " + type(error).__name__})
-                except Exception:
-                    pass
+                external = state.get("scheme", {}).get("template", "").startswith("external_")
+                if pid in self._active_actions or not external:
+                    self._invalidate_control(pid)
+                    stops.append((pid, lease))
+                else:
+                    # Waiting for Agent reasoning is not motion. Expire the old
+                    # observation, retain the task and require a new inspected frame.
+                    self._leases.pop(pid, None)
+                self._expired.add(pid)
+        # Each stop is independent: an unreachable A must not delay B's request.
+        from concurrent.futures import ThreadPoolExecutor
+        if stops:
+            with ThreadPoolExecutor(max_workers=len(stops), thread_name_prefix="nerv-expiry-stop") as pool:
+                list(pool.map(self._stop_expired, stops))
+
+    def _stop_expired(self, item):
+        pid, lease = item
+        try:
+            state = self.hub.tasks.snapshot(lease["session_id"]).get("task") or {}
+            if state.get("task_id") == lease.get("task_id") and state.get("status") in {"running", "starting", "updating"}:
+                self.hub.tasks.cancel(lease["session_id"], reason="External observation supervision expired")
+        except Exception as error:
+            try:
+                self.hub.store.memory(lease["session_id"]).append("robot_activity", {
+                    "source": "host", "type": "supervision_stop_unconfirmed", "ok": False,
+                    "instance_id": lease["epoch"], "task_id": lease.get("task_id"),
+                    "message": "External supervision expired; stop could not be confirmed: " + type(error).__name__})
+            except Exception:
+                pass
 
     def shutdown(self):
         self._stop.set()

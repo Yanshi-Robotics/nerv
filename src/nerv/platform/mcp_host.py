@@ -74,7 +74,7 @@ class HostBridge:
         if current.get("stopped") or current.get("instance_id") != self.host["instance_id"]:
             raise ValueError("NERV Host changed; reconnect and inspect the project before continuing")
         try:
-            response = await self.client.post("/api/agent/invoke", json={"operation": operation, "arguments": arguments, "brain_instance_id": self.brain_id},
+            response = await self.client.post("/api/agent/invoke", json={"operation": operation, "arguments": arguments, "brain_instance_id": self.brain_id, "transport_id": getattr(self, "transport_id", None)},
                 headers={"Authorization": "Bearer " + self.token, "X-Nerv-Host-Instance": self.host["instance_id"]})
         except httpx.HTTPError:
             raise ValueError("NERV Host is unavailable; request outcome may be unknown. Inspect task state before retrying.") from None
@@ -86,6 +86,18 @@ class HostBridge:
             detail = response.json().get("detail", "NERV rejected the request")
             raise ValueError(detail if isinstance(detail, str) else "NERV rejected invalid request arguments")
         return response.json()
+
+    async def transport(self, action):
+        response = await self.client.post('/api/agent/transport', json={
+            'action':action, 'brain_instance_id':self.brain_id,
+            'transport_id':getattr(self, 'transport_id', None)}, headers={
+            'Authorization':'Bearer ' + self.token, 'X-Nerv-Host-Instance':self.host['instance_id']})
+        if response.status_code != 200:
+            raise ValueError('MCP connection is unavailable or already attached; inspect Brain control')
+        value=response.json()
+        self.transport_id=value['transport_id']
+        self.brain_id=value['brain_instance_id']
+        return value
 
     async def close(self):
         await self.client.aclose()
@@ -135,10 +147,34 @@ async def serve(channel="stable", client_id=None, brain_id=None):
         except Exception:
             raise ValueError("NERV request failed; inspect its task state before retrying.") from None
 
+    heartbeat = None
+    connected = False
     try:
-        async with stdio_server() as (read_stream, write_stream):
-            await server.run(read_stream, write_stream, server.create_initialization_options())
+        connection = await bridge.transport('connect')
+        connected = True
+        async def keepalive():
+            while True:
+                await asyncio.sleep(connection['heartbeat_s'])
+                await bridge.transport('heartbeat')
+        async def protocol():
+            async with stdio_server() as (read_stream, write_stream):
+                await server.run(read_stream, write_stream, server.create_initialization_options())
+        heartbeat = asyncio.create_task(keepalive())
+        protocol_task = asyncio.create_task(protocol())
+        try:
+            done, _ = await asyncio.wait([heartbeat, protocol_task], return_when=asyncio.FIRST_COMPLETED)
+            for task in done:
+                task.result()
+        finally:
+            protocol_task.cancel()
+            heartbeat.cancel()
+            await asyncio.gather(protocol_task, heartbeat, return_exceptions=True)
     finally:
+        if connected:
+            try:
+                await bridge.transport('disconnect')
+            except (httpx.HTTPError, ValueError):
+                pass  # Host/Runtime deadlines still stop motion if transport is gone.
         await bridge.close()
 
 

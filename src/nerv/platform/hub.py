@@ -236,6 +236,9 @@ class Nerv:
                     project_id="", run_id="", project_revision=0) -> dict:
         if brain == "operator" and not operator_workspace:
             raise ValueError("Select a configured chat model; use the operator workspace for device operations")
+        if body and any(s.world_instance_id and s.world == s.world_instance_id
+                        and s.status == op.SESSION_ACTIVE for s in self.store.all()):
+            raise ValueError("Use the allocated Brain in the active shared World")
         if body:
             from .robot_tasks import ACTIVE
             for previous in self.store.all():
@@ -458,9 +461,17 @@ class Nerv:
             self.store.set_armed(s.id, False)
             return False
         wc = self.world_client(s.world, s.body)
+        shared = bool(s.world_instance_id and s.world == s.world_instance_id)
         if wc is None:
-            return True
+            if shared:
+                self.store.set_status(s.id, op.SESSION_RECONNECT)
+                self.store.set_armed(s.id, False)
+            return not shared
         now = wc.epoch()
+        if shared and not now:
+            self.store.set_status(s.id, op.SESSION_RECONNECT)
+            self.store.set_armed(s.id, False)
+            return False
         if s.epoch and now and now != s.epoch:
             self.store.set_status(s.id, op.SESSION_RECONNECT)
             self.store.set_armed(s.id, False)
@@ -570,7 +581,7 @@ class Nerv:
             if event.get("type") in (op.EV_TOOL_CALL, op.EV_TOOL_RESULT, op.EV_PROGRESS):
                 self.store.memory(sid).append("robot_activity", {
                     "instance_id": s.epoch, "task_id": None, "execution_id": getattr(token, "control_token", None),
-                    "version": None, "source": "system1", "type": event["type"],
+                    "version": None, "source": "system1", "requested_by": "operator", "type": event["type"],
                     "name": event.get("name"), "ok": event.get("ok"),
                     "text": event.get("message") or event.get("name", "")})
             q.put(event)

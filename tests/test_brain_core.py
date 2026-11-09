@@ -74,3 +74,58 @@ def test_shared_composition_requires_reserved_revisions(integrated):  # noqa: F8
             f.projects.worlds.configure(slots)
     finally:
         core.shutdown()
+
+
+def test_transport_expiry_and_reconnect_never_restore_motion(integrated):  # noqa: F811
+    import time
+    f = integrated
+    core = BrainCore(f.hub, f.projects, f.gw.root)
+    try:
+        pair = core.create('Bound', [f.project['id']], ['observe', 'control'])
+        bid = core.reserve(f.project['id'], pair['connection']['id'])['brain_instance_id']
+        core.invoke(pair['token'], 'run_start', {'project_id':f.project['id'], 'request_id':'run'}, bid)
+        first = core.transport(pair['token'], 'connect', bid)
+        with pytest.raises(ValueError, match='live MCP'):
+            core.transport(pair['token'], 'connect', bid)
+        core.set_control(f.project['id'], accepting=True, owner_id=pair['connection']['id'])
+        core._transports[bid]['deadline'] = time.monotonic() - 1
+        core.check_expired()
+        assert not core.control(f.project['id'])['accepting']
+        f.hub.stop_robot.assert_called()
+        replacement = core.transport(pair['token'], 'connect', bid)
+        assert replacement['transport_id'] != first['transport_id']
+        assert not core.control(f.project['id'])['accepting']
+        with pytest.raises(ValueError, match='generation'):
+            core.transport(pair['token'], 'heartbeat', bid, first['transport_id'])
+        assert core.invoke(pair['token'], 'brain_get', {}, bid, replacement['transport_id'])['brain_instance_id'] == bid
+        f.robot.invoke.assert_not_called()
+    finally:
+        core.shutdown()
+
+
+def test_retry_keeps_original_control_generation(integrated):  # noqa: F811
+    f = integrated
+    core = BrainCore(f.hub, f.projects, f.gw.root)
+    try:
+        pair=core.create('Bound', [f.project['id']], ['observe','control'])
+        bid=core.reserve(f.project['id'],pair['connection']['id'])['brain_instance_id']
+        args={'project_id':f.project['id'],'request_id':'once'}
+        first=core.invoke(pair['token'],'run_start',args,bid)
+        core.set_control(f.project['id'],accepting=True,owner_id=pair['connection']['id'])
+        assert core.control(f.project['id'])['control_generation'] > first['control_generation']
+        assert core.invoke(pair['token'],'run_start',args,bid) == first
+    finally:
+        core.shutdown()
+
+
+def test_scene_revision_covers_geometry_and_ignores_private_rules(tmp_path):
+    from types import SimpleNamespace
+    from nerv.brain_core.worlds import source_revision
+    (tmp_path/'scene.xml').write_text('<mujoco/>')
+    (tmp_path/'mesh.obj').write_text('v 0 0 0')
+    spec=SimpleNamespace(assets_root=str(tmp_path))
+    first=source_revision(spec)
+    (tmp_path/'AGENTS.md').write_text('Private rule')
+    assert source_revision(spec)==first
+    (tmp_path/'mesh.obj').write_text('v 1 0 0')
+    assert source_revision(spec)!=first

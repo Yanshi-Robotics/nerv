@@ -28,6 +28,8 @@ def validate(directory, storage, tools, env, log, *, smoke=False):
     uv = Path(tools['python']).parent / ('uv.exe' if os.name == 'nt' else 'uv')
     env = dict(env, PYTHONDONTWRITEBYTECODE='1', CUDA_VISIBLE_DEVICES='-1',
                NERV_HOME=str(directory / 'validation-home'), NERV_STORAGE_HOME=str(directory / 'validation-home'))
+    if os.environ.get('NERV_NODE_PORTS'):
+        env['NERV_NODE_PORTS'] = os.environ['NERV_NODE_PORTS']
     if sys.platform == 'linux':
         env.update(MUJOCO_GL='egl', LIBGL_ALWAYS_SOFTWARE='1')
     state = {'state': 'running', 'checks': [], 'hardware': 'not_tested'}
