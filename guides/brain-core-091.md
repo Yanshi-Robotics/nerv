@@ -32,7 +32,7 @@ CPU development probes executed fourteen concurrent forward/turn actions across 
 
 G1 requests below 0.5 m are rejected before motion because smaller scales have not been qualified. Approach speed remains within the existing policy command range. Results retain actual displacement, requested target, target error, obstruction, fall, timeout and stop confirmation. `travel_threshold_crossed` is a local control condition; `target_reached=null` does not claim arrival without a qualified tolerance or independent task evaluator.
 
-Waiting for an external Agent expires an old observation without inventing acknowledgement or cancelling an idle external task. Motion remains subject to Runtime deadlines. The final versioned observation-age/execution timing qualification and installed-candidate navigation trials remain outstanding.
+Waiting for an external Agent expires an old observation without inventing acknowledgement or cancelling an idle external task. Motion remains subject to Runtime deadlines. The G1 apt CPU contract `g1-apt-cpu-mcp-091-1` allows 40 seconds from image acquisition to explicit acknowledgement and retains a separate 20-second motion-supervision deadline. Six independent MCP image-processing probes measured 11.08–19.96 seconds from acquisition to acknowledgement; the age bound is twice the measured maximum, rounded upward to 5 seconds. This is scoped to apt simulation. Installed-candidate navigation and deadline fault trials remain outstanding.
 
 ## Migration and recovery
 

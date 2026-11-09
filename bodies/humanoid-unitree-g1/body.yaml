@@ -51,8 +51,10 @@ buses:
   sim:
     settings:
       external_supervision:
+        version: g1-apt-cpu-mcp-091-1
+        scenes: [apt]
         timeout_s: 20
-        max_observation_age_s: 2
+        max_observation_age_s: 40  # six MCP visual-processing samples; twice observed maximum, rounded up to 5 s
         poll_s: 0.05
       skill_transitions:
         version: g1-apt-cpu-091-1

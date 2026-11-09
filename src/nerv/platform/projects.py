@@ -354,10 +354,14 @@ class ProjectService:
                 for key in ("brain_instance_id", "robot_instance_id", "world_instance_id"):
                     setattr(bound_session, key, run.get(key, ""))
                 bound_session.robot_profile = project["robot"]
+                bound_session.binding_generation = run.get("binding_generation", 0)
+                bound_session.world_generation = run.get("world_generation", 0)
                 self.hub.store.save(bound_session)
                 handle = self.hub.launcher.nodes.get('body:' + bound_session.body)
                 run.update(session_id=session["id"], status="running", world_epoch=bound_session.epoch,
                            robot_epoch=handle.meta.get('epoch', '') if handle else '')
+                bound_session.robot_epoch = run["robot_epoch"]
+                self.hub.store.save(bound_session)
                 self.store.save_run(project_id, run)
                 if project["scheme"]:
                     self.hub.tasks.select_scheme(session["id"], project["scheme"], scheme.revision)

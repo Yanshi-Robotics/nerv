@@ -55,7 +55,9 @@ class RobotTasks:
     def _save(self, sid, **fields):
         with self._lock:
             session = self.hub.store.get(sid)
-            identity = {key: getattr(session, key, "") for key in ("brain_instance_id", "robot_instance_id", "world_instance_id", "run_id")}
+            identity = {key: getattr(session, key, "") for key in ("brain_instance_id", "robot_instance_id", "world_instance_id", "run_id", "binding_generation", "world_generation", "robot_epoch")}
+            identity["world_epoch"] = session.epoch
+            identity["control_generation"] = fields.get("supervisor", self._jobs.get(sid, {}).get("supervisor", {})).get("control_generation")
             state = {**self._jobs.get(sid, {}), **fields, **identity, "updated_at": time.time()}
             # Durable before it becomes visible or may authorize an action.
             self.hub.store.memory(sid).append("robot_task", state)
@@ -71,7 +73,8 @@ class RobotTasks:
             kind = event.get("type", "")
             source = "system2" if kind in ("thinking", "reply", "perception", "start", "model_phase", "model_error") else "system1"
             # No image payloads or provider reasoning are sent to activity bubbles.
-            payload = {"task_id": task_id, "version": version,
+            payload = {**{key:state.get(key) for key in ("brain_instance_id","run_id","robot_instance_id","world_instance_id","binding_generation","world_generation","control_generation","robot_epoch","world_epoch")},
+                       "task_id": task_id, "version": version,
                        "instance_id": state["instance_id"], "source": source,
                        "execution_id": event.get("execution_id"), "type": kind, "text": event.get("text") or event.get("message", ""),
                        "name": event.get("name", ""), "ok": False if kind == "model_error" else event.get("ok"),

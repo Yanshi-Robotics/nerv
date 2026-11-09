@@ -69,6 +69,26 @@ class RobotView(WorldSim):
         self.epoch = owner.epoch
         self.instance_receipt = owner.receipt
 
+    def operator_geometry(self):
+        """Ground truth for independent scoring; never part of a sensor response."""
+        with self._lock:
+            selected = []
+            for gid in range(self.model.ngeom):
+                body = int(self.model.geom_bodyid[gid])
+                while body and body != self.base_body:
+                    body = int(self.model.body_parentid[body])
+                if body != self.base_body or not (self.model.geom_contype[gid] or self.model.geom_conaffinity[gid]):
+                    continue
+                selected.append(gid)
+            boxes = self.owner.geometry_boxes(selected)
+            bounds = np.array([box['bounds'] for box in boxes])
+            return {'robot_instance_id':self.robot_instance_id, 'world_instance_id':self.owner.world_instance_id,
+                    'epoch':self.epoch, 'sim_time':float(self.data.time),
+                    'bounds':[bounds[:,0,:].min(axis=0).tolist(), bounds[:,1,:].max(axis=0).tolist()],
+                    'joint_velocity':self.data.qvel[self.dadr].tolist(),
+                    'base_velocity':self.data.qvel[self.free_dadr:self.free_dadr+6].tolist(),
+                    'status':self.status()}
+
     def start(self):
         raise ValueError('Only the shared World advances physics')
 
@@ -154,6 +174,21 @@ class SharedWorld:
         self.running = False
         self.error = None
         self.thread = None
+
+    def geometry_boxes(self, indices=None):
+        """Conservative world-space collision AABBs, operator diagnostics only."""
+        boxes=[]
+        with self.lock:
+            for gid in range(self.model.ngeom) if indices is None else indices:
+                if not (self.model.geom_contype[gid] or self.model.geom_conaffinity[gid]):
+                    continue
+                rotation=self.data.geom_xmat[gid].reshape(3,3)
+                center=self.data.geom_xpos[gid]+rotation @ self.model.geom_aabb[gid,:3]
+                extent=np.abs(rotation) @ self.model.geom_aabb[gid,3:]
+                boxes.append({'name':mujoco.mj_id2name(self.model,mujoco.mjtObj.mjOBJ_GEOM,gid),
+                              'body_id':int(self.model.geom_bodyid[gid]),
+                              'bounds':[(center-extent).tolist(),(center+extent).tolist()]})
+        return boxes
 
     def view(self, robot_instance_id):
         if robot_instance_id not in self.views:

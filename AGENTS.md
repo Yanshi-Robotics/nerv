@@ -160,3 +160,18 @@ and stopping envelope are verified; loading ONNX or MJCF alone is not validation
 
 0.9.0 is a local candidate in this development round. Do not push, deploy, tag or
 replace the stable installation without new explicit release authorization.
+
+## 0.9.1 Brain Core boundary
+
+The 0.9.1 architecture supersedes historical internal-Agent descriptions above.
+`nerv.brain_core` contains no model provider, prompting, conversation loop or context
+compaction. External Agents own high-level decisions; Runtime owns policy inference
+and local supervision. Old brain/harness/vlm source remains archival and is excluded
+from the product package. Model/key/chat endpoints are retired.
+
+A Project still controls one robot. A Brain pins one Run, client and robot instance;
+operator-configured shared Worlds own frozen rosters and one physics clock. MCP
+connections cannot reset a shared World or inherit motion authority on reconnect.
+Use the existing Project/Run/Task journal. Operator truth and scoring never enter
+Agent observations. CPU development tests, fixed-candidate checks, independent Agent
+trials and physical acceptance are separate evidence states.

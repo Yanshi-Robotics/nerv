@@ -62,7 +62,9 @@ OPERATIONS = {
 CONTROL_OPERATIONS = frozenset({"run_start", "run_end", "task_start", "task_update", "task_cancel", "action"})
 IDEMPOTENT_OPERATIONS = CONTROL_OPERATIONS | {"activity"}
 EVENT_FIELDS = frozenset({"type", "text", "message", "ok", "status", "outcome", "task_id", "version", "instance_id",
-                          "execution_id", "end_reason", "source", "client_id", "client_name", "supervisor"})
+                          "execution_id", "end_reason", "source", "client_id", "client_name", "supervisor",
+                          "brain_instance_id", "run_id", "robot_instance_id", "world_instance_id",
+                          "binding_generation", "world_generation", "control_generation", "robot_epoch", "world_epoch"})
 
 
 class AgentGateway:
@@ -285,6 +287,8 @@ class AgentGateway:
             self.hub.store.memory(session.id).append("external_agent_activity", {
                 "source": "external_agent", "client_id": record["id"], "client_name": record["name"],
                 "instance_id": session.epoch,
+                **{key:getattr(session,key, None) for key in ("brain_instance_id","run_id","robot_instance_id","world_instance_id","binding_generation","world_generation","robot_epoch")},
+                "world_epoch":session.epoch, "control_generation":self.control(pid).get("control_generation"),
                 "type": "command_request", "text": args.get("goal") or args.get("action") or operation,
                 "operation": operation, "request_id": args["request_id"]})
         if operation == "capabilities":
@@ -383,7 +387,8 @@ class AgentGateway:
         if operation == "task_start":
             result = self.hub.tasks.start(session.id, args["goal"], args.get("constraints", ""),
                                           current=lambda: self._still_current(record, pid, lease),
-                                          supervisor={"kind": "external_agent", "client_id": record["id"]})
+                                          supervisor={"kind": "external_agent", "client_id": record["id"],
+                                                      "control_generation":lease["control_generation"]})
             if result.get("ok"):
                 with self._lock:
                     latest = self._leases.get(pid, {})
@@ -442,6 +447,7 @@ class AgentGateway:
                 if data.get("type") in {"thinking", "model_phase", "reply"}:
                     continue  # Never forward model reasoning or private conversation.
                 events.append({"seq": row["seq"], "time": row["time"], "kind": row["kind"],
+                               "control_generation":data.get("control_generation"),
                                **{k: v for k, v in data.items() if k in EVENT_FIELDS}})
                 if len(events) >= args.get("limit", 50):
                     break

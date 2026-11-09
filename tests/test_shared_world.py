@@ -62,3 +62,14 @@ def test_other_robot_is_visible_to_physical_rays(world):
     assert hit == pytest.approx(1.8)
     # Own body is excluded, including children, without excluding another robot.
     assert a._ray(np.array([0., 0., 1.]), np.array([-1., 0., 0.])) == -1
+
+
+def test_operator_geometry_is_separate_from_sensor_bus(world):
+    a,b=world.view('A'),world.view('B')
+    attach(a)
+    attach(b)
+    world.step()
+    ga,gb=a.operator_geometry(),b.operator_geometry()
+    assert ga['bounds'][1][0] < gb['bounds'][0][0]
+    assert ga['robot_instance_id']=='A' and gb['robot_instance_id']=='B'
+    assert 'bounds' not in a.read() and 'status' not in a.read()

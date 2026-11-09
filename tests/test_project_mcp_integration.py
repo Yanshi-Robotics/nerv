@@ -139,7 +139,7 @@ def test_selected_fixed_scheme_persists_without_mutating_run_snapshot(integrated
     acknowledge(f)
     task = call(f, "task_start", request_id="act-task", goal="Run fixture ACT")["data"]
     assert f.invoked.wait(2)
-    assert task["supervisor"] == {"kind": "external_agent", "client_id": f.pair["connection"]["id"]}
+    assert task["supervisor"] == {"kind": "external_agent", "client_id": f.pair["connection"]["id"], "control_generation": f.gw.control(f.project["id"])["control_generation"]}
     with pytest.raises(ValueError, match="acknowledged Agent observations"):
         f.hub.tasks.allow_operator_supervision(session.id)
     assert call(f, "task_cancel", request_id="stop-act")["ok"]

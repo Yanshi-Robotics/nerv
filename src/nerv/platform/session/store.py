@@ -60,6 +60,9 @@ class Session:
     world_instance_id: str = ""
     robot_instance_id: str = ""
     brain_instance_id: str = ""
+    binding_generation: int = 0
+    world_generation: int = 0
+    robot_epoch: str = ""
 
     def summary(self) -> dict:
         return {"id": self.id, "brain": self.brain, "body": self.body, "world": self.world,

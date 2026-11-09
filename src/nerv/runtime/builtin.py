@@ -50,6 +50,9 @@ class BuiltinRuntime:
     def external_supervision_config(self):
         if not self._supervision_config:
             return {"validated": False, "reason": "No simulation supervision profile"}
+        scenes = self._supervision_config.get('scenes')
+        if scenes and self.binding.configuration.get('scene_profile') not in scenes:
+            return {"validated": False, "reason": "Observation timing is not qualified for this scene"}
         return {**self._supervision_config, "validated": True, "scope": "simulation-software"}
 
     def skill_transition_config(self):
@@ -85,7 +88,7 @@ class BuiltinRuntime:
 
     def supervise(self, frame_seq):
         with self._supervision_lock:
-            if not self._supervision_config or self._closed.is_set():
+            if not self.external_supervision_config().get('validated') or self._closed.is_set():
                 return {"ok": False, "message": "Simulation supervision unavailable"}
             acquired = self._frames.get(frame_seq) if type(frame_seq) is int else None
             if (acquired is None or frame_seq <= self._last_ack

@@ -40,6 +40,12 @@ def main():
         return {'world_instance_id': owner.world_instance_id, 'epoch': owner.epoch,
                 'robots': {key: view.status() for key, view in owner.views.items()}}
 
+    @app.get('/operator/geometry')
+    def geometry():
+        return {'world_instance_id':owner.world_instance_id, 'epoch':owner.epoch,
+                'robots':{rid:view.operator_geometry() for rid,view in owner.views.items()},
+                'collision_geometry':owner.geometry_boxes()}
+
     try:
         owner.start()
         for record in config['roster']:

@@ -45,3 +45,13 @@ def test_scene_and_confirmed_stop_are_required(tmp_path):
     value._last_skill_stopped = False
     assert not value.invoke('turn')['ok']
     assert calls == ['walk','turn']
+
+
+def test_observation_timing_qualification_is_scene_scoped(tmp_path):
+    value, _ = runtime(tmp_path)
+    value._supervision_config = {'version':'fixture-1', 'scenes':['fixture-scene'],
+                                'max_observation_age_s':40, 'timeout_s':20, 'poll_s':.05}
+    assert value.external_supervision_config()['validated']
+    value.binding.configuration['scene_profile'] = 'unqualified-scene'
+    assert not value.external_supervision_config()['validated']
+    assert not value.supervise(1)['ok']
