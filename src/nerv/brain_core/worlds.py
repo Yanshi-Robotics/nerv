@@ -1,4 +1,4 @@
-"""Operator-owned frozen World composition, separate from individual Run lifetimes."""
+"""Operator-owned World lifecycle and serialized membership transactions."""
 from concurrent.futures import ThreadPoolExecutor
 import hashlib
 import json
@@ -45,8 +45,8 @@ class WorldInstances:
         # No process resurrection or movement after Host recovery.
         for path in self.root.glob('world_*.json'):
             value = json.loads(path.read_text())
-            if value['status'] in {'preparing', 'ready'}:
-                value.update(status='interrupted', reason='Host restarted; create a new World')
+            if value['status'] in {'preparing', 'ready', 'changing'}:
+                value.update(status='interrupted', reason='Host restarted; operator restart required')
                 _write(path, value)
 
     def get(self, wid):
@@ -59,6 +59,120 @@ class WorldInstances:
         if run and run.get('shared_world'):
             return self.get(run['world_instance_id'])
         return None
+
+    def create(self, scene, robot_profile, *, topology_policy=None):
+        """Operator-created empty World. A profile selects the scene's template only."""
+        spec = self.hub.registry.world(scene)
+        body = self.hub.registry.body(robot_profile)
+        if spec.kind != 'sim' or body.name not in spec.supports:
+            raise ValueError('Select a compatible simulation scene and robot template')
+        policy = dict(topology_policy or {})
+        if set(policy) - {'allow_agent_changes', 'max_robots'}:
+            raise ValueError('Unknown World topology policy')
+        if type(policy.get('allow_agent_changes', False)) is not bool:
+            raise ValueError('Specify whether Agent topology requests are allowed')
+        if type(policy.get('max_robots', 2)) is not int or policy.get('max_robots', 2) < 1:
+            raise ValueError('World capacity must be a positive integer')
+        world = dict(world_instance_id='world_' + uuid.uuid4().hex, world=scene,
+                     robot_profile=robot_profile, status='configured', generation=1,
+                     topology_revision=1, roster=[], created_at=time.time(),
+                     source_revision=source_revision(spec), topology_policy=policy)
+        self.save(world)
+        return world
+
+    def list(self):
+        return [json.loads(path.read_text()) for path in sorted(self.root.glob('world_*.json'))]
+
+    def add_robot(self, resource, spawn):
+        """Allocate the physical entity before any Run is allowed to start."""
+        with self.lock:
+            world = self.get(resource['world_instance_id'])
+            if len(world['roster']) >= world.get('topology_policy', {}).get('max_robots', 2):
+                raise ValueError('World capacity exhausted')
+            if any(r['robot_instance_id'] == resource['robot_instance_id'] for r in world['roster']):
+                return world
+            world = self.prepare(world)
+            slot = dict(robot_instance_id=resource['robot_instance_id'], project_id=resource['project_id'],
+                        run_id=None, spawn=spawn)
+            body = self.hub.registry.body(world['robot_profile'])
+            result = self._change_topology(world, add=slot)
+            world.update(roster=world['roster'] + [slot], topology_revision=result['topology_revision'],
+                         generation=world['generation'] + 1, status='ready')
+            self.save(world)
+            self._sync_generation(world)
+            # Keep the committed entity discoverable even if Runtime preparation fails.
+            self.projects.resources.save(dict(resource, shared_world=True, status='preparing'))
+            try:
+                handle = self.hub.launcher.nodes[f"world:{world['world_instance_id']}/{resource['robot_instance_id']}"]
+                spec = self.hub.registry.world(world['world']).model_copy(update={'name':world['world_instance_id']})
+                runtime = self.hub.launcher.ensure_runtime(body.model_copy(update={'name':resource['robot_instance_id']}),
+                    'sim', spec, handle, scene_profile=world['world'])
+                self.projects.resources.save(dict(resource, shared_world=True, status='ready', runtime_epoch=runtime.meta.get('epoch')))
+            except Exception as error:
+                self.projects.resources.save(dict(resource, shared_world=True, status='failed', reason=str(error)))
+                world.update(status='recovery_required', reason='Entity committed but Runtime preparation failed; operator stop and restart required')
+                self.save(world)
+                raise
+            return world
+
+    def _change_topology(self, world, **change):
+        world['status'] = 'changing'
+        self.save(world)
+        try:
+            self._quiesce(world)
+            return self.hub.launcher.change_shared_world(world, **change)
+        except ValueError:
+            # Backend validation/rollback confirmed no structural commit.
+            world['status'] = 'ready'
+            self.save(world)
+            raise
+        except Exception:
+            world.update(status='recovery_required', reason='Topology outcome unknown; inspect World receipt')
+            self.save(world)
+            raise
+
+    def _sync_generation(self, world):
+        for slot in world['roster']:
+            run = self.projects.active_run(slot['project_id'])
+            if run:
+                run['world_generation'] = world['generation']
+                self.projects.store.save_run(run['project_id'], run)
+                if run.get('session_id'):
+                    session = self.hub.store.get(run['session_id'])
+                    session.world_generation = world['generation']
+                    self.hub.store.save(session)
+
+    def _quiesce(self, world):
+        for slot in world['roster']:
+            pid = slot['project_id']
+            core = getattr(self.projects, 'brain_core', None)
+            if core is not None:
+                with core._lock:
+                    core._invalidate_control(pid)
+            run = self.projects.active_run(pid)
+            if run and run.get('session_id'):
+                result = self.hub.tasks.cancel(run['session_id'], reason='World topology transaction')
+                if not result.get('ok'):
+                    raise ValueError('Execution stop unconfirmed; World topology unchanged')
+            client = self.hub.body_client(slot['robot_instance_id'])
+            result = client.hold('world_topology') if client else {}
+            if not result.get('stop_confirmed'):
+                raise ValueError('Physical stop unconfirmed; World topology unchanged')
+
+    def remove_robot(self, resource):
+        with self.lock:
+            world = self.get(resource['world_instance_id'])
+            if self.projects.active_run(resource['project_id']):
+                raise ValueError('End the robot Run before removing its entity')
+            result = self._change_topology(world, remove=resource['robot_instance_id'])
+            world.update(roster=[r for r in world['roster'] if r['robot_instance_id'] != resource['robot_instance_id']],
+                         topology_revision=result['topology_revision'], generation=world['generation'] + 1, status='ready')
+            self.save(world)
+            self._sync_generation(world)
+            self.hub.launcher.stop('body:' + resource['robot_instance_id'])
+            self.hub._bodies.pop(resource['robot_instance_id'], None)
+            self.projects.resources.save(dict(resource, status='removed', removed_at=time.time()))
+            return world
 
     def configure(self, slots):
         """Freeze already allocated Runs; only explicit operator API calls reach here."""
@@ -96,23 +210,30 @@ class WorldInstances:
                      'source_revision':source_revision(self.hub.registry.world(projects[0]['world']))}
             self.save(world)
             for run in runs:
+                if hasattr(self.projects, 'resources'):
+                    self.projects.resources.bind_world(run['project_id'], wid)
                 run.update(world_instance_id=wid, world_generation=world["generation"], shared_world=True)
                 self.projects.store.save_run(run['project_id'], run)
             return world
 
-    def prepare(self, world):
+    def prepare(self, world, *, restart=False):
         with self.lock:
             world = self.get(world['world_instance_id'])
             if world['status'] == 'ready':
                 return world
+            if world['status'] in {'interrupted', 'stopped'} and restart:
+                world.update(status='configured', generation=world['generation'] + 1,
+                             topology_revision=world.get('topology_revision', 1) + 1)
+                self.save(world)
             if world['status'] != 'configured':
-                raise ValueError('World is not startable; inspect its recorded failure')
+                raise ValueError('World is not startable; operator recovery is required')
             hub = self.hub
             spec = hub.registry.world(world['world'])
             body = hub.registry.body(world['robot_profile'])
             if source_revision(spec) != world['source_revision']:
                 raise ValueError('Scene inputs changed after World allocation; compose a new World')
             request = {'world_instance_id': world['world_instance_id'],
+                       'topology_revision': world.get('topology_revision', 1),
                        'arena': str(Path(spec.assets_root) / spec.supports[body.name]),
                        'physics': dict(spec.physics), 'source_revision':world['source_revision'],
                        'body_profile': {'actuators': body.actuators, 'dir': body.dir},
@@ -131,10 +252,17 @@ class WorldInstances:
                     runtimes.append(runtime)
                 # Preparation needs every bus to spawn before the shared clock advances.
                 # These are IO workers, not AI Agents or model calls.
-                with ThreadPoolExecutor(max_workers=len(runtimes)) as pool:
-                    list(pool.map(hub.launcher._prepare_runtime, runtimes))
+                if runtimes:
+                    with ThreadPoolExecutor(max_workers=len(runtimes)) as pool:
+                        list(pool.map(hub.launcher._prepare_runtime, runtimes))
                 world.update(status='ready', epoch=handle.meta['epoch'], receipt=handle.meta.get('configuration', {}))
                 self.save(world)
+                self._sync_generation(world)
+                resources = getattr(self.projects, 'resources', None)
+                if resources is not None:
+                    for slot in world['roster']:
+                        resource = resources.get(slot['robot_instance_id'])
+                        resources.save(dict(resource, status='ready'))
                 return world
             except Exception as error:
                 world.update(status='failed', reason=str(error))
@@ -217,6 +345,13 @@ class WorldInstances:
                     run.update(status='interrupted', reason='Shared World stopped by operator', ended_at=time.time())
                     self.projects.store.save_run(run['project_id'], run)
                 rid = slot['robot_instance_id']
+                resources = getattr(self.projects, 'resources', None)
+                if resources is not None:
+                    resources.save(dict(resources.get(rid), status='offline'))
+                core = getattr(self.projects, 'brain_core', None)
+                if core is not None:
+                    with core._lock:
+                        core._invalidate_control(slot['project_id'])
                 self.hub.launcher.stop('body:' + rid)
                 self.hub._bodies.pop(rid, None)
                 self.hub.launcher.nodes.pop(f'world:{wid}/{rid}', None)

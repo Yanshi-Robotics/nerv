@@ -70,6 +70,8 @@ DEFAULT_LOCOMOTION: dict = {
     "hold_settle_s": 1.5,          # emergency stop: let the gait come to a stand for at most this (sim s)
                                    # before latching the joints — freezing legs mid-stride topples a biped
                                    # (measured 2026-09-06: the g1-29dof-turn gait needs ~1.2 s to stop)
+    "hold_linear_m_s": 0.05,      # design stop bound; qualification is recorded separately
+    "hold_angular_rad_s": 0.1,  # includes whole-body rotation
     "hold_still_rad_s": 0.3,       # every joint must stay below this during the quiet interval
     "hold_still_s": 0.2,          # require a sustained quiet interval, not one gait turning point
                                    # (a standing G1 measures 0.02 rad/s; mid-stride 3–8 rad/s)
@@ -135,13 +137,19 @@ class PolicyRelease:
         self.name = str(rel.get("policy_id") or os.path.basename(path))
         self.joint_names: list[str] = list(c["joint_names"])
         self.default_pos = np.asarray(c["default_joint_pos"], np.float64)
-        self.scales: dict = dict(c["term_scales"])
+        self.scales: dict = dict(c.get("term_scales") or {
+            term['name']: 1.0 if term.get('scale') is None else term['scale']
+            for term in c.get('obs_terms', []) if isinstance(term, dict) and 'name' in term})
         self.action_scale = float(c["action"]["scale"])
         self.policy_dt = float(c["timing"]["policy_dt_s"])
         self.history = int(c.get("history_length", 1) or 1)
         declared_terms = c.get("obs_terms") or c.get("term_order") or []
-        terms = [t["term"] if isinstance(t, dict) else str(t) for t in declared_terms]
+        terms = [t.get("term", t.get("name")) if isinstance(t, dict) else str(t) for t in declared_terms]
         self.term_order: tuple[str, ...] = tuple(terms) or TERM_ORDER
+        if any(isinstance(t, dict) and t.get('history_length', self.history) != self.history for t in declared_terms):
+            raise ValueError('Mixed observation history lengths are not supported')
+        if set(self.scales) != set(self.term_order):
+            raise ValueError('Every observation term needs an explicit contract scale')
         unknown = [t for t in self.term_order if t not in TERM_ORDER]
         if unknown:
             raise ValueError(f"contract observation terms {unknown} are not ones this family assembles")
@@ -269,6 +277,8 @@ class VelocityPolicyBody:
         # would go limp instead). Entered by the operator or automatically on a fall — a gait
         # policy fed a fallen body's observation only thrashes, which is what the twitching was.
         self._hold_lock = threading.Lock()
+        self._stop_evidence = self._new_stop_evidence()
+        self._hold_revision = 0
         self._held = False
         self._hold_reason = ""
         self._hold_targets: list[float] = []
@@ -336,8 +346,20 @@ class VelocityPolicyBody:
                 st = self.bus.read()
             except Exception as e:
                 self._policy_error = f"{type(e).__name__}: {e}"
+                if hasattr(self, "_stop_evidence"):
+                    self._stop_evidence.invalidate()
                 time.sleep(p.policy_dt)
                 continue
+            topology = getattr(st, 'extra', {}).get('topology_revision')
+            if topology != getattr(self, '_topology_revision', None):
+                hist, prev_action = None, np.zeros(len(p.joint_names))
+                self._topology_revision = topology
+                if hasattr(self, '_stop_evidence'):
+                    self._stop_evidence.invalidate()
+                self.runner.stop.request()
+                self._set_command(0.0, 0.0, 0.0)
+            if hasattr(self, '_stop_evidence'):
+                self._stop_evidence.update(st, fallen=self._fallen(st))
             if last_t is not None and st.t < last_t:          # the world was reset: start over
                 hist, prev_action, last_t = None, np.zeros(len(p.joint_names)), None
                 self._yaw0 = None
@@ -363,10 +385,13 @@ class VelocityPolicyBody:
                 if self._quiet_hold_ready(st) or st.t >= deadline:
                     self._hold(reason, st)
             with self._hold_lock:
-                hold = list(self._hold_targets) if self._held else None
+                # A standing biped needs active balance. Freeze targets only
+                # after a fall; ordinary hold keeps the released zero-command gait.
+                hold = list(self._hold_targets) if self._held and self._fallen(st) else None
+                hold_revision = getattr(self, '_hold_revision', 0)
             if hold is not None:                                # holding: keep the pose, do not think
                 try:
-                    self.bus.write(BusCommand(targets=hold))
+                    self.bus.write(BusCommand(targets=hold, topology_revision=topology))
                 except Exception as e:
                     self._policy_error = f"{type(e).__name__}: {e}"
                 hist, prev_action = None, np.zeros(len(p.joint_names))   # a fresh start on release
@@ -383,9 +408,9 @@ class VelocityPolicyBody:
                 # A hold may latch while inference is outside this lock. The
                 # final actuator write must recheck the same hold state.
                 with self._hold_lock:
-                    if self._held:
+                    if getattr(self, '_hold_revision', 0) != hold_revision:
                         continue
-                    self.bus.write(BusCommand(targets=targets.tolist()))
+                    self.bus.write(BusCommand(targets=targets.tolist(), topology_revision=topology))
                     self._last_targets = targets.tolist()
                 self._policy_error = ""
             except Exception as e:
@@ -403,7 +428,26 @@ class VelocityPolicyBody:
             return False
         return self._tilt(st) > float(self.loco["fall_tilt_rad"]) or st.base_height < float(self.loco["fall_height_m"])
 
-    # ---- hold (emergency stop that keeps the pose) --------------------------------------------------------
+    # ---- hold (revoke locomotion while supervising balance) --------------------------------------------------------
+    def _new_stop_evidence(self):
+        from ..stopping import QuietWindow
+        return QuietWindow(joint_limit=float(self.loco['hold_still_rad_s']),
+            linear_limit=float(self.loco.get('hold_linear_m_s', DEFAULT_LOCOMOTION['hold_linear_m_s'])),
+            angular_limit=float(self.loco.get('hold_angular_rad_s', DEFAULT_LOCOMOTION['hold_angular_rad_s'])),
+            duration=float(self.loco['hold_still_s']), max_age=float(self.loco['sim_dead_wall_s']))
+
+    def _stop_snapshot(self):
+        value = self._stop_evidence.snapshot()
+        if self._hold_pending is not None:
+            value['stop_state'] = 'stopping'
+        return value
+
+    def _hold_receipt(self):
+        evidence = self._stop_evidence.snapshot() if hasattr(self, '_stop_evidence') else {
+            'stop_confirmed':False, 'stop_state':'stop_unconfirmed'}
+        return {'ok': bool(evidence['stop_confirmed']), 'accepted': True, 'held': self._held,
+                'reason': self._hold_reason, 'message': self._last, **evidence}
+
     def _quiet_hold_ready(self, st: BusState) -> bool:
         speeds = [abs(float(v)) for v in st.joint_vel]
         if (not speeds or not all(math.isfinite(v) for v in speeds)
@@ -415,29 +459,29 @@ class VelocityPolicyBody:
         return st.t - self._hold_still_since >= float(self.loco["hold_still_s"])
 
     def _hold(self, reason: str, st: BusState | None = None) -> dict:
-        """Latch the last commanded targets and stop the policy. Idempotent."""
+        """Revoke locomotion; keep active zero-command balance unless fallen."""
         self.runner.stop.request()                              # any running skill ends on its next tick
         self._set_command(0.0, 0.0, 0.0)
         with self._hold_lock:
             self._hold_pending = None
             self._hold_still_since = None
             if self._held:
-                return {"ok": True, "message": f"already holding the pose ({self._hold_reason})",
-                        "held": True, "reason": self._hold_reason}
+                return self._hold_receipt()
             if st is None:
                 st = self._state or self.bus.read()
             # Preserve the policy's gravity compensation offset. A measured pose
             # alone discards it. The quiet interval reduces settling drift but
             # does not prove static stability, especially on timeout or a fall.
+            self._hold_revision = getattr(self, '_hold_revision', 0) + 1
             self._hold_targets = [float(v) for v in (self._last_targets or st.joint_pos)]
             self._held, self._hold_reason = True, reason
             targets = list(self._hold_targets)
         try:
-            self.bus.write(BusCommand(targets=targets))           # do not wait for the loop's next tick
+            self.bus.write(BusCommand(targets=targets, topology_revision=getattr(st, 'extra', {}).get('topology_revision')))           # do not wait for the loop's next tick
         except Exception as e:
             self._policy_error = f"{type(e).__name__}: {e}"
-        self._last = "holding the pose" + (" after a fall" if reason == HOLD_FALLEN else " (emergency stop)")
-        return {"ok": True, "message": self._last, "held": True, "reason": reason}
+        self._last = "holding after a fall" if reason == HOLD_FALLEN else "motion revoked; supervising zero-command balance"
+        return self._hold_receipt()
 
     def _release(self, after_reset: bool = False) -> dict:
         with self._hold_lock:
@@ -446,14 +490,17 @@ class VelocityPolicyBody:
             if not self._held:
                 return {"ok": True, "message": "not holding", "held": False, "reason": ""}
             was = self._hold_reason
+            self._hold_revision = getattr(self, '_hold_revision', 0) + 1
             self._held, self._hold_reason, self._hold_targets = False, "", []
         self._last = "back at the spawn pose" if after_reset else f"released the hold ({was}); standing"
         return {"ok": True, "message": self._last, "held": False, "reason": ""}
 
     def hold(self, reason: str = HOLD_OPERATOR) -> dict:
-        """Emergency stop that keeps the pose. A walking biped is first told to stand (zero command,
-        the gait balances itself) and latched as soon as it is still; a fallen or idle body is
-        latched at once. Returns when the joints are latched."""
+        """Revoke locomotion and await sensor-based stopping.
+
+        Standing uses the existing zero-command balancing policy. A fallen body
+        retains joint targets. Acceptance and physical stop confirmation differ.
+        """
         reason = reason or HOLD_OPERATOR
         st = self._state
         if self._held or st is None or self._fallen(st) or self._sim_dead:
@@ -469,7 +516,7 @@ class VelocityPolicyBody:
             time.sleep(float(self.loco["poll_s"]))
         if not self._held:                                      # the loop never got there: latch anyway
             return self._hold(reason, self._state)
-        return {"ok": True, "message": self._last, "held": True, "reason": self._hold_reason}
+        return self._hold_receipt()
 
     def release(self) -> dict:
         st = self._state or self.bus.read()
@@ -532,15 +579,14 @@ class VelocityPolicyBody:
         """Confirm a quiet interval using the existing policy stopping contract."""
         start = self.bus.read()
         last_t, last_wall = start.t, time.perf_counter()
-        quiet_since = None
+        evidence = self._new_stop_evidence()
+        evidence.update(start, fallen=self._fallen(start))
         while True:
             state = self.bus.read()
             if self._fallen(state):
                 return False, state
-            speeds = [abs(float(value)) for value in state.joint_vel]
-            quiet = bool(speeds) and all(math.isfinite(value) for value in speeds) and max(speeds) <= float(self.loco['hold_still_rad_s'])
-            quiet_since = (state.t if quiet_since is None else quiet_since) if quiet else None
-            if quiet_since is not None and state.t - quiet_since >= float(self.loco['hold_still_s']):
+            quiet = evidence.update(state, fallen=self._fallen(state))
+            if quiet['stop_confirmed']:
                 return True, state
             if state.t-start.t >= float(self.loco.get('motion_settle_s', self.loco['hold_settle_s'])):
                 return False, state
@@ -749,7 +795,9 @@ class VelocityPolicyBody:
         state = {"clearance_m": self._clearances(), "front_cone_m": round(self._front_cone(), 2),
                  "fallen": self._fallen(st), "heading_deg": round(heading, 1),
                  "held": self._held, "hold_reason": self._hold_reason,
-                 "last_action": self._last, "t": round(st.t, 3)}
+                 "last_action": self._last, "t": round(st.t, 3),
+                 "topology_revision": st.extra.get('topology_revision'),
+                 "stop_evidence": self._stop_snapshot()}
         if self._policy_error:
             state["policy_error"] = self._policy_error
         images = []
@@ -808,6 +856,7 @@ class VelocityPolicyBody:
             cmd = self._cmd.tolist()
         return {"policy": self.policy.name, "pd_mode": self.pd_mode, "command": cmd,
                 "running_skill": self.runner.running, "last_action": self._last,
+                "stop_evidence": self._stop_snapshot(),
                 "held": self._held, "hold_reason": self._hold_reason,
                 "hold_pending": self._hold_pending is not None,
                 "sim_dead": self._sim_dead, "policy_error": self._policy_error,

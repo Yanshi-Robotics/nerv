@@ -12,6 +12,7 @@ import httpx
 from ..install_system import atomic_json
 from ..managed import channel_home, storage_root
 from ..brain_core.core import OPERATIONS
+from ..brain_core.discovery import DISCOVERY_OPERATIONS
 
 
 def publish_host(home, host, port):
@@ -85,7 +86,15 @@ class HostBridge:
         if response.status_code >= 300:
             detail = response.json().get("detail", "NERV rejected the request")
             raise ValueError(detail if isinstance(detail, str) else "NERV rejected invalid request arguments")
-        return response.json()
+        result = response.json()
+        if operation == 'brain_attach':
+            self.brain_id = result['brain_instance_id']
+            try:
+                await self.transport('connect')
+            except Exception:
+                self.brain_id = None
+                raise
+        return result
 
     async def transport(self, action):
         response = await self.client.post('/api/agent/transport', json={
@@ -118,7 +127,7 @@ def content_blocks(result):
 
 
 async def serve(channel="stable", client_id=None, brain_id=None):
-    from mcp.server import Server
+    from mcp.server import Server, NotificationOptions
     from mcp.server.stdio import stdio_server
     from mcp.types import Tool
     from jsonschema import validate
@@ -130,15 +139,19 @@ async def serve(channel="stable", client_id=None, brain_id=None):
     @server.list_tools()
     async def list_tools():
         return [Tool(name=name, description=description, inputSchema=schema)
-                for name, (description, schema) in OPERATIONS.items()]
+                for name, (description, schema) in (OPERATIONS if bridge.brain_id else DISCOVERY_OPERATIONS).items()]
 
     @server.call_tool()
     async def call_tool(name, arguments):
         try:
-            if name not in OPERATIONS:
-                raise ValueError("Unknown NERV operation")
-            validate(arguments or {}, OPERATIONS[name][1])
-            return content_blocks(await bridge.invoke(name, arguments or {}))
+            operations = OPERATIONS if bridge.brain_id else DISCOVERY_OPERATIONS
+            if name not in operations:
+                raise ValueError("Unknown NERV operation for this connection binding")
+            validate(arguments or {}, operations[name][1])
+            result = await bridge.invoke(name, arguments or {})
+            if name == 'brain_attach':
+                await server.request_context.session.send_tool_list_changed()
+            return content_blocks(result)
         except ValidationError:
             raise ValueError("Invalid NERV tool arguments") from None
         except (ValueError, PermissionError) as error:
@@ -158,7 +171,7 @@ async def serve(channel="stable", client_id=None, brain_id=None):
                 await bridge.transport('heartbeat')
         async def protocol():
             async with stdio_server() as (read_stream, write_stream):
-                await server.run(read_stream, write_stream, server.create_initialization_options())
+                await server.run(read_stream, write_stream, server.create_initialization_options(NotificationOptions(tools_changed=True)))
         heartbeat = asyncio.create_task(keepalive())
         protocol_task = asyncio.create_task(protocol())
         try:

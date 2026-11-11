@@ -271,6 +271,10 @@ class ProjectService:
         with self._lock, self.store.lock:
             current = self.store.get(project_id)
             values = dict(payload)
+            resource = self.resources.for_project(project_id) if hasattr(self, 'resources') else None
+            if resource and any(key in values and values[key] != current.get(key)
+                                for key in ('robot', 'world', 'mode', 'world_configuration')):
+                raise ValueError('Remove the allocated simulation entity or detach the device before changing its identity configuration')
             if {"scheme", "scheme_revision", "robot", "mode", "execution"} & values.keys():
                 if "scheme" in values and "scheme_revision" not in values:
                     values["scheme_revision"] = 0
@@ -283,10 +287,13 @@ class ProjectService:
 
     def get(self, project_id):
         value = self.store.get(project_id)
-        return {**value, "runs": self.store.runs(project_id), "active_run": self.active_run(project_id)}
+        return {**value, "runs": self.store.runs(project_id), "active_run": self.active_run(project_id),
+                "resource": self.resources.for_project(project_id) if hasattr(self, "resources") else None}
 
     def list(self):
-        return [{**p, "active_run": self.active_run(p["id"])} for p in self.store.list()]
+        return [{**p, "active_run": self.active_run(p["id"]),
+                 "resource": self.resources.for_project(p["id"]) if hasattr(self, "resources") else None}
+                for p in self.store.list()]
 
     def readiness(self, project_id):
         project = self.store.get(project_id)

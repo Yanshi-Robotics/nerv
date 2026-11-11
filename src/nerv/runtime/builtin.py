@@ -251,7 +251,11 @@ class BuiltinRuntime:
             self._last_ack = self._frame_seq
             self._supervision_deadline = None
             self._supervision_expired = False
-        return {"ok": True, "message": "Stop forwarded to the active simulation runner"}
+        if self._impl is None:
+            return {"ok": True, "accepted": True, "dispatch_revoked": True,
+                    "stop_confirmed": False, "stop_state": "offline"}
+        result = self._impl.hold(reason)
+        return {**result, "accepted": True, "dispatch_revoked": True}
 
     def hold(self, reason="operator"):
         if self._impl:
@@ -259,7 +263,13 @@ class BuiltinRuntime:
         return self._impl.hold(reason) if self._impl else {"ok": False, "held": False}
 
     def release(self):
-        return self._impl.release() if self._impl else {"ok": False}
+        stopped = bool(self._impl and self._impl.status().get('stop_evidence', {}).get('stop_confirmed'))
+        result = self._impl.release() if self._impl else {"ok": False}
+        if result.get('ok') and stopped:
+            # Recovery may clear an unconfirmed stop, never erase the prior skill
+            # and bypass the qualified transition contract.
+            self._last_skill_stopped = True
+        return result
 
     def close(self):
         self._closed.set()

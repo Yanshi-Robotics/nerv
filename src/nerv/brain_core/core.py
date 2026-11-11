@@ -1,4 +1,4 @@
-"""One authenticated Agent binding per Run. Existing journals own all task state."""
+"""Persistent robot/Brain identity with bounded execution in existing Run journals."""
 from __future__ import annotations
 
 from contextvars import ContextVar
@@ -7,9 +7,14 @@ import threading
 import time
 import uuid
 
-from ..platform.agent_gateway import AgentGateway, OPERATIONS, _object
+from ..platform.agent_gateway import AgentGateway, OPERATIONS, _object, IDENT
+from .discovery import Discovery, DISCOVERY_OPERATIONS
 
 OPERATIONS.setdefault("brain_get", ("Read this Brain binding, identity and recovery state.", _object()))
+OPERATIONS.setdefault('control_acquire', ('Request control under an existing operator grant after observing.',
+    _object({'project_id':IDENT, 'receipt_id':IDENT}, ['project_id','receipt_id'])))
+OPERATIONS.setdefault('control_release', ('Release owned control and stop execution.',
+    _object({'project_id':IDENT}, ['project_id'])))
 
 _request_run = ContextVar("nerv_brain_request_run", default=None)
 
@@ -20,13 +25,37 @@ class BrainCore(AgentGateway):
     def __init__(self, hub, projects, root=None):
         self._transports = {}
         self._binding_lock = threading.RLock()
+        self._robot_control_locks = {}
+        from .resources import RobotResources
+        self.resources = RobotResources(projects)
+        projects.resources = self.resources
+        projects.brain_core = self
         super().__init__(hub, projects, root)
+        self.discovery = Discovery(self)
+
+    def create(self, name, projects, permissions=None, world_grants=None):
+        grants = self.discovery.validate_grants(world_grants or [])
+        result = super().create(name, projects, permissions, allow_empty=bool(grants))
+        if grants:
+            import json
+            from ..platform.projects import _write
+            path = self._path(result['connection']['id'])
+            record = json.loads(path.read_text())
+            record['world_grants'] = grants
+            _write(path, record)
+        return result
 
     def _bindings(self):
-        for project in self.projects.store.list():
-            for run in self.projects.store.runs(project['id']):
-                if run.get('brain_instance_id'):
-                    yield project, run
+        for resource in self.resources.list():
+            if resource['status'] == 'removed':
+                continue
+            project = self.projects.store.get(resource['project_id'])
+            runs = self.projects.store.runs(project['id'])
+            run = next((r for r in runs if r.get('brain_instance_id') == resource['brain_instance_id']), None)
+            if run is None:
+                run = dict(resource, id=None, snapshot=project, status=resource['status'],
+                           project_revision=project['revision'], world_generation=(self.projects.worlds.get(resource['world_instance_id'])['generation'] if resource['shared_world'] else 1), session_id='')
+            yield project, run
 
     def reserve(self, project_id, client_id):
         """Operator-only; reserve identity without creating devices or motion authority."""
@@ -45,10 +74,19 @@ class BrainCore(AgentGateway):
                 run = {'id': 'r_' + uuid.uuid4().hex, 'project_id': project_id,
                        'project_revision': project['revision'], 'snapshot': project,
                        'status': 'reserved', 'session_id': '', 'created_at': time.time()}
-            run.update(brain_instance_id='brain_' + uuid.uuid4().hex,
-                       robot_instance_id='robot_' + uuid.uuid4().hex,
-                       world_instance_id=project.get('world_instance_id') or 'world_' + uuid.uuid4().hex,
-                       binding_generation=1, world_generation=1, client_id=client_id)
+            resource = self.resources.reserve(project, client_id)
+            run.update({key: resource[key] for key in (
+                'brain_instance_id', 'robot_instance_id', 'world_instance_id',
+                'binding_generation', 'client_id', 'shared_world')})
+            if resource['shared_world']:
+                world = self.projects.worlds.get(resource['world_instance_id'])
+                run['world_generation'] = world['generation']
+                for slot in world['roster']:
+                    if slot['robot_instance_id'] == resource['robot_instance_id']:
+                        slot['run_id'] = run['id']
+                self.projects.worlds.save(world)
+            else:
+                run['world_generation'] = 1
             self.projects.store.save_run(project_id, run)
             return self.describe(run)
 
@@ -59,37 +97,42 @@ class BrainCore(AgentGateway):
         control = self.control(run['project_id']) if active and active['id'] == run['id'] else {'accepting':False, 'owner_id':None}
         return {**identity, 'project_id': run['project_id'], 'client_id': run.get('client_id'),
                 'status': run['status'], 'control': control,
+                'resource_status': (self.resources.for_project(run['project_id']) or {}).get('status', 'offline'),
                 'recovery': 'Read current state and fresh observations; motion never resumes automatically.'}
 
     def resolve_binding(self, client_id, brain_id=None):
+        import json
+        record = json.loads(self._path(client_id).read_text())
         matches = [(project, run) for project, run in self._bindings()
-                   if run.get('client_id') == client_id
-                   and (run.get('brain_instance_id') == brain_id if brain_id else
-                        run['status'] in {'reserved', 'starting', 'running', 'stopping', 'stop_unconfirmed'})]
+                   if project['id'] in record['projects']
+                   and (run.get('brain_instance_id') == brain_id if brain_id else True)]
         if len(matches) != 1:
             raise ValueError('Select one operator-bound Brain instance with --brain')
         return matches[0]
 
     def set_control(self, project_id, *, accepting, owner_id=None):
-        if accepting:
-            run = self.projects.active_run(project_id)
-            if not run or run.get('client_id') != owner_id:
-                raise ValueError('Control must belong to the Agent fixed to this Run')
-        return super().set_control(project_id, accepting=accepting, owner_id=owner_id)
+        with self._robot_control_locks.setdefault(project_id, threading.RLock()):
+            return super().set_control(project_id, accepting=accepting, owner_id=owner_id)
 
     def transport(self, token, action, brain_id=None, transport_id=None):
         """Transport liveness is separate from observing or acknowledging images."""
         from .. import config
         record = self._authenticate(token)
+        if brain_id is None and record.get('world_grants'):
+            if action not in {'connect', 'heartbeat', 'disconnect'}:
+                raise ValueError('Unknown transport operation')
+            return {'transport_id':'bootstrap', 'brain_instance_id':None,
+                    'heartbeat_s':config.NODE_LIVENESS_TIMEOUT / 3, 'motion_authorized':False}
         project, run = self.resolve_binding(record['id'], brain_id)
         bid = run['brain_instance_id']
+        transport_key = bid + ':' + record['id']
         with self._binding_lock:
-            previous = self._transports.get(bid)
+            previous = self._transports.get(transport_key)
             if action == 'connect':
                 if previous and time.monotonic() < previous['deadline']:
                     raise ValueError('This Brain already has a live MCP connection')
                 tid = uuid.uuid4().hex
-                self._transports[bid] = {'id': tid, 'project_id': project['id'], 'run_id':run['id'],
+                self._transports[transport_key] = {'id': tid, 'project_id': project['id'], 'run_id':run['id'], 'client_id':record['id'],
                                          'deadline': time.monotonic() + config.NODE_LIVENESS_TIMEOUT}
             elif action in {'heartbeat', 'disconnect'}:
                 if not previous or previous['id'] != transport_id:
@@ -100,10 +143,10 @@ class BrainCore(AgentGateway):
                         raise ValueError('MCP connection expired; reconnect read-only')
                     previous['deadline'] = time.monotonic() + config.NODE_LIVENESS_TIMEOUT
                 else:
-                    self._transports.pop(bid, None)
+                    self._transports.pop(transport_key, None)
             else:
                 raise ValueError('Unknown transport operation')
-        if action in {'connect', 'disconnect'}:
+        if action in {'connect', 'disconnect'} and self.control(project['id']).get('owner_id') == record['id']:
             # A fresh transport has no inherited movement authority. Stop only its
             # active Run, never a replacement Run or another robot.
             with self._lock:
@@ -128,6 +171,8 @@ class BrainCore(AgentGateway):
         def stop_expired(item):
             _, value = item
             pid = value['project_id']
+            if self.control(pid).get('owner_id') != value['client_id']:
+                return
             with self._lock:
                 self._invalidate_control(pid)
             run = self.projects.active_run(pid)
@@ -141,13 +186,19 @@ class BrainCore(AgentGateway):
     def invoke(self, token, operation, args, brain_id=None, transport_id=None):
         record = self._authenticate(token)
         from jsonschema import validate
+        if operation in DISCOVERY_OPERATIONS:
+            validate(args, DISCOVERY_OPERATIONS[operation][1])
+            if brain_id is not None:
+                raise PermissionError('Resource management requires the unbound bootstrap connection')
+            return self.discovery.invoke(record, operation, args)
         if operation not in OPERATIONS:
             raise ValueError("Unknown external Agent operation")
         validate(args, OPERATIONS[operation][1])
         project, run = self.resolve_binding(record['id'], brain_id)
         with self._binding_lock:
-            transport = self._transports.get(run['brain_instance_id'])
-            if transport and (transport['id'] != transport_id or time.monotonic() >= transport['deadline']):
+            transport = self._transports.get(run['brain_instance_id'] + ':' + record['id'])
+            if ((transport_id is not None and transport is None)
+                    or (transport and (transport['id'] != transport_id or time.monotonic() >= transport['deadline']))):
                 raise PermissionError('MCP connection generation expired or changed')
         identity = self.describe(run)
         if operation == 'brain_get':
@@ -162,12 +213,26 @@ class BrainCore(AgentGateway):
         if args.get('project_id', project['id']) != project['id']:
             raise PermissionError('Project is outside this Brain binding')
         args['project_id'] = project['id']
+        if operation in {'control_acquire', 'control_release'}:
+            return self._agent_control(record, project['id'], operation, args)
         active = self.projects.active_run(project['id'])
-        if not active or active['id'] != run['id']:
-            if operation not in {'project_get', 'events', 'task_status'}:
+        if (not active or active['id'] != run['id']) and operation != 'run_start':
+            if operation not in {'project_get', 'events', 'task_status', 'capabilities', 'observe'}:
                 raise ValueError('This Brain Run has ended; no request will be replayed')
             if operation == 'project_get':
                 return {'project': project, **identity}
+            if operation in {'capabilities', 'observe'}:
+                robot = self.hub.body_client(run['robot_instance_id'])
+                if robot is None:
+                    return {'connected':False, 'actions':[], **identity}
+                if operation == 'capabilities':
+                    caps = robot.capabilities()
+                    return {'actions':[dict(name=a.name, description=a.description, parameters=a.parameters, kind=a.kind) for a in caps.operations],
+                            'sensors':caps.sensors, 'motion_authorized':False, **identity}
+                import base64
+                observed = robot.perceive()
+                return {'state':observed.state, 'motion_authorized':False,
+                        'images':[dict(name=i['name'], mimeType='image/png', data=base64.b64encode(i['png']).decode()) for i in observed.images if i.get('png')], **identity}
             if not run.get('session_id'):
                 return {'task': None, 'events': [], **identity}
             if operation == 'task_status':
@@ -182,17 +247,68 @@ class BrainCore(AgentGateway):
         finally:
             _request_run.reset(context)
 
+    def _agent_control(self, record, pid, operation, args):
+        with self._robot_control_locks.setdefault(pid, threading.RLock()):
+            return self._agent_control_locked(record, pid, operation, args)
+
+    def _agent_control_locked(self, record, pid, operation, args):
+        resource = self.resources.for_project(pid)
+        if operation == 'control_release':
+            self._owns(record, pid, allow_paused=True)
+            return self.set_control(pid, accepting=False)
+        if not resource or resource['mode'] != 'sim' or not resource.get('allow_control'):
+            raise PermissionError('Operator has not granted autonomous control acquisition')
+        if self.projects.worlds.get(resource['world_instance_id'])['status'] != 'ready':
+            raise ValueError('World is unavailable or changing')
+        if 'control' not in record['permissions']:
+            raise PermissionError('This connection has observation permission only')
+        current = self.control(pid)
+        if current.get('owner_id') not in (None, record['id']):
+            raise PermissionError('Another Agent owns this robot')
+        session = self.projects.require_session(pid)
+        robot, contract = self._supervision_contract(session)
+        receipt = self._receipts.get((record['id'], pid))
+        if (not receipt or receipt['id'] != args['receipt_id'] or receipt['epoch'] != session.epoch
+                or time.monotonic() - receipt['delivered_mono'] > contract['max_observation_age_s']
+                or (robot.health() or {}).get('epoch') != receipt['body_epoch']):
+            raise ValueError('Observe this robot before acquiring control')
+        if current.get('accepting') and current.get('owner_id') == record['id']:
+            return {'ok':True, **current}
+        result = self.set_control(pid, accepting=True, owner_id=record['id'])
+        if result.get('ok'):
+            # Grant covers release from a confirmed supervised stop, never a fall
+            # or an unconfirmed emergency hold.
+            status = robot.status() or {}
+            if status.get('held'):
+                if not status.get('stop_evidence', {}).get('stop_confirmed'):
+                    self._invalidate_control(pid)
+                    return {'ok':False, 'message':'Held robot has no current stable-stop evidence'}
+                if not self.hub.release(session.id).get('ok'):
+                    self._invalidate_control(pid)
+                    return {'ok':False, 'message':'Runtime refused release'}
+            armed = self.hub.arm(session.id, True)
+            if not armed.get('ok'):
+                self._invalidate_control(pid)
+                return {'ok':False, 'message':'Runtime did not authorize motion'}
+        return {**result, 'next':'Observe and acknowledge a new frame before any action.'}
+
     def _dispatch(self, record, operation, args):
         # The complete receipt is persisted by the idempotency layer. A retry
         # keeps the original generation rather than relabelling old execution.
         run = self.projects.active_run(args['project_id'])
-        if run is None or run.get('client_id') != record['id'] or run['id'] != _request_run.get():
+        if run is None and operation == 'run_start':
+            self.reserve(args['project_id'], record['id'])
+            run = self.projects.active_run(args['project_id'])
+        elif run is None or run['id'] != _request_run.get():
             raise ValueError('Brain Run changed before dispatch')
         captured = {key: self.describe(run)[key] for key in IDENTITY_FIELDS}
         captured['control_generation'] = self.control(args['project_id']).get('control_generation', 0)
         result = super()._dispatch(record, operation, args)
         if operation == 'run_start':
             current = self.projects.active_run(args['project_id'])
+            transport = self._transports.get(current['brain_instance_id'] + ':' + record['id'])
+            if transport is not None:
+                transport['run_id'] = current['id']
             captured.update({key:self.describe(current)[key] for key in IDENTITY_FIELDS})
         if 'events' in result:
             result['events'] = [{**captured, **event} for event in result['events']]

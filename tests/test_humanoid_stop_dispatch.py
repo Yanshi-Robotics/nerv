@@ -19,6 +19,7 @@ def test_inference_started_before_hold_cannot_overwrite_latched_targets():
     body._hold_lock = threading.Lock()
     body._held, body._hold_pending, body._hold_reason = False, None, ""
     body._hold_targets, body._last_targets = [], [0.0]
+    body._last = "fixture"
     body._yaw0, body._state, body._running = None, state, True
     body._fallen = lambda _: False
     body._observation = lambda *_: (np.zeros(1), None)
@@ -64,12 +65,12 @@ def test_normal_settling_waits_for_quiet_without_extending_emergency_hold():
     def read():
         nonlocal stamp
         stamp += .05
-        return SimpleNamespace(t=stamp, joint_vel=[.4 if stamp<1.7 else .02])
+        return SimpleNamespace(t=stamp, joint_vel=[.4 if stamp<1.7 else .02], odom_xy=[0,0], base_height=1, imu_gyro=[0,0,0])
     body.bus = SimpleNamespace(read=read)
     ok, state = body._settle_motion()
     assert ok and 1.9 <= state.t < 2.1
     assert body.loco['hold_settle_s'] == 1.5
     stamp = 0.
-    body.bus.read = lambda: SimpleNamespace(t=read().t, joint_vel=[.02,float('nan')])
+    body.bus.read = lambda: SimpleNamespace(t=read().t, joint_vel=[.02,float('nan')], odom_xy=[0,0], base_height=1, imu_gyro=[0,0,0])
     ok, state = body._settle_motion()
     assert not ok and state.t >= 4.

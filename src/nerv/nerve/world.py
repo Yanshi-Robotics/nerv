@@ -67,6 +67,7 @@ class BusCommand:
     targets: list[float]
     kp: list[float] | None = None
     kd: list[float] | None = None
+    topology_revision: int | None = None
 
 
 class MotorBus(Protocol):

@@ -3,7 +3,9 @@ import argparse
 import json
 import os
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Request, HTTPException
+import secrets
+import threading
 
 from .composition import SharedWorld
 from .mujoco_node import build_app, make_bus_handler
@@ -30,8 +32,11 @@ def main():
         slot['body_defaults'] = defaults
     owner = SharedWorld(config['arena'], config['roster'],
                         world_instance_id=config['world_instance_id'], physics=config['physics'])
+    owner.topology_revision = config.get('topology_revision', 1)
+    owner.receipt['topology_revision'] = owner.topology_revision
     app = FastAPI(title='NERV shared World')
-    buses = []
+    buses = {}
+    topology_lock = threading.Lock()
 
     @app.get('/health')
     def health():
@@ -52,19 +57,99 @@ def main():
                 'robots':{rid:view.operator_geometry() for rid,view in owner.views.items()},
                 'collision_geometry':owner.geometry_boxes()}
 
+    def authorize(request):
+        expected = os.environ.get('NERV_LAUNCH_TOKEN', '')
+        if not expected or not secrets.compare_digest(expected, request.headers.get('x-nerv-world-token', '')):
+            raise HTTPException(403, 'Host World authorization required')
+
+    @app.post('/operator/evidence')
+    def evidence_start(request: Request, payload: dict):
+        authorize(request)
+        from .evidence import PhysicsEvidence
+        if set(payload) != {'sample_hz', 'duration_s', 'max_samples'}:
+            raise HTTPException(400, 'Specify recording rate, duration and capacity')
+        with owner.lock:
+            if owner.evidence is not None:
+                raise HTTPException(409, 'This World already has an evidence record; retrieve it before another trial')
+            owner.evidence = PhysicsEvidence(**payload)
+        return {'ok':True, 'world_instance_id':owner.world_instance_id, 'epoch':owner.epoch}
+
+    @app.get('/operator/evidence')
+    def evidence_read(request: Request, after: int = 0):
+        authorize(request)
+        with owner.lock:
+            if owner.evidence is None:
+                raise HTTPException(404, 'No recording')
+            return owner.evidence.read(after)
+
+    @app.post('/operator/evidence/stop')
+    def evidence_stop(request: Request):
+        authorize(request)
+        with owner.lock:
+            if owner.evidence is None:
+                raise HTTPException(404, 'No recording')
+            owner.evidence.finished = True
+            return owner.evidence.read()
+
+    @app.post('/operator/topology')
+    def topology(request: Request, payload: dict):
+        expected = os.environ.get('NERV_LAUNCH_TOKEN', '')
+        if not expected or not secrets.compare_digest(expected, request.headers.get('x-nerv-world-token', '')):
+            raise HTTPException(403, 'Host topology authorization required')
+        if set(payload) not in ({'expected_revision', 'add'}, {'expected_revision', 'remove'}):
+            raise HTTPException(400, 'Provide one topology change and expected_revision')
+        with topology_lock:
+            new_bus = None
+            try:
+                roster = list(owner.roster)
+                if 'add' in payload:
+                    slot = dict(payload['add'], body_defaults=defaults)
+                    rid = slot['robot_instance_id']
+                    if rid in owner.views:
+                        raise ValueError('Robot identity already exists')
+                    new_bus = BusServer(slot['bus_url'], make_bus_handler(owner.endpoint(rid)))
+                    new_bus.start()
+                    roster.append(slot)
+                else:
+                    rid = payload['remove']
+                    view = owner.view(rid)
+                    with owner.lock:
+                        # Contacts involving another entity or scene prop can support
+                        # weight. Refuse normal deletion rather than teleporting it away.
+                        for contact in owner.data.contact:
+                            roots = [int(owner.model.body_rootid[owner.model.geom_bodyid[g]]) for g in contact.geom]
+                            if view.base_body in roots and any(r not in (0, view.base_body) for r in roots):
+                                raise ValueError('Robot is in contact with another entity')
+                    roster = [r for r in roster if r['robot_instance_id'] != rid]
+                result = owner.transact(roster, expected_revision=payload['expected_revision'])
+                if new_bus is not None:
+                    buses[rid] = new_bus
+                    new_bus = None
+                    app.mount('/robots/' + rid, robot_app(owner.endpoint(rid)))
+                else:
+                    bus = buses.pop(rid, None)
+                    if bus is not None:
+                        bus.stop()
+                return {'ok':True, 'topology_revision':owner.topology_revision, 'configuration':result}
+            except (ValueError, RuntimeError) as error:
+                return {'ok':False, 'message':str(error), 'topology_revision':owner.topology_revision}
+            finally:
+                if new_bus is not None:
+                    new_bus.stop()
+
     try:
         owner.start()
         for record in config['roster']:
             rid = record['robot_instance_id']
-            view = owner.view(rid)
+            view = owner.endpoint(rid)
             bus = BusServer(record['bus_url'], make_bus_handler(view))
             bus.start()
-            buses.append(bus)
+            buses[rid] = bus
             app.mount('/robots/' + rid, robot_app(view))
         import uvicorn
         uvicorn.run(app, host=args.host, port=args.port, log_level='warning')
     finally:
-        for bus in buses:
+        for bus in buses.values():
             bus.stop()
         owner.stop()
 

@@ -35,6 +35,7 @@ class ConnectionInput(BaseModel):
     model_config = ConfigDict(extra="forbid")
     name: str = Field(min_length=1, max_length=120)
     projects: list[str]
+    world_grants: list[dict] = Field(default_factory=list)
     permissions: list[str] = Field(default_factory=lambda: ["observe"])
 
 
@@ -143,9 +144,22 @@ def router(get_hub):
     @api.post("/api/world-instances")
     def world_create(request: Request, payload: dict):
         operator(request)
-        if set(payload) != {"robots"}:
-            raise HTTPException(400, "Provide exactly robots")
-        return call(services(get_hub())[0].worlds.configure, payload["robots"])
+        worlds = services(get_hub())[0].worlds
+        if set(payload) == {"robots"}:
+            return call(worlds.configure, payload["robots"])
+        if not {'scene', 'robot_profile'} <= set(payload) or set(payload) - {'scene', 'robot_profile', 'topology_policy'}:
+            raise HTTPException(400, 'Provide scene, robot_profile and optional topology_policy')
+        return call(worlds.create, **payload)
+
+    @api.get('/api/world-instances')
+    def worlds_list():
+        return services(get_hub())[0].worlds.list()
+
+    @api.post('/api/world-instances/{wid}/start')
+    def world_start(wid: str, request: Request):
+        operator(request)
+        worlds = services(get_hub())[0].worlds
+        return call(worlds.prepare, call(worlds.get, wid), restart=True)
 
     @api.get("/api/world-instances/{wid}")
     def world_get(wid: str):
@@ -155,6 +169,19 @@ def router(get_hub):
     def world_stop(wid: str, request: Request):
         operator(request)
         return call(services(get_hub())[0].worlds.stop, wid)
+
+    @api.get('/api/robot-instances')
+    def robots_list():
+        return services(get_hub())[1].resources.list()
+
+    @api.post('/api/robot-instances/{rid}/remove')
+    def robot_remove(rid: str, request: Request):
+        operator(request)
+        projects, core = services(get_hub())
+        resource = call(core.resources.get, rid)
+        if resource['mode'] != 'sim':
+            raise HTTPException(409, 'Physical robots cannot be removed by a simulation operation')
+        return call(projects.worlds.remove_robot, resource)
 
     @api.get("/api/agent-connections")
     def connection_list():

@@ -126,3 +126,39 @@ def test_retired_chat_entries_have_no_host_side_effect(monkeypatch, capsys):
     assert cli.cmd_run(SimpleNamespace()) == 2
     assert cli.cmd_session(SimpleNamespace(action="new")) == 2
     assert "Project" in capsys.readouterr().err
+
+
+def test_bootstrap_stdio_changes_tools_after_attachment(tmp_path):
+    import os
+    import sys
+    from pathlib import Path
+    from mcp import ClientSession, StdioServerParameters
+    from mcp.client.stdio import stdio_client
+    prepare(tmp_path)
+    env = {k:os.environ[k] for k in ('PATH','HOME') if k in os.environ}
+    env.update(PYTHONPATH=os.pathsep.join(str(Path(p).resolve()) for p in os.environ.get('PYTHONPATH','').split(os.pathsep) if p),
+               NERV_HOME=str(tmp_path),NERV_STORAGE_HOME=str(tmp_path),PYTHONDONTWRITEBYTECODE='1')
+    program = '''
+import asyncio
+from nerv.platform import mcp_host
+async def transport(self, action):
+    return {'transport_id':'fixture','brain_instance_id':self.brain_id,'heartbeat_s':1}
+async def invoke(self, name, args):
+    if name == 'brain_attach': self.brain_id = args['brain_instance_id']
+    return {'brain_instance_id':self.brain_id,'motion_authorized':False}
+mcp_host.HostBridge.transport=transport
+mcp_host.HostBridge.invoke=invoke
+asyncio.run(mcp_host.serve('stable','agent_123'))
+'''
+    async def run():
+        async with stdio_client(StdioServerParameters(command=sys.executable,args=['-c',program],env=env)) as (read,write):
+            async with ClientSession(read,write) as session:
+                initialized=await session.initialize()
+                assert initialized.capabilities.tools.listChanged
+                names={t.name for t in (await session.list_tools()).tools}
+                assert 'robot_allocate' in names and 'action' not in names
+                attached=await session.call_tool('brain_attach',{'brain_instance_id':'brain_fixture'})
+                assert not attached.isError
+                names={t.name for t in (await session.list_tools()).tools}
+                assert 'control_acquire' in names and 'action' in names and 'robot_allocate' not in names
+    asyncio.run(run())

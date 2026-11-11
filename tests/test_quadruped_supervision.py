@@ -17,7 +17,7 @@ def runtime():
     value.stop = StopFlag()
     runner = SkillRunner(value.stop)
     value._impl = SimpleNamespace(runner=runner, observe=lambda: ({}, [('camera', b'fixture')]),
-                                  status=lambda: {}, close=lambda: None)
+                                  status=lambda: {}, close=lambda: None, hold=lambda reason: {'ok':True,'stop_confirmed':True})
     return value
 
 
@@ -125,5 +125,16 @@ def test_node_cancel_revokes_old_token_before_resetting_supervision():
         with pytest.raises(InterruptedError, match='stale or missing control'):
             node.invoke('move', _nerv_control='old-grant')
         assert not value.supervise(frame['frame_seq'])['ok']
+    finally:
+        value.close()
+
+
+def test_cancel_propagates_physical_stop_failure():
+    value = runtime()
+    value._impl.hold = lambda reason: {'ok':False, 'stop_confirmed':False, 'stop_state':'stop_unconfirmed'}
+    try:
+        result=value.cancel_current()
+        assert result['accepted'] and result['dispatch_revoked']
+        assert result['ok'] is False and result['stop_confirmed'] is False
     finally:
         value.close()

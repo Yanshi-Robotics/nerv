@@ -123,7 +123,8 @@ class Nerv:
         while time.monotonic() < deadline:
             status = client.post("/executions/status")
             if status.get("running") is False:
-                return {"ok": True, "message": "Execution stopped; old dispatch revoked"}
+                return {**result, "ok": True, "execution_stopped": True,
+                        "message": "Execution ended; inspect stop_confirmed for physical stopping"}
             time.sleep(config.SCENE_ENTRY_POLL_S)
         return {"ok": False, "message": "Stop requested but execution termination is unconfirmed"}
 

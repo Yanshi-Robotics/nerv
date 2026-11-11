@@ -100,10 +100,10 @@ class AgentGateway:
             result.append({**self._public(record), "last_seen": self._seen.get(record["id"])})
         return result
 
-    def create(self, name, projects, permissions=None):
+    def create(self, name, projects, permissions=None, *, allow_empty=False):
         if not isinstance(name, str) or not 1 <= len(name.strip()) <= 120:
             raise ValueError("Choose a connection name of 1 to 120 characters")
-        if not isinstance(projects, list) or not projects or len(set(projects)) != len(projects):
+        if not isinstance(projects, list) or (not projects and not allow_empty) or len(set(projects)) != len(projects):
             raise ValueError("Select distinct projects to share")
         for project in projects:
             self.projects.get(project)

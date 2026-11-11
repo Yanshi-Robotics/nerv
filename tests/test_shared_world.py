@@ -91,3 +91,73 @@ def test_shared_robot_view_uses_host_cors_origins(world, monkeypatch):
         denied = client.options("/robots/A/control", headers={
             "Origin": "http://unapproved.example", "Access-Control-Request-Method": "POST"})
         assert denied.status_code == 400
+
+
+def test_dynamic_membership_preserves_survivor_state_and_empty_world_clock(world):
+    a = world.endpoint('A')
+    attach(a)
+    attach(world.endpoint('B'))
+    world.step(10)
+    before = a.read()
+    time_before = world.data.time
+    world.transact([world.roster[0]], expected_revision=1)
+    assert world.topology_revision == 2
+    assert world.data.time == time_before
+    assert a.read()['joint_pos'] == before['joint_pos']
+    assert a.read()['joint_vel'] == before['joint_vel']
+    assert a.read()['extra']['topology_revision'] == 2
+    for command in ({'targets':[0.]}, {'targets':[0.], 'topology_revision':1}):
+        with pytest.raises(ValueError, match='obsolete topology'):
+            a.write(command)
+    a.write({'targets':[0.], 'topology_revision':2})
+    with pytest.raises(ValueError):
+        world.endpoint('B').read()
+    world.transact([], expected_revision=2)
+    assert not world.views
+    world.step(10)
+    assert world.data.time > time_before
+    world.transact([dict(robot_instance_id='C', spawn=dict(x=3,y=0,z=1,yaw=0))], expected_revision=3)
+    attach(world.endpoint('C'))
+    assert world.step()
+    assert world.view('C').model is world.model
+
+
+def test_failed_topology_preserves_original_model_data_and_revision(world, monkeypatch):
+    import nerv.world.composition as composition
+    attach(world.view('A'))
+    attach(world.view('B'))
+    world.step(5)
+    model, data, stamp = world.model, world.data, world.data.time
+    monkeypatch.setattr(composition, 'migrate_state', lambda *args: (_ for _ in ()).throw(ValueError('fixture failure')))
+    with pytest.raises(ValueError, match='fixture failure'):
+        world.transact(world.roster[:1], expected_revision=1)
+    assert world.model is model and world.data is data and world.data.time == stamp
+    assert world.topology_revision == 1 and set(world.views) == {'A','B'}
+    assert world.step()
+
+
+def test_empty_world_can_run_without_robot_clock_owner(world):
+    from nerv.world.composition import SharedWorld
+    empty = SharedWorld(world.arena, [])
+    try:
+        assert empty.step(10)
+        assert empty.data.time > 0
+        empty.start()
+        assert empty.running
+    finally:
+        empty.stop()
+
+
+def test_physics_evidence_is_step_sampled_and_refuses_topology_during_trial(world):
+    from nerv.world.evidence import PhysicsEvidence
+    attach(world.endpoint('A'))
+    attach(world.endpoint('B'))
+    world.evidence = PhysicsEvidence(sample_hz=20,duration_s=.2,max_samples=20)
+    with pytest.raises(ValueError, match='recording'):
+        world.transact(world.roster[:1], expected_revision=1)
+    world.step(120)
+    record=world.evidence.read()
+    assert record['finished'] and record['physics_events_complete']
+    assert record['dropped_samples']==0 and len(record['samples'])>=4
+    assert all(b['sim_time']-a['sim_time'] <= .051 for a,b in zip(record['samples'],record['samples'][1:]))
+    assert all(set(s['robots'])=={'A','B'} for s in record['samples'])

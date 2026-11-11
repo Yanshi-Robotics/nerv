@@ -19,8 +19,7 @@ def test_binding_is_operator_owned_and_cannot_cross_projects(integrated):  # noq
         other = core.create('B', [pid], ['observe', 'control'])
         with pytest.raises(ValueError, match='replacing'):
             core.reserve(pid, other['connection']['id'])
-        with pytest.raises(ValueError, match='operator-bound'):
-            core.invoke(other['token'], 'brain_get', {}, bound['brain_instance_id'])
+        assert core.invoke(other['token'], 'brain_get', {}, bound['brain_instance_id'])['brain_instance_id'] == bound['brain_instance_id']
     finally:
         core.shutdown()
 
@@ -88,10 +87,12 @@ def test_transport_expiry_and_reconnect_never_restore_motion(integrated):  # noq
         with pytest.raises(ValueError, match='live MCP'):
             core.transport(pair['token'], 'connect', bid)
         core.set_control(f.project['id'], accepting=True, owner_id=pair['connection']['id'])
-        core._transports[bid]['deadline'] = time.monotonic() - 1
+        core._transports[bid + ':' + pair['connection']['id']]['deadline'] = time.monotonic() - 1
         core.check_expired()
         assert not core.control(f.project['id'])['accepting']
         f.hub.stop_robot.assert_called()
+        with pytest.raises(PermissionError, match='generation'):
+            core.invoke(pair['token'], 'brain_get', {}, bid, first['transport_id'])
         replacement = core.transport(pair['token'], 'connect', bid)
         assert replacement['transport_id'] != first['transport_id']
         assert not core.control(f.project['id'])['accepting']
@@ -164,5 +165,42 @@ def test_shared_runtime_failure_is_local_and_world_failure_invalidates_peers(int
         assert f.projects.worlds.check_health()==[peer['project_id']]
         assert f.projects.active_run(peer['project_id']) is None
         assert f.projects.worlds.get(world['world_instance_id'])['status']=='failed'
+    finally:
+        core.shutdown()
+
+
+def test_robot_and_brain_identity_survive_run_end_and_new_run(integrated):
+    f = integrated
+    core = BrainCore(f.hub, f.projects, f.gw.root)
+    try:
+        pair = core.create('Persistent', [f.project['id']], ['observe', 'control'])
+        cid = pair['connection']['id']
+        first = core.reserve(f.project['id'], cid)
+        f.projects.stop_run(f.project['id'], first['run_id'])
+        history = core.invoke(pair['token'], 'brain_get', {}, first['brain_instance_id'])
+        assert history['status'] == 'ended'
+        second = core.reserve(f.project['id'], cid)
+        assert second['run_id'] != first['run_id']
+        assert second['brain_instance_id'] == first['brain_instance_id']
+        assert second['robot_instance_id'] == first['robot_instance_id']
+        assert not second['control']['accepting']
+        assert len(core.resources.list()) == 1
+    finally:
+        core.shutdown()
+
+
+def test_observer_transport_does_not_revoke_the_controller(integrated):
+    f = integrated
+    core = BrainCore(f.hub, f.projects, f.gw.root)
+    try:
+        owner = core.create('Owner', [f.project['id']], ['observe','control'])
+        observer = core.create('Observer', [f.project['id']], ['observe'])
+        bid = core.reserve(f.project['id'],owner['connection']['id'])['brain_instance_id']
+        core.invoke(owner['token'],'run_start',{'project_id':f.project['id'],'request_id':'start'},bid)
+        core.set_control(f.project['id'],accepting=True,owner_id=owner['connection']['id'])
+        before = core.control(f.project['id'])
+        connection = core.transport(observer['token'],'connect',bid)
+        core.transport(observer['token'],'disconnect',bid,connection['transport_id'])
+        assert core.control(f.project['id']) == before
     finally:
         core.shutdown()

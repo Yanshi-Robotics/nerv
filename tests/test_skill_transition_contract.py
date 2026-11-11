@@ -22,6 +22,8 @@ def runtime(tmp_path):
         return {'ok':True, 'data':{'stop_confirmed':True}}
     value.stop = StopFlag()
     value._impl = SimpleNamespace(policy=SimpleNamespace(dir=str(tmp_path)), runner=SimpleNamespace(_control=threading.local()),
+        hold=lambda reason: {'ok':True,'stop_confirmed':True},
+        status=lambda: {'stop_evidence':{'stop_confirmed':True}}, release=lambda: {'ok':True},
         tools=lambda: [{'name':n,'kind':'skill'} for n in ['walk','turn']], invoke=invoke)
     return value, calls
 
@@ -30,6 +32,7 @@ def test_changed_policy_rejects_transition_even_after_cancellation(tmp_path):
     value, calls = runtime(tmp_path)
     assert value.invoke('walk')['ok']
     value.cancel_current()  # New task/claim cannot reset transition qualification.
+    assert value.release()['ok']  # A confirmed hold release must not erase the previous skill.
     (tmp_path/'policy.onnx').write_text('replacement')
     assert not value.invoke('turn')['ok']
     assert calls == ['walk']

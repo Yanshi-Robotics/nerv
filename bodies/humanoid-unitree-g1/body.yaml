@@ -47,9 +47,11 @@ locomotion:
   # Candidate-06 turn needed ~1.79 s including the unchanged quiet interval.
   # Ceil(2 * 1.79) = 4 s; normal action settling only, still bounded by supervision.
   motion_settle_s: 4.0
-  hold_settle_s: 1.5               # emergency stop: up to this long (sim s) to come to a stand before latching
+  hold_settle_s: 1.5               # emergency stop: up to this long (sim s) to come to a stand before entering supervised balance
   hold_still_rad_s: 0.3            # every joint must remain below this during the quiet interval
-  hold_still_s: 0.2                # ten 50 Hz policy frames below the velocity bound before latching
+  hold_linear_m_s: 0.05          # provisional design bound; long holding has not passed
+  hold_angular_rad_s: 0.1        # provisional design bound; freeze only after qualification
+  hold_still_s: 0.2                # ten 50 Hz policy frames below the velocity bound before entering supervised balance
 buses:
   sim:
     settings:
@@ -60,8 +62,8 @@ buses:
         max_observation_age_s: 40  # six MCP visual-processing samples; twice observed maximum, rounded up to 5 s
         poll_s: 0.05
       skill_transitions:
-        version: g1-apt-cpu-091-1
-        validated: true
+        version: g1-apt-cpu-091-completion-pending
+        validated: false # New stop/lifecycle implementation requires candidate qualification
         scope: simulation-software
         scenes: [apt]
         pairs: [[move_forward, turn_left], [move_forward, turn_right], [turn_left, move_forward], [turn_left, turn_right], [turn_right, move_forward], [turn_right, turn_left]]

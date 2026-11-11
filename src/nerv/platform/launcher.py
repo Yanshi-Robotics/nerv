@@ -287,6 +287,39 @@ class Launcher:
         return handle
 
     @_serialized_launch
+    def change_shared_world(self, world, *, add=None, remove=None):
+        """Host-only topology request; reserve new bus ports through the existing allocator."""
+        owner = self.nodes.get('shared_world:' + world['world_instance_id'])
+        if owner is None or not owner.alive():
+            raise ValueError('Shared World unavailable')
+        payload = {'expected_revision': world.get('topology_revision', 1)}
+        if add is not None:
+            add = dict(add)
+            add['bus_url'] = f'tcp://{config.NODE_BIND_HOST}:{self._free_port()}'
+            payload['add'] = add
+        elif remove is not None:
+            payload['remove'] = remove
+        else:
+            raise ValueError('Select one topology change')
+        response = httpx.post(owner.url + '/operator/topology', json=payload,
+                              headers={'X-Nerv-World-Token': owner.launch_token},
+                              timeout=config.NODE_HEALTH_WAIT_S)
+        response.raise_for_status()
+        result = response.json()
+        if not result.get('ok'):
+            raise ValueError(result.get('message', 'World topology transaction failed'))
+        if add is not None:
+            rid = add['robot_instance_id']
+            alias = f"world:{world['world_instance_id']}/{rid}"
+            self.nodes[alias] = NodeHandle(kind='world', name=alias,
+                url=owner.url + '/robots/' + rid, bus_url=add['bus_url'], attached=True,
+                meta={**owner.meta, 'shared_owner':owner.name})
+        else:
+            self.nodes.pop(f"world:{world['world_instance_id']}/{remove}", None)
+        owner.meta['configuration'] = result['configuration']
+        return result
+
+    @_serialized_launch
     def ensure_body(self, body: BodySpec, world: WorldSpec, world_handle: NodeHandle | None) -> NodeHandle:
         self.check_body_binding(body, world, world_handle)
         return self.ensure_runtime(body, world.kind, world, world_handle)
