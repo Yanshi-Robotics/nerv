@@ -67,13 +67,15 @@ nerv mcp --channel preview --brain BRAIN_ID --client CLIENT_ID
 
 ## 范围
 
-本版仅支持同机连接。桥接器拒绝非本机 Host 地址，并检测 Host 实例变化。浏览器操作者接口与 Runtime 节点接口不是通用 Agent 接口。带认证的远程连接和独立 Brain 留待后续开发，见[部署图](../../assets/readme/diagrams/zh/deployments-091.svg)。
+本版仅支持同机连接。桥接器拒绝非本机 Host 地址，并检测 Host 实例变化。浏览器操作者接口与 Runtime 节点接口不是通用 Agent 接口。带认证的远程连接及独立外部 Agent 部署留待后续开发，见[部署图](../../assets/readme/diagrams/zh/deployments-091.svg)。
 
 
-## 0.9.1 Brain 绑定
+## 0.9.1 资源发现与 Brain 绑定
 
-启动桥接前，在 Agent 连接页分配 Brain。一条连接只操作一个 Brain；仅当活动绑定唯一时才兼容省略 --brain。第十五个工具 brain_get 返回 Run、机器人、世界、绑定与控制状态。run_start 只能启动已分配的 Run。task_update 返回退役错误；更换目标需取消旧任务并创建新任务。
+操作者在控制台创建空 World，再在 Agent 连接中授权模板、出生位置、配额及可选的控制权限。Agent 使用 `nerv mcp --channel preview --client CLIENT_ID` 进入未绑定入口，通过 `platform_describe`、`robot_allocate`、`operation_get`、`brain_attach`、`robot_remove` 发现和申请实例。重复申请必须复用相同请求 ID；结果未知时先查询，不能创建第二个申请来掩盖未知状态。
 
-观测、事件和动作回执包含 brain_instance_id、run_id、robot_instance_id、world_instance_id 和 binding_generation。回执、任务及重试 ID 仅在原 Brain 内有效。重连不恢复运动，不重放请求；已完成的重试返回旧回执，结果未知时必须先检查状态。共享世界 Agent 不能重置世界或改变组成。
+`brain_attach` 会通知工具清单改变并固定该连接的 Brain 范围。已有 Brain 仍可直接用 `--brain BRAIN_ID` 连接。绑定后提供 `brain_get`、`control_acquire` 和 `control_release`。先启动引用已分配 Robot 的 Run，获取观测，在预授权范围内申请控制，再取得并确认新观测，才可开始任务。申请控制不等于确认图像。`task_update` 继续返回退役响应。
 
-MCP 桥接先登记连接代次，再提供工具。心跳只证明连接仍在，不确认图像。断线或超时撤销对应 Brain 的控制；重连后须由操作者重新分配控制权。外部任务可以在静止状态等待 Agent 思考，旧观测失效后必须重新观察并确认，才能继续动作。安装候选包的独立导航验收和最终时序验证仍待完成。
+Robot 与 Brain 跨 Run 保留。授权观察者可以并存，每台机器人只有一个运动控制者。重连只恢复读取，运动需要当前观测和已确认停止；心跳不会确认图像或延长旧动作期限。实例申请与移除属于未绑定资源入口，必须符合操作者 World policy；Agent 不能重置或停止整个世界。
+
+旧的 Run 预留流程仍作为兼容路径。当前动态生命周期源码尚在验证，长期稳定保持、安装候选及独立会合验收尚未完成，见[开发说明](brain-core-091.md)。

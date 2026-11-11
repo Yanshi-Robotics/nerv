@@ -8,27 +8,33 @@ External Agents own goal interpretation, visual reasoning, planning, model calls
 
 The active implementation is `nerv.brain_core`. Historical `nerv.brain`, `nerv.harness` and `nerv.vlm` source remains available for preservation, but wheel and npm packages exclude it. Old chat/model/credential mutation endpoints return retirement errors. A model credential is unnecessary for operator or fixed-policy execution. Asset-download credentials have a separate store; upgrading does not copy model keys.
 
-## Binding and transport
+## Persistent resources and transport
 
-A Project continues to represent one controlled robot. The operator reserves a Run and Brain for an explicitly paired client. A Run pins its Project revision; its Brain, robot and world identifiers remain stable. `run_start` starts that reserved Run. It cannot create an extra robot or choose another binding. A legacy MCP command without `--brain` is accepted only if the client has exactly one active binding.
+World, Robot and canonical Brain identities are stored independently of Runs. The operator can create and start an empty World. An allocation grant specifies a compatible Project template, instance quota, private spawn slots and whether autonomous simulation control acquisition is permitted. The unbound bridge exposes `platform_describe`, `robot_allocate`, `operation_get`, `brain_attach` and `robot_remove`. Allocation retries are scoped to principal and request ID; different parameters cannot reuse an ID.
 
-Start the bridge with `nerv mcp --channel CHANNEL --brain BRAIN_ID --client CLIENT_ID`. `brain_get` supplements the fourteen existing tools. It returns the binding, Run state, control state and recovery instruction. Receipts carry Brain, Run, robot and world IDs, binding/world generations and available Runtime/world epochs. Idempotent retries retain their original execution metadata.
+After `brain_attach`, MCP announces a changed tool list and scopes control to that Brain. `brain_get` describes identity, Run, resource and control state. `control_acquire` requires an existing operator pregrant and a fresh observation; `control_release` revokes ownership and requests stopping. Multiple authorized observers may connect, but one Agent owns motion. Observer disconnect does not revoke another connection's control. Reconnection restores reading only. Runtime checks local control deadlines independently of transport heartbeat.
 
-The stdio bridge registers a transport generation and sends bounded liveness heartbeats. A heartbeat never confirms an image. A second simultaneous connection cannot take the same Brain. Disconnect or expiry revokes that Brain's control; reconnecting preserves read access but requires new operator control assignment and fresh observation before motion. A late acknowledgement cannot restore a revoked generation.
+## Dynamic shared World
 
-## Shared World
+The source compiler creates namespaced robot trees in one MuJoCo model/data pair. A topology transaction quiesces members under the operator policy, pauses physical advancement, builds a separate candidate, migrates named joint and scene state, reconstructs mappings and publishes a new revision. Missing or stale topology revisions cannot drive actuators after a change. Input assets and third-party robot files are not edited.
 
-The operator freezes a roster and explicit spawn poses before starting. Scene inputs are fingerprinted before launch and rechecked at preparation. The source compiler attaches namespaced robot trees to one MuJoCo model and data object. All robots share the physics clock and contacts; each has its own bus, Runtime, actuator map, camera namespace, control target and journal.
+A failed candidate compile preserves the prior physical objects. Once a topology has committed, Runtime preparation failure is explicitly recovery-required; operator stop/restart is required. This is not a claim of transparent rollback. Activation, equality, mocap and plugin states are rejected by the current migration implementation rather than silently lost.
 
-No robot endpoint can reset the World. Ending A's Run stops/disarms A while retaining its physical body and B's simulation. Operator World stop invalidates every associated Run. Runtime process loss invalidates the affected Run; loss of the shared physics process invalidates all its running members. No recovery path replays motion.
+Ending a shared Run keeps the Robot, Brain and World. Entity removal is separate and requires the Run to end. Host restart retains identities but interrupts attachments and motion authority. An explicit operator World restart changes generation/epoch; it does not restore tasks or motion. The complete multi-device mock attachment contract remains unfinished.
 
-The current composition path requires a common registered scene and robot profile. Dynamic topology and nonempty scene-configuration overrides are not yet supported. These are explicit restrictions, not silently ignored inputs.
+## Completion qualification status
+
+Current source checks cover resource allocation, scoped retries, observer isolation, dynamic generic physics and MCP tool-list changes. Bounded G1 CPU diagnostics have exercised A → A+B → B → empty World. After removing A, B executed a 0.5 m request with approximately 0.012 m measured forward error, then confirmed stopping; the empty world's clock continued. These are direct Runtime diagnostics, not installed-candidate or independent Agent acceptance.
+
+A static target hold reproduced a fall after a successful motion chain. Active zero-command balance avoided that fall in short probes, but a two-minute test revealed slow drift and revoked stop confirmation for both robots. A separate single-robot idle test also reproduced the drift, so topology change is not a necessary cause. Long holding remains unqualified. No stopping threshold was relaxed.
+
+Physics evidence can now be sampled at the physical step, with robot contacts and falls recorded separately from rendering. The new paired scorer requires complete data, a common stable window of at least three seconds, bounded drift/distance, current stopping evidence and three independently reviewed images from each robot. Calibration numbers and formal rendezvous trials remain pending. The historical findings below are retained as results of their original candidates.
 
 ## Execution and qualification
 
-The model-free dispatcher supports external primitives, external skills and a fixed policy. New tasks cannot erase the previous skill in the same robot instance. Runtime additionally qualifies G1 skill transitions against the scene and exact policy/contract/release hashes. The current development contract covers the existing G1 turning policy in `apt`; it does not qualify Go2, arbitrary policies, ACT transitions or real devices.
+The model-free dispatcher supports external primitives, external skills and a fixed policy. New tasks cannot erase the previous skill in the same robot instance. Runtime additionally qualifies G1 skill transitions against the scene and exact policy/contract/release hashes. The previous development contract covered the existing G1 turning policy in `apt`; it does not qualify Go2, arbitrary policies, ACT transitions or real devices.
 
-CPU development probes executed fourteen concurrent forward/turn actions across two G1 instances, with fourteen stable-stop confirmations and no reported falls. In that probe, six 0.5 m forward requests had final errors from 0.003 to 0.021 m, and eight 45-degree turns had errors from 0.5 to 3.3 degrees. These observations support a scoped transition contract; they do not establish independent navigation success or a broad reliability rate.
+Earlier CPU development probes executed fourteen concurrent forward/turn actions across two G1 instances, with fourteen stable-stop confirmations and no reported falls. In that probe, six 0.5 m forward requests had final errors from 0.003 to 0.021 m, and eight 45-degree turns had errors from 0.5 to 3.3 degrees. These observations support a scoped transition contract; they do not establish independent navigation success or a broad reliability rate.
 
 G1 requests below 0.5 m are rejected before motion because smaller scales have not been qualified. Approach speed remains within the existing policy command range. Results retain actual displacement, requested target, target error, obstruction, fall, timeout and stop confirmation. `travel_threshold_crossed` is a local control condition; `target_reached=null` does not claim arrival without a qualified tolerance or independent task evaluator.
 

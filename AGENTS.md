@@ -169,9 +169,19 @@ compaction. External Agents own high-level decisions; Runtime owns policy infere
 and local supervision. Old brain/harness/vlm source remains archival and is excluded
 from the product package. Model/key/chat endpoints are retired.
 
-A Project still controls one robot. A Brain pins one Run, client and robot instance;
-operator-configured shared Worlds own frozen rosters and one physics clock. MCP
+A Project still controls one robot. Canonical Brain and Robot identities outlive Runs
+and Agent connections. Operator-created Worlds allow zero robots and transactional
+G1 membership changes; one physical clock owns collisions. Bootstrap MCP grants
+allow scoped allocation. Connections, observers, control authority and Run journals
+remain distinct. New control acquisition requires an operator pregrant and fresh observation. MCP
 connections cannot reset a shared World or inherit motion authority on reconnect.
 Use the existing Project/Run/Task journal. Operator truth and scoring never enter
 Agent observations. CPU development tests, fixed-candidate checks, independent Agent
 trials and physical acceptance are separate evidence states.
+
+The completion revision adds physics-step evidence and an independent paired meeting
+scorer. New rendezvous acceptance requires three successful paired rounds, including
+reviewed images and a common three-second stable window. Candidate08 navigation
+remains 0/6 with three false claims. New source checks and diagnostic probes do not
+upgrade that result. Long zero-command holding remains unqualified until measured
+velocity and drift pass; do not loosen thresholds or claim success from no falls.

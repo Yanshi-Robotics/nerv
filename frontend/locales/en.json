@@ -1176,6 +1176,23 @@
     "Changing the view does not transfer control.": "Changing the view does not transfer control.",
     "Stop the shared world and all its robots?": "Stop the shared world and all its robots?",
     "Stop shared world": "Stop shared world",
-    "Project": "Project"
+    "Project": "Project",
+    "Persistent worlds": "Persistent worlds",
+    "Create an empty world first. Ending a run keeps its robot in the world. Removing a robot is a separate operation.": "Create an empty world first. Ending a run keeps its robot in the world. Removing a robot is a separate operation.",
+    "Scene and robot template": "Scene and robot template",
+    "Maximum robots": "Maximum robots",
+    "Allow granted Agents to request topology changes": "Allow granted Agents to request topology changes",
+    "Adding or removing a robot stops all members briefly. Every controller must observe again and acquire a new lease.": "Adding or removing a robot stops all members briefly. Every controller must observe again and acquire a new lease.",
+    "Create empty world": "Create empty world",
+    "Topology revision": "Topology revision",
+    "Remove this simulation robot? Other members will stop during the topology change.": "Remove this simulation robot? Other members will stop during the topology change.",
+    "Remove simulation robot": "Remove simulation robot",
+    "Grant observation or control for existing projects, or allow an Agent to allocate its own simulation robot.": "Grant observation or control for existing projects, or allow an Agent to allocate its own simulation robot.",
+    "Simulation allocation grant": "Simulation allocation grant",
+    "No allocation grant": "No allocation grant",
+    "This grant permits one robot. Spawn coordinates are operator configuration and are not sent to the Agent.": "This grant permits one robot. Spawn coordinates are operator configuration and are not sent to the Agent.",
+    "Choose a template and enter a finite spawn pose.": "Choose a template and enter a finite spawn pose.",
+    "Refresh": "Refresh",
+    "Status": "Status"
   }
 }

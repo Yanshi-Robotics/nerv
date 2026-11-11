@@ -1,5 +1,5 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="1200" height="720" viewBox="0 0 1200 720" role="img" aria-labelledby="title desc">
-<title id="title">Brain Core 始终属于 NERV</title><desc id="desc">架构契约 · 独立导航验收待完成</desc>
+<title id="title">Brain Core 始终属于 NERV</title><desc id="desc">架构契约 · 独立会合验收待完成</desc>
 <defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1 L8 5 L1 9" fill="none" stroke="#5c7078" stroke-width="1.6"/></marker></defs>
 <style>text {font-family:"Noto Sans CJK SC",Arial,sans-serif;fill:#23343b;} .muted{fill:#5c7078;} .mono{font-family:"DejaVu Sans Mono",monospace;}</style>
 <rect width="1200" height="720" rx="24" fill="#f6f8f8"/>
@@ -8,7 +8,7 @@
 <text x="40" y="38" font-size="13" style="fill:#356a85" font-weight="700" text-anchor="start">NERV   /   0.9.1 / 04</text>
 <text x="40" y="73" font-size="28" style="fill:#23343b" font-weight="700" text-anchor="start">Brain Core 始终属于 NERV</text>
 <text x="1160" y="38" font-size="12" style="fill:#5c7078" font-weight="400" text-anchor="end">架构与产品</text>
-<text x="40" y="694" font-size="16" style="fill:#5c7078" font-weight="400" text-anchor="start">架构契约 · 独立导航验收待完成</text>
+<text x="40" y="694" font-size="16" style="fill:#5c7078" font-weight="400" text-anchor="start">架构契约 · 独立会合验收待完成</text>
 <text x="60" y="155" font-size="19" style="fill:#356a85" font-weight="700" text-anchor="start">本地连接</text>
 <rect x="60" y="180" width="330" height="105" rx="14" fill="white" stroke="#ccd8dc" stroke-width="1.3"/>
 <path d="M76 197v71" stroke="#356a85" stroke-width="3" stroke-linecap="round"/>

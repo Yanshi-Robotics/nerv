@@ -1,41 +1,50 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="800" viewBox="0 0 1200 800" role="img" aria-labelledby="title desc">
-<title id="title">Runs end independently; the shared world remains</title><desc id="desc">Architecture contract · Independent navigation acceptance pending</desc>
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="900" viewBox="0 0 1200 900" role="img" aria-labelledby="title desc">
+<title id="title">World and robot identity outlive connections and Runs</title><desc id="desc">Architecture contract · Independent rendezvous acceptance pending</desc>
 <defs><marker id="arrow" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1 L8 5 L1 9" fill="none" stroke="#5c7078" stroke-width="1.6"/></marker></defs>
 <style>text {font-family:"Noto Sans CJK SC",Arial,sans-serif;fill:#23343b;} .muted{fill:#5c7078;} .mono{font-family:"DejaVu Sans Mono",monospace;}</style>
-<rect width="1200" height="800" rx="24" fill="#f6f8f8"/>
+<rect width="1200" height="900" rx="24" fill="#f6f8f8"/>
 <path d="M40 104H1160" stroke="#ccd8dc"/>
 
 <text x="40" y="38" font-size="13" style="fill:#356a85" font-weight="700" text-anchor="start">NERV   /   0.9.1 / 02</text>
-<text x="40" y="73" font-size="28" style="fill:#23343b" font-weight="700" text-anchor="start">Runs end independently; the shared world remains</text>
+<text x="40" y="73" font-size="28" style="fill:#23343b" font-weight="700" text-anchor="start">World and robot identity outlive connections and Runs</text>
 <text x="1160" y="38" font-size="12" style="fill:#5c7078" font-weight="400" text-anchor="end">PRODUCT &amp; ARCHITECTURE</text>
-<text x="40" y="774" font-size="16" style="fill:#5c7078" font-weight="400" text-anchor="start">Architecture contract · Independent navigation acceptance pending</text>
-<rect x="60" y="140" width="1080" height="78" rx="14" fill="white" stroke="#ccd8dc" stroke-width="1.3"/>
-<path d="M76 157v44" stroke="#356a85" stroke-width="3" stroke-linecap="round"/>
-<text x="92" y="174" font-size="20" style="fill:#23343b" font-weight="600" text-anchor="start">Project A / Project B</text>
-<text x="92" y="201" font-size="16" style="fill:#5c7078" font-weight="400" text-anchor="start">Reusable configuration and history; one controlled robot per Project</text>
-<path d="M305,218 L305,270" fill="none" stroke="#356a85" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
-<rect x="60" y="270" width="490" height="94" rx="14" fill="white" stroke="#ccd8dc" stroke-width="1.3"/>
-<path d="M76 287v60" stroke="#356a85" stroke-width="3" stroke-linecap="round"/>
-<text x="92" y="304" font-size="20" style="fill:#23343b" font-weight="600" text-anchor="start">Run A + Brain A</text>
-<text x="92" y="331" font-size="16" style="fill:#5c7078" font-weight="400" text-anchor="start">Pinned revision · fixed binding generation</text>
-<path d="M305,364 L305,415" fill="none" stroke="#247a71" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
-<rect x="60" y="415" width="490" height="86" rx="14" fill="white" stroke="#ccd8dc" stroke-width="1.3"/>
-<path d="M76 432v52" stroke="#247a71" stroke-width="3" stroke-linecap="round"/>
-<text x="92" y="449" font-size="20" style="fill:#23343b" font-weight="600" text-anchor="start">Robot A</text>
-<text x="92" y="476" font-size="16" style="fill:#5c7078" font-weight="400" text-anchor="start">Separate Runtime and control generation</text>
-<path d="M895,218 L895,270" fill="none" stroke="#356a85" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
-<rect x="650" y="270" width="490" height="94" rx="14" fill="white" stroke="#ccd8dc" stroke-width="1.3"/>
-<path d="M666 287v60" stroke="#356a85" stroke-width="3" stroke-linecap="round"/>
-<text x="682" y="304" font-size="20" style="fill:#23343b" font-weight="600" text-anchor="start">Run B + Brain B</text>
-<text x="682" y="331" font-size="16" style="fill:#5c7078" font-weight="400" text-anchor="start">Pinned revision · fixed binding generation</text>
-<path d="M895,364 L895,415" fill="none" stroke="#247a71" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
-<rect x="650" y="415" width="490" height="86" rx="14" fill="white" stroke="#ccd8dc" stroke-width="1.3"/>
-<path d="M666 432v52" stroke="#247a71" stroke-width="3" stroke-linecap="round"/>
-<text x="682" y="449" font-size="20" style="fill:#23343b" font-weight="600" text-anchor="start">Robot B</text>
-<text x="682" y="476" font-size="16" style="fill:#5c7078" font-weight="400" text-anchor="start">Separate Runtime and control generation</text>
-<rect x="60" y="545" width="1080" height="166" rx="14" fill="#edf2f3" stroke="#ccd8dc" stroke-width="1.3"/>
-<text x="85" y="580" font-size="22" style="fill:#247a71" font-weight="700" text-anchor="start">WORLD LIFETIME</text>
-<text x="85" y="619" font-size="19" style="fill:#5c7078" font-weight="400" text-anchor="start">End Run A → A holds; B continues; both remain physical objects.</text>
-<text x="85" y="650" font-size="19" style="fill:#5c7078" font-weight="400" text-anchor="start">Operator stops World → all associated Runs become invalid.</text>
-<text x="85" y="681" font-size="19" style="fill:#5c7078" font-weight="400" text-anchor="start">Reconnection reads history; it never replays motion.</text>
+<text x="40" y="874" font-size="16" style="fill:#5c7078" font-weight="400" text-anchor="start">Architecture contract · Independent rendezvous acceptance pending</text>
+<rect x="60" y="140" width="1080" height="86" rx="14" fill="white" stroke="#ccd8dc" stroke-width="1.3"/>
+<path d="M76 157v52" stroke="#247a71" stroke-width="3" stroke-linecap="round"/>
+<text x="92" y="174" font-size="20" style="fill:#23343b" font-weight="600" text-anchor="start">World</text>
+<text x="92" y="201" font-size="16" style="fill:#5c7078" font-weight="400" text-anchor="start">Zero or more robots · one clock · versioned topology</text>
+<path d="M305,226 L305,275" fill="none" stroke="#247a71" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="60" y="275" width="490" height="86" rx="14" fill="white" stroke="#ccd8dc" stroke-width="1.3"/>
+<path d="M76 292v52" stroke="#356a85" stroke-width="3" stroke-linecap="round"/>
+<text x="92" y="309" font-size="20" style="fill:#23343b" font-weight="600" text-anchor="start">Robot A / Brain A</text>
+<text x="92" y="336" font-size="16" style="fill:#5c7078" font-weight="400" text-anchor="start">Persistent identity and Project history</text>
+<path d="M305,361 L305,410" fill="none" stroke="#356a85" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="60" y="410" width="490" height="86" rx="14" fill="white" stroke="#ccd8dc" stroke-width="1.3"/>
+<path d="M76 427v52" stroke="#247a71" stroke-width="3" stroke-linecap="round"/>
+<text x="92" y="444" font-size="20" style="fill:#23343b" font-weight="600" text-anchor="start">Runtime attachment</text>
+<text x="92" y="471" font-size="16" style="fill:#5c7078" font-weight="400" text-anchor="start">Own sensors · policy · supervised balance</text>
+<path d="M305,496 L305,545" fill="none" stroke="#356a85" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="60" y="545" width="490" height="86" rx="14" fill="white" stroke="#ccd8dc" stroke-width="1.3"/>
+<path d="M76 562v52" stroke="#9a703c" stroke-width="3" stroke-linecap="round"/>
+<text x="92" y="579" font-size="20" style="fill:#23343b" font-weight="600" text-anchor="start">Agent / lease / Run</text>
+<text x="92" y="606" font-size="16" style="fill:#5c7078" font-weight="400" text-anchor="start">Observers may coexist; one motion owner</text>
+<path d="M895,226 L895,275" fill="none" stroke="#247a71" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="650" y="275" width="490" height="86" rx="14" fill="white" stroke="#ccd8dc" stroke-width="1.3"/>
+<path d="M666 292v52" stroke="#356a85" stroke-width="3" stroke-linecap="round"/>
+<text x="682" y="309" font-size="20" style="fill:#23343b" font-weight="600" text-anchor="start">Robot B / Brain B</text>
+<text x="682" y="336" font-size="16" style="fill:#5c7078" font-weight="400" text-anchor="start">Persistent identity and Project history</text>
+<path d="M895,361 L895,410" fill="none" stroke="#356a85" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="650" y="410" width="490" height="86" rx="14" fill="white" stroke="#ccd8dc" stroke-width="1.3"/>
+<path d="M666 427v52" stroke="#247a71" stroke-width="3" stroke-linecap="round"/>
+<text x="682" y="444" font-size="20" style="fill:#23343b" font-weight="600" text-anchor="start">Runtime attachment</text>
+<text x="682" y="471" font-size="16" style="fill:#5c7078" font-weight="400" text-anchor="start">Own sensors · policy · supervised balance</text>
+<path d="M895,496 L895,545" fill="none" stroke="#356a85" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arrow)"/>
+<rect x="650" y="545" width="490" height="86" rx="14" fill="white" stroke="#ccd8dc" stroke-width="1.3"/>
+<path d="M666 562v52" stroke="#9a703c" stroke-width="3" stroke-linecap="round"/>
+<text x="682" y="579" font-size="20" style="fill:#23343b" font-weight="600" text-anchor="start">Agent / lease / Run</text>
+<text x="682" y="606" font-size="16" style="fill:#5c7078" font-weight="400" text-anchor="start">Observers may coexist; one motion owner</text>
+<rect x="60" y="675" width="1080" height="155" rx="14" fill="#edf2f3" stroke="#ccd8dc" stroke-width="1.3"/>
+<text x="85" y="709" font-size="19" style="fill:#5c7078" font-weight="400" text-anchor="start">End Run → revoke motion; retain robot and Brain.</text>
+<text x="85" y="743" font-size="19" style="fill:#5c7078" font-weight="400" text-anchor="start">Membership change → stop, compile, migrate, commit, observe again.</text>
+<text x="85" y="777" font-size="19" style="fill:#5c7078" font-weight="400" text-anchor="start">Host restart → recover identities; operator restarts World; no motion replay.</text>
 </svg>

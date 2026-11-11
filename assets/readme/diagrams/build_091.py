@@ -4,7 +4,7 @@ from build import Figure, BLUE, TEAL, GOLD, MUTED
 
 def base(zh, number, title, cn, height=800):
     return Figure(zh, height, '0.9.1 / '+number, cn if zh else title,
-        '架构契约 · 独立导航验收待完成' if zh else 'Architecture contract · Independent navigation acceptance pending')
+        '架构契约 · 独立会合验收待完成' if zh else 'Architecture contract · Independent rendezvous acceptance pending')
 
 
 def platform(zh):
@@ -19,7 +19,7 @@ def platform(zh):
     f.text(1100,336,c('Operator console → bindings and authority','操作者控制台 → 绑定与授权'),19,TEAL,anchor='end')
     f.text(65,370,c('Identity · observations · tasks · authority · receipts','身份 · 观测 · 任务 · 授权 · 回执'),21)
     for x,letter in [(65,'A'),(655,'B')]:
-        f.box(x,400,480,82,'Brain '+letter+' / Run '+letter,c('One bound Agent and robot instance','固定绑定一个 Agent 与机器人实例'))
+        f.box(x,400,480,82,'Brain '+letter+' / Robot '+letter,c('Persistent identity · separate Run and lease','持久身份 · Run 与租约分别管理'))
         f.path([(x+240,482),(x+240,525)],TEAL)
         f.box(x,525,480,80,'Runtime '+letter+' / G1 '+letter,c('Policy · control · local stop','策略 · 控制 · 本地停止'),TEAL)
         f.path([(x+240,605),(x+240,680)],TEAL,both=True)
@@ -28,17 +28,20 @@ def platform(zh):
 
 
 def lifecycle(zh):
-    f=base(zh,'02','Runs end independently; the shared world remains','Run 分别结束，共享世界继续存在')
+    f=base(zh,'02','World and robot identity outlive connections and Runs','World 与机器人身份跨连接、跨 Run 存在',900)
     c=f.choose
-    f.box(60,140,1080,78,'Project A / Project B',c('Reusable configuration and history; one controlled robot per Project','复用配置与历史；每个 Project 一台受控机器人'))
+    f.box(60,140,1080,86,'World',c('Zero or more robots · one clock · versioned topology','允许零台机器人 · 同一时钟 · 拓扑修订'),TEAL)
     for x,letter in [(60,'A'),(650,'B')]:
-        f.path([(x+245,218),(x+245,270)])
-        f.box(x,270,490,94,'Run '+letter+' + Brain '+letter,c('Pinned revision · fixed binding generation','固定修订 · 固定绑定代次'))
-        f.path([(x+245,364),(x+245,415)],TEAL)
-        f.box(x,415,490,86,'Robot '+letter,c('Separate Runtime and control generation','独立 Runtime 与控制代次'),TEAL)
-    f.rect(60,545,1080,166,'#edf2f3')
-    f.text(85,580,c('WORLD LIFETIME','世界生命周期'),22,TEAL,700)
-    f.lines(85,619,[c('End Run A → A holds; B continues; both remain physical objects.','结束 Run A → A 保持，B 继续；两台机器人仍参与物理仿真。'),c('Operator stops World → all associated Runs become invalid.','操作者停止 World → 全部关联 Run 失效。'),c('Reconnection reads history; it never replays motion.','重连可读取历史，不重放运动。')],19,step=31)
+        f.path([(x+245,226),(x+245,275)],TEAL)
+        f.box(x,275,490,86,'Robot '+letter+' / Brain '+letter,c('Persistent identity and Project history','持久身份与 Project 历史'))
+        f.path([(x+245,361),(x+245,410)])
+        f.box(x,410,490,86,c('Runtime attachment','Runtime 执行连接'),c('Own sensors · policy · supervised balance','独立传感器 · 策略 · 受监督保持'),TEAL)
+        f.path([(x+245,496),(x+245,545)])
+        f.box(x,545,490,86,c('Agent / lease / Run','Agent / 租约 / Run'),c('Observers may coexist; one motion owner','可并存观察者；仅一个运动控制者'),GOLD)
+    f.rect(60,675,1080,155,'#edf2f3')
+    f.lines(85,709,[c('End Run → revoke motion; retain robot and Brain.','结束 Run → 撤销运动；保留 Robot 与 Brain。'),
+        c('Membership change → stop, compile, migrate, commit, observe again.','增删成员 → 停止、编译、迁移、提交、重新观测。'),
+        c('Host restart → recover identities; operator restarts World; no motion replay.','Host 重启 → 恢复身份；操作者重启 World；不重放运动。')],19,step=34)
     f.save('lifecycle-091')
 
 
@@ -48,7 +51,7 @@ def supervision(zh):
     for x,title in [(190,c('External Agent','外部 Agent')),(600,'Brain Core'),(1010,'Runtime')]:
         f.box(x-140,140,280,70,title)
         f.path([(x,225),(x,730)],MUTED,dashed=True,arrow=False)
-    messages=[(275,1010,190,'Sensor frames + identity + sequence','传感器图像 + 身份 + 序号'),(365,190,600,'Acknowledge inspected observation','确认已检查的观测'),(455,190,600,'Bounded action + task identity','有限动作 + 任务身份'),(545,600,1010,'Validate binding, grant and budget','核对绑定、控制权与预算'),(635,1010,190,'Measured outcome + stop confirmation','实测结果 + 停止确认')]
+    messages=[(275,1010,190,'Sensor frames + identity + sequence','传感器图像 + 身份 + 序号'),(365,190,600,'Acknowledge inspected observation','确认已检查的观测'),(455,190,600,'Bounded action + task identity','有限动作 + 任务身份'),(545,600,1010,'Check lease, topology and action deadline','核对租约、拓扑与动作期限'),(635,1010,190,'Measured outcome + current stop evidence','实测结果 + 当前停止证据')]
     for y,a,b,en,cn in messages:
         f.rect(min(a,b)+8,y-45,abs(b-a)-16,32,'#ffffff')
         f.text((a+b)/2,y-20,c(en,cn),18,BLUE,anchor='middle')

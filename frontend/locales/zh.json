@@ -1176,6 +1176,23 @@
     "Changing the view does not transfer control.": "切换视图不会转移控制权。",
     "Stop the shared world and all its robots?": "停止共享世界及其中的全部机器人？",
     "Stop shared world": "停止共享世界",
-    "Project": "项目"
+    "Project": "项目",
+    "Persistent worlds": "持续存在的世界",
+    "Create an empty world first. Ending a run keeps its robot in the world. Removing a robot is a separate operation.": "先创建空世界。结束运行会保留世界中的机器人，移除机器人需单独操作。",
+    "Scene and robot template": "场景与机器人模板",
+    "Maximum robots": "机器人数量上限",
+    "Allow granted Agents to request topology changes": "允许已授权的 Agent 申请增删机器人",
+    "Adding or removing a robot stops all members briefly. Every controller must observe again and acquire a new lease.": "增删机器人时，所有成员会短暂停止。每个控制者都必须重新观测并获取控制租约。",
+    "Create empty world": "创建空世界",
+    "Topology revision": "拓扑修订",
+    "Remove this simulation robot? Other members will stop during the topology change.": "移除此仿真机器人？拓扑变更期间其他机器人也将停止。",
+    "Remove simulation robot": "移除仿真机器人",
+    "Grant observation or control for existing projects, or allow an Agent to allocate its own simulation robot.": "为现有项目授予观测或控制权限，或允许 Agent 申请自己的仿真机器人。",
+    "Simulation allocation grant": "仿真实例分配授权",
+    "No allocation grant": "不授予实例分配权限",
+    "This grant permits one robot. Spawn coordinates are operator configuration and are not sent to the Agent.": "此授权允许申请一台机器人。出生坐标属于操作者配置，不会发送给 Agent。",
+    "Choose a template and enter a finite spawn pose.": "请选择模板并填写有效的出生位置与朝向。",
+    "Refresh": "刷新",
+    "Status": "状态"
   }
 }
