@@ -161,3 +161,18 @@ def test_physics_evidence_is_step_sampled_and_refuses_topology_during_trial(worl
     assert record['dropped_samples']==0 and len(record['samples'])>=4
     assert all(b['sim_time']-a['sim_time'] <= .051 for a,b in zip(record['samples'],record['samples'][1:]))
     assert all(set(s['robots'])=={'A','B'} for s in record['samples'])
+
+
+def test_motor_bus_serializes_topology_revision_for_existing_connections(world):
+    from nerv.body.bus_zmq import ZmqBus
+    from nerv.nerve.world import BusCommand
+    from nerv.world.mujoco_node import make_bus_handler
+    attach(world.endpoint('A')); attach(world.endpoint('B'))
+    bus=ZmqBus.__new__(ZmqBus)
+    bus._req=make_bus_handler(world.endpoint('A'))
+    bus.write(BusCommand([0.], topology_revision=1))
+    world.transact(world.roster[:1], expected_revision=1)
+    with pytest.raises(ValueError, match='obsolete topology'):
+        bus.write(BusCommand([0.], topology_revision=1))
+    bus.write(BusCommand([.1], topology_revision=2))
+    assert world.view('A').targets[0] == .1

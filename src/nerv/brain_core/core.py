@@ -33,6 +33,10 @@ class BrainCore(AgentGateway):
         super().__init__(hub, projects, root)
         self.discovery = Discovery(self)
 
+    def shutdown(self):
+        self.discovery.close()
+        super().shutdown()
+
     def create(self, name, projects, permissions=None, world_grants=None):
         grants = self.discovery.validate_grants(world_grants or [])
         result = super().create(name, projects, permissions, allow_empty=bool(grants))
@@ -310,6 +314,10 @@ class BrainCore(AgentGateway):
             if transport is not None:
                 transport['run_id'] = current['id']
             captured.update({key:self.describe(current)[key] for key in IDENTITY_FIELDS})
+        if operation == 'observe':
+            current = self.projects.active_run(args['project_id'])
+            if current is None or any(self.describe(current)[key] != captured[key] for key in IDENTITY_FIELDS):
+                raise ValueError('Brain or World changed while observing; request a new frame')
         if 'events' in result:
             result['events'] = [{**captured, **event} for event in result['events']]
         return {**result, **captured}

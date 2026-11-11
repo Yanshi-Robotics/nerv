@@ -291,6 +291,7 @@ class WorldInstances:
             return []
         self._last_health = time.monotonic()
         failures = []
+        invalidated = set()
         for path in self.root.glob('world_*.json'):
             world = json.loads(path.read_text())
             if world['status'] != 'ready':
@@ -304,29 +305,41 @@ class WorldInstances:
                 healthy = healthy and health.get('ok') and health.get('epoch') == world.get('epoch')
             except (httpx.HTTPError, ValueError):
                 healthy = False
-            for slot in world['roster']:
-                run = self.projects.active_run(slot['project_id'])
-                if not run or run['id'] != slot['run_id'] or run['status'] != 'running':
-                    continue
-                runtime = self.hub.launcher.nodes.get('body:' + slot['robot_instance_id'])
-                if healthy and runtime and runtime.alive():
-                    continue
-                reason = 'Shared World unavailable' if not healthy else 'Robot Runtime unavailable'
-                run.update(status='failed', reason=reason, ended_at=time.time())
-                self.projects.store.save_run(run['project_id'], run)
-                self.hub.store.set_armed(run['session_id'], False)
-                self.hub.store.set_status(run['session_id'], 'reconnect_required')
-                failures.append((run, reason))
-            if not healthy:
-                world.update(status='failed', reason='Shared World unavailable', generation=world['generation']+1)
-                self.save(world)
+            with self.lock:
+                current = self.get(world['world_instance_id'])
+                if any(current.get(key) != world.get(key) for key in
+                       ('status', 'generation', 'topology_revision', 'epoch')):
+                    continue  # The probe predates a topology/restart transaction.
+                for slot in world['roster']:
+                    runtime = self.hub.launcher.nodes.get('body:' + slot['robot_instance_id'])
+                    if healthy and runtime and runtime.alive():
+                        continue
+                    reason = 'Shared World unavailable' if not healthy else 'Robot Runtime unavailable'
+                    resources = getattr(self.projects, 'resources', None)
+                    if resources is not None:
+                        resource = resources.get(slot['robot_instance_id'])
+                        if resource['status'] not in {'removed', 'failed'}:
+                            resources.save(dict(resource, status='failed', reason=reason))
+                            invalidated.add(slot['project_id'])
+                    run = self.projects.active_run(slot['project_id'])
+                    if not run or run['id'] != slot['run_id'] or run['status'] != 'running':
+                        continue
+                    invalidated.add(slot['project_id'])
+                    run.update(status='failed', reason=reason, ended_at=time.time())
+                    self.projects.store.save_run(run['project_id'], run)
+                    self.hub.store.set_armed(run['session_id'], False)
+                    self.hub.store.set_status(run['session_id'], 'reconnect_required')
+                    failures.append((run, reason))
+                if not healthy:
+                    world.update(status='failed', reason='Shared World unavailable', generation=world['generation']+1)
+                    self.save(world)
         def stop_failed(item):
             run, reason = item
             return self.hub.tasks.cancel(run['session_id'], reason=reason)
         if failures:
             with ThreadPoolExecutor(max_workers=len(failures)) as pool:
                 list(pool.map(stop_failed, failures))
-        return [run['project_id'] for run, _ in failures]
+        return sorted(invalidated)
 
     def stop(self, wid):
         with self.lock:

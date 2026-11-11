@@ -204,3 +204,44 @@ def test_observer_transport_does_not_revoke_the_controller(integrated):
         assert core.control(f.project['id']) == before
     finally:
         core.shutdown()
+
+
+def test_resource_without_run_becomes_failed_when_world_disappears(integrated):
+    f = integrated
+    core = BrainCore(f.hub, f.projects, f.gw.root)
+    try:
+        resource = core.resources.reserve(f.project, 'agent_fixture')
+        world = f.projects.worlds.create(f.project['world'], f.project['robot'])
+        resource.update(world_instance_id=world['world_instance_id'], shared_world=True, status='ready')
+        core.resources.save(resource)
+        world.update(status='ready', epoch='lost', roster=[dict(robot_instance_id=resource['robot_instance_id'],
+            project_id=f.project['id'], run_id=None)])
+        f.projects.worlds.save(world)
+        assert f.projects.active_run(f.project['id']) is None
+        assert f.projects.worlds.check_health() == [f.project['id']]
+        assert core.resources.get(resource['robot_instance_id'])['status'] == 'failed'
+        assert f.projects.worlds.get(world['world_instance_id'])['status'] == 'failed'
+    finally:
+        core.shutdown()
+
+
+def test_delayed_world_health_probe_cannot_overwrite_new_topology(integrated, monkeypatch):
+    from types import SimpleNamespace
+    f = integrated
+    core = BrainCore(f.hub, f.projects, f.gw.root)
+    try:
+        world = f.projects.worlds.create(f.project['world'], f.project['robot'])
+        world.update(status='ready', epoch='same-world')
+        f.projects.worlds.save(world)
+        f.launcher.nodes['shared_world:' + world['world_instance_id']] = SimpleNamespace(
+            url='http://fixture.invalid', alive=lambda:True)
+        def delayed(*args, **kwargs):
+            changed = dict(world, generation=2, topology_revision=2)
+            f.projects.worlds.save(changed)
+            return SimpleNamespace(json=lambda:{'ok':False})
+        monkeypatch.setattr('httpx.get', delayed)
+        assert f.projects.worlds.check_health() == []
+        current = f.projects.worlds.get(world['world_instance_id'])
+        assert current['generation'] == 2 and current['status'] == 'ready'
+    finally:
+        core.shutdown()

@@ -40,6 +40,9 @@ class Settings(BaseSettings):
     guidance_max_chars: int = Field(4000, validation_alias="NERV_GUIDANCE_MAX_CHARS", ge=100)
     tool_desc_max_chars: int = Field(1000, validation_alias="NERV_TOOL_DESC_MAX_CHARS", ge=50)
 
+    resource_operation_workers: int = Field(4, validation_alias="NERV_RESOURCE_OPERATION_WORKERS", ge=1,
+                                           description="Concurrent resource workers; each World is serialized.")
+
     # ---- node clients ----
     node_timeout: float = Field(30, validation_alias="NERV_NODE_TIMEOUT", gt=0,
                                 description="Deadline for fast reads (capabilities, observe).")
@@ -115,6 +118,7 @@ NODE_PROBE_TIMEOUT = _settings.node_probe_timeout
 NODE_STATUS_TIMEOUT = _settings.node_status_timeout
 NODE_CONNECT_TIMEOUT = _settings.node_connect_timeout
 NODE_LIVENESS_TIMEOUT = _settings.node_liveness_timeout
+RESOURCE_OPERATION_WORKERS = _settings.resource_operation_workers
 NODE_INVOKE_HARD_CAP = _settings.node_invoke_hard_cap
 BRIDGE_WATCHDOG_POLL_S = _settings.bridge_watchdog_poll_s
 ROBOT_EVENTS_POLL_S = _settings.robot_events_poll_s

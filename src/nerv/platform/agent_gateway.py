@@ -301,6 +301,8 @@ class AgentGateway:
                     "sensors": caps.sensors, "external_supervision": (caps.config or {}).get("external_supervision"),
                     "control": self.control(pid)}
         if operation == "observe":
+            control_generation = self.control(pid).get('control_generation')
+            world_generation = getattr(session, 'world_generation', 0)
             robot = self.hub.body_client(session.body)
             body_epoch = (robot.health() or {}).get("epoch") if robot else None
             observed = self.hub.perceive(session.id)
@@ -312,8 +314,12 @@ class AgentGateway:
                        "state": dict(observed.state),
                        "delivered_at": time.time(), "delivered_mono": time.monotonic(),
                        "images": [i["name"] for i in observed.images if i.get("png")], "acknowledged": False,
-                       "control_generation": self.control(pid).get("control_generation")}
+                       "control_generation": control_generation}
             with self._lock:
+                current_session = self.hub.store.get(session.id)
+                if (self.control(pid).get('control_generation') != control_generation
+                        or getattr(current_session, 'world_generation', 0) != world_generation):
+                    raise ValueError('Control or World changed while collecting observations; observe again')
                 self._receipts[(record["id"], pid)] = receipt
             self.hub.store.append_perception(session.id, observed.state, observed.images)
             return {"receipt_id": receipt["id"], "instance_id": session.epoch,

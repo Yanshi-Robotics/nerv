@@ -87,6 +87,8 @@ class ZmqBus:
 
     def write(self, cmd: BusCommand) -> None:
         msg = {"op": OP_WRITE, "targets": cmd.targets}
+        if cmd.topology_revision is not None:
+            msg["topology_revision"] = cmd.topology_revision
         if cmd.kp is not None:
             msg["kp"] = cmd.kp
         if cmd.kd is not None:

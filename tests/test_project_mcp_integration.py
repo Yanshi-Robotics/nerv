@@ -160,3 +160,23 @@ def test_paused_commands_keep_supervision_and_explicit_stop_available(integrated
     f.robot.invoke.assert_not_called()
     assert call(f, "task_cancel", request_id="stop")["ok"]
     assert f.hub.tasks.snapshot(session.id)["task"]["status"] == "cancelled"
+
+
+def test_observation_cannot_be_relabelled_after_control_or_world_changes(integrated, monkeypatch):
+    f=integrated
+    _,session=start_run(f)
+    original=f.robot.perceive
+    for change in ['control','world']:
+        def delayed():
+            observed=original()
+            if change=='control':
+                with f.gw._lock:f.gw._invalidate_control(f.project['id'])
+            else:
+                latest=f.hub.store.get(session.id)
+                latest.world_generation += 1
+                f.hub.store.save(latest)
+            return observed
+        monkeypatch.setattr(f.robot,'perceive',delayed)
+        with pytest.raises(ValueError,match='changed while collecting'):
+            call(f,'observe')
+        assert (f.pair['connection']['id'],f.project['id']) not in f.gw._receipts

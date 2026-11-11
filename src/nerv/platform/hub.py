@@ -647,4 +647,7 @@ class Nerv:
 
     def shutdown(self) -> None:
         self.request_shutdown()
+        from .project_api import _services
+        if self in _services:
+            _services[self][1].shutdown()
         self.launcher.stop_all()

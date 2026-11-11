@@ -1,6 +1,6 @@
 # Brain Core in NERV 0.9.1
 
-This is an architecture and compatibility change under the requested 0.9.1 version. The implementation is a local development candidate. Independent dual-Agent navigation acceptance has not yet passed.
+This is an architecture and compatibility change under the requested 0.9.1 version. This completion revision is source development, not a newly installed candidate. Independent dual-Agent navigation acceptance has not yet passed.
 
 ## Responsibility
 
@@ -10,7 +10,7 @@ The active implementation is `nerv.brain_core`. Historical `nerv.brain`, `nerv.h
 
 ## Persistent resources and transport
 
-World, Robot and canonical Brain identities are stored independently of Runs. The operator can create and start an empty World. An allocation grant specifies a compatible Project template, instance quota, private spawn slots and whether autonomous simulation control acquisition is permitted. The unbound bridge exposes `platform_describe`, `robot_allocate`, `operation_get`, `brain_attach` and `robot_remove`. Allocation retries are scoped to principal and request ID; different parameters cannot reuse an ID.
+World, Robot and canonical Brain identities are stored independently of Runs. The operator can create and start an empty World. An allocation grant specifies a compatible Project template, instance quota, private spawn slots and whether autonomous simulation control acquisition is permitted. The unbound bridge exposes `platform_describe`, `robot_allocate`, `operation_get`, `brain_attach` and `robot_remove`. Allocation retries are scoped to principal and request ID; different parameters cannot reuse an ID. Allocation and removal return a durable operation ID before physical work finishes. Poll `operation_get` until complete, failed or interrupted. A failed operation retains any allocated identity; a Host restart marks unfinished operations interrupted without replaying them. Operator recovery is required for an unknown physical outcome.
 
 After `brain_attach`, MCP announces a changed tool list and scopes control to that Brain. `brain_get` describes identity, Run, resource and control state. `control_acquire` requires an existing operator pregrant and a fresh observation; `control_release` revokes ownership and requests stopping. Multiple authorized observers may connect, but one Agent owns motion. Observer disconnect does not revoke another connection's control. Reconnection restores reading only. Runtime checks local control deadlines independently of transport heartbeat.
 
@@ -26,7 +26,7 @@ Ending a shared Run keeps the Robot, Brain and World. Entity removal is separate
 
 Current source checks cover resource allocation, scoped retries, observer isolation, dynamic generic physics and MCP tool-list changes. Bounded G1 CPU diagnostics have exercised A → A+B → B → empty World. After removing A, B executed a 0.5 m request with approximately 0.012 m measured forward error, then confirmed stopping; the empty world's clock continued. These are direct Runtime diagnostics, not installed-candidate or independent Agent acceptance.
 
-A static target hold reproduced a fall after a successful motion chain. Active zero-command balance avoided that fall in short probes, but a two-minute test revealed slow drift and revoked stop confirmation for both robots. A separate single-robot idle test also reproduced the drift, so topology change is not a necessary cause. Long holding remains unqualified. No stopping threshold was relaxed.
+A static target hold reproduced a fall after a successful motion chain. Active zero-command balance avoided that fall in short probes, but a two-minute test revealed slow drift and revoked stop confirmation for both robots. A separate single-robot idle test also reproduced the drift, so topology change is not a necessary cause. A separate World process over the real ZMQ IPC bus also reproduced drift over 120 seconds. Long holding remains unqualified and the skill-transition validation flag is disabled. No stopping threshold was relaxed.
 
 Physics evidence can now be sampled at the physical step, with robot contacts and falls recorded separately from rendering. The new paired scorer requires complete data, a common stable window of at least three seconds, bounded drift/distance, current stopping evidence and three independently reviewed images from each robot. Calibration numbers and formal rendezvous trials remain pending. The historical findings below are retained as results of their original candidates.
 
