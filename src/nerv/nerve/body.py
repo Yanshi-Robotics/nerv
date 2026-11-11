@@ -68,6 +68,10 @@ class Capabilities:
     family: str = ""
     sensors: list[str] = field(default_factory=list)   # e.g. ["camera:head"]
 
+    prepare_state: str = "ready"
+    runtime_epoch: str = ""
+    manifest_revision: int = 0
+
     @property
     def operations(self) -> list[ToolSpec]:
         """Transport enumeration; application domains remain separate fields."""

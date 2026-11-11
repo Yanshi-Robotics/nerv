@@ -98,6 +98,9 @@ class BodyNode:
         self.bus_kind = bus_kind
         self.stream_fps = stream_fps
         self.epoch = f"{int(time.time())}-{uuid.uuid4().hex[:6]}"
+        self.prepare_state = "unprepared" if hasattr(impl, "prepare") else "ready"
+        self.manifest_revision = 0
+        self._prepare_lock = threading.Lock()
         self._kinds = {td["name"]: td.get("kind", "primitive") for td in self.actions()}
 
     def actions(self):
@@ -254,7 +257,8 @@ def build_app(node: BodyNode, cors_origins: list[str]) -> FastAPI:
         if u == CAPABILITIES_URI:
             meta = {"family": impl.family, "version": impl.version,
                     "robot_actions": {td["name"]: {"kind": td.get("kind", "primitive")} for td in node.actions()},
-                    "sensors": impl.sensor_names(), "armed": node.armed, "epoch": node.epoch}
+                    "sensors": impl.sensor_names(), "armed": node.armed, "epoch": node.epoch,
+                    "prepare_state": node.prepare_state, "manifest_revision": node.manifest_revision}
             return [ReadResourceContents(content=json.dumps(meta), mime_type="application/json")]
         state, images = await anyio.to_thread.run_sync(impl.observe)
         state = dict(state or {})
@@ -303,6 +307,7 @@ def build_app(node: BodyNode, cors_origins: list[str]) -> FastAPI:
                 "launch_token": os.environ.get("NERV_LAUNCH_TOKEN", ""),
                 "version": impl.version, "world": node.world, "bus": node.bus_kind,
                 "armed": node.armed, "held": bool(impl.held), "epoch": node.epoch,
+                "prepare_state": node.prepare_state, "manifest_revision": node.manifest_revision,
                 "protocol_major": PROTOCOL_MAJOR, "protocol_minor": PROTOCOL_MINOR, "runtime_manifest": getattr(node, "manifest", {}),
                 "supervision_sensors": impl.supervision_sensors() if hasattr(impl, "supervision_sensors") else []}
 
@@ -365,9 +370,20 @@ def build_app(node: BodyNode, cors_origins: list[str]) -> FastAPI:
     def prepare() -> dict:
         if not hasattr(impl, "prepare"):
             return {"ok": True, "prepared": True}
-        result = impl.prepare()
-        node._kinds = {td["name"]: td.get("kind", "primitive") for td in node.actions()}
-        return result
+        with node._prepare_lock:
+            node.prepare_state = "preparing"
+            node.manifest_revision += 1
+            try:
+                result = impl.prepare()
+                node._kinds = {td["name"]: td.get("kind", "primitive") for td in node.actions()}
+                node.prepare_state = "ready" if result.get("ok") is True else "failed"
+                return {**result, "prepare_state": node.prepare_state,
+                        "manifest_revision": node.manifest_revision + 1, "epoch": node.epoch}
+            except Exception:
+                node.prepare_state = "failed"
+                raise
+            finally:
+                node.manifest_revision += 1
 
     @app.get("/policies")
     def policies() -> dict:
@@ -389,6 +405,8 @@ def build_app(node: BodyNode, cors_origins: list[str]) -> FastAPI:
     def close_device():
         node.invalidate_control()
         node.armed = False
+        node.prepare_state = "unprepared"
+        node.manifest_revision += 1
         impl.close()
         return {"ok": True, "prepared": False}
 

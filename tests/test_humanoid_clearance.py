@@ -81,3 +81,30 @@ def test_subscale_request_is_rejected_before_motion():
     result = body.invoke('move_forward', meters=.1)
     assert not result['ok'] and result['data']['executed'] is False
     assert not commands
+
+
+@pytest.mark.parametrize('kind', ['dist', 'yaw'])
+def test_opposite_direction_never_counts_as_target_progress(kind):
+    body, commands, _ = body_with_scans([CLEAR])
+    original = body.bus.read
+    def backwards():
+        state = original()
+        state.odom_xy[0] *= -1
+        state.odom_yaw *= -1
+        return state
+    body.bus.read = backwards
+    velocity = (.6, 0, 0) if kind == 'dist' else (0, 0, .8)
+    result = body._drive_until(*velocity, 3, kind, .1, None, lambda: False)
+    assert result['reason'] != 'reached'
+    assert result['forward_m'] < 0 if kind == 'dist' else result['turned_deg'] < 0
+    assert commands[-1] == (0, 0, 0)
+
+
+def test_stall_does_not_invent_obstacle_contact():
+    body, _, _ = body_with_scans([CLEAR])
+    body._drive_until = lambda *args: dict(forward_m=.02, moved_m=.02, stop_confirmed=True,
+                                         fallen=False, reason='stalled')
+    result = body._move_forward(.5, lambda *args: None, lambda: False)
+    assert not result['ok']
+    assert 'wall' not in result['message'] and 'furniture' not in result['message']
+    assert result['data']['target_error_m'] == -.48

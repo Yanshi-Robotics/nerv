@@ -67,14 +67,15 @@ class _McpNode:
 
     # -- capabilities ---------------------------------------------------------------------
     def capabilities(self) -> Capabilities:
-        if self._caps is not None:
-            return self._caps
-
+        # A Runtime can prepare or restart at the same URL. Refresh the manifest
+        # on discovery rather than caching an unprepared/old generation forever.
+        self.refresh()
         async def op(s):
             tl = await s.list_tools()
             kinds: dict = {}
             family, sensors, version = "", [], ""
             cfg: dict = {}
+            meta: dict = {}
             try:
                 rl = await s.list_resources()
                 uris = {str(r.uri) for r in rl.resources}
@@ -95,7 +96,8 @@ class _McpNode:
                             cfg = json.loads(c.text) or {}
                             break
             except Exception:
-                pass
+                if self.what == "body":
+                    raise
             tools = []
             for t in tl.tools:
                 ro = bool(t.annotations and t.annotations.readOnlyHint)
@@ -112,19 +114,29 @@ class _McpNode:
                                        if getattr(m.content, "text", None))
             except Exception:
                 pass
-            return tools, guidance, cfg, family, sensors, version
+            if meta.get("prepare_state", "ready") != "ready":
+                raise ValueError("Runtime capabilities are not ready: " + meta["prepare_state"])
+            if self.what == "body" and "robot_actions" in meta and set(kinds) != {t.name for t in tools}:
+                raise ValueError("Runtime capabilities changed during discovery; observe again")
+            return tools, guidance, cfg, family, sensors, version, meta
 
         t0 = time.perf_counter()
-        tools, guidance, cfg, family, sensors, version = run_sync(
+        tools, guidance, cfg, family, sensors, version, meta = run_sync(
             with_session(self.mcp_url, op, self.timeout), self.timeout + config.BRIDGE_GRACE_S)
         self._raw = Capabilities(name=self.name, version=version, **{"robot_actions" if self.what == "body" else "agent_tools": tools}, guidance=guidance,
-                                 config=cfg, family=family, sensors=sensors)
+                                 config=cfg, family=family, sensors=sensors,
+                                 prepare_state=meta.get("prepare_state", "ready"),
+                                 runtime_epoch=meta.get("epoch", ""),
+                                 manifest_revision=meta.get("manifest_revision", 0))
         self._trust = trust.TrustStore().check(self.key, tools, guidance, url=self.base)
         if self._trust.allowed:
             self._caps = self._raw
         else:
             self._caps = Capabilities(name=self.name, version=version, guidance="",
-                                      config=cfg, family=family, sensors=sensors)
+                                      config=cfg, family=family, sensors=sensors,
+                                 prepare_state=meta.get("prepare_state", "ready"),
+                                 runtime_epoch=meta.get("epoch", ""),
+                                 manifest_revision=meta.get("manifest_revision", 0))
         log.record_node(self.log_kind, self.name, "capabilities", "handshake [mcp]",
                         (time.perf_counter() - t0) * 1000,
                         {"n_tools": len(tools), "tools": [t.name for t in tools],
@@ -134,8 +146,7 @@ class _McpNode:
     # -- invoke ---------------------------------------------------------------------------
     def invoke(self, name: str, *, _on_progress: Optional[Callable] = None,
                _should_abort: Optional[Callable[[], bool]] = None, _control_token: str | None = None, **kwargs: Any) -> ActionResult:
-        if self._caps is None:
-            self.capabilities()
+        self.capabilities()
         t0 = time.perf_counter()
         beat = mcp_bridge.Beat()
 

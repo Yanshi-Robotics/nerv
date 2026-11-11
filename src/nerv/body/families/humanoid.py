@@ -558,7 +558,8 @@ class VelocityPolicyBody:
         L = self.loco
         st = self.bus.read()
         x0, y0 = (st.odom_xy + [0.0, 0.0])[:2]
-        prev_yaw, acc_yaw = st.odom_yaw, 0.0
+        yaw0 = st.odom_yaw
+        prev_yaw, acc_yaw = yaw0, 0.0
         best, t_stall = 0.0, st.t
         t_end = st.t + max(0.0, budget_s)
         reason, braked_at = REASON_BUDGET, None
@@ -599,7 +600,8 @@ class VelocityPolicyBody:
                 x, y = (st.odom_xy + [0.0, 0.0])[:2]
                 acc_yaw += _wrap(st.odom_yaw - prev_yaw)
                 prev_yaw = st.odom_yaw
-                prog = math.hypot(x - x0, y - y0) if kind == "dist" else abs(acc_yaw)
+                forward = (x-x0)*math.cos(yaw0) + (y-y0)*math.sin(yaw0)
+                prog = forward if kind == "dist" else acc_yaw * (1 if wz >= 0 else -1)
                 if prog >= target:
                     reason = REASON_REACHED
                     break
@@ -626,6 +628,10 @@ class VelocityPolicyBody:
         x1, y1 = (st.odom_xy + [0.0, 0.0])[:2]
         acc_yaw += _wrap(st.odom_yaw - prev_yaw)
         return {"moved_m": round(math.hypot(x1 - x0, y1 - y0), 3), "turned_deg": round(math.degrees(acc_yaw), 1),
+                "forward_m": round((x1-x0)*math.cos(yaw0) + (y1-y0)*math.sin(yaw0), 3),
+                "lateral_m": round(-(x1-x0)*math.sin(yaw0) + (y1-y0)*math.cos(yaw0), 3),
+                "stop_state": "stopped" if settled else "stop_unconfirmed",
+                "execution_status": "completed" if reason == REASON_REACHED and settled else "interrupted",
                 "fallen": self._fallen(st), "reason": reason,
                 "stop_confirmed": settled, "timed_out": reason == REASON_BUDGET,
                 "braking_m": round(math.hypot(x1-braking_start.odom_xy[0], y1-braking_start.odom_xy[1]), 3),
@@ -641,7 +647,7 @@ class VelocityPolicyBody:
         budget = meters / max(1e-6, speed) * float(L["time_factor"]) + float(L["time_extra_s"])
         progress(float(L["progress_start"]), f"walking forward {meters:g} m")
         r = self._drive_until(speed, 0.0, 0.0, budget, "dist", meters, progress, should_abort)
-        moved = r["moved_m"]
+        moved = r["forward_m"]
         r["target_m"] = meters
         r["target_error_m"] = round(moved-meters, 3)
         r["travel_threshold_crossed"] = r["reason"] == REASON_REACHED
@@ -658,13 +664,13 @@ class VelocityPolicyBody:
             return {"ok": False, "message": f"walking inhibited: {r['reason']}", "data": r}
         if r["reason"] == REASON_BRAKED:
             if moved < float(L["brake_zero_move_m"]):
-                return {"ok": True, "message": (f"did not move: {r['motion_clearance']['reason']} within "
+                return {"ok": False, "message": (f"did not move: {r['motion_clearance']['reason']} within "
                                                 f"the safety distance"), "data": r}
-            return {"ok": True, "message": (f"walked {moved:.2f} m then braked: "
+            return {"ok": False, "message": (f"walked {moved:.2f} m then braked: "
                                             f"{r['motion_clearance']['reason']} ahead"), "data": r}
-        if r["reason"] == REASON_STALLED or moved < meters * float(L["stuck_min_ratio"]):
-            return {"ok": True, "message": f"walked only {moved:.2f} m and got stuck — blocked by a wall "
-                                           f"or furniture", "data": r}
+        if r["reason"] != REASON_REACHED:
+            return {"ok": False, "message": f"Forward progress {moved:.2f} m; motion ended: {r['reason']}. "
+                                           "The cause of lost progress is not established.", "data": r}
         return {"ok": True, "message": f"walked forward {moved:.2f} m", "data": r}
 
     def _turn(self, degrees: float, sign: int, progress, should_abort) -> dict:
@@ -675,7 +681,7 @@ class VelocityPolicyBody:
         side = "left" if sign > 0 else "right"
         progress(float(L["progress_start"]), f"turning {side} {degrees:g}°")
         r = self._drive_until(self.policy.turn_vx, 0.0, sign * rate, budget, "yaw", rad, progress, should_abort)
-        turned = abs(r["turned_deg"])
+        turned = sign * r["turned_deg"]
         r["target_deg"] = degrees
         r["target_error_deg"] = round(turned-degrees, 1)
         r["travel_threshold_crossed"] = r["reason"] == REASON_REACHED
@@ -691,6 +697,8 @@ class VelocityPolicyBody:
         if r["reason"] in (REASON_CLEARANCE, "scene_test_active", REASON_BRAKED):
             return {"ok": False, "message": (f"turn stopped after {turned:.0f}°: "
                                              f"{r['motion_clearance'].get('reason', r['reason'])}"), "data": r}
+        if r["reason"] != REASON_REACHED:
+            return {"ok": False, "message": f"Turn ended: {r['reason']} after {turned:.0f}°", "data": r}
         msg = f"turned {side} {turned:.0f}°"
         if r["moved_m"] >= float(L["turn_report_move_m"]):
             msg += f", drifting {r['moved_m']:.2f} m"
