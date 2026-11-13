@@ -70,16 +70,35 @@ def score(record, robot_ids, contract, visual_reviews, stop_receipts, *, claimed
             stable = stamp - start
             reason = 'common_stable_window'
         previous = stamp
-    window = [max(start, previous - contract['stable_seconds']), previous] if start is not None else None
+    # The contract requires a common window of AT LEAST three seconds. Keep
+    # its full uninterrupted extent: visual reasoning can take longer than three
+    # seconds while both robots remain stationary. Never cross a reset or gap.
+    window = [start, previous] if start is not None else None
     images_valid = stops_valid = bool(window)
     for rid in robot_ids:
         reviewed = visual_reviews.get(rid, [])
         selected = [r for r in reviewed if window and r.get('seen_other_reviewed') is True
+                    and r.get('agent_claimed_seen_other') is True
                     and r.get('robot_instance_id') == rid and r.get('world_epoch') == (identity or (None,None))[1]
                     and _vector([r.get('sim_time')]) and window[0] <= r['sim_time'] <= window[1]
-                    and isinstance(r.get('image_sha256'), str) and len(r['image_sha256']) == 64]
-        images_valid &= (len({r.get('observation_sequence') for r in selected if type(r.get('observation_sequence')) is int}) >= 3
-                         and len({r['image_sha256'] for r in selected}) >= 3)
+                    and isinstance(r.get('image_sha256'), str) and len(r['image_sha256']) == 64
+                    and all(c in '0123456789abcdef' for c in r['image_sha256'])]
+        acquisitions = {}
+        consistent = True
+        for frame in selected:
+            sequence = frame.get('observation_sequence')
+            if type(sequence) is not int or sequence < 0:
+                consistent = False
+                continue
+            acquisition = (frame['sim_time'], frame['image_sha256'])
+            if sequence in acquisitions and acquisitions[sequence] != acquisition:
+                consistent = False
+            acquisitions[sequence] = acquisition
+        images_valid &= (consistent and len(acquisitions) >= 3
+                         and len({value[0] for value in acquisitions.values()}) >= 3)
+        # Equal image bytes are legitimate for an unchanged scene. Independent
+        # acquisitions require distinct sequence numbers AND acquisition times;
+        # content hashes identify retained originals, not physical movement.
         stop = stop_receipts.get(rid, {})
         stops_valid &= (stop.get('stop_confirmed') is True and _vector([stop.get('observed_sim_time')])
                         and stop.get('robot_instance_id') == rid and stop.get('world_epoch') == (identity or (None,None))[1]

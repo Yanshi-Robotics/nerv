@@ -166,7 +166,7 @@ class BuiltinRuntime:
             name = sensor["name"] if isinstance(sensor, dict) else str(sensor)
             camera = (sensor.get("camera") or name) if isinstance(sensor, dict) else name
             try:
-                data, mime = self._sensor_bus.sensor(camera)
+                data, mime, source = self._sensor_bus.sensor_frame(camera)
                 if mime != "image/png":
                     if not mime.startswith("image/"):
                         raise ValueError("camera did not return an image")
@@ -174,6 +174,10 @@ class BuiltinRuntime:
                     Image.open(io.BytesIO(data)).convert("RGB").save(buf, format="PNG")
                     data = buf.getvalue()
                 images.append((name, data))
+                import hashlib
+                state.setdefault('image_frames', {})[name] = {
+                    **source, 'source_metadata_available': bool(source),
+                    'image_sha256': hashlib.sha256(data).hexdigest()}
             except Exception as error:
                 state.setdefault("sensor_errors", {})[name] = f"{type(error).__name__}: {error}"
         return state, images

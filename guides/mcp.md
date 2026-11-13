@@ -53,6 +53,8 @@ Start by reading the project and capabilities. Request observations, inspect all
 
 Mutating requests require a caller-generated `request_id`. Reuse that ID only when retrying the identical request; changed arguments need a new request. Action calls also carry the current task ID and version. After a bounded action, observe again before the next action. Fixed ACT runs independently of model latency, but still requires the declared supervision cadence.
 
+G1 simulation observations expose `state.image_frames[sensor]` for each returned PNG: the camera's `source_sequence`, actual `captured_sim_time`, capture wall time, World epoch, Robot/World IDs, topology revision and `image_sha256`. These values describe the image capture, not the earlier robot-state poll or later delivery. The Runtime `frame_seq` and observation receipt remain the acknowledgement mechanism; a camera source sequence is not an acknowledgement. Legacy sensors without capture metadata are explicitly marked unavailable for that evidence, rather than receiving an invented capture time.
+
 Use `events` with a bounded `wait_s` or poll `task_status` to inspect progress. Neither call renews observation supervision. When the model is delayed or disconnected, the local supervision deadline still applies. Do not acknowledge unseen frames to keep a task alive. A tool returning an execution result does not establish success without the task's independent success criterion.
 
 ## Client acceptance

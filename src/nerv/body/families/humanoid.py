@@ -26,6 +26,7 @@ the body fell, a heading relative to where it started, the last action's outcome
 from __future__ import annotations
 
 import io
+import hashlib
 import json
 import math
 import os
@@ -846,15 +847,24 @@ class VelocityPolicyBody:
         images = []
         for name in self.sensors:
             try:
-                data, mime = self.bus.sensor(self._cam_map.get(name) or name)
-                if mime == "image/png":
-                    images.append((name, data))
-                elif mime == "image/jpeg":
+                camera = self._cam_map.get(name) or name
+                if callable(getattr(self.bus, 'sensor_frame', None)):
+                    data, mime, source = self.bus.sensor_frame(camera)
+                else:
+                    data, mime = self.bus.sensor(camera)
+                    source = {}
+                if mime == "image/jpeg":
                     from PIL import Image
                     im = Image.open(io.BytesIO(data)).convert("RGB")
                     buf = io.BytesIO()
                     im.save(buf, format="PNG")
-                    images.append((name, buf.getvalue()))
+                    data, mime = buf.getvalue(), 'image/png'
+                if mime != 'image/png':
+                    raise ValueError('camera did not return a supported image')
+                images.append((name, data))
+                state.setdefault('image_frames', {})[name] = {
+                    **source, 'source_metadata_available': bool(source),
+                    'image_sha256': hashlib.sha256(data).hexdigest()}
             except Exception as e:      # a missing camera is reported, never faked
                 state.setdefault("sensor_errors", {})[name] = f"{type(e).__name__}: {e}"
         return state, images

@@ -102,8 +102,12 @@ class ZmqBus:
         return list(self._req({"op": OP_SENSORS}).get("sensors", []))
 
     def sensor(self, name: str) -> tuple[bytes, str]:
+        data, mime, _source = self.sensor_frame(name)
+        return data, mime
+
+    def sensor_frame(self, name: str):
         r = self._camera.request({"op": OP_SENSOR, "name": name})
-        return wire.b64d(r["data"]), r.get("mime", "image/jpeg")
+        return wire.b64d(r["data"]), r.get("mime", "image/jpeg"), dict(r.get('source') or {})
 
     def rays(self, angles_deg: list[float], max_range_m: float) -> list[float]:
         return list(self._req({"op": OP_RAYS, "angles_deg": angles_deg,

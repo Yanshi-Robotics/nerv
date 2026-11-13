@@ -312,6 +312,7 @@ class WorldSim:
         self._imu_acc = np.zeros(3)
         self._prev_base_v = np.zeros(3)
 
+        self._camera_sequence = 0
         self.render = RenderService(self.model, self.phys["render_width"], self.phys["render_height"],
                                     self.phys["render_timeout_s"])
         self._chase_cam = mujoco.MjvCamera()
@@ -696,15 +697,27 @@ class WorldSim:
             raise KeyError(f"no sensor named {name!r}; have {self.sensor_names()}")
         return bare
 
-    def render_camera(self, name: str) -> tuple[np.ndarray, float]:
+    def capture_camera(self, name: str):
+        """Return pixels and provenance from the same scene-update critical section."""
         cam = self._camera_for(name)
 
-        def job(r: mujoco.Renderer):
+        def job(renderer):
             with self._lock:
-                r.update_scene(self.data, camera=cam)
-                t = float(self.data.time)
-            return r.render().copy(), t
+                renderer.update_scene(self.data, camera=cam)
+                self._camera_sequence += 1
+                owner = getattr(self, 'owner', None)
+                metadata = dict(camera=cam, captured_sim_time=float(self.data.time),
+                                captured_at=time.time(), source_sequence=self._camera_sequence,
+                                world_epoch=self.epoch,
+                                robot_instance_id=getattr(self, 'robot_instance_id', None),
+                                world_instance_id=getattr(owner, 'world_instance_id', None),
+                                topology_revision=getattr(owner, 'topology_revision', None))
+            return renderer.render().copy(), metadata
         return self.render.run(job)
+
+    def render_camera(self, name: str) -> tuple[np.ndarray, float]:
+        rgb, metadata = self.capture_camera(name)
+        return rgb, metadata['captured_sim_time']
 
     def scene_state(self) -> dict:
         with self._lock:
@@ -847,8 +860,9 @@ def make_bus_handler(sim: WorldSim) -> Callable[[dict], dict]:
         if op == OP_SENSORS:
             return {"sensors": sim.sensor_names()}
         if op == OP_SENSOR:
-            rgb, t = sim.render_camera(str(msg.get("name", "")))
-            return {"mime": "image/jpeg", "data": wire.b64e(_jpeg(rgb, sim.phys["jpeg_quality"])), "t": t}
+            rgb, source = sim.capture_camera(str(msg.get("name", "")))
+            return {"mime": "image/jpeg", "data": wire.b64e(_jpeg(rgb, sim.phys["jpeg_quality"])),
+                    "t": source['captured_sim_time'], "source": source}
         if op == OP_RAYS:
             return {"ranges": sim.rays(list(msg.get("angles_deg") or []),
                                        float(msg.get("max_range_m", 0.0)))}
