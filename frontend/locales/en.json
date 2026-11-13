@@ -1200,6 +1200,10 @@
     "Robot observation": "Robot observation",
     "Observation does not grant motion control.": "Observation does not grant motion control.",
     "Frame": "Frame",
-    "Offline": "Offline"
+    "Offline": "Offline",
+    "Internal Agent settings retired": "Internal Agent settings retired",
+    "External Agents manage their own models, credentials and context. NERV Brain Core provides observations, control and execution records.": "External Agents manage their own models, credentials and context. NERV Brain Core provides observations, control and execution records.",
+    "Historical configuration is preserved. It does not authorize new tasks.": "Historical configuration is preserved. It does not authorize new tasks.",
+    "Brain instance": "Brain instance"
   }
 }

@@ -1221,7 +1221,11 @@ export const LOCALES: Record<string, Locale> = {
       "Robot observation": "Robot observation",
       "Observation does not grant motion control.": "Observation does not grant motion control.",
       "Frame": "Frame",
-      "Offline": "Offline"
+      "Offline": "Offline",
+      "Internal Agent settings retired": "Internal Agent settings retired",
+      "External Agents manage their own models, credentials and context. NERV Brain Core provides observations, control and execution records.": "External Agents manage their own models, credentials and context. NERV Brain Core provides observations, control and execution records.",
+      "Historical configuration is preserved. It does not authorize new tasks.": "Historical configuration is preserved. It does not authorize new tasks.",
+      "Brain instance": "Brain instance"
     }
   },
   "zh": {
@@ -1364,7 +1368,7 @@ export const LOCALES: Record<string, Locale> = {
       "Refused:": "被拒绝：",
       "Remote control": "遥控",
       "Remote control: drive the body yourself; the brain is paused": "遥控：你自己开身体；大脑暂停",
-      "Run": "执行",
+      "Run": "运行",
       "Running…": "执行中…",
       "Runtime limits": "运行参数",
       "See what it declares": "看它声明了什么",
@@ -2426,7 +2430,11 @@ export const LOCALES: Record<string, Locale> = {
       "Robot observation": "机器人观测",
       "Observation does not grant motion control.": "查看观测不会授予运动控制权。",
       "Frame": "帧",
-      "Offline": "离线"
+      "Offline": "离线",
+      "Internal Agent settings retired": "内部 Agent 设置已退役",
+      "External Agents manage their own models, credentials and context. NERV Brain Core provides observations, control and execution records.": "外部 Agent 自行管理模型、凭据和上下文。NERV Brain Core 提供观测、控制和执行记录。",
+      "Historical configuration is preserved. It does not authorize new tasks.": "历史配置继续保留，不会据此授权新任务。",
+      "Brain instance": "Brain 实例"
     }
   }
 };

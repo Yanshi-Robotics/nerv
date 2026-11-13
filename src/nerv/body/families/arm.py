@@ -212,12 +212,20 @@ class ArmBody:
         self._last = msg
         return {"ok": bool(res.get("ok")) and not res.get("aborted"), "message": msg, "data": res}
 
-    def hold(self, reason: str = "operator") -> dict:
-        """Emergency stop that keeps the pose: abort the move, re-command the current joints so the
-        servos stay powered where they are. (Cutting power instead would let the arm drop.)"""
+    def cancel_current(self, reason: str = "cancelled") -> dict:
+        """Revoke the current move without clearing or creating an emergency latch."""
         self.runner.stop.request()
         _, cur = self._read()
         self.bus.write(BusCommand(targets=[cur[jn] for jn in self.joints]))
+        self._last = f"motion cancelled ({reason})"
+        # Capturing servo targets is not independent physical-stop evidence.
+        return {"ok": True, "accepted": True, "message": self._last,
+                "held": self._held, "stop_confirmed": False, "stop_state": "stop_unconfirmed"}
+
+    def hold(self, reason: str = "operator") -> dict:
+        """Emergency stop that keeps the pose: abort the move, re-command the current joints so the
+        servos stay powered where they are. (Cutting power instead would let the arm drop.)"""
+        self.cancel_current(reason)
         self._held = True
         self._last = f"holding the pose ({reason})"
         return {"ok": True, "message": self._last, "held": True, "reason": reason}

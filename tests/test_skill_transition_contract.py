@@ -2,6 +2,7 @@
 from types import SimpleNamespace
 import hashlib
 import threading
+import pytest
 
 from nerv.runtime.builtin import BuiltinRuntime
 from nerv.body.skills import StopFlag
@@ -58,3 +59,17 @@ def test_observation_timing_qualification_is_scene_scoped(tmp_path):
     value.binding.configuration['scene_profile'] = 'unqualified-scene'
     assert not value.external_supervision_config()['validated']
     assert not value.supervise(1)['ok']
+
+
+@pytest.mark.parametrize('next_skill', ['walk', 'turn'])
+def test_old_stop_receipt_cannot_authorize_motion_after_balance_is_lost(tmp_path, next_skill):
+    value, calls = runtime(tmp_path)
+    assert value.invoke('walk')['ok']
+    value._impl.status = lambda:{'stop_evidence':{'stop_confirmed':False}}
+    result = value.invoke(next_skill)
+    assert not result['ok'] and result['data']['stop_state'] == 'stop_unconfirmed'
+    assert calls == ['walk']
+    value._impl.status = lambda:{}
+    assert not value.invoke(next_skill)['ok'], 'Missing evidence cannot authorize movement'
+    value._impl.status = lambda:{'stop_evidence':{'stop_confirmed':True}}
+    assert value.invoke(next_skill)['ok']

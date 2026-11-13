@@ -189,6 +189,14 @@ class BuiltinRuntime:
 
         is_skill = bool(getattr(self.binding, 'configuration', {}).get('skill_transitions')) and any(
             action['name'] == name and action.get('kind') == 'skill' for action in self._impl.tools())
+        if is_skill:
+            # A successful action receipt is historical evidence. Balance may
+            # have been lost while the Agent was thinking; check live evidence
+            # even when repeating the same skill under a new task or lease.
+            evidence = self._impl.status().get('stop_evidence', {})
+            if evidence.get('stop_confirmed') is not True:
+                return {'ok':False, 'message':'Current stable-stop evidence is unavailable',
+                        'data':{'stop_confirmed':False, 'stop_state':'stop_unconfirmed'}}
         if is_skill and not self._last_skill_stopped:
             return {'ok':False, 'message':'Previous motion stop is unconfirmed; operator recovery is required'}
         if is_skill and self._last_skill is not None and self._last_skill != name:
@@ -254,7 +262,8 @@ class BuiltinRuntime:
         if self._impl is None:
             return {"ok": True, "accepted": True, "dispatch_revoked": True,
                     "stop_confirmed": False, "stop_state": "offline"}
-        result = self._impl.hold(reason)
+        cancel = getattr(self._impl, 'cancel_current', self._impl.hold)
+        result = cancel(reason)
         return {**result, "accepted": True, "dispatch_revoked": True}
 
     def hold(self, reason="operator"):

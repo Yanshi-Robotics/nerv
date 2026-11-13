@@ -1,7 +1,6 @@
 "use client";
 import { useEffect, useState } from "react";
 import {
-  userApi,
   setupDevice,
   checkRelease,
   type Registry,
@@ -9,7 +8,6 @@ import {
   type NodeInfo,
 } from "@/lib/api";
 import { useI18n } from "@/lib/i18n";
-import VlmPanel from "./VlmPanel";
 import ControlSchemes from "./ControlSchemes";
 import ModulesPanel from "./ModulesPanel";
 import PolicyLibrary from "./PolicyLibrary";
@@ -23,13 +21,11 @@ import AssetLibrary from './AssetLibrary';
 const sections = [
   ["general", "General"],
   ["agents", "Agent connections"],
-  ["models", "Robot decision models"],
   ["schemes", "Control schemes"],
   ["policies", "Policy library"],
   ["components", "Components and simulation"],
   ["assets", "My assets"],
   ["system", "System and installation"],
-  ["runtime", "Decision service"],
   ["diagnostics", "Diagnostics and logs"],
   ["updates", "Updates"],
   ["about", "About"],
@@ -84,98 +80,13 @@ function SchemeSettings({
     </>
   );
 }
-function RuntimeSettings() {
-  const { t } = useI18n();
-  const [params, setParams] = useState<any[]>([]),
-    [values, setValues] = useState<Record<string, number>>({}),
-    [message, setMessage] = useState(""),
-    [error, setError] = useState("");
-  const load = (v: any) => {
-    setParams(v.params);
-    setValues(Object.fromEntries(v.params.map((p: any) => [p.key, p.value])));
-  };
-  useEffect(() => {
-    userApi("config")
-      .then(load)
-      .catch((e) => setError(e.message));
-  }, []);
-  async function save(reset = false) {
-    setError("");
-    try {
-      load(
-        await userApi(
-          reset ? "config/reset" : "config",
-          reset ? "POST" : "PUT",
-          reset
-            ? {}
-            : Object.fromEntries(
-                params
-                  .filter((p) => p.editable)
-                  .map((p) => [p.key, values[p.key]]),
-              ),
-        ),
-      );
-      setMessage(
-        t(
-          "Saved. New managed decision turns use these settings; running tasks keep their limits.",
-        ),
-      );
-    } catch (e) {
-      setError((e as Error).message);
-    }
-  }
-  return (
-    <div className="settings-content space-y-5">
-      <h1>{t("Decision service")}</h1>
-      <p className="muted">
-        {t(
-          "These settings apply only to the optional managed robot decision service. External Agents manage their own context and budgets. Robot task limits come from the control scheme.",
-        )}
-      </p>
-      {params.map((p) => (
-        <label className="settings-row" key={p.key}>
-          <div>
-            <b>{t(p.label)}</b>
-            <p className="muted">{t(p.description)}</p>
-            <span className="text-xs text-neutral-500">
-              {t(p.source)} · {p.env}
-              {p.constraints?.minimum !== undefined && ` · ≥ ${p.constraints.minimum}`}
-              {p.constraints?.exclusiveMinimum !== undefined && ` · > ${p.constraints.exclusiveMinimum}`}
-            </span>
-          </div>
-          <input
-            aria-label={t(p.label)}
-            className="form-field max-w-36"
-            type="number"
-            min={p.constraints?.minimum}
-            step={p.constraints?.type === "integer" ? 1 : "any"}
-            disabled={!p.editable}
-            value={values[p.key] ?? ""}
-            onChange={(e) =>
-              setValues({ ...values, [p.key]: Number(e.target.value) })
-            }
-          />
-        </label>
-      ))}
-      <div className="flex gap-3">
-        <button
-          className="nerv-control nerv-primary action"
-          onClick={() => save()}
-        >
-          {t("Save changes")}
-        </button>
-        <button className="nerv-control action" onClick={() => save(true)}>
-          {t("Restore defaults")}
-        </button>
-      </div>
-      {message && <p role="status">{message}</p>}
-      {error && (
-        <p role="alert" className="error-text">
-          {error}
-        </p>
-      )}
-    </div>
-  );
+function RetiredInternalSettings() {
+  const {t}=useI18n();
+  return <div className="settings-content space-y-5">
+    <h1>{t('Internal Agent settings retired')}</h1>
+    <p>{t('External Agents manage their own models, credentials and context. NERV Brain Core provides observations, control and execution records.')}</p>
+    <p className="muted">{t('Historical configuration is preserved. It does not authorize new tasks.')}</p>
+  </div>;
 }
 export default function SettingsPage({
   section,
@@ -260,7 +171,7 @@ export default function SettingsPage({
             </div>
           </div>
         )}
-        {section === "models" && <VlmPanel onChanged={onChanged} />}
+        {["models", "runtime"].includes(section) && <RetiredInternalSettings />}
         {section === "schemes" && (
           <SchemeSettings
             registry={registry}
@@ -283,7 +194,6 @@ export default function SettingsPage({
         )}
         {section === "system" && <SystemInstallation />}
         {section === "assets" && <AssetLibrary />}
-        {section === "runtime" && <RuntimeSettings />}
         {section === "diagnostics" && (
           <>
             <div className="p-4">
