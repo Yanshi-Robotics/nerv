@@ -163,6 +163,33 @@ def test_physics_evidence_is_step_sampled_and_refuses_topology_during_trial(worl
     assert all(set(s['robots'])=={'A','B'} for s in record['samples'])
 
 
+@pytest.mark.parametrize('margin', [None, .1])
+def test_physics_evidence_tracks_a_moving_prop_but_excludes_robot_geometry(world, tmp_path, margin):
+    from pathlib import Path
+    from nerv.world.evidence import PhysicsEvidence
+    arena = tmp_path / 'moving-prop.xml'
+    arena.write_text(Path(world.arena).read_text().replace('</worldbody>',
+        '<body name="prop" pos="4 0 1"><freejoint name="prop_free"/>'
+        '<geom name="prop_shape" size=".1" mass="1"/></body></worldbody>'))
+    owner = SharedWorld(str(arena), [dict(robot_instance_id='A', spawn=dict(x=0,y=0,z=1,yaw=0))])
+    try:
+        attach(owner.view('A'))
+        owner.evidence = PhysicsEvidence(sample_hz=25, duration_s=1, max_samples=30, obstacle_margin_m=margin)
+        owner.step()
+        first = owner.evidence.read()['samples'][0]
+        assert first['dynamic_geometry_checked'] == 1
+        assert [g['name'] for g in first['dynamic_obstacles']] == (['prop_shape'] if margin is None else [])
+        qadr = owner.model.joint('prop_free').qposadr[0]
+        owner.data.qpos[qadr] = .35  # Inside clearance margin, without physical penetration.
+        owner.step(30)
+        latest = owner.evidence.read()['samples'][-1]
+        assert latest['dynamic_obstacles'][0]['name'] == 'prop_shape'
+        assert latest['dynamic_obstacles'][0]['bounds'][0][0] == pytest.approx(.25)
+        assert 'dynamic_obstacles' not in owner.view('A').read()
+    finally:
+        owner.stop()
+
+
 def test_motor_bus_serializes_topology_revision_for_existing_connections(world):
     from nerv.body.bus_zmq import ZmqBus
     from nerv.nerve.world import BusCommand

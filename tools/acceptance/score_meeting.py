@@ -24,7 +24,12 @@ def score(record, robot_ids, contract, visual_reviews, stop_receipts, *, claimed
                     and all(type(counts.get(rid)) is int and 0 <= counts[rid] <= 60 for rid in robot_ids)
                     and limits.get('source') == 'mcp_receipts_and_run_task_journal'
                     and limits.get('complete') is True)
-    valid = (budget_valid and record.get('physics_events_complete') is True and record.get('dropped_samples') == 0
+    dynamic_ids = record.get('dynamic_geometry_ids')
+    dynamic_valid = (isinstance(dynamic_ids, list) and all(type(g) is int and g >= 0 for g in dynamic_ids)
+                     and len(dynamic_ids) == len(set(dynamic_ids)))
+    margin = record.get('dynamic_obstacle_margin_m')
+    dynamic_valid &= (margin is None or (_vector([margin]) and margin >= contract['body_margin_m']))
+    valid = (budget_valid and dynamic_valid and record.get('physics_events_complete') is True and record.get('dropped_samples') == 0
              and record.get('finished') is True and bool(samples) and not record.get('error'))
     start = previous = identity = None
     stable = 0.
@@ -32,13 +37,21 @@ def score(record, robot_ids, contract, visual_reviews, stop_receipts, *, claimed
     collision = record.get('robot_collision_seen') is not False
     fallen = record.get('fall_seen') is not False
     reason = 'no_samples'
+    previous_steps = 0
     for index, sample in enumerate(samples):
         robots = [sample.get('robots', {}).get(rid, {}) for rid in robot_ids]
         stamp = sample.get('sim_time')
         current_identity = (sample.get('world_instance_id'), sample.get('epoch'), sample.get('topology_revision'))
         complete = (_vector([stamp]) and all(current_identity) and type(sample.get('robot_collision_seen')) is bool
                     and type(sample.get('fall_seen')) is bool and sample.get('sequence') == index + 1
-                    and type(sample.get('physics_steps')) is int and sample['physics_steps'] > 0)
+                    and type(sample.get('physics_steps')) is int and sample['physics_steps'] > previous_steps)
+        moving = sample.get('dynamic_obstacles')
+        complete = (complete and isinstance(moving, list) and dynamic_valid
+                    and sample.get('dynamic_geometry_checked') == len(dynamic_ids)
+                    and len({box.get('geom_id') for box in moving}) == len(moving)
+                    and all(box.get('geom_id') in dynamic_ids for box in moving)
+                    and (margin is not None or [box.get('geom_id') for box in moving] == dynamic_ids)
+                    and all(_bounds(box.get('bounds')) for box in moving))
         for rid, r in zip(robot_ids, robots):
             complete &= (_bounds(r.get('bounds')) and _vector(r.get('joint_velocity'))
                 and _vector(r.get('base_velocity'), 6) and r.get('robot_instance_id') == rid
@@ -53,12 +66,16 @@ def score(record, robot_ids, contract, visual_reviews, stop_receipts, *, claimed
         collision |= sample['robot_collision_seen']
         fallen |= sample['fall_seen'] or any(r['status']['fallen'] for r in robots)
         identity = current_identity
+        previous_steps = sample['physics_steps']
         positions = [[(r['bounds'][0][j] + r['bounds'][1][j])/2 for j in range(2)] for r in robots]
         distance = math.dist(*positions)
         quiet = all(max(map(abs,r['joint_velocity'])) <= contract['joint_velocity_max']
                     and math.hypot(*r['base_velocity'][:3]) <= contract['base_linear_velocity_max']
                     and math.hypot(*r['base_velocity'][3:]) <= contract['base_angular_velocity_max'] for r in robots)
-        inside = all(geometry_verdict(r,contract['region'],contract)['inside'] for r in robots)
+        # Frozen standing space remains conservative. Also test current dynamic
+        # geometry: a chair pushed into the region must not disappear from scoring.
+        region = {**contract['region'], 'obstacles': contract['region']['obstacles'] + moving}
+        inside = all(geometry_verdict(r,region,contract)['inside'] for r in robots)
         eligible = quiet and inside and contract['distance_min_m'] <= distance <= contract['distance_max_m']
         gap = previous is not None and stamp - previous > contract['max_sample_gap_s'] + 1e-9
         drift = start is not None and any(math.dist(anchors[rid],pos) > contract['window_drift_max_m'] for rid,pos in zip(robot_ids,positions))

@@ -19,8 +19,9 @@ def evidence():
             bounds=[[x,1,0],[x+.4,1.4,1.6]],joint_velocity=[0],base_velocity=[0]*6,status={'fallen':False})
             for rid,x in [('A',1),('B',2)]}
         samples.append(dict(sequence=i+1,sim_time=t,world_instance_id='world',epoch='epoch',topology_revision=1,
-            robot_collision_seen=False,fall_seen=False,physics_steps=i*25+1,robots=robots))
-    record=dict(samples=samples,physics_events_complete=True,dropped_samples=0,finished=True,robot_collision_seen=False,fall_seen=False,
+            robot_collision_seen=False,fall_seen=False,physics_steps=i*25+1,robots=robots,
+            dynamic_obstacles=[],dynamic_geometry_checked=0))
+    record=dict(samples=samples,dynamic_geometry_ids=[],physics_events_complete=True,dropped_samples=0,finished=True,robot_collision_seen=False,fall_seen=False,
                 execution_audit=dict(navigation_wall_seconds=4,motion_requests={'A':1,'B':1},
                     source='mcp_receipts_and_run_task_journal',complete=True))
     visual={rid:[dict(robot_instance_id=rid,world_epoch='epoch',sim_time=t,observation_sequence=i,
@@ -102,3 +103,28 @@ def test_independent_visual_review_does_not_invent_agent_claims(evidence):
 def test_conflicting_timestamps_cannot_manufacture_independent_observations(evidence):
     evidence[2]['A'].append({**evidence[2]['A'][0], 'sim_time': 3.8})
     assert not evaluate(evidence)['success']
+
+
+def test_moving_obstacle_and_missing_geometry_cannot_prove_clear_standing_space(evidence):
+    record = evidence[0]
+    record['dynamic_geometry_ids'] = [9]
+    for sample in record['samples']:
+        sample['dynamic_geometry_checked'] = 1
+        sample['dynamic_obstacles'] = [dict(geom_id=9, name='chair', bounds=[[4,4,0],[4.5,4.5,1]])]
+    assert evaluate(evidence)['success']
+    record['samples'][-1]['dynamic_obstacles'][0]['bounds'] = [[1.1,1.1,.1],[1.3,1.3,1]]
+    assert not evaluate(evidence)['success']
+    record['samples'][-1]['dynamic_obstacles'] = []
+    assert not evaluate(evidence)['evidence_valid']
+
+
+def test_obstacle_filter_must_cover_the_entire_scoring_margin(evidence):
+    evidence[0]['dynamic_obstacle_margin_m'] = evidence[1]['body_margin_m']
+    assert evaluate(evidence)['success']
+    evidence[0]['dynamic_obstacle_margin_m'] /= 2
+    assert not evaluate(evidence)['evidence_valid']
+
+
+def test_repeated_physics_step_cannot_prove_a_stable_time_window(evidence):
+    evidence[0]['samples'][-1]['physics_steps'] = evidence[0]['samples'][-2]['physics_steps']
+    assert not evaluate(evidence)['evidence_valid']

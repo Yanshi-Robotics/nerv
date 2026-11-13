@@ -66,7 +66,8 @@ def main():
     def evidence_start(request: Request, payload: dict):
         authorize(request)
         from .evidence import PhysicsEvidence
-        if set(payload) != {'sample_hz', 'duration_s', 'max_samples'}:
+        required = {'sample_hz', 'duration_s', 'max_samples'}
+        if not required <= set(payload) or set(payload) - required - {'obstacle_margin_m'}:
             raise HTTPException(400, 'Specify recording rate, duration and capacity')
         with owner.lock:
             if owner.evidence is not None:
@@ -83,13 +84,13 @@ def main():
             return owner.evidence.read(after)
 
     @app.post('/operator/evidence/stop')
-    def evidence_stop(request: Request):
+    def evidence_stop(request: Request, after: int = 0):
         authorize(request)
         with owner.lock:
             if owner.evidence is None:
                 raise HTTPException(404, 'No recording')
             owner.evidence.finished = True
-            return owner.evidence.read()
+            return owner.evidence.read(after)
 
     @app.post('/operator/topology')
     def topology(request: Request, payload: dict):
