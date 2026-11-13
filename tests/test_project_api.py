@@ -37,6 +37,10 @@ def test_mcp_credential_cannot_create_operator_project(api):
                            headers={"Authorization": "Bearer fixture"})
     assert response.status_code == 403
     assert client.get("/api/projects").json() == []
+    response = client.post('/api/world-instances/world_fixture/agent-topology',
+                           json={'allow_agent_changes': True, 'expected_topology_revision': 1},
+                           headers={'Authorization': 'Bearer fixture'})
+    assert response.status_code == 403
 
 
 def test_unsupported_type_rejected_and_version_required(api):

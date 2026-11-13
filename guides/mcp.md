@@ -84,3 +84,5 @@ The previous reserved-Run flow remains a compatibility path. Current dynamic lif
 
 
 After acquisition, check `ok` before any dependent request. A rejected acquisition must not be followed by `acknowledge`, `task_start` or `action`. Obtain a new observation to inspect the refusal; do not acknowledge an unseen image or recreate a task to bypass stopping. The bound owner may request ending its own standby simulation Run without motion ownership; the result still requires actual stop confirmation.
+
+An operator can close further Agent allocation/removal requests with `POST /api/world-instances/{id}/agent-topology`, supplying `allow_agent_changes: false` and the current `expected_topology_revision`. This permission change waits for an in-flight membership transaction and rejects a stale revision. Existing robot entities, observations and control leases remain intact. It is not an Agent MCP tool; formal rendezvous trials close this gate after both instances are ready.

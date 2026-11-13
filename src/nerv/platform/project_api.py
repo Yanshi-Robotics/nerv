@@ -165,6 +165,13 @@ def router(get_hub):
     def world_get(wid: str):
         return call(services(get_hub())[0].worlds.get, wid)
 
+    @api.post('/api/world-instances/{wid}/agent-topology')
+    def world_agent_topology(wid: str, request: Request, payload: dict):
+        operator(request)
+        if set(payload) != {'allow_agent_changes', 'expected_topology_revision'}:
+            raise HTTPException(400, 'Provide permission and expected topology revision')
+        return call(services(get_hub())[1].discovery.set_agent_topology, wid, **payload)
+
     @api.post("/api/world-instances/{wid}/stop")
     def world_stop(wid: str, request: Request):
         operator(request)

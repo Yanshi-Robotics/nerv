@@ -44,6 +44,28 @@ class Discovery:
         # Quiesce owned work before the Host tears down its World processes.
         self._workers.shutdown(wait=True)
 
+    def set_agent_topology(self, wid, *, allow_agent_changes, expected_topology_revision):
+        """Operator permission change, serialized with the full allocation queue.
+
+        Closing the gate leaves existing robots, leases and physics untouched.
+        A request already executing finishes first; a stale operator view cannot
+        silently freeze a different roster. Pending work rechecks the closed gate.
+        """
+        if (type(allow_agent_changes) is not bool or type(expected_topology_revision) is not int
+                or expected_topology_revision < 1):
+            raise ValueError('Provide a boolean permission and positive topology revision')
+        with self.lock:
+            world_lock = self._world_locks.setdefault(wid, threading.RLock())
+        with world_lock, self.core.projects.worlds.lock:
+            worlds = self.core.projects.worlds
+            world = worlds.get(wid)
+            if world['topology_revision'] != expected_topology_revision:
+                raise ValueError('World topology changed; inspect the current roster first')
+            world['topology_policy'] = {**world.get('topology_policy', {}),
+                                       'allow_agent_changes': allow_agent_changes}
+            worlds.save(world)
+            return world
+
     def validate_grants(self, grants):
         if not isinstance(grants, list):
             raise ValueError('World grants must be a list')

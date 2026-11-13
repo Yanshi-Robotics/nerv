@@ -86,3 +86,5 @@ Robot 与 Brain 跨 Run 保留。授权观察者可以并存，每台机器人�
 
 
 申请控制后先检查 `ok`，再执行后续请求。申请被拒后，不继续调用 `acknowledge`、`task_start` 或 `action`；可取得新观测核对状态，不能确认未看过的图像，也不能重建任务绕过停止检查。绑定所有者可以在尚无运动权时请求结束自己的待命仿真 Run，但结果仍须实际停止确认。
+
+操作者可通过 `POST /api/world-instances/{id}/agent-topology` 关闭后续 Agent 增删实例请求，提交 `allow_agent_changes: false` 和当前 `expected_topology_revision`。权限变更会等待正在执行的成员事务，并拒绝过期修订；现有机器人实体、观测和控制租约保持有效。这不是 Agent MCP 工具。正式会合试验在双方实例准备完成后关闭该权限。

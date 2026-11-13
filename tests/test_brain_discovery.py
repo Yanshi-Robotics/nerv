@@ -3,7 +3,7 @@ import json
 import time
 import pytest
 
-from test_project_mcp_integration import integrated  # noqa: F401
+from test_project_mcp_integration import integrated as integrated  # pytest fixture re-export
 from nerv.brain_core.core import BrainCore
 
 
@@ -68,6 +68,69 @@ def test_unapproved_world_cannot_grant_agent_structural_changes(integrated):
                 template_project_id=f.project['id'], max_instances=1,
                 spawn_slots=[dict(x=0,y=0,z=1,yaw=0)], allow_control=False)])
     finally:
+        core.shutdown()
+
+
+def test_operator_can_freeze_membership_without_invalidating_resources(integrated):
+    f = integrated
+    core = BrainCore(f.hub, f.projects, f.gw.root)
+    try:
+        world = f.projects.worlds.create(f.project['world'], f.project['robot'],
+            topology_policy={'allow_agent_changes': True, 'max_robots': 2})
+        grant = dict(world_instance_id=world['world_instance_id'], template_project_id=f.project['id'],
+                     max_instances=1, spawn_slots=[dict(x=0,y=0,z=1,yaw=0)], allow_control=True)
+        pair = core.create('Bootstrap', [], ['observe', 'control'], [grant])
+        frozen = core.discovery.set_agent_topology(world['world_instance_id'], allow_agent_changes=False,
+            expected_topology_revision=world['topology_revision'])
+        assert frozen['generation'] == world['generation'] and frozen['roster'] == world['roster']
+        denied = completed(core, pair['token'], core.invoke(pair['token'], 'robot_allocate',
+            dict(world_instance_id=world['world_instance_id'], request_id='after-freeze')))
+        assert denied['status'] == 'failed' and 'disabled' in denied['message']
+        assert not core.resources.list(), 'Permission denial must precede identity allocation'
+        with pytest.raises(ValueError, match='topology changed'):
+            core.discovery.set_agent_topology(world['world_instance_id'], allow_agent_changes=True,
+                expected_topology_revision=world['topology_revision'] + 1)
+        assert not f.projects.worlds.get(world['world_instance_id'])['topology_policy']['allow_agent_changes']
+    finally:
+        core.shutdown()
+
+
+def test_freeze_waits_for_inflight_membership_and_rejects_stale_roster(integrated, monkeypatch):
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+    f = integrated
+    core = BrainCore(f.hub, f.projects, f.gw.root)
+    entered, finish = threading.Event(), threading.Event()
+    try:
+        world = f.projects.worlds.create(f.project['world'], f.project['robot'],
+            topology_policy={'allow_agent_changes': True, 'max_robots': 2})
+        wid = world['world_instance_id']
+        pair = core.create('Bootstrap', [], ['observe'], [dict(world_instance_id=wid,
+            template_project_id=f.project['id'], max_instances=1,
+            spawn_slots=[dict(x=0,y=0,z=1,yaw=0)], allow_control=False)])
+        def delayed_change(resource, spawn):
+            entered.set()
+            assert finish.wait(2)
+            current = f.projects.worlds.get(wid)
+            current['topology_revision'] += 1
+            f.projects.worlds.save(current)
+            core.resources.save(dict(resource, status='ready'))
+        monkeypatch.setattr(f.projects.worlds, 'add_robot', delayed_change)
+        pending = core.invoke(pair['token'], 'robot_allocate', dict(world_instance_id=wid, request_id='inflight'))
+        assert entered.wait(2)
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            freeze = pool.submit(core.discovery.set_agent_topology, wid, allow_agent_changes=False,
+                                 expected_topology_revision=world['topology_revision'])
+            assert not freeze.done()
+            finish.set()
+            assert completed(core, pair['token'], pending)['status'] == 'complete'
+            with pytest.raises(ValueError, match='topology changed'):
+                freeze.result(timeout=2)
+        frozen = core.discovery.set_agent_topology(wid, allow_agent_changes=False,
+            expected_topology_revision=world['topology_revision'] + 1)
+        assert not frozen['topology_policy']['allow_agent_changes']
+    finally:
+        finish.set()
         core.shutdown()
 
 
