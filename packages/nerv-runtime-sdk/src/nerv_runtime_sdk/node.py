@@ -44,8 +44,9 @@ from .control import StopFlag
 
 # Default for standalone nodes; simulated nodes inherit their world's stream budget.
 DEFAULT_STREAM_FPS = 12.0
-# Standalone fallback matches the Host's default HTTP node deadline. Managed
-# workers receive the actual configured Host budget, independently of physics.
+# Standalone fallback for joining an existing stop. Managed workers receive
+# NODE_TIMEOUT; the Host adds its status budget as HTTP response headroom.
+# This does not bound the first provider call or change physical stop criteria.
 DEFAULT_STOP_JOIN_TIMEOUT_S = 30.0
 
 
@@ -204,7 +205,7 @@ class BodyNode:
             try:
                 return dict(operation['result'].result(timeout=self.stop_join_timeout_s))
             except TimeoutError:
-                return {"ok": False, "accepted": True, "dispatch_revoked": True,
+                return {"ok": False, "accepted": True, "dispatch_revoked": self.require_control or not self.armed,
                         "stop_confirmed": False, "stop_state": "stopping",
                         "stop_operation_id": operation['id'], "runtime_control_generation": operation['generation'],
                         "runtime_epoch": operation['epoch'],
@@ -227,6 +228,7 @@ class BodyNode:
             with self._control_lock:
                 result = {**(result or {"ok": False, "stop_confirmed": False,
                     "stop_state": "stop_unconfirmed", "message": "Stop completion was interrupted"}),
+                    "accepted": True, "dispatch_revoked": self.require_control or not self.armed,
                     "stop_operation_id": operation['id'], "runtime_control_generation": operation['generation'],
                     "runtime_epoch": operation['epoch']}
                 operation['result'].set_result(result)

@@ -296,7 +296,7 @@ class RobotTasks:
         with self._lock:
             # Admission and invalidation must be atomic: an old deadline may
             # resume after its task has been cancelled and replaced.
-            if expected_token is not None and self._tokens.get(sid) is not expected_token:
+            if expected_token is not None and (expected_token.is_set() or self._tokens.get(sid) is not expected_token):
                 return {"ok": False, "superseded": True, "message": "Task deadline was superseded"}
             self._generation[sid] = self._generation.get(sid, 0) + 1
             generation = self._generation[sid]

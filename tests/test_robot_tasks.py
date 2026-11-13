@@ -1,5 +1,6 @@
 """0.9.1 task lifecycle through external execution, with no internal model fixture."""
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from unittest.mock import Mock
 import pytest
 from test_project_mcp_integration import integrated  # noqa: F401
@@ -120,3 +121,44 @@ def test_delayed_old_deadline_cannot_cancel_a_replacement_task(task_host, monkey
     finally:
         release.set()
         original_cancel(s.id)
+
+
+def test_cancelled_old_deadline_cannot_invalidate_replacement_before_claim(task_host, monkeypatch):
+    hub, s = task_host
+    original_get, original_cancel = hub.schemes.get, hub.tasks.cancel
+    scheme = original_get(s.control_scheme, s.control_scheme_revision)
+    expired, resume_expiry = threading.Event(), threading.Event()
+    resolving, resume_resolution = threading.Event(), threading.Event()
+    reads = 0
+    def get_scheme(*args):
+        nonlocal reads
+        reads += 1
+        if reads == 2:
+            resolving.set()
+            assert resume_resolution.wait(2)
+        return scheme.model_copy(update={'max_runtime_s': .05 if reads == 1 else 60})
+    def delayed_expiry(*args, **kwargs):
+        expired.set()
+        assert resume_expiry.wait(2)
+        return original_cancel(*args, **kwargs)
+    monkeypatch.setattr(hub.schemes, 'get', get_scheme)
+    monkeypatch.setattr(hub.tasks, 'cancel', delayed_expiry)
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        try:
+            assert hub.tasks.start(s.id, 'first')['ok']
+            first_thread = hub.tasks._threads[s.id]
+            assert expired.wait(1)
+            assert original_cancel(s.id)['ok']
+            replacement = pool.submit(hub.tasks.start, s.id, 'second')
+            assert resolving.wait(1)
+            resume_expiry.set()
+            first_thread.join(1)
+            assert not first_thread.is_alive()
+            resume_resolution.set()
+            assert replacement.result(1)['ok']
+            assert hub.tasks.snapshot(s.id)['task']['status'] == 'running'
+            assert not hub.tasks._tokens[s.id].is_set()
+        finally:
+            resume_expiry.set()
+            resume_resolution.set()
+            original_cancel(s.id)

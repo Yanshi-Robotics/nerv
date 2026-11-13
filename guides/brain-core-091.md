@@ -42,7 +42,7 @@ Physics evidence can now be sampled at the physical step, with robot contacts an
 
 ## Execution and qualification
 
-Concurrent lease expiry, task expiry and operator cancellation share an in-flight Runtime stop only when its control generation and identity match. Joining waits outside the dispatch lock within the configured Host HTTP node budget; a timeout remains unconfirmed. A subsequent independent stop checks again rather than reusing historical physical evidence. An old task deadline must match its task token atomically before invalidating execution, so it cannot cancel a replacement task.
+Concurrent lease expiry, task expiry and operator cancellation share an in-flight Runtime stop only when its control generation and identity match. Joining waits outside the dispatch lock for at most `NODE_TIMEOUT`; the Host stop transport adds the positive `NODE_STATUS_TIMEOUT` budget as response headroom. This bounds joining, not the first provider call; a transport or joining timeout remains unconfirmed. A subsequent independent stop checks again rather than reusing historical physical evidence. An old task deadline must atomically match an unset task token before invalidating execution, so it cannot cancel a replacement task, including during control-scheme resolution.
 
 The model-free dispatcher supports external primitives, external skills and a fixed policy. New tasks cannot erase the previous skill in the same robot instance. Runtime additionally qualifies G1 skill transitions against the scene and exact policy/contract/release hashes. The previous development contract covered the existing G1 turning policy in `apt`; it does not qualify Go2, arbitrary policies, ACT transitions or real devices.
 

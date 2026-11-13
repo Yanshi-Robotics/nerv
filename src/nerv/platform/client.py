@@ -224,7 +224,11 @@ class _McpNode:
     def post(self, path: str, payload: dict | None = None) -> dict:
         """One control-plane POST (never the brain's path); a dead node answers as a refusal."""
         try:
-            r = self._http.post(self.base + path, json=payload or {}, timeout=config.NODE_STATUS_TIMEOUT)
+            # A stop may join an in-flight Runtime stop for NODE_TIMEOUT.
+            # Keep the normal status budget as positive response headroom;
+            # transport expiry must still remain an unconfirmed stop.
+            timeout = config.NODE_TIMEOUT + config.NODE_STATUS_TIMEOUT if path == "/stop" else config.NODE_STATUS_TIMEOUT
+            r = self._http.post(self.base + path, json=payload or {}, timeout=timeout)
             return r.json()
         except Exception as e:
             return {"ok": False, "message": f"The {self.what} `{self.name}` did not answer: {e}"}
