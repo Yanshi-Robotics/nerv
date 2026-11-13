@@ -40,7 +40,7 @@ def response_conditions(response):
     return conditions
 
 
-def audit(participants, started_monotonic, ended_monotonic):
+def audit(participants, started_monotonic, ended_monotonic, *, termination_reason):
     """Read retained raw evidence and reconcile accepted requests with their Run.
 
     participants maps robot ID to requests/protocol/journal paths and the bound
@@ -51,6 +51,8 @@ def audit(participants, started_monotonic, ended_monotonic):
             for t in (started_monotonic, ended_monotonic)) or ended_monotonic < started_monotonic):
         raise ValueError('Two participants and a valid operator monotonic interval are required')
     errors, counts, sources, violations = [], {}, {}, []
+    if termination_reason != 'agents_finished':
+        violations.append(dict(source='operator_trial', condition='trial_not_completed', reason=termination_reason))
     for rid, participant in participants.items():
         evidence = {}
         sources[rid] = {}
