@@ -127,10 +127,15 @@ class BuiltinRuntime:
             from ..body.bus_zmq import ZmqBus
             from ..body.skills import SkillRunner, StopFlag
             self.stop = StopFlag()
+            if (self.profile.configuration.get('actuators', {}).get('standing_balance')
+                    and not self.binding.configuration.get('assets_root')):
+                raise ValueError('Standing feedback requires the active simulation asset root')
             bus = ZmqBus(self.binding.configuration["bus_url"])
             try:
                 self._impl = families.load(self.family).build(
-                    self.profile.configuration, bus, SkillRunner(self.stop))
+                    {**self.profile.configuration,
+                     '_simulation_assets_root': self.binding.configuration.get('assets_root', '')},
+                    bus, SkillRunner(self.stop))
             except BaseException:
                 bus.close()
                 raise
@@ -197,6 +202,10 @@ class BuiltinRuntime:
             if evidence.get('stop_confirmed') is not True:
                 return {'ok':False, 'message':'Current stable-stop evidence is unavailable',
                         'data':{'stop_confirmed':False, 'stop_state':'stop_unconfirmed'}}
+            if not getattr(self._impl, '_standing_ready', lambda: True)():
+                return {'ok':False, 'message':'Standing feedback handover is not complete',
+                        'data':{'stop_confirmed':True, 'stop_state':'stopped',
+                                'control_ready':False, 'reason':'standing_handover_pending'}}
         if is_skill and not self._last_skill_stopped:
             return {'ok':False, 'message':'Previous motion stop is unconfirmed; operator recovery is required'}
         if is_skill and self._last_skill is not None and self._last_skill != name:

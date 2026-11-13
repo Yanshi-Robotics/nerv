@@ -15,6 +15,14 @@ actuators:
   pd_mode: release                 # taken from release.yaml (implicit for this policy)
   start_height: 0.80               # spawn root height (m), matches the contract's default root pose
   foot_bodies: [left_ankle_roll_link, right_ankle_roll_link]
+  standing_balance:               # simulation only; sensor-local model feedback, no model training
+    model: robots/g1/g1.xml
+    foot_bodies: [left_ankle_roll_link, right_ankle_roll_link]
+    horizon_s: 20                 # finite-horizon control design, not an infinite stability claim
+    design_timeout_s: 5
+    derivative_epsilon: 0.000001  # MuJoCo transition finite difference
+    balance_cost: 1000            # COM relative to support; official MuJoCo LQR construction
+    posture_cost: {hip: 3, knee: 3, ankle: 3, waist: 3, default: 0.3}
   chase_body: torso_link
   chase_back_m: 2.6
   chase_up_m: 1.7

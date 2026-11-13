@@ -350,7 +350,8 @@ class Launcher:
         bus_url = world_handle.bus_url if world_handle else ""
         binding = EnvironmentBinding(id=f"{body.name}:{mode}:{world_name}", profile_id=body.name,
                                      mode=mode, provider=ep.provider, world=world_name,
-                                     configuration={**ep.settings, "bus_url": bus_url, "scene_profile": scene_profile or world_name})
+                                     configuration={**ep.settings, "bus_url": bus_url, "scene_profile": scene_profile or world_name,
+                                                    "assets_root": getattr(world, "assets_root", "")})
         profile = RobotProfile(id=body.name, family=body.family, label=body.label,
                                configuration={**body.model_dump(), "skills": {name: skill.model_dump() for name, skill in body.skills.items() if mode in skill.modes}})
         directory = Path(paths.CACHE_DIR) / "runtime-config"
@@ -379,7 +380,8 @@ class Launcher:
                     declared_env[ref] = os.environ[ref]
         handle = self._spawn(key, "body", py, args, f"http://{config.NODE_BIND_HOST}:{port}",
                              bus_url=bus_url, extra_env=declared_env,
-                             resource_paths=[skill.policy for skill in body.skills.values() if skill.policy_record])
+                             resource_paths=[skill.policy for skill in body.skills.values() if skill.policy_record]
+                             + ([world.assets_root] if world and world.assets_root else []))
         try:
             self._runtime_protocol(handle)
             if mode == KIND_SIM and not defer_prepare:

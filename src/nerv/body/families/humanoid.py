@@ -67,9 +67,8 @@ DEFAULT_LOCOMOTION: dict = {
     "turn_report_move_m": 0.15,    # a turn that drifted more than this says so
     "stuck_min_ratio": 0.35,       # reached less than this fraction of the target = blocked
     "progress_start": 0.1,         # first progress tick, so the operator sees it start
-    "hold_settle_s": 1.5,          # emergency stop: let the gait come to a stand for at most this (sim s)
-                                   # before latching the joints — freezing legs mid-stride topples a biped
-                                   # (measured 2026-09-06: the g1-29dof-turn gait needs ~1.2 s to stop)
+    "hold_settle_s": 1.5,          # emergency revocation wait; active balance continues afterwards
+                                   # (measured 2026-09-06: the gait needs ~1.2 s to brake)
     "hold_linear_m_s": 0.05,      # design stop bound; qualification is recorded separately
     "hold_angular_rad_s": 0.1,  # includes whole-body rotation
     "hold_still_rad_s": 0.3,       # every joint must stay below this during the quiet interval
@@ -267,15 +266,21 @@ class VelocityPolicyBody:
 
         self._cmd_lock = threading.Lock()
         self._cmd = np.zeros(3)                # vx vy wz, as sent to the policy
+        self._command_revision = 0
+        self._balance = None
+        self._standing_generation = None
+        balance_settings = act.get('standing_balance')
+        if balance_settings and spec.get('_simulation_assets_root'):
+            from ..balance import StandingBalance
+            self._balance = StandingBalance(spec['_simulation_assets_root'], self.policy, balance_settings)
         self._state: BusState | None = None     # last bus read, for observe/status
         self._yaw0: float | None = None         # heading reference: where the body first stood
         self._last = "nothing yet"
         self._sim_dead = False
         self._policy_error = ""
-        # Hold = emergency stop that keeps the pose: the policy loop stops thinking and the PD
-        # keeps every joint where it is (a real robot in damping mode; a powered-off servo robot
-        # would go limp instead). Entered by the operator or automatically on a fall — a gait
-        # policy fed a fallen body's observation only thrashes, which is what the twitching was.
+        # Hold revokes locomotion, but a standing biped still needs active feedback.
+        # Only a fallen body freezes targets instead of continuing gait inference.
+        # This simulation convention is not a hardware damping-mode guarantee.
         self._hold_lock = threading.Lock()
         self._stop_evidence = self._new_stop_evidence()
         self._hold_revision = 0
@@ -304,7 +309,12 @@ class VelocityPolicyBody:
     # ---- System 1: the policy loop -------------------------------------------------------------------------
     def _set_command(self, vx: float, vy: float, wz: float) -> None:
         with self._cmd_lock:
-            self._cmd = np.array(self.policy.clamp_command(vx, vy, wz), np.float64)
+            command = np.array(self.policy.clamp_command(vx, vy, wz), np.float64)
+            if not np.array_equal(command, self._cmd):
+                self._command_revision = getattr(self, '_command_revision', 0) + 1
+                if getattr(self, '_balance', None) is not None:
+                    self._balance.reset()
+            self._cmd = command
 
     def _observation(self, st: BusState, hist: dict | None, prev_action: np.ndarray):
         p = self.policy
@@ -354,6 +364,8 @@ class VelocityPolicyBody:
             if topology != getattr(self, '_topology_revision', None):
                 hist, prev_action = None, np.zeros(len(p.joint_names))
                 self._topology_revision = topology
+                if getattr(self, '_balance', None) is not None:
+                    self._balance.reset()
                 if hasattr(self, '_stop_evidence'):
                     self._stop_evidence.invalidate()
                 self.runner.stop.request()
@@ -363,6 +375,8 @@ class VelocityPolicyBody:
             if last_t is not None and st.t < last_t:          # the world was reset: start over
                 hist, prev_action, last_t = None, np.zeros(len(p.joint_names)), None
                 self._yaw0 = None
+                if getattr(self, '_balance', None) is not None:
+                    self._balance.reset()
                 self._release(after_reset=True)                # back at the spawn pose: nothing to hold
             if last_t is not None:
                 deadline = last_t + p.policy_dt
@@ -386,7 +400,7 @@ class VelocityPolicyBody:
                     self._hold(reason, st)
             with self._hold_lock:
                 # A standing biped needs active balance. Freeze targets only
-                # after a fall; ordinary hold keeps the released zero-command gait.
+                # after a fall; ordinary hold uses standing feedback after gait braking.
                 hold = list(self._hold_targets) if self._held and self._fallen(st) else None
                 hold_revision = getattr(self, '_hold_revision', 0)
             if hold is not None:                                # holding: keep the pose, do not think
@@ -397,6 +411,26 @@ class VelocityPolicyBody:
                 hist, prev_action = None, np.zeros(len(p.joint_names))   # a fresh start on release
                 continue
             try:
+                balance = getattr(self, '_balance', None)
+                if balance is not None:
+                    with self._cmd_lock:
+                        resting = not np.any(self._cmd)
+                        command_revision = self._command_revision
+                    if resting and not self._fallen(st):
+                        target = balance.update(st, quiet=self._stop_evidence.snapshot()['stop_confirmed'])
+                        if target is not None:
+                            with self._hold_lock, self._cmd_lock:
+                                if (self._hold_revision == hold_revision
+                                        and self._command_revision == command_revision):
+                                    self.bus.write(BusCommand(targets=target.tolist(), topology_revision=topology))
+                                    generation = balance.status()['generation']
+                                    if self._standing_generation != generation:
+                                        self._standing_generation = generation
+                                        self._stop_evidence.invalidate()
+                                    self._last_targets = target.tolist()
+                            hist, prev_action = None, np.zeros(len(p.joint_names))
+                            self._policy_error = ''
+                            continue
                 obs, hist = self._observation(st, hist, prev_action)
                 if p.obs_dim and obs.shape[0] != p.obs_dim:
                     raise ValueError(f"assembled {obs.shape[0]} observation values, contract says {p.obs_dim}")
@@ -459,7 +493,7 @@ class VelocityPolicyBody:
         return st.t - self._hold_still_since >= float(self.loco["hold_still_s"])
 
     def _hold(self, reason: str, st: BusState | None = None) -> dict:
-        """Revoke locomotion; keep active zero-command balance unless fallen."""
+        """Revoke locomotion; keep supervised standing feedback unless fallen."""
         self.runner.stop.request()                              # any running skill ends on its next tick
         self._set_command(0.0, 0.0, 0.0)
         with self._hold_lock:
@@ -480,7 +514,7 @@ class VelocityPolicyBody:
             self.bus.write(BusCommand(targets=targets, topology_revision=getattr(st, 'extra', {}).get('topology_revision')))           # do not wait for the loop's next tick
         except Exception as e:
             self._policy_error = f"{type(e).__name__}: {e}"
-        self._last = "holding after a fall" if reason == HOLD_FALLEN else "motion revoked; supervising zero-command balance"
+        self._last = "holding after a fall" if reason == HOLD_FALLEN else "motion revoked; supervising standing balance"
         return self._hold_receipt()
 
     def _release(self, after_reset: bool = False) -> dict:
@@ -498,7 +532,7 @@ class VelocityPolicyBody:
     def hold(self, reason: str = HOLD_OPERATOR) -> dict:
         """Revoke locomotion and await sensor-based stopping.
 
-        Standing uses the existing zero-command balancing policy. A fallen body
+        Standing uses qualified feedback after zero-command braking. A fallen body
         retains joint targets. Acceptance and physical stop confirmation differ.
         """
         reason = reason or HOLD_OPERATOR
@@ -575,8 +609,17 @@ class VelocityPolicyBody:
                 return
             time.sleep(float(self.loco["poll_s"]))
 
+    def _standing_ready(self):
+        balance = getattr(self, '_balance', None)
+        if balance is None:
+            return True
+        status = balance.status()
+        return (status['mode'] == 'standing' and not status['error']
+                and status['generation'] == self._standing_generation
+                and self._stop_evidence.snapshot()['stop_confirmed'])
+
     def _settle_motion(self):
-        """Confirm a quiet interval using the existing policy stopping contract."""
+        """Confirm quiet after standing feedback has actually taken over."""
         start = self.bus.read()
         last_t, last_wall = start.t, time.perf_counter()
         evidence = self._new_stop_evidence()
@@ -586,7 +629,7 @@ class VelocityPolicyBody:
             if self._fallen(state):
                 return False, state
             quiet = evidence.update(state, fallen=self._fallen(state))
-            if quiet['stop_confirmed']:
+            if quiet['stop_confirmed'] and self._standing_ready():
                 return True, state
             if state.t-start.t >= float(self.loco.get('motion_settle_s', self.loco['hold_settle_s'])):
                 return False, state
@@ -824,6 +867,9 @@ class VelocityPolicyBody:
                                              f"until the operator releases it"
                                              + (" (reset the world first)" if self._hold_reason == HOLD_FALLEN else "")),
                     "data": {"reason": REASON_HELD, "held": True, "hold_reason": self._hold_reason}}
+        if getattr(self, '_balance', None) is not None and self._balance.status()['error']:
+            return {'ok': False, 'message': 'Standing feedback is unavailable; inspect Runtime status',
+                    'data': {'executed': False, 'reason': 'standing_feedback_unavailable'}}
         if name == "move_forward":
             meters = float(args.get("meters", L["default_move_m"]))
             if not math.isfinite(meters) or meters <= 0:
@@ -857,6 +903,7 @@ class VelocityPolicyBody:
         return {"policy": self.policy.name, "pd_mode": self.pd_mode, "command": cmd,
                 "running_skill": self.runner.running, "last_action": self._last,
                 "stop_evidence": self._stop_snapshot(),
+                "standing_balance": self._balance.status() if getattr(self, '_balance', None) else None,
                 "held": self._held, "hold_reason": self._hold_reason,
                 "hold_pending": self._hold_pending is not None,
                 "sim_dead": self._sim_dead, "policy_error": self._policy_error,
@@ -890,6 +937,8 @@ class VelocityPolicyBody:
 
     def close(self) -> None:
         self._running = False
+        if getattr(self, '_balance', None) is not None:
+            self._balance.close()
         if self._thread.is_alive():
             self._thread.join(timeout=2)
         try:
