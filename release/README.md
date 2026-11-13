@@ -3,6 +3,11 @@
 `constraints/` fixes third-party versions separately for the host, LeRobot and simulation.
 The build resolves platform markers and creates hashed install locks. NERV wheel hashes
 come from the current build, so rebuilding a candidate cannot reuse stale wheel hashes.
+Qualified simulation control profiles also bind exact numerical dependencies. Before
+resolution, the builder requires those versions to match both simulation installation
+constraints and validation inputs/locks; every resolved simulation wheel plan is
+checked again. A dependency mismatch fails construction rather than changing or
+weakening the measured control qualification.
 
 The development CLI provides `nerv preview build --source <checkout>`. This command is
 not available in the currently published 0.8.1 installer. It snapshots indexed source

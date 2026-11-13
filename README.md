@@ -14,6 +14,8 @@ This checkout is a **0.9.1 development checkout**, not a published release. The 
 
 Candidate 11 includes persistent World/Robot/Brain resources, bootstrap allocation and transactional G1 membership. It passed 767 CPU software checks and isolated installation/recovery checks. Two independent Agents then exercised allocation, observation and control through real MCP: both were blocked by unconfirmed stopping. Installed-candidate qualification of long-duration holding and three paired living-room rendezvous trials remains incomplete. The development Runtime now separates gait braking from robot-local standing feedback; source-level transition and 900-second holding probes passed, but they do not qualify an installed candidate or independent navigation.
 
+Candidate 66 passed 834 CPU checks and isolated installation/recovery. Its first fresh paired rendezvous round failed when both robots' second, different skill was refused: the simulation install pinned NumPy 2.5.4 while control qualification and validation pinned 2.5.2. Both first motions stopped successfully; neither Agent claimed rendezvous success. The development release inputs now preserve the measured dependency versions and check resolved artifacts. A rebuilt installation, complete skill-transition exercise and three fresh paired successes remain required.
+
 <div align="center"><img src="assets/readme/diagrams/en/platform-091.svg" alt="External Agent and operator workbench share the NERV Host, which manages authority and routes tasks to local execution" width="960"></div>
 
 ## Install and start

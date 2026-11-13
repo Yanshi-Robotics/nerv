@@ -1,6 +1,6 @@
 # Brain Core in NERV 0.9.1
 
-This is an architecture and compatibility change under the requested 0.9.1 version. Candidate 11 has been installed and independently exercised by two Agents. It passed software and installation checks, but both Agents were refused control because stopping was unconfirmed. Formal three-round rendezvous acceptance has not run.
+This is an architecture and compatibility change under the requested 0.9.1 version. Earlier candidates failed navigation or stopping qualification. Candidate 66's first fresh paired rendezvous trial exposed conflicting validation and installation dependency pins; it failed without a success claim. Three successful fresh paired rounds remain required.
 
 ## Responsibility
 
@@ -60,6 +60,10 @@ Normal G1 action completion may wait up to 4 simulation seconds for the existing
 
 
 ## Installed candidate findings
+
+Candidate 66 (`711668a`) passed 834 CPU checks with two retired-provider skips and a fresh isolated installation/update/rollback. Its first formal paired rendezvous round made four motion requests: two first motions completed with confirmed stopping, then both different-skill requests were refused. Neither Agent claimed success. Physics recording retained 4,359 samples at approximately 25 Hz without a recorded fall or robot-to-robot collision; no common meeting window existed.
+
+The actual installed simulation used NumPy 2.5.4 from `release/constraints/sim.txt`, while the measured G1 contract and development validation lock required 2.5.2. Runtime correctly rejected that unqualified combination. Host code/profile checks and repeated forward actions had missed the distinct Runtime dependency stack. Release construction now rejects conflicting profile/validation/installation inputs and incompatible resolved wheels. The numerical contract remains unchanged; a fresh installed package must verify its own Runtime dependencies and complete all directed skill transitions before new formal Agents start. This packaging correction does not retroactively pass candidate 66 or qualify navigation.
 
 Candidate 08, built from `248c7c0`, passed 713 CPU software tests with two retired-provider skips, plus managed frontend and isolated installation/recovery checks. Two independent Codex subagents completed three concurrent paired navigation rounds through separate real MCP connections: 0/6 independently scored successes, three false arrival claims, zero falls and 69 motion requests. All six failed complete-body target entry. Fixed spawn/goal geometry and scoring were unchanged.
 

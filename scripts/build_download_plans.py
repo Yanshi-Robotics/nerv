@@ -10,7 +10,9 @@ from urllib.parse import unquote, urlsplit
 import urllib.request
 
 from packaging.tags import cpython_tags, compatible_tags, mac_platforms
-from packaging.utils import parse_wheel_filename
+from packaging.requirements import Requirement
+from packaging.utils import canonicalize_name, parse_wheel_filename
+import yaml
 
 ROOT = Path(__file__).resolve().parents[1]
 PYTHON = '3.12.13'
@@ -18,6 +20,57 @@ UV_VERSION = '0.12.2'
 MACOS_MIN = '14.0'  # Required by the pinned ONNX Runtime binary wheels.
 TARGETS = {'linux-x86_64': 'x86_64-manylinux_2_28', 'windows-x86_64': 'x86_64-pc-windows-msvc',
            'macos-aarch64': 'aarch64-apple-darwin', 'macos-x86_64': 'x86_64-apple-darwin'}
+
+
+def qualified_sim_dependencies(root):
+    """Reject conflicting release inputs before resolving any platform artifacts.
+
+    A control qualification belongs to its measured numerical dependencies.
+    Passing tests in validation.lock cannot qualify another sim installation.
+    """
+    expected = {}
+    for path in sorted((root / 'bodies').glob('*/body.yaml')):
+        profile = yaml.safe_load(path.read_text())
+        contract = profile.get('buses', {}).get('sim', {}).get('settings', {}).get('skill_transitions', {})
+        if contract.get('validated') is not True:
+            continue
+        versions = contract.get('dependency_versions', {})
+        if set(versions) != {'mujoco', 'numpy', 'onnxruntime'}:
+            raise ValueError('Qualified simulation profile lacks exact numerical dependencies: ' + str(path))
+        for name, version in versions.items():
+            if name in expected and expected[name] != version:
+                raise ValueError('Qualified simulation profiles require conflicting versions: ' + name)
+            expected[name] = version
+    for relative in ('release/constraints/sim.txt', 'release/validation.in', 'release/validation.lock'):
+        pins = {}
+        for line in (root / relative).read_text().splitlines():
+            line = line.strip().removesuffix('\\').strip()
+            if not line or line.startswith(('#', '--')):
+                continue
+            requirement = Requirement(line)
+            name = canonicalize_name(requirement.name)
+            if name in expected:
+                if requirement.marker is not None or name in pins:
+                    raise ValueError(f'{relative}: qualified dependency must have one unconditional pin: {name}')
+                pins[name] = str(requirement.specifier)
+        for name, version in expected.items():
+            if pins.get(name) != '==' + version:
+                raise ValueError(f'{relative}: {name} must match qualified simulation version {version}')
+    return expected
+
+
+def verify_qualified_artifacts(plan, expected):
+    selected = {}
+    for artifact in plan['artifacts']:
+        if artifact.get('kind') != 'wheel':
+            continue
+        name, version, _, _ = parse_wheel_filename(artifact['name'])
+        if name in expected:
+            if name in selected:
+                raise ValueError('Duplicate qualified simulation dependency: ' + name)
+            selected[name] = str(version)
+    if selected != expected:
+        raise ValueError('Resolved simulation artifacts differ from the control qualification: ' + repr(selected))
 
 
 def tags(target):
@@ -118,6 +171,7 @@ def resolve(output, manifest, product, target, backend, python):
 
 def build(output, target_filter=None):
     output = Path(output).resolve()
+    qualification = qualified_sim_dependencies(ROOT)
     manifest_path = output / 'release.json'
     manifest = json.loads(manifest_path.read_text())
     python = python_artifacts(output)
@@ -136,6 +190,9 @@ def build(output, target_filter=None):
                     plans[product][key] = {'available': False, 'target': target, 'backend': backend,
                         'reason': 'No validated binary dependency plan for this platform. See release build diagnostics.'}
                     print(f'{product} {key}: unavailable ({type(error).__name__})', flush=True)
+                else:
+                    if product == 'so101-sim':
+                        verify_qualified_artifacts(plans[product][key], qualification)
                 manifest_path.write_text(json.dumps(manifest, indent=2))
     return manifest
 
