@@ -250,6 +250,7 @@ class ProjectService:
 
         from ..brain_core.worlds import WorldInstances
         self.worlds = WorldInstances(self)
+        hub.project_service = self
 
     def _pin_scheme(self, value):
         value = dict(value)
@@ -333,6 +334,10 @@ class ProjectService:
                     issues.append({'code':'resource_configuration_mismatch',
                         'reason':'The assigned entity differs from the Project template', 'destination':'worlds'})
                 if world.get('status') == 'ready':
+                    if world.get('health', {}).get('state') == 'unknown':
+                        issues.append({'code':'world_unavailable',
+                            'reason':'World health is unconfirmed; wait for fresh same-instance health',
+                            'destination':'worlds'})
                     owner = self.hub.launcher.nodes.get('shared_world:'+resource['world_instance_id'])
                     if not owner or not owner.alive():
                         issues.append({'code':'world_unavailable','reason':'The assigned World process is unavailable',
@@ -350,7 +355,9 @@ class ProjectService:
         if not run or run["status"] != "running" or not run.get("session_id"):
             raise ValueError("Start the project before requesting observations or actions")
         session = self.hub.store.get(run["session_id"])
-        if self.hub._control_error(session):
+        if error := self.hub._control_error(session):
+            if error.get('reason') == 'health_unconfirmed':
+                raise ValueError(error['message'])
             raise ValueError("Runtime changed; end this run and reconnect")
         return session
 

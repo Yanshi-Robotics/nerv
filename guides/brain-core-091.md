@@ -20,6 +20,8 @@ An Agent can explicitly supply a processed observation `receipt_id` in `task_sta
 
 Observations and capability readiness are readable without a Run. Such reads carry resource identities and Runtime generation, but no motion receipt or authority. A changed Runtime epoch or a concurrent topology/resource change rejects the read. The console can display these resource observations and has separate device connection controls.
 
+World health distinguishes a confirmed live instance, an unavailable or incomplete probe, and a confirmed failure. An unknown probe revokes motion authority and stops registered task/manual execution with its exact Runtime control identity; it preserves resource and Run identities. Recovery of the same epoch enables fresh reads, not old authority or action replay. Process exit, changed epoch or an explicit unhealthy node still fails the affected resources. An exact-control stop reaches Runtime independently of a failing World probe. Renderer/context and first-frame preparation happen before initial or changed-topology readiness; diagnostic pixels are discarded and never become an observation or acknowledgement. Sensor preparation failure is recorded separately from physics availability.
+
 ## Dynamic shared World
 
 The source compiler creates namespaced robot trees in one MuJoCo model/data pair. A topology transaction quiesces members under the operator policy, pauses physical advancement, builds a separate candidate, migrates named joint and scene state, reconstructs mappings and publishes a new revision. Missing or stale topology revisions cannot drive actuators after a change. Input assets and third-party robot files are not edited.

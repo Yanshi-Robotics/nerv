@@ -6,11 +6,37 @@ import os
 from fastapi import FastAPI, Request, HTTPException
 import secrets
 import threading
+import time
 
 from .composition import SharedWorld
 from .mujoco_node import build_app, make_bus_handler
 from .bus_server import BusServer
 
+
+def prepare_rendering(owner):
+    """Pay GL/context and first-frame costs before publishing World readiness.
+
+    Called before startup or while the Host's topology transaction has already
+    revoked motion. These diagnostic pixels are discarded, never observations
+    or acknowledgements. A headless World may retain physics with failed sensors.
+    """
+    states = {}
+    for rid, view in owner.views.items():
+        started = time.monotonic()
+        try:
+            cameras = view.model_cameras()
+            def initialize(renderer):
+                if cameras:
+                    with view._lock:
+                        renderer.update_scene(view.data, camera=view._camera_for(cameras[0]))
+                    renderer.render()
+            view.render.run(initialize)
+            states[rid] = {'state':'ready', 'elapsed_s':time.monotonic() - started}
+        except Exception as error:
+            states[rid] = {'state':'failed', 'elapsed_s':time.monotonic() - started,
+                           'error_type':type(error).__name__, 'message':str(error)}
+    owner.receipt['rendering_readiness'] = states
+    return states
 
 def robot_app(view):
     origins = [value.strip() for value in os.environ.get("NERV_CORS_ORIGINS", "http://localhost:8100").split(",") if value.strip()]
@@ -123,6 +149,7 @@ def main():
                                 raise ValueError('Robot is in contact with another entity')
                     roster = [r for r in roster if r['robot_instance_id'] != rid]
                 result = owner.transact(roster, expected_revision=payload['expected_revision'])
+                prepare_rendering(owner)
                 if new_bus is not None:
                     buses[rid] = new_bus
                     new_bus = None
@@ -139,6 +166,7 @@ def main():
                     new_bus.stop()
 
     try:
+        prepare_rendering(owner)
         owner.start()
         for record in config['roster']:
             rid = record['robot_instance_id']

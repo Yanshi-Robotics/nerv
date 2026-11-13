@@ -471,6 +471,156 @@ def test_resource_without_run_becomes_failed_when_world_disappears(integrated): 
         core.shutdown()
 
 
+@pytest.mark.parametrize('failure', ['timeout', 'http_500', 'missing_epoch'])
+def test_unknown_world_probe_revokes_control_without_destroying_same_instance(integrated, monkeypatch, failure):  # noqa: F811
+    import httpx
+    f = integrated
+    core = BrainCore(f.hub, f.projects, f.gw.root)
+    try:
+        binding = ready_binding(core, f, core.reserve(f.project['id'], f.pair['connection']['id']))
+        wid = binding['world_instance_id']
+        core.invoke(f.pair['token'], 'run_start', {'project_id':f.project['id'], 'request_id':'start'}, binding['brain_instance_id'])
+        before = f.projects.worlds.get(wid)
+        core.set_control(f.project['id'], accepting=True, owner_id=f.pair['connection']['id'])
+        def unknown(*args, **kwargs):
+            if failure == 'timeout':
+                raise httpx.ReadTimeout('fixture probe timeout')
+            return httpx.Response(500 if failure == 'http_500' else 200,
+                                  json={'ok': True}, request=httpx.Request('GET', args[0]))
+        monkeypatch.setattr('httpx.get', unknown)
+        f.projects.worlds._last_health = 0
+        core.check_expired()
+        after = f.projects.worlds.get(wid)
+        assert after['status'] == 'ready' and after['generation'] == before['generation']
+        assert after['health']['state'] == 'unknown'
+        assert f.projects.active_run(f.project['id'])['id'] == binding['run_id']
+        assert f.hub.store.get(f.projects.active_run(f.project['id'])['session_id']).status == 'active'
+        assert not core.control(f.project['id'])['accepting']
+        monkeypatch.setattr('httpx.get', lambda *a, **k: httpx.Response(200,
+            json={'ok': True, 'epoch': before['epoch']}, request=httpx.Request('GET', a[0])))
+        f.projects.worlds._last_health = 0
+        core.check_expired()
+        assert f.projects.worlds.get(wid)['health']['state'] == 'healthy'
+        assert not core.control(f.project['id'])['accepting']
+        assert core.invoke(f.pair['token'], 'observe', {'project_id':f.project['id']}, binding['brain_instance_id'])['receipt_id']
+    finally:
+        core.shutdown()
+
+
+@pytest.mark.parametrize('health', [{'ok': True, 'epoch': 'replacement'}, {'ok': False, 'epoch': 'fixture-epoch'}])
+def test_confirmed_world_fault_still_ends_the_run_immediately(integrated, monkeypatch, health):  # noqa: F811
+    import httpx
+    f = integrated
+    core = BrainCore(f.hub, f.projects, f.gw.root)
+    try:
+        binding = ready_binding(core, f, core.reserve(f.project['id'], f.pair['connection']['id']))
+        core.invoke(f.pair['token'], 'run_start', {'project_id':f.project['id'], 'request_id':'start'}, binding['brain_instance_id'])
+        before = f.projects.worlds.get(binding['world_instance_id'])
+        monkeypatch.setattr('httpx.get', lambda *a, **k: httpx.Response(200, json=health))
+        f.projects.worlds._last_health = 0
+        core.check_expired()
+        after = f.projects.worlds.get(binding['world_instance_id'])
+        assert after['status'] == 'failed' and after['generation'] == before['generation'] + 1
+        assert f.projects.active_run(f.project['id']) is None
+        assert not core.control(f.project['id'])['accepting']
+    finally:
+        core.shutdown()
+
+
+def test_unknown_health_during_slow_observe_does_not_poison_the_run(integrated, monkeypatch):  # noqa: F811
+    import httpx
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+    f = integrated
+    core = BrainCore(f.hub, f.projects, f.gw.root)
+    core._stop.set()
+    core._thread.join(1)
+    core._stop.clear()
+    entered, release = threading.Event(), threading.Event()
+    original = f.robot.perceive
+    try:
+        binding = ready_binding(core, f, core.reserve(f.project['id'], f.pair['connection']['id']))
+        args = {'project_id': f.project['id']}
+        core.invoke(f.pair['token'], 'run_start', {**args,'request_id':'start'}, binding['brain_instance_id'])
+        before = f.projects.worlds.get(binding['world_instance_id'])
+        core.set_control(f.project['id'], accepting=True, owner_id=f.pair['connection']['id'])
+        def slow():
+            entered.set()
+            assert release.wait(2)
+            return original()
+        monkeypatch.setattr(f.robot, 'perceive', slow)
+        def timeout(*a, **k):
+            raise httpx.ReadTimeout('fixture unavailable')
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            observation = pool.submit(core.invoke, f.pair['token'], 'observe', args, binding['brain_instance_id'])
+            assert entered.wait(1)
+            monkeypatch.setattr('httpx.get', timeout)
+            f.projects.worlds._last_health = 0
+            core.check_expired()
+            release.set()
+            with pytest.raises(ValueError, match='changed while collecting|health is unconfirmed'):
+                observation.result(1)  # Old control generation is correctly rejected.
+        monkeypatch.setattr('httpx.get', lambda *a, **k: httpx.Response(200, json={'ok':True,'epoch':before['epoch']}))
+        f.projects.worlds._last_health = 0
+        core.check_expired()
+        assert core.invoke(f.pair['token'], 'observe', args, binding['brain_instance_id'])['receipt_id']
+        assert f.projects.active_run(f.project['id'])['id'] == binding['run_id']
+        assert not core.control(f.project['id'])['accepting']
+        f.robot.invoke.assert_not_called()
+    finally:
+        release.set()
+        core.shutdown()
+
+
+def test_unknown_health_revokes_manual_context_using_its_own_control_token(integrated, monkeypatch):  # noqa: F811
+    import httpx
+    import threading
+    from concurrent.futures import ThreadPoolExecutor
+    from types import SimpleNamespace
+    f = integrated
+    core = BrainCore(f.hub, f.projects, f.gw.root)
+    entered, release = threading.Event(), threading.Event()
+    captured = {}
+    try:
+        binding = ready_binding(core, f, core.reserve(f.project['id'], f.pair['connection']['id']))
+        core.invoke(f.pair['token'], 'run_start', {'project_id':f.project['id'],'request_id':'start'}, binding['brain_instance_id'])
+        sid = f.projects.active_run(f.project['id'])['session_id']
+        f.hub.tasks._save(sid, task_id='previous-task', status='cancelled')
+        retired = threading.Event()
+        retired.control_token = 'retired-task-control'
+        f.hub.tasks._tokens[sid] = retired
+        def manual_turn(sid, emit, token, **kwargs):
+            captured['token'] = token
+            def action(_):
+                entered.set()
+                assert release.wait(2)
+                captured['invalidated'] = token.is_set()
+            return SimpleNamespace(tools=lambda: [], session=f.hub.store.get(sid), observe=lambda:None,
+                _routes={'manual-move':('body',None,SimpleNamespace(kind='primitive',name='move'))}, call_tool=action)
+        monkeypatch.setattr(f.hub, '_turn', manual_turn)
+        f.hub.claim_robot.return_value = 'manual-control'
+        with ThreadPoolExecutor(max_workers=1) as pool:
+            execution = pool.submit(lambda:list(f.hub.teleop_stream(sid, 'manual-move', {})))
+            assert entered.wait(1)
+            f.hub.stop_robot.reset_mock()
+            def timeout(*args, **kwargs):
+                raise httpx.ReadTimeout('fixture unavailable')
+            monkeypatch.setattr('httpx.get', timeout)
+            f.projects.worlds._last_health = 0
+            core.check_expired()
+            assert captured['token'].is_set()
+            f.hub.stop_robot.assert_called_once_with(sid, expected_control='manual-control')
+            release.set()
+            execution.result(1)
+        assert captured['invalidated'] and sid not in f.hub._runs
+        assert f.projects.active_run(f.project['id'])['id'] == binding['run_id']
+        assert not core.control(f.project['id'])['accepting']
+        f.robot.invoke.assert_not_called()
+    finally:
+        release.set()
+        core.shutdown()
+
+
 def test_delayed_world_health_probe_cannot_overwrite_new_topology(integrated, monkeypatch):  # noqa: F811 - imported pytest fixture
     from types import SimpleNamespace
     f = integrated

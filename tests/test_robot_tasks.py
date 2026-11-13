@@ -135,6 +135,18 @@ def test_unknown_execution_requires_transport_and_runtime_termination_before_rec
     assert hub.tasks.start(s.id, 'recovered')['ok']
 
 
+def test_exact_control_stop_does_not_depend_on_world_health(task_host, monkeypatch):
+    from nerv.platform.hub import Nerv
+    hub, s = task_host
+    probe = Mock(return_value={'ok': False, 'message': 'World health temporarily unavailable'})
+    monkeypatch.setattr(hub, '_control_error', probe)
+    robot = hub.body_client(s.body)
+    result = Nerv.stop_robot(hub, s.id, expected_control='captured-control-token')
+    assert result['ok'] and result['execution_stopped']
+    probe.assert_not_called()
+    robot.post.assert_any_call('/stop', {'expected_control': 'captured-control-token'})
+
+
 def test_delayed_old_deadline_cannot_cancel_a_replacement_task(task_host, monkeypatch):
     hub, s = task_host
     original_get = hub.schemes.get

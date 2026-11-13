@@ -102,9 +102,12 @@ class BrainCore(AgentGateway):
         identity['run_id'] = run['id']
         active = self.projects.active_run(run['project_id'])
         control = self.control(run['project_id']) if active and active['id'] == run['id'] else {'accepting':False, 'owner_id':None}
+        resource = self.resources.for_project(run['project_id']) or {}
+        world = self.projects.worlds.get(resource['world_instance_id']) if resource.get('shared_world') else {}
         return {**identity, 'project_id': run['project_id'], 'client_id': run.get('client_id'),
                 'status': run['status'], 'control': control,
-                'resource_status': (self.resources.for_project(run['project_id']) or {}).get('status', 'offline'),
+                'resource_status': resource.get('status', 'offline'),
+                'world_health': world.get('health', {'state':'not_observed'}),
                 'recovery': 'Read current state and fresh observations; motion never resumes automatically.'}
 
     def resolve_binding(self, client_id, brain_id=None):
@@ -119,7 +122,24 @@ class BrainCore(AgentGateway):
 
     def set_control(self, project_id, *, accepting, owner_id=None):
         with self._robot_control_locks.setdefault(project_id, threading.RLock()):
+            if accepting and not self._world_motion_available(project_id):
+                raise ValueError('World health is unconfirmed; obtain fresh state after recovery')
             return super().set_control(project_id, accepting=accepting, owner_id=owner_id)
+
+    def _world_motion_available(self, project_id):
+        resource = self.resources.for_project(project_id)
+        if not resource or not resource.get('shared_world'):
+            return True
+        world = self.projects.worlds.get(resource['world_instance_id'])
+        return world['status'] == 'ready' and world.get('health', {}).get('state') != 'unknown'
+
+    def _owns(self, record, project_id, *, allow_paused=False):
+        super()._owns(record, project_id, allow_paused=allow_paused)
+        if not allow_paused and not self._world_motion_available(project_id):
+            raise PermissionError('World health is unconfirmed; motion remains disabled')
+
+    def _still_current(self, record, project_id, lease):
+        return self._world_motion_available(project_id) and super()._still_current(record, project_id, lease)
 
     def transport(self, token, action, brain_id=None, transport_id=None):
         """Transport liveness is separate from observing or acknowledging images."""
@@ -167,9 +187,7 @@ class BrainCore(AgentGateway):
     def check_expired(self):
         # Called by the independent Host watchdog, including when no tools are used.
         super().check_expired()
-        for pid in self.projects.worlds.check_health():
-            with self._lock:
-                self._invalidate_control(pid)
+        self.projects.worlds.check_health()
         with self._binding_lock:
             expired = [(bid, value) for bid, value in self._transports.items()
                        if time.monotonic() >= value['deadline']]
@@ -280,9 +298,12 @@ class BrainCore(AgentGateway):
         now_world = self.projects.worlds.get(resource['world_instance_id']) if world else None
         if (not current or any(current.get(k) != resource.get(k) for k in
                 ('status','binding_generation','runtime_epoch','runtime_generation','world_instance_id'))
-                or now_world != world or (robot.health() or {}).get('epoch') != before):
+                or (world and any(now_world.get(k) != world.get(k) for k in
+                    ('status', 'generation', 'topology_revision', 'epoch')))
+                or (robot.health() or {}).get('epoch') != before):
             raise ValueError('Resource changed while reading; obtain a new observation')
-        return {**result, **identity, 'robot_epoch':before, 'connected':True}
+        return {**result, **identity, 'robot_epoch':before, 'connected':True,
+                'world_health': (now_world or {}).get('health', {'state':'not_observed'})}
 
     def _agent_control(self, record, pid, operation, args):
         with self._robot_control_locks.setdefault(pid, threading.RLock()):
@@ -311,7 +332,8 @@ class BrainCore(AgentGateway):
             return self.set_control(pid, accepting=False)
         if not resource or resource['mode'] != 'sim' or not resource.get('allow_control'):
             raise PermissionError('Operator has not granted autonomous control acquisition')
-        if self.projects.worlds.get(resource['world_instance_id'])['status'] != 'ready':
+        world = self.projects.worlds.get(resource['world_instance_id'])
+        if world['status'] != 'ready' or world.get('health', {}).get('state') == 'unknown':
             raise ValueError('World is unavailable or changing')
         if 'control' not in record['permissions']:
             raise PermissionError('This connection has observation permission only')

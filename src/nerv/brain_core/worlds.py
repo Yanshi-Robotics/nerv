@@ -91,7 +91,7 @@ class WorldInstances:
                 raise ValueError('World capacity exhausted')
             if any(r['robot_instance_id'] == resource['robot_instance_id'] for r in world['roster']):
                 return world
-            if world['status'] != 'ready':
+            if world['status'] != 'ready' or world.get('health', {}).get('state') == 'unknown':
                 raise ValueError('Start the existing World before allocating a robot')
             slot = dict(robot_instance_id=resource['robot_instance_id'], project_id=resource['project_id'],
                         run_id=None, spawn=spawn)
@@ -320,23 +320,36 @@ class WorldInstances:
                 continue
             owner = self.hub.launcher.nodes.get('shared_world:' + world['world_instance_id'])
             # Process liveness and the physics thread health are separate facts.
-            import httpx
-            try:
-                healthy = owner and owner.alive()
-                health = httpx.get(owner.url + '/health', timeout=config.NODE_PROBE_TIMEOUT).json() if healthy else {}
-                healthy = healthy and health.get('ok') and health.get('epoch') == world.get('epoch')
-            except (httpx.HTTPError, ValueError):
-                healthy = False
+            from ..platform.node_health import probe
+            health = probe(owner.url + '/health' if owner else '', world.get('epoch'),
+                           config.NODE_PROBE_TIMEOUT, alive=bool(owner and owner.alive()))
+            health.update(generation=world['generation'], topology_revision=world.get('topology_revision', 1))
+            healthy = health['state'] == 'healthy'
+            unknown = health['state'] == 'unknown'
             with self.lock:
                 current = self.get(world['world_instance_id'])
                 if any(current.get(key) != world.get(key) for key in
                        ('status', 'generation', 'topology_revision', 'epoch')):
                     continue  # The probe predates a topology/restart transaction.
+                world['health'] = health
                 for slot in world['roster']:
                     runtime = self.hub.launcher.nodes.get('body:' + slot['robot_instance_id'])
                     if healthy and runtime and runtime.alive():
                         continue
-                    reason = 'Shared World unavailable' if not healthy else 'Robot Runtime unavailable'
+                    if unknown and runtime and runtime.alive():
+                        # Uncertain transport revokes motion, not resource identity.
+                        # The matching instance can recover only by a fresh grant.
+                        invalidated.add(slot['project_id'])
+                        run = self.projects.active_run(slot['project_id'])
+                        if run and run['id'] == slot['run_id'] and run['status'] == 'running':
+                            self.hub.store.set_armed(run['session_id'], False)
+                            task = self.hub.tasks.snapshot(run['session_id']).get('task') or {}
+                            with self.hub._runs_lock:
+                                manual = self.hub._runs.get(run['session_id'])
+                            if manual or task.get('status') in {'starting', 'running', 'updating', 'stopping'}:
+                                failures.append((run, 'World health unconfirmed; motion revoked'))
+                        continue
+                    reason = 'Shared World unavailable' if health['state'] == 'failed' else 'Robot Runtime unavailable'
                     resources = getattr(self.projects, 'resources', None)
                     if resources is not None:
                         resource = resources.get(slot['robot_instance_id'])
@@ -352,12 +365,23 @@ class WorldInstances:
                     self.hub.store.set_armed(run['session_id'], False)
                     self.hub.store.set_status(run['session_id'], 'reconnect_required')
                     failures.append((run, reason))
-                if not healthy:
+                if not healthy and not unknown:
                     world.update(status='failed', reason='Shared World unavailable', generation=world['generation']+1)
-                    self.save(world)
+                self.save(world)
+        core = getattr(self.projects, 'brain_core', None)
+        if core is not None:
+            for pid in invalidated:
+                with core._lock:
+                    core._invalidate_control(pid)
         def stop_failed(item):
             run, reason = item
-            return self.hub.tasks.cancel(run['session_id'], reason=reason)
+            sid = run['session_id']
+            with self.hub._runs_lock:
+                manual = self.hub._runs.get(sid)
+                if manual:
+                    manual.set()
+                control = getattr(manual, 'control_token', None)
+            return self.hub.tasks.cancel(sid, reason=reason, direct_stop=True, expected_runtime_control=control)
         if failures:
             with ThreadPoolExecutor(max_workers=len(failures)) as pool:
                 list(pool.map(stop_failed, failures))

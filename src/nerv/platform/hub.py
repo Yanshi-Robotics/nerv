@@ -111,8 +111,11 @@ class Nerv:
     def stop_robot(self, sid, expected_control=None):
         from .. import config
         session = self.store.get(sid)
-        if error := self._control_error(session):
-            return error
+        # An exact Runtime token is already scoped to its execution generation.
+        # Stopping it must not depend on a separate World probe succeeding.
+        if expected_control is None:
+            if error := self._control_error(session):
+                return error
         client = self.body_client(session.body) if session.body else None
         if client is None:
             return {"ok": not session.body, "message": "Robot unavailable"}
@@ -224,8 +227,18 @@ class Nerv:
         return {"ok": True, "stopped": pair, "frozen": frozen}
 
     def _control_error(self, s) -> dict | None:
+        projects = getattr(self, 'project_service', None)
+        if s.status == op.SESSION_ACTIVE and s.world_instance_id and projects is not None:
+            world = projects.worlds.get(s.world_instance_id)
+            if world.get('health', {}).get('state') == 'unknown':
+                self.store.set_armed(s.id, False)
+                return {'ok':False, 'reason':'health_unconfirmed',
+                        'message':'World health is unconfirmed; motion remains disabled'}
         if s.status != op.SESSION_ACTIVE or not self._epoch_ok(s):
             status = self.store.get(s.id).status
+            if status == op.SESSION_ACTIVE:
+                return {'ok':False, 'reason':'health_unconfirmed',
+                        'message':'Robot or World health is unconfirmed; read current state before retrying'}
             return {"ok": False, "message": messages.SESSION_NOT_ACTIVE.format(status=status)}
         return None
 
@@ -468,12 +481,14 @@ class Nerv:
                 self.store.set_status(s.id, op.SESSION_RECONNECT)
                 self.store.set_armed(s.id, False)
             return not shared
-        now = wc.epoch()
-        if shared and not now:
-            self.store.set_status(s.id, op.SESSION_RECONNECT)
+        health = wc.health()
+        from .node_health import classify
+        state, _ = classify(health, s.epoch)
+        if state == 'unknown':
             self.store.set_armed(s.id, False)
             return False
-        if s.epoch and now and now != s.epoch:
+        now = (health or {}).get('epoch', '')
+        if state == 'failed':
             self.store.set_status(s.id, op.SESSION_RECONNECT)
             self.store.set_armed(s.id, False)
             slog.record("operator", {"event": "epoch_changed", "session": s.id, "was": s.epoch, "now": now})
@@ -571,9 +586,9 @@ class Nerv:
                    "message": messages.SESSION_NOT_ACTIVE.format(status=s.status)}
             yield {"type": op.EV_DONE}
             return
-        if not self._epoch_ok(s):
+        if error := self._control_error(s):
             yield {"type": op.EV_TOOL_RESULT, "name": name, "ok": False,
-                   "message": messages.SESSION_NOT_ACTIVE.format(status=op.SESSION_RECONNECT)}
+                   "message": error['message']}
             yield {"type": op.EV_DONE}
             return
         token = threading.Event()
@@ -595,8 +610,25 @@ class Nerv:
                 yield {"type": op.EV_TOOL_RESULT, "name": name, "ok": False, "message": stopped.get("message", "")}
                 yield {"type": op.EV_DONE}
                 return
-            token.control_token = self.claim_robot(sid, allowed_actions=[route[2].name])
-            turn.control_token = token.control_token
+            with self._runs_lock:
+                if previous := self._runs.get(sid):
+                    previous.set()
+                self._runs[sid] = token
+            try:
+                token.control_token = self.claim_robot(sid, allowed_actions=[route[2].name])
+                turn.control_token = token.control_token
+                if token.is_set() or self._control_error(s):
+                    raise ValueError('Manual execution context changed during control acquisition')
+            except Exception as error:
+                token.set()
+                if control := getattr(token, 'control_token', None):
+                    self.stop_robot(sid, expected_control=control)
+                with self._runs_lock:
+                    if self._runs.get(sid) is token:
+                        self._runs.pop(sid)
+                yield {"type":op.EV_TOOL_RESULT, "name":name, "ok":False, "message":str(error)}
+                yield {"type":op.EV_DONE}
+                return
         call_id = f"teleop-{int(time.time() * 1000)}"
 
         def _run():

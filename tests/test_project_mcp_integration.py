@@ -52,7 +52,8 @@ def integrated(tmp_path, monkeypatch):
         invoke=Mock(side_effect=invoke), post=Mock(side_effect=lambda *a, **k: {"ok": True, "execution_id": "fixture-execution", **execution}))
     # Runtime discovery/transport are the only substitutes. Project creation,
     # Session identity, scheme resolution, task dispatch, and gateway stay real.
-    wc = SimpleNamespace(epoch=lambda: "fixture-epoch", sensors=lambda: [], health=lambda: {"configuration": {"configuration": {}}})
+    wc = SimpleNamespace(epoch=lambda: "fixture-epoch", sensors=lambda: [], health=lambda: {
+        "ok": True, "epoch": "fixture-epoch", "configuration": {"configuration": {}}})
     monkeypatch.setattr(hub, "body_client", lambda _: robot)
     monkeypatch.setattr(hub, "world_client", lambda *_: wc)
     monkeypatch.setattr(hub, "_control_error", lambda _: None)

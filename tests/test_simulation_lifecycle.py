@@ -27,6 +27,7 @@ def simulation(tmp_path, monkeypatch):
     hub.store.set_armed(session.id, True)
     bc, wc = Mock(), Mock()
     wc.epoch.return_value = "original"
+    wc.health.return_value = {'ok': True, 'epoch': 'original'}
     monkeypatch.setattr(hub, "body_client", Mock(return_value=bc))
     monkeypatch.setattr(hub, "world_client", Mock(return_value=wc))
     return hub, hub.store.get(session.id), bc, wc, events
@@ -75,6 +76,7 @@ def test_stale_session_cannot_touch_current_body(simulation, state, action):
         hub.launcher.nodes[f"body:{session.body}"].meta["world"] = "house"
     elif state == "wrong_epoch":
         wc.epoch.return_value = "restarted"
+        wc.health.return_value = {'ok': True, 'epoch': 'restarted'}
     else:
         hub.store.set_status(session.id, state)
     result = hub.arm(session.id, True) if action == "arm" else getattr(hub, action)(session.id)
@@ -93,6 +95,19 @@ def test_offline_body_cannot_be_armed(simulation):
     hub.store.set_armed(session.id, False)
     assert not hub.arm(session.id, True)["ok"]
     assert not hub.store.get(session.id).armed
+
+
+def test_unknown_world_probe_rejects_request_without_claiming_epoch_changed(simulation):
+    hub, session, bc, wc, _ = simulation
+    wc.health.return_value = None
+    error = hub._control_error(session)
+    assert error['reason'] == 'health_unconfirmed'
+    assert hub.store.get(session.id).status == op.SESSION_ACTIVE
+    assert not hub.store.get(session.id).armed
+    wc.health.return_value = {'ok': True, 'epoch': session.epoch}
+    assert hub._control_error(hub.store.get(session.id)) is None
+    assert not hub.store.get(session.id).armed
+    assert not bc.mock_calls
 
 
 def test_emergency_stop_does_not_wait_for_camera_io(simulation, monkeypatch):

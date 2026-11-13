@@ -373,6 +373,8 @@ class AgentGateway:
             body_epoch = (robot.health() or {}).get("epoch") if robot else None
             observed = self.hub.perceive(session.id)
             if observed is None:
+                if error := self.hub._control_error(session):
+                    raise ValueError(error['message'])
                 raise ValueError("No observation is available for this run")
             if not body_epoch or (robot.health() or {}).get("epoch") != body_epoch:
                 raise ValueError("Runtime changed while collecting observations; observe again")

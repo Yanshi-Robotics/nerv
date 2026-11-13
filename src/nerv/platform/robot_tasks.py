@@ -334,7 +334,8 @@ class RobotTasks:
             self.hub.store.save(session)
             return session.summary()
 
-    def cancel(self, sid, reason="Task cancelled", strict=False, *, expected_token=None, expected_task_id=None):
+    def cancel(self, sid, reason="Task cancelled", strict=False, *, expected_token=None, expected_task_id=None,
+               direct_stop=False, expected_runtime_control=None):
         # Stop does not acquire the operation lock: it must preempt slow starts/model loads.
         with self._lock:
             if expected_task_id is not None and (self._jobs.get(sid, {}).get('task_id') != expected_task_id
@@ -357,7 +358,9 @@ class RobotTasks:
             if active:
                 self._save(sid, status="stopping", message=reason)
         try:
-            result = self.hub.stop_robot(sid)
+            control = expected_runtime_control or (token.control_token if token else None)
+            result = (self.hub.stop_robot(sid, expected_control=control)
+                      if direct_stop and control else self.hub.stop_robot(sid))
         except Exception as error:
             result = {"ok": False, "message": str(error)}
         recovered = False

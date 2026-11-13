@@ -93,6 +93,31 @@ def test_shared_robot_view_uses_host_cors_origins(world, monkeypatch):
         assert denied.status_code == 400
 
 
+def test_render_preparation_keeps_sensor_sequences_and_physics_failure_separate(world, monkeypatch):
+    from nerv.world.shared_node import prepare_rendering
+    a, b = world.view('A'), world.view('B')
+    attach(a)
+    attach(b)
+    initial_time = world.data.time
+    states = prepare_rendering(world)
+    assert {rid: item['state'] for rid, item in states.items()} == {'A':'ready', 'B':'ready'}
+    assert a._camera_sequence == b._camera_sequence == 0
+    assert world.data.time == initial_time
+    pixels, metadata = a.capture_camera('eye')
+    assert pixels.size and metadata['source_sequence'] == 1
+    assert metadata['robot_instance_id'] == 'A'
+
+    def unavailable(_):
+        raise RuntimeError('fixture sensor unavailable')
+    monkeypatch.setattr(b.render, 'run', unavailable)
+    states = prepare_rendering(world)
+    assert states['A']['state'] == 'ready'
+    assert states['B']['state'] == 'failed'
+    assert states['B']['error_type'] == 'RuntimeError'
+    assert a._camera_sequence == 1 and b._camera_sequence == 0
+    assert world.step() and world.data.time > initial_time
+
+
 def test_dynamic_membership_preserves_survivor_state_and_empty_world_clock(world):
     a = world.endpoint('A')
     attach(a)
@@ -194,7 +219,8 @@ def test_motor_bus_serializes_topology_revision_for_existing_connections(world):
     from nerv.body.bus_zmq import ZmqBus
     from nerv.nerve.world import BusCommand
     from nerv.world.mujoco_node import make_bus_handler
-    attach(world.endpoint('A')); attach(world.endpoint('B'))
+    attach(world.endpoint('A'))
+    attach(world.endpoint('B'))
     bus=ZmqBus.__new__(ZmqBus)
     bus._req=make_bus_handler(world.endpoint('A'))
     bus.write(BusCommand([0.], topology_revision=1))
