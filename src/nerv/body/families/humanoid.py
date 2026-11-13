@@ -6,7 +6,7 @@ run the ONNX network, write joint targets — and offers three skills to the bra
   move_forward(meters)   walk straight ahead, closed loop on the odometry, brake before obstacles
   turn_left(degrees)     turn on the spot, closed loop on the yaw
   turn_right(degrees)
-A skill ends when the measured quantity reaches the target, when the body stalls (a wall), when
+A skill ends when the measured quantity reaches the target, when measured progress stalls, when
 physical obstacles or missing support enter the braking/turn envelope, when the body falls, on timeout or
 on stop. What comes back is MEASURED (displacement, turn), never the command echoed.
 
@@ -769,8 +769,8 @@ class VelocityPolicyBody:
                             "required": ["meters"]}},
             {"name": "turn_left", "kind": KIND_SKILL,
              "description": (f"Turn left (counter-clockwise) on the spot by an angle in degrees (at most "
-                             f"{L['max_turn_deg']:g} per call). The turn is measured; it stands still "
-                             f"afterwards so the next image is sharp."),
+                             f"{L['max_turn_deg']:g} per call). Read the measured angle, drift and "
+                             f"stop status in the result. A completed request does not guarantee stable stopping."),
              "parameters": {"type": "object",
                             "properties": {"degrees": {"type": "number", "minimum": 0,
                                                        "maximum": float(L["max_turn_deg"]),
@@ -779,8 +779,8 @@ class VelocityPolicyBody:
                             "required": ["degrees"]}},
             {"name": "turn_right", "kind": KIND_SKILL,
              "description": (f"Turn right (clockwise) on the spot by an angle in degrees (at most "
-                             f"{L['max_turn_deg']:g} per call). The turn is measured; it stands still "
-                             f"afterwards so the next image is sharp."),
+                             f"{L['max_turn_deg']:g} per call). Read the measured angle, drift and "
+                             f"stop status in the result. A completed request does not guarantee stable stopping."),
              "parameters": {"type": "object",
                             "properties": {"degrees": {"type": "number", "minimum": 0,
                                                        "maximum": float(L["max_turn_deg"]),
