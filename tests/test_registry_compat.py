@@ -72,3 +72,25 @@ def test_hub_refuses_incompatible_session(tmp_path):
     else:
         raise AssertionError("expected refusal")
     assert hub.store.list() == []          # nothing was created
+
+
+def test_packaged_json_profile_preserves_the_frozen_control_contract(tmp_path, monkeypatch):
+    """An installed JSON descriptor must retain the YAML source's numeric types."""
+    import hashlib
+    import json
+    from pathlib import Path
+    import yaml
+    from nerv import paths
+    monkeypatch.setattr(paths, 'NERV_HOME', str(tmp_path / 'home'))
+    original = yaml.safe_load((Path(paths.BODIES_DIR) / 'humanoid-unitree-g1/body.yaml').read_text())
+    module = tmp_path / 'module'
+    target = module / 'bodies/humanoid-unitree-g1/body.yaml'
+    target.parent.mkdir(parents=True)
+    target.write_text(json.dumps(original))
+    loaded = Registry(roots=[module]).bodies['humanoid-unitree-g1']
+    assert type(loaded.actuators['standing_balance']['derivative_epsilon']) is float
+    current = {key:getattr(loaded,key) for key in ('actuators','locomotion')}
+    source = {key:original[key] for key in current}
+    def fingerprint(value):
+        return hashlib.sha256(json.dumps(value,sort_keys=True,separators=(',',':')).encode()).hexdigest()
+    assert fingerprint(current) == fingerprint(source), 'Packaging changed the qualified control profile'

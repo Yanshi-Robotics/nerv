@@ -23,7 +23,15 @@ def _expand(obj):
 
 def _read_yaml(path: str) -> dict:
     with open(path, encoding="utf-8") as f:
-        return _expand(yaml.safe_load(f) or {})
+        raw = f.read()
+    # Installed modules store JSON in descriptor files named *.yaml. YAML 1.1
+    # interprets JSON exponents such as 1e-06 as strings, changing qualified
+    # numeric control contracts. Preserve JSON types before the YAML fallback.
+    try:
+        value = json.loads(raw)
+    except json.JSONDecodeError:
+        value = yaml.safe_load(raw)
+    return _expand(value or {})
 
 
 def _guidance(d: str) -> str:

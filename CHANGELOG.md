@@ -6,6 +6,7 @@
 - Retire internal model services and provider packaging; preserve historical source and journals. Fixed policies remain Runtime capabilities.
 - Add generated shared-world robot namespaces, per-robot buses and separate Run lifetimes. The completion revision adds durable World/Robot/Brain records, scoped bootstrap allocation and transactional topology changes in source.
 - Require explicit World startup and ready Runtime resources before simulation Run attachment. Runs no longer create or rebuild physics; new Run references remain in World stop/fault scope, and unrelated Run stops do not wait behind resource startup.
+- Preserve JSON numeric types in installed registry descriptors so scientific notation cannot silently alter qualified control-profile hashes.
 - Add directional motion feedback, continuous stop evidence and physics-step paired-meeting scoring. Two-minute holding probes still show drift; qualification is incomplete.
 - Record actual displacement, braking travel and stable stopping. Candidate 08 passed 713 CPU software tests (two retired-provider skips) and managed frontend/install/recovery checks. Its three paired navigation rounds produced 0/6 successes, three false arrival claims and no falls; navigation qualification failed.
 - This is an architecture upgrade despite the retained 0.9.1 version number. Installed candidate, UI, migration and three independent paired rendezvous rounds must pass before release. No release is implied by this entry.
