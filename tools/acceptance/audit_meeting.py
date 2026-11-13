@@ -12,6 +12,34 @@ import math
 from pathlib import Path
 
 
+def terminal_conditions(value):
+    """Structured execution facts, never a guess from an Agent's prose."""
+    if not isinstance(value, dict):
+        return set()
+    result = set()
+    if value.get('fallen') is True:
+        result.add('fallen')
+    if value.get('timed_out') is True or value.get('execution_status') in ('timeout', 'timed_out'):
+        result.add('timeout')
+    if value.get('stop_confirmed') is False or value.get('stop_state') == 'stop_unconfirmed':
+        result.add('stop_unconfirmed')
+    for child in value.values():
+        if isinstance(child, dict):
+            result.update(terminal_conditions(child))
+    return result
+
+
+def response_conditions(response):
+    conditions = set()
+    for block in response.get('result', {}).get('content', []):
+        if block.get('type') == 'text':
+            try:
+                conditions.update(terminal_conditions(json.loads(block['text'])))
+            except (ValueError, KeyError):
+                pass  # Tool error prose is not structured physical evidence.
+    return conditions
+
+
 def audit(participants, started_monotonic, ended_monotonic):
     """Read retained raw evidence and reconcile accepted requests with their Run.
 
@@ -22,7 +50,7 @@ def audit(participants, started_monotonic, ended_monotonic):
     if (len(participants) != 2 or not all(type(t) in (int, float) and math.isfinite(t)
             for t in (started_monotonic, ended_monotonic)) or ended_monotonic < started_monotonic):
         raise ValueError('Two participants and a valid operator monotonic interval are required')
-    errors, counts, sources = [], {}, {}
+    errors, counts, sources, violations = [], {}, {}, []
     for rid, participant in participants.items():
         evidence = {}
         sources[rid] = {}
@@ -53,8 +81,20 @@ def audit(participants, started_monotonic, ended_monotonic):
             request_id = request['request'].get('arguments', {}).get('request_id')
             if isinstance(request_id, str):
                 namespaced.add(hashlib.sha256((participant['brain_instance_id'] + ':' + request_id).encode()).hexdigest())
+        for response in responses:
+            if (response.get('request', {}).get('operation') in {'action', 'task_cancel'}
+                    and started_monotonic <= response.get('started_monotonic', -1) <= ended_monotonic):
+                for condition in sorted(response_conditions(response)):
+                    violations.append(dict(robot_instance_id=rid, source='mcp_response',
+                                           sequence=response['sequence'], condition=condition))
         for event in journal:
             data = event.get('data', {})
+            scoped = data.get('data', {})
+            if (event.get('kind') == 'scoped_event' and data.get('kind') == 'message'
+                    and scoped.get('role') == 'tool'):
+                for condition in sorted(terminal_conditions(scoped.get('data'))):
+                    violations.append(dict(robot_instance_id=rid, source='run_task_journal',
+                                           sequence=event['seq'], condition=condition))
             if event.get('kind') != 'external_agent_activity' or data.get('operation') != 'action':
                 continue
             if (data.get('request_id') not in namespaced or data.get('robot_instance_id') != rid
@@ -62,4 +102,4 @@ def audit(participants, started_monotonic, ended_monotonic):
                 errors.append(rid + ': execution has no matching bound MCP request')
     return dict(source='mcp_receipts_and_run_task_journal', complete=not errors, errors=errors,
                 navigation_wall_seconds=ended_monotonic - started_monotonic,
-                motion_requests=counts, evidence_sha256=sources)
+                motion_requests=counts, evidence_sha256=sources, terminal_violations=violations)

@@ -51,3 +51,26 @@ def test_unlogged_or_cross_instance_execution_invalidates_audit(tmp_path):
     event['data']['robot_instance_id'] = 'B'
     path.write_text(json.dumps(event) + '\n')
     assert not audit(participants, 10, 14)['complete']
+
+
+def test_stop_failure_cannot_be_cleared_by_a_later_successful_response(tmp_path):
+    participants = fixture(tmp_path)
+    path = participants['A']['protocol']
+    replies = [json.loads(line) for line in path.read_text().splitlines()]
+    for reply, stopped in zip(replies, [False, True]):
+        reply['result'] = {'content': [dict(type='text', text=json.dumps({'data': {'stop_confirmed': stopped}}))]}
+    path.write_text(''.join(json.dumps(row) + '\n' for row in replies))
+    result = audit(participants, 10, 14)
+    assert result['complete']
+    assert result['terminal_violations'] == [dict(robot_instance_id='A', source='mcp_response',
+                                                sequence=1, condition='stop_unconfirmed')]
+
+
+def test_journal_retains_timeout_even_if_client_response_has_no_details(tmp_path):
+    participants = fixture(tmp_path)
+    path = participants['B']['journal']
+    with path.open('a') as stream:
+        stream.write(json.dumps(dict(seq=2,kind='scoped_event',data=dict(kind='message',
+            data=dict(role='tool',data=dict(timed_out=True,stop_confirmed=True))))) + '\n')
+    result = audit(participants, 10, 14)
+    assert result['terminal_violations'][0]['condition'] == 'timeout'

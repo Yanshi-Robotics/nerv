@@ -20,6 +20,7 @@ def score(record, robot_ids, contract, visual_reviews, stop_receipts, *, claimed
     limits = record.get('execution_audit', {})
     elapsed = limits.get('navigation_wall_seconds')
     counts = limits.get('motion_requests', {})
+    terminal_valid = limits.get('terminal_violations') == []
     budget_valid = (_vector([elapsed]) and 0 <= elapsed <= 900
                     and all(type(counts.get(rid)) is int and 0 <= counts[rid] <= 60 for rid in robot_ids)
                     and limits.get('source') == 'mcp_receipts_and_run_task_journal'
@@ -121,9 +122,10 @@ def score(record, robot_ids, contract, visual_reviews, stop_receipts, *, claimed
         stops_valid &= (stop.get('stop_confirmed') is True and _vector([stop.get('observed_sim_time')])
                         and stop.get('robot_instance_id') == rid and stop.get('world_epoch') == (identity or (None,None))[1]
                         and window is not None and window[1] - contract['max_sample_gap_s'] <= stop['observed_sim_time'] <= window[1])
-    success = bool(valid and not collision and not fallen and stable + 1e-9 >= contract['stable_seconds']
+    success = bool(valid and terminal_valid and not collision and not fallen and stable + 1e-9 >= contract['stable_seconds']
                    and images_valid and stops_valid)
-    return dict(success=success, evidence_valid=valid, budget_valid=budget_valid, common_stable_seconds=stable, stable_window=window,
+    return dict(success=success, evidence_valid=valid, budget_valid=budget_valid, terminal_outcomes_valid=terminal_valid,
+                common_stable_seconds=stable, stable_window=window,
                 visual_evidence_valid=bool(images_valid), stops_confirmed=bool(stops_valid),
                 robot_collision=collision, fallen=fallen, reason=reason,
                 agent_claimed_success=bool(claimed_success), false_success_claim=bool(claimed_success and not success))

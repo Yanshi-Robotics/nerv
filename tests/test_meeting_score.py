@@ -23,7 +23,7 @@ def evidence():
             dynamic_obstacles=[],dynamic_geometry_checked=0))
     record=dict(samples=samples,dynamic_geometry_ids=[],physics_events_complete=True,dropped_samples=0,finished=True,robot_collision_seen=False,fall_seen=False,
                 execution_audit=dict(navigation_wall_seconds=4,motion_requests={'A':1,'B':1},
-                    source='mcp_receipts_and_run_task_journal',complete=True))
+                    source='mcp_receipts_and_run_task_journal',complete=True,terminal_violations=[]))
     visual={rid:[dict(robot_instance_id=rid,world_epoch='epoch',sim_time=t,observation_sequence=i,
         seen_other_reviewed=True,agent_claimed_seen_other=True,image_sha256=str(i)*64) for i,t in enumerate([1.5,2.5,3.5])] for rid in ['A','B']}
     stops={rid:dict(stop_confirmed=True,observed_sim_time=4,robot_instance_id=rid,world_epoch="epoch") for rid in ['A','B']}
@@ -128,3 +128,9 @@ def test_obstacle_filter_must_cover_the_entire_scoring_margin(evidence):
 def test_repeated_physics_step_cannot_prove_a_stable_time_window(evidence):
     evidence[0]['samples'][-1]['physics_steps'] = evidence[0]['samples'][-2]['physics_steps']
     assert not evaluate(evidence)['evidence_valid']
+
+
+def test_later_recovery_does_not_erase_terminal_trial_failure(evidence):
+    evidence[0]['execution_audit']['terminal_violations'] = [dict(condition='stop_unconfirmed')]
+    result = evaluate(evidence)
+    assert result['stops_confirmed'] and not result['success'] and not result['terminal_outcomes_valid']
