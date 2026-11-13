@@ -1,8 +1,9 @@
 """Rejected/replayed requests consume budget even without another execution."""
 import hashlib
 import json
+import pytest
 
-from tools.acceptance.audit_meeting import audit
+from tools.acceptance.audit_meeting import audit, terminal_conditions
 
 
 def fixture(tmp_path):
@@ -92,3 +93,10 @@ def test_interrupted_motion_remains_terminal_even_after_confirmed_stopping(tmp_p
     result = audit(participants, 10, 14, termination_reason='agents_finished')
     assert result['terminal_violations'] == [dict(robot_instance_id='A', source='mcp_response',
                                                 sequence=1, condition='execution_interrupted')]
+
+
+@pytest.mark.parametrize('reason', ['braked', 'stalled', 'clearance_unavailable'])
+def test_confirmed_navigation_obstruction_can_be_observed_and_replanned(reason):
+    result = {'execution_status': 'interrupted', 'reason': reason, 'stop_confirmed': True}
+    assert terminal_conditions(result) == set()
+    assert terminal_conditions({**result, 'stop_confirmed': False}) == {'stop_unconfirmed'}
