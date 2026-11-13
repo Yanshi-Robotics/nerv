@@ -67,7 +67,7 @@ class BrainCore(AgentGateway):
     def reserve(self, project_id, client_id):
         """Operator-only; reserve identity without creating devices or motion authority."""
         import json
-        with self._binding_lock, self.projects._lock:
+        with self.projects.worlds.lock, self._binding_lock, self.projects._lock:
             record = json.loads(self._path(client_id).read_text())
             if record.get('revoked') or project_id not in record['projects']:
                 raise ValueError('Select a valid Agent connection for this project')
@@ -356,9 +356,14 @@ class BrainCore(AgentGateway):
             raise ValueError('Brain Run changed before dispatch')
         captured = {key: self.describe(run)[key] for key in IDENTITY_FIELDS}
         captured['control_generation'] = self.control(args['project_id']).get('control_generation', 0)
-        result = super()._dispatch(record, operation, args)
         if operation == 'run_start':
-            current = self.projects.active_run(args['project_id'])
+            expected = {key:run.get(key) for key in ('id','brain_instance_id','robot_instance_id',
+                        'world_instance_id','binding_generation','world_generation')}
+            result = self.projects.create_run(args['project_id'],operator=False,expected_run=expected)
+        else:
+            result = super()._dispatch(record, operation, args)
+        if operation == 'run_start':
+            current = next(r for r in self.projects.store.runs(args['project_id']) if r['id'] == result['run']['id'])
             transport = self._transports.get(current['brain_instance_id'] + ':' + record['id'])
             if transport is not None:
                 transport['run_id'] = current['id']

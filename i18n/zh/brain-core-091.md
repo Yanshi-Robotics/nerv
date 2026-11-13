@@ -10,6 +10,8 @@
 
 每个 Project 仍对应一台受控机器人。World、Robot 与规范 Brain 独立于 Run 保存；操作者可先创建空世界并授予实例申请权限。未绑定 MCP 提供资源发现和幂等申请；绑定后的 `nerv mcp --channel CHANNEL --brain BRAIN_ID --client CLIENT_ID` 仅操作一个 Brain。`brain_get` 返回资源与控制状态；回执保留原始执行身份，不用新授权重标旧回执。
 
+World 启动是明确的操作者资源操作。实例申请在消耗配额前拒绝未启动或不可用的 World，不隐式启动仿真。Run 要求已有 World 和 Runtime 就绪，场景、机器人配置与连接代次匹配；启动只发布执行记录及当前 World 成员中的 Run 引用，结束不销毁这些资源。通过 Run 重建 World 的旧入口退役，改用 World 生命周期操作。预留 Brain 在明确绑定前可以没有 World；旧独立 Run 保留历史，但不能恢复原来的隐式资源创建路径。
+
 MCP 心跳只证明连接存活，不确认图像。授权观察者可以并存，但只有一个运动控制者；观察者断开不会撤销另一 Agent 的控制权。控制者重连恢复读取，在预授权范围内取得新观测后可重新申请控制，不重放动作。
 
 共享 World 使用同一 MuJoCo model/data、物理时钟和真实碰撞。成员事务协调停止、构建独立候选模型、按名称迁移状态并递增拓扑修订。各机器人拥有独立总线、Runtime、相机和执行记录。结束 Run 保留机器人；移除实体是单独操作。当前候选拒绝无法迁移的 activation、equality、mocap 和 plugin 状态，以及非空场景配置覆盖。

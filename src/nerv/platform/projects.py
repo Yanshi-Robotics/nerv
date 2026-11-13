@@ -240,6 +240,7 @@ class ProjectService:
         self.hub = hub
         self.store = ProjectStore(root) if root else getattr(hub, "project_store", None) or ProjectStore()
         self._lock = threading.RLock()
+        self._run_locks = {}
         # Recover durable run metadata without invoking any device or task API.
         for project in self.store.list():
             for run in self.store.runs(project["id"]):
@@ -314,6 +315,9 @@ class ProjectService:
                     issues.append({"code": "incompatible_world", "reason": reason, "destination": "worlds"})
             resources = getattr(self, 'resources', None)
             resource = resources.for_project(project_id) if resources is not None else None
+            if hasattr(self, 'brain_core') and (not resource or not resource.get('shared_world')):
+                issues.append({'code':'simulation_resource_required',
+                    'reason':'Allocate a robot in an existing World before starting its Run', 'destination':'worlds'})
             if resource and resource.get('shared_world'):
                 try:
                     world = self.worlds.get(resource['world_instance_id'])
@@ -325,6 +329,20 @@ class ProjectService:
                 if resource.get('status') != 'ready':
                     issues.append({'code':'runtime_unavailable', 'reason':'The assigned robot Runtime is not ready',
                                    'destination':'robots'})
+                if (world.get('world') != project['world'] or world.get('robot_profile') != project['robot']):
+                    issues.append({'code':'resource_configuration_mismatch',
+                        'reason':'The assigned entity differs from the Project template', 'destination':'worlds'})
+                if world.get('status') == 'ready':
+                    owner = self.hub.launcher.nodes.get('shared_world:'+resource['world_instance_id'])
+                    if not owner or not owner.alive():
+                        issues.append({'code':'world_unavailable','reason':'The assigned World process is unavailable',
+                                       'destination':'worlds'})
+                if resource.get('status') == 'ready':
+                    runtime = self.hub.launcher.nodes.get('body:'+resource['robot_instance_id'])
+                    if (not runtime or not runtime.alive() or not resource.get('runtime_epoch')
+                            or runtime.meta.get('epoch') != resource['runtime_epoch']):
+                        issues.append({'code':'runtime_unavailable','reason':'The assigned Runtime attachment is unavailable',
+                                       'destination':'robots'})
         return {"ready": not issues, "issues": issues}
 
     def require_session(self, project_id):
@@ -336,13 +354,32 @@ class ProjectService:
             raise ValueError("Runtime changed; end this run and reconnect")
         return session
 
-    def create_run(self, project_id, *, operator=False):
-        with self._lock:
+    def create_run(self, project_id, *, operator=False, expected_run=None):
+        from contextlib import ExitStack
+        with ExitStack() as resource_locks:
+            # A slow World transaction must not hold the global Project lock
+            # while a different robot is trying to stop.
+            if hasattr(self, 'brain_core'):
+                resource_locks.enter_context(self.worlds.lock)
+            resource_locks.enter_context(self._lock)
+            resource_locks.enter_context(self._run_locks.setdefault(project_id, threading.RLock()))
             project = self.store.get(project_id)
             current = self.active_run(project_id)
+            bound_simulation = project['mode'] == 'sim' and hasattr(self, 'brain_core')
+            if bound_simulation:
+                # Pin membership, readiness and Session publication together;
+                # World transactions never inherit a half-started Run.
+                current = self.active_run(project_id)
+            if expected_run is not None and (current is None or any(
+                    current.get(key) != value for key,value in expected_run.items())):
+                raise ValueError('Run allocation changed while waiting for its resources')
             if current and current["status"] != "reserved":
+                if bound_simulation and not current.get('shared_world'):
+                    raise ValueError('Migrate the legacy Run to explicit World and robot resources')
                 if current["status"] != "running":
                     raise ValueError("Resolve the current run before starting another")
+                if bound_simulation and not self.readiness(project_id)['ready']:
+                    raise ValueError('The assigned simulation resources are unavailable')
                 session = self.require_session(project_id)
                 return {"run": current, "session": session.summary()}
             if project["mode"] == "real" and not operator:
@@ -352,7 +389,7 @@ class ProjectService:
                 resource = self.resources.for_project(project_id)
                 if not resource or resource['status'] != 'ready':
                     raise ValueError('Connect the registered device before starting its Run')
-            if not attached_device and not self.worlds.for_run(current) and any(self.active_run(p["id"]) for p in self.store.list() if p["id"] != project_id):
+            if not attached_device and not bound_simulation and not self.worlds.for_run(current) and any(self.active_run(p["id"]) for p in self.store.list() if p["id"] != project_id):
                 raise ValueError("End the active world before starting another project")
             if current and current["project_revision"] != project["revision"]:
                 raise ValueError("Project changed after Brain allocation; end the reserved Run")
@@ -369,10 +406,18 @@ class ProjectService:
             run = current or {"id": "r_" + uuid.uuid4().hex, "project_id": project_id,
                    "project_revision": project["revision"], "snapshot": project,
                    "status": "starting", "session_id": "", "created_at": time.time()}
+            if bound_simulation:
+                resource = self.resources.for_project(project_id)
+                if any(run.get(key) and run[key] != resource[key] for key in
+                       ('brain_instance_id','robot_instance_id')):
+                    raise ValueError('The reserved Run refers to a different robot resource')
+                run.update({key:resource.get(key) for key in ('brain_instance_id','robot_instance_id',
+                    'world_instance_id','binding_generation','client_id','shared_world')})
+                run['world_generation'] = self.worlds.get(resource['world_instance_id'])['generation']
             run["status"] = "starting"
             self.store.save_run(project_id, run)
             try:
-                session = self.attachments.attach_run(run) if attached_device else self.worlds.attach(run) if self.worlds.for_run(run) else self.hub.new_session("operator", project["robot"], project["world"] or None,
+                session = self.attachments.attach_run(run) if attached_device else self.worlds.attach(run) if bound_simulation or self.worlds.for_run(run) else self.hub.new_session("operator", project["robot"], project["world"] or None,
                     project["sensors"], [], project["mode"], project["world_configuration"], operator_workspace=True,
                     project_id=project_id, run_id=run["id"], project_revision=project["revision"])
                 bound_session = self.hub.store.get(session["id"])
@@ -417,12 +462,16 @@ class ProjectService:
             project = self.store.get(project_id)
             if project["mode"] != "sim":
                 raise ValueError("Only simulation projects can rebuild a world")
+            if hasattr(self, 'brain_core'):
+                raise ValueError('Change the World through its resource lifecycle; a Run cannot rebuild it')
             self.end_run(project_id)
             self.store.update(project_id, {"expected_revision": project["revision"], "world_configuration": values})
             return self.create_run(project_id, operator=True)
 
     def stop_run(self, project_id, run_id):
-        with self._lock:
+        # Stop serializes only this robot's Run. It cannot wait behind another
+        # robot's slow sensor acquisition, startup, or World compilation.
+        with self._run_locks.setdefault(project_id, threading.RLock()):
             run = self.active_run(project_id)
             if not run or run["id"] != run_id:
                 raise ValueError("This run is no longer active")

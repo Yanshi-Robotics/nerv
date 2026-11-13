@@ -48,6 +48,7 @@ def integrated(tmp_path, monkeypatch):
         ToolSpec("act", "Fixture ACT", {"type": "object", "properties": {}, "additionalProperties": False}, "skill")],
         sensors=["camera"], config={"external_supervision": {"validated": True, "timeout_s": 30, "max_observation_age_s": 2}}),
         health=lambda: {"epoch": "fixture-epoch", "supervision_sensors": ["camera"]}, perceive=observe,
+        set_config=Mock(side_effect=lambda key, value: {"ok": True, key: value}),
         invoke=Mock(side_effect=invoke), post=Mock(side_effect=lambda *a, **k: {"ok": True, "execution_id": "fixture-execution", **execution}))
     # Runtime discovery/transport are the only substitutes. Project creation,
     # Session identity, scheme resolution, task dispatch, and gateway stay real.
@@ -65,12 +66,43 @@ def integrated(tmp_path, monkeypatch):
     gateway = AgentGateway(hub, service)
     paired = gateway.create("Fixture Agent", [project["id"]], ["observe", "control"])
     yield SimpleNamespace(hub=hub, projects=service, project=project, gw=gateway, pair=paired,
-                          robot=robot, launcher=launcher, execution=execution, invoked=invoked)
+                          robot=robot, launcher=launcher, execution=execution, invoked=invoked,
+                          monkeypatch=monkeypatch)
     gateway.shutdown()
     for token in hub.tasks._tokens.values():
         token.set()
     for thread in hub.tasks._threads.values():
         thread.join(2)
+
+
+def ready_binding(core, fixture, binding):
+    """Explicit operator resource setup over inert physics/Runtime transports.
+
+    A Run must not construct either transport. The real resource and World stores
+    represent that separate setup before tests exercise execution authorization.
+    """
+    import httpx
+    f = fixture
+    pid = binding['project_id']
+    project = f.projects.store.get(pid)
+    world = f.projects.worlds.create(project['world'], project['robot'])
+    resource = core.resources.for_project(pid)
+    resource.update(shared_world=True,world_instance_id=world['world_instance_id'],
+                    status='ready',runtime_epoch='fixture-epoch')
+    core.resources.save(resource)
+    run = f.projects.active_run(pid)
+    run.update(shared_world=True,world_instance_id=world['world_instance_id'],world_generation=1)
+    f.projects.store.save_run(pid,run)
+    world.update(status='ready',epoch='fixture-epoch',roster=[dict(project_id=pid,
+        robot_instance_id=resource['robot_instance_id'],run_id=run['id'],spawn=dict(x=0,y=0,z=1,yaw=0))])
+    f.projects.worlds.save(world)
+    f.launcher.nodes['shared_world:'+world['world_instance_id']] = SimpleNamespace(alive=lambda:True,url='http://fixture')
+    f.launcher.nodes['body:'+resource['robot_instance_id']] = SimpleNamespace(meta={'epoch':'fixture-epoch'},alive=lambda:True)
+    original_get = httpx.get
+    f.monkeypatch.setattr(httpx,'get',lambda url,*args,**kwargs:
+        SimpleNamespace(json=lambda:{'ok':True,'epoch':'fixture-epoch'}) if url=='http://fixture/health'
+        else original_get(url,*args,**kwargs))
+    return core.describe(run)
 
 
 def call(fixture, operation, **arguments):
@@ -170,7 +202,8 @@ def test_observation_cannot_be_relabelled_after_control_or_world_changes(integra
         def delayed():
             observed=original()
             if change=='control':
-                with f.gw._lock:f.gw._invalidate_control(f.project['id'])
+                with f.gw._lock:
+                    f.gw._invalidate_control(f.project['id'])
             else:
                 latest=f.hub.store.get(session.id)
                 latest.world_generation += 1

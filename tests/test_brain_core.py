@@ -1,6 +1,6 @@
 """Identity boundaries; inert Runtime fixtures are not navigation evidence."""
 import pytest
-from test_project_mcp_integration import integrated  # noqa: F401
+from test_project_mcp_integration import integrated, ready_binding  # noqa: F401
 from nerv.brain_core.core import BrainCore
 
 
@@ -55,6 +55,147 @@ def test_readiness_cannot_outlive_shared_world_or_runtime(integrated,world_state
         core.shutdown()
 
 
+def test_unallocated_simulation_run_cannot_create_a_world_or_robot(integrated,monkeypatch):  # noqa: F811
+    from unittest.mock import Mock
+    f = integrated
+    core = BrainCore(f.hub,f.projects,f.gw.root)
+    try:
+        create = Mock(side_effect=AssertionError('Run must not construct physics'))
+        monkeypatch.setattr(f.hub,'new_session',create)
+        with pytest.raises(ValueError,match='simulation_resource_required'):
+            f.projects.create_run(f.project['id'],operator=True)
+        assert not f.projects.store.runs(f.project['id']) and not core.resources.list()
+        binding = core.reserve(f.project['id'],f.pair['connection']['id'])
+        assert binding['world_instance_id'] is None, 'reservation cannot invent a phantom World'
+        with pytest.raises(ValueError,match='simulation_resource_required'):
+            core.invoke(f.pair['token'],'run_start',{'project_id':f.project['id'],'request_id':'start'})
+        create.assert_not_called()
+    finally:
+        core.shutdown()
+
+
+def test_operator_run_only_attaches_existing_resources_and_cannot_rebuild_them(integrated,monkeypatch):  # noqa: F811
+    from unittest.mock import Mock
+    f = integrated
+    core = BrainCore(f.hub,f.projects,f.gw.root)
+    try:
+        binding = ready_binding(core,f,core.reserve(f.project['id'],f.pair['connection']['id']))
+        f.projects.stop_run(f.project['id'],binding['run_id'])  # Cancel a metadata-only reservation.
+        prepare = Mock(side_effect=AssertionError('Run must not start or recover a World'))
+        monkeypatch.setattr(f.projects.worlds,'prepare',prepare)
+        monkeypatch.setattr(f.hub,'new_session',Mock(side_effect=AssertionError('Run must not spawn')))
+        result = f.projects.create_run(f.project['id'],operator=True)
+        for field in ('brain_instance_id','robot_instance_id','world_instance_id'):
+            assert result['run'][field] == binding[field]
+        assert result['run']['id'] != binding['run_id']
+        assert not f.launcher.ensure_body.called and not f.launcher.ensure_shared_world.called
+        before = f.projects.active_run(f.project['id'])
+        with pytest.raises(ValueError,match='resource lifecycle'):
+            f.projects.rebuild(f.project['id'],{})
+        assert f.projects.active_run(f.project['id']) == before
+        prepare.assert_not_called()
+    finally:
+        core.shutdown()
+
+
+def test_run_start_waits_for_world_transaction_and_rechecks_its_result(integrated):  # noqa: F811
+    import threading
+    f = integrated
+    core = BrainCore(f.hub,f.projects,f.gw.root)
+    errors, entered = [], threading.Event()
+    try:
+        binding = ready_binding(core,f,core.reserve(f.project['id'],f.pair['connection']['id']))
+        def start():
+            entered.set()
+            try:
+                f.projects.create_run(f.project['id'])
+            except ValueError as error:
+                errors.append(str(error))
+        with f.projects.worlds.lock:
+            thread = threading.Thread(target=start)
+            thread.start()
+            assert entered.wait(1)
+            assert not f.hub.store.all()
+            world = f.projects.worlds.get(binding['world_instance_id'])
+            world['status'] = 'failed'
+            f.projects.worlds.save(world)
+        thread.join(2)
+        assert not thread.is_alive() and errors and 'world_unavailable' in errors[0]
+        assert not f.hub.store.all() and not f.launcher.ensure_shared_world.called
+    finally:
+        core.shutdown()
+
+
+def test_queued_run_start_cannot_replace_an_ended_allocation(integrated):  # noqa: F811
+    import threading
+    f = integrated
+    core = BrainCore(f.hub,f.projects,f.gw.root)
+    errors, entered = [], threading.Event()
+    try:
+        ready_binding(core,f,core.reserve(f.project['id'],f.pair['connection']['id']))
+        original = f.projects.active_run(f.project['id'])
+        def start():
+            entered.set()
+            try:
+                f.projects.create_run(f.project['id'],expected_run={'id':original['id']})
+            except ValueError as error:
+                errors.append(str(error))
+        with f.projects.worlds.lock:
+            thread = threading.Thread(target=start)
+            thread.start()
+            assert entered.wait(1)
+            f.projects.store.save_run(f.project['id'],dict(original,status='ended'))
+        thread.join(2)
+        assert not thread.is_alive() and errors and 'allocation changed' in errors[0]
+        assert len(f.projects.store.runs(f.project['id'])) == 1 and not f.hub.store.all()
+    finally:
+        core.shutdown()
+
+
+@pytest.mark.parametrize('fault',['runtime','world','configuration'])
+def test_live_resource_failure_cannot_be_hidden_by_persisted_ready_state(integrated,fault):  # noqa: F811
+    f = integrated
+    core = BrainCore(f.hub,f.projects,f.gw.root)
+    try:
+        binding = ready_binding(core,f,core.reserve(f.project['id'],f.pair['connection']['id']))
+        if fault == 'configuration':
+            world = f.projects.worlds.get(binding['world_instance_id'])
+            world['robot_profile'] = 'different-profile'
+            f.projects.worlds.save(world)
+        else:
+            key = 'body:'+binding['robot_instance_id'] if fault == 'runtime' else 'shared_world:'+binding['world_instance_id']
+            f.launcher.nodes[key].alive = lambda:False
+        assert not f.projects.readiness(f.project['id'])['ready']
+        with pytest.raises(ValueError,match='configuration'):
+            f.projects.create_run(f.project['id'])
+        assert not f.hub.store.all() and not f.launcher.ensure_shared_world.called
+    finally:
+        core.shutdown()
+
+
+def test_ending_and_restarting_a_run_preserves_the_existing_entities(integrated,monkeypatch):  # noqa: F811
+    from unittest.mock import Mock
+    f = integrated
+    core = BrainCore(f.hub,f.projects,f.gw.root)
+    try:
+        binding = ready_binding(core,f,core.reserve(f.project['id'],f.pair['connection']['id']))
+        forbidden = Mock(side_effect=AssertionError('Run must not destroy physics'))
+        monkeypatch.setattr(f.hub,'stop_simulation',forbidden)
+        first = f.projects.create_run(f.project['id'])
+        assert f.projects.stop_run(f.project['id'],first['run']['id'])['ok']
+        assert f.projects.worlds.get(binding['world_instance_id'])['status'] == 'ready'
+        assert core.resources.for_project(f.project['id'])['status'] == 'ready'
+        second = f.projects.create_run(f.project['id'])
+        for field in ('brain_instance_id','robot_instance_id','world_instance_id'):
+            assert second['run'][field] == first['run'][field] == binding[field]
+        assert second['run']['id'] != first['run']['id']
+        assert not core.control(f.project['id'])['accepting']
+        forbidden.assert_not_called()
+        f.launcher.stop.assert_not_called()
+    finally:
+        core.shutdown()
+
+
 def test_owned_standby_run_can_end_without_motion_but_peers_cannot(integrated, monkeypatch):  # noqa: F811 - imported pytest fixture
     from unittest.mock import Mock
     f = integrated
@@ -64,6 +205,7 @@ def test_owned_standby_run_can_end_without_motion_but_peers_cannot(integrated, m
         owner = core.create('Owner', [pid], ['observe', 'control'])
         peer = core.create('Peer', [pid], ['observe', 'control'])
         binding = core.reserve(pid, owner['connection']['id'])
+        binding = ready_binding(core,f,binding)
         core.invoke(owner['token'], 'run_start', {'project_id':pid, 'request_id':'start'})
         assert not core.control(pid)['accepting']
         stop = Mock(return_value={'ok':False, 'message':'Stop is unconfirmed'})
@@ -85,14 +227,16 @@ def test_owned_standby_run_can_end_without_motion_but_peers_cannot(integrated, m
 
 def test_shared_run_rejects_unknown_sensor_before_creating_session(integrated, monkeypatch):  # noqa: F811 - imported pytest fixture
     f = integrated
-    worlds = f.projects.worlds
-    world = {'world_instance_id':'world_fixture', 'epoch':'world-epoch', 'status':'ready'}
-    monkeypatch.setattr(worlds, 'for_run', lambda run: world)
-    monkeypatch.setattr(worlds, 'prepare', lambda value: value)
-    run = {'robot_instance_id':'robot_fixture', 'snapshot':dict(f.project, sensors=['camera:head'])}
-    with pytest.raises(ValueError, match='does not publish sensor'):
-        worlds.attach(run)
-    assert not f.hub.store.all()
+    core = BrainCore(f.hub,f.projects,f.gw.root)
+    try:
+        binding = ready_binding(core,f,core.reserve(f.project['id'],f.pair['connection']['id']))
+        run = f.projects.active_run(f.project['id'])
+        run['snapshot'] = dict(f.project,sensors=['camera:head'])
+        with pytest.raises(ValueError, match='does not publish sensor'):
+            f.projects.worlds.attach(run)
+        assert not f.hub.store.all() and binding['robot_instance_id']
+    finally:
+        core.shutdown()
 
 
 def test_world_restart_refreshes_persistent_runtime_attachment_without_a_run(integrated, monkeypatch):  # noqa: F811 - imported pytest fixture
@@ -141,6 +285,7 @@ def test_reserved_run_starts_once_and_keeps_identity(integrated):  # noqa: F811
     try:
         pair = core.create('Bound Agent', [f.project['id']], ['observe', 'control'])
         binding = core.reserve(f.project['id'], pair['connection']['id'])
+        binding = ready_binding(core,f,binding)
         args = {'project_id': f.project['id'], 'request_id': 'x' * 128}
         result = core.invoke(pair['token'], 'run_start', args)
         assert result['run_id'] == binding['run_id']
@@ -149,7 +294,8 @@ def test_reserved_run_starts_once_and_keeps_identity(integrated):  # noqa: F811
         assert session.brain_instance_id == binding['brain_instance_id']
         assert session.robot_instance_id == binding['robot_instance_id']
         assert session.armed is False
-        f.launcher.ensure_body.assert_called_once()
+        f.launcher.ensure_body.assert_not_called()
+        f.launcher.ensure_shared_world.assert_not_called()
     finally:
         core.shutdown()
 
@@ -181,7 +327,7 @@ def test_transport_expiry_and_reconnect_never_restore_motion(integrated):  # noq
     core = BrainCore(f.hub, f.projects, f.gw.root)
     try:
         pair = core.create('Bound', [f.project['id']], ['observe', 'control'])
-        bid = core.reserve(f.project['id'], pair['connection']['id'])['brain_instance_id']
+        bid = ready_binding(core,f,core.reserve(f.project['id'], pair['connection']['id']))['brain_instance_id']
         core.invoke(pair['token'], 'run_start', {'project_id':f.project['id'], 'request_id':'run'}, bid)
         first = core.transport(pair['token'], 'connect', bid)
         with pytest.raises(ValueError, match='live MCP'):
@@ -209,7 +355,7 @@ def test_retry_keeps_original_control_generation(integrated):  # noqa: F811
     core = BrainCore(f.hub, f.projects, f.gw.root)
     try:
         pair=core.create('Bound', [f.project['id']], ['observe','control'])
-        bid=core.reserve(f.project['id'],pair['connection']['id'])['brain_instance_id']
+        bid=ready_binding(core,f,core.reserve(f.project['id'],pair['connection']['id']))['brain_instance_id']
         args={'project_id':f.project['id'],'request_id':'once'}
         first=core.invoke(pair['token'],'run_start',args,bid)
         core.set_control(f.project['id'],accepting=True,owner_id=pair['connection']['id'])
@@ -295,7 +441,7 @@ def test_observer_transport_does_not_revoke_the_controller(integrated):  # noqa:
     try:
         owner = core.create('Owner', [f.project['id']], ['observe','control'])
         observer = core.create('Observer', [f.project['id']], ['observe'])
-        bid = core.reserve(f.project['id'],owner['connection']['id'])['brain_instance_id']
+        bid = ready_binding(core,f,core.reserve(f.project['id'],owner['connection']['id']))['brain_instance_id']
         core.invoke(owner['token'],'run_start',{'project_id':f.project['id'],'request_id':'start'},bid)
         core.set_control(f.project['id'],accepting=True,owner_id=owner['connection']['id'])
         before = core.control(f.project['id'])
@@ -371,5 +517,110 @@ def test_no_run_observation_rejects_runtime_change_and_never_grants_control(inte
         monkeypatch.setattr(f.robot,'perceive',changed)
         with pytest.raises(ValueError,match='changed while reading'):
             core.invoke(pair['token'],'observe',{'project_id':f.project['id']},resource['brain_instance_id'])
+    finally:
+        core.shutdown()
+
+
+@pytest.mark.parametrize('fault', ['stop', 'world_loss', 'runtime_loss'])
+def test_new_operator_run_remains_in_world_failure_scope(integrated, fault):  # noqa: F811
+    f = integrated
+    core = BrainCore(f.hub, f.projects, f.gw.root)
+    try:
+        binding = ready_binding(core, f, core.reserve(f.project['id'], f.pair['connection']['id']))
+        f.projects.stop_run(f.project['id'], binding['run_id'])
+        created = f.projects.create_run(f.project['id'], operator=True)
+        sid, run_id = created['session']['id'], created['run']['id']
+        f.hub.store.set_armed(sid, True)
+        if fault == 'stop':
+            f.projects.worlds.stop(binding['world_instance_id'])
+        else:
+            key = ('shared_world:' + binding['world_instance_id'] if fault == 'world_loss'
+                   else 'body:' + binding['robot_instance_id'])
+            f.launcher.nodes[key].alive = lambda: False
+            f.projects.worlds.check_health()
+        assert f.projects.active_run(f.project['id']) is None
+        assert not f.hub.store.get(sid).armed
+        assert next(r for r in f.projects.store.runs(f.project['id']) if r['id'] == run_id)['status'] in {'failed', 'interrupted'}
+    finally:
+        core.shutdown()
+
+
+def test_reservation_waits_for_world_stop_without_restoring_stale_metadata(integrated):  # noqa: F811
+    import threading
+    f = integrated
+    core = BrainCore(f.hub, f.projects, f.gw.root)
+    entered, errors = threading.Event(), []
+    try:
+        binding = ready_binding(core, f, core.reserve(f.project['id'], f.pair['connection']['id']))
+        f.projects.stop_run(f.project['id'], binding['run_id'])
+        underlying = f.projects.worlds.lock
+        class PendingLock:
+            def __enter__(self):
+                entered.set()
+                return underlying.__enter__()
+            def __exit__(self, *args):
+                return underlying.__exit__(*args)
+        f.projects.worlds.lock = PendingLock()
+        def reserve():
+            try:
+                core.reserve(f.project['id'], f.pair['connection']['id'])
+            except Exception as error:
+                errors.append(error)
+        with underlying:
+            thread = threading.Thread(target=reserve)
+            thread.start()
+            assert entered.wait(1)
+            stopped = f.projects.worlds.stop(binding['world_instance_id'])['world']
+        thread.join(2)
+        world = f.projects.worlds.get(binding['world_instance_id'])
+        assert not thread.is_alive() and not errors
+        assert world['status'] == 'stopped' and world['generation'] == stopped['generation']
+        assert world['roster'][0]['run_id'] == f.projects.active_run(f.project['id'])['id']
+    finally:
+        core.shutdown()
+
+
+def test_waiting_run_start_cannot_block_another_project_stop(integrated):  # noqa: F811
+    import threading
+    f = integrated
+    core = BrainCore(f.hub, f.projects, f.gw.root)
+    started, stopped, errors = threading.Event(), threading.Event(), []
+    try:
+        ready_binding(core, f, core.reserve(f.project['id'], f.pair['connection']['id']))
+        peer = f.projects.create(dict(name='Independent project', mode='sim',
+            robot=f.project['robot'], world=f.project['world']))
+        pair = core.create('Peer', [peer['id']], ['observe', 'control'])
+        reserved = core.reserve(peer['id'], pair['connection']['id'])
+        # Instrument the actual wait, rather than assuming thread scheduling.
+        underlying = f.projects.worlds.lock
+        class PendingLock:
+            def __enter__(self):
+                started.set()
+                return underlying.__enter__()
+            def __exit__(self, *args):
+                return underlying.__exit__(*args)
+        f.projects.worlds.lock = PendingLock()
+        def start():
+            try:
+                f.projects.create_run(f.project['id'])
+            except Exception as error:
+                errors.append(error)
+        def stop():
+            try:
+                f.projects.stop_run(peer['id'], reserved['run_id'])
+                stopped.set()
+            except Exception as error:
+                errors.append(error)
+        with underlying:
+            starter = threading.Thread(target=start)
+            starter.start()
+            assert started.wait(1)
+            stopper = threading.Thread(target=stop)
+            stopper.start()
+            was_independent = stopped.wait(1)
+        starter.join(2)
+        stopper.join(2)
+        assert was_independent, 'Stop waited behind an unrelated World transaction'
+        assert not errors and not starter.is_alive() and not stopper.is_alive()
     finally:
         core.shutdown()

@@ -91,7 +91,8 @@ class WorldInstances:
                 raise ValueError('World capacity exhausted')
             if any(r['robot_instance_id'] == resource['robot_instance_id'] for r in world['roster']):
                 return world
-            world = self.prepare(world)
+            if world['status'] != 'ready':
+                raise ValueError('Start the existing World before allocating a robot')
             slot = dict(robot_instance_id=resource['robot_instance_id'], project_id=resource['project_id'],
                         run_id=None, spawn=spawn)
             body = self.hub.registry.body(world['robot_profile'])
@@ -271,7 +272,18 @@ class WorldInstances:
                 raise
 
     def attach(self, run):
-        world = self.prepare(self.for_run(run))
+        # Run creation attaches metadata only. Starting/recovering physics and
+        # attaching a Runtime belong to explicit resource lifecycle operations.
+        world = self.for_run(run)
+        if not world or world['status'] != 'ready':
+            raise ValueError('Start the existing World before starting its Run')
+        resource = self.projects.resources.for_project(run['project_id'])
+        if (not resource or resource['status'] != 'ready'
+                or resource['robot_instance_id'] != run['robot_instance_id']
+                or resource['world_instance_id'] != world['world_instance_id']
+                or not any(slot['robot_instance_id'] == run['robot_instance_id']
+                           and slot['project_id'] == run['project_id'] for slot in world['roster'])):
+            raise ValueError('Attach the allocated robot Runtime before starting its Run')
         p = run['snapshot']
         if p['sensors']:
             client = self.hub.world_client(world['world_instance_id'], run['robot_instance_id'])
@@ -288,6 +300,10 @@ class WorldInstances:
         s.brain_instance_id = run['brain_instance_id']
         s.binding = f'{s.body}:sim:{s.world}'
         self.hub.store.save(s)
+        for slot in world['roster']:
+            if slot['robot_instance_id'] == run['robot_instance_id']:
+                slot['run_id'] = run['id']
+        self.save(world)
         return s.summary()
 
     def check_health(self):

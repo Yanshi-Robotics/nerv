@@ -151,7 +151,8 @@ class Discovery:
                     def checkpoint(resource):
                         value['resource'] = self.public(resource)
                         _write(path, value)
-                    result = self.allocate(record, wid, checkpoint=checkpoint, operation_id=value['operation_id'])
+                    with core.projects.worlds.lock:
+                        result = self.allocate(record, wid, checkpoint=checkpoint, operation_id=value['operation_id'])
                 else:
                     resource = core.resources.get(args['robot_instance_id'])
                     if resource['client_id'] != record['id'] or resource['mode'] != 'sim':
@@ -182,6 +183,8 @@ class Discovery:
         world = self.core.projects.worlds.get(wid)
         if not world.get('topology_policy', {}).get('allow_agent_changes'):
             raise PermissionError('World topology requests are disabled')
+        if world['status'] != 'ready':
+            raise ValueError('Start the existing World before allocating a robot')
         return grant
 
     def allocate(self, record, wid, *, checkpoint, operation_id):

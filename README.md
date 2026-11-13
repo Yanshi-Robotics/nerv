@@ -47,7 +47,7 @@ An explicitly installed preview uses `nerv preview` and its own channel data. Ca
    nerv mcp --channel preview --client CLIENT_ID
    ```
 
-5. Start the world, inspect the selected control scheme and authorize motion separately. In the world controls, explicitly select the Agent that will receive control.
+5. For simulation, create and explicitly start an empty World, then grant a compatible template and instance quota to the Agent. The unbound bridge discovers the grant and allocates a robot before attaching its Brain and starting a Run. Inspect the selected control scheme and authorize motion separately, or use the operator's explicit simulation control pregrant.
 
 The bridge connects to an already running Host. It does not start another robot service or prepare hardware. The [MCP guide](guides/mcp.md) explains configuration, observation acknowledgements, request IDs and revocation. Codex, DeepSeek Harness and Claude Code are intended clients; their names are not a claim that every client/version has passed acceptance.
 
@@ -74,6 +74,8 @@ A Project is the saved configuration: robot, environment, execution structure, l
 Reopening a project restores configuration and history and can reattach to a valid active instance. Host restart interrupts old work and clears motion authority. It does not replay actions. New project revisions apply to future runs/tasks; current tasks keep their locked references. Official weights and assets are referenced rather than copied into every project.
 
 A registered device is connected separately before starting its Run. Ending a Run preserves the attachment; disconnecting it is an explicit operator action. Resources can provide observations without an active Run, and viewing them grants no motion authority. The device lifecycle has been checked with inert adapters only; physical validation remains pending.
+
+A simulation Run only attaches to an already started World and ready robot Runtime. It cannot create, restart or rebuild physics. Ending or replacing a Run preserves the entity and its canonical Brain; removing a robot or stopping the shared World is a separate resource operation. Legacy standalone simulation Runs require explicit resource allocation before execution can resume.
 
 The 0.9 migration preserves robot sessions as projects and historical runs. Plain chat remains a read-only archive rather than becoming a fictitious robot project. Migration snapshots and idempotent records support recovery; use the candidate's recovery instructions before rolling an older binary back over its data.
 

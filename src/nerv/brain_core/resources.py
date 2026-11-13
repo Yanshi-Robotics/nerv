@@ -2,7 +2,6 @@
 from __future__ import annotations
 
 import json
-from pathlib import Path
 import time
 import uuid
 
@@ -57,7 +56,7 @@ class RobotResources:
                 value = dict(project_id=project['id'], mode=project['mode'],
                              robot_instance_id='robot_' + uuid.uuid4().hex,
                              brain_instance_id='brain_' + uuid.uuid4().hex,
-                             world_instance_id=('world_' + uuid.uuid4().hex) if project['mode'] == 'sim' else None,
+                             world_instance_id=None,
                              binding_generation=1, client_id=client_id,
                              status='allocated', shared_world=False, created_at=time.time())
             elif value['client_id'] != client_id:

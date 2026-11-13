@@ -22,6 +22,8 @@ def test_world_first_allocation_is_scoped_idempotent_and_creates_no_run(integrat
     try:
         world = f.projects.worlds.create(f.project['world'], f.project['robot'],
                                         topology_policy={'allow_agent_changes':True, 'max_robots':2})
+        world['status'] = 'ready'  # Explicitly prepared inert physics transport.
+        f.projects.worlds.save(world)
         assert world['roster'] == [] and not f.projects.active_run(f.project['id'])
         grant = dict(world_instance_id=world['world_instance_id'], template_project_id=f.project['id'],
                      max_instances=1, spawn_slots=[dict(x=0.,y=0.,z=1.,yaw=0.)], allow_control=True)
@@ -104,6 +106,8 @@ def test_freeze_waits_for_inflight_membership_and_rejects_stale_roster(integrate
     try:
         world = f.projects.worlds.create(f.project['world'], f.project['robot'],
             topology_policy={'allow_agent_changes': True, 'max_robots': 2})
+        world['status'] = 'ready'  # Explicitly prepared inert physics transport.
+        f.projects.worlds.save(world)
         wid = world['world_instance_id']
         pair = core.create('Bootstrap', [], ['observe'], [dict(world_instance_id=wid,
             template_project_id=f.project['id'], max_instances=1,
@@ -143,6 +147,8 @@ def test_pending_allocation_returns_before_physics_and_retains_failed_identity(i
     try:
         world = f.projects.worlds.create(f.project['world'], f.project['robot'],
             topology_policy={'allow_agent_changes':True, 'max_robots':2})
+        world['status'] = 'ready'  # Explicitly prepared inert physics transport.
+        f.projects.worlds.save(world)
         grant = dict(world_instance_id=world['world_instance_id'], template_project_id=f.project['id'],
             max_instances=1, spawn_slots=[dict(x=0,y=0,z=1,yaw=0)], allow_control=True)
         pair = core.create('Slow allocation', [], ['observe','control'], [grant])
@@ -186,3 +192,25 @@ def test_restart_marks_unknown_allocation_interrupted_without_replay(integrated)
         assert not recovered.resources.list()
     finally:
         recovered.shutdown()
+
+
+@pytest.mark.parametrize('state', ['configured', 'stopped', 'failed', 'interrupted'])
+def test_allocation_cannot_start_a_world_or_consume_quota_before_it_is_ready(integrated, state):
+    f = integrated
+    core = BrainCore(f.hub, f.projects, f.gw.root)
+    try:
+        world = f.projects.worlds.create(f.project['world'], f.project['robot'],
+            topology_policy={'allow_agent_changes': True, 'max_robots': 2})
+        world['status'] = state
+        f.projects.worlds.save(world)
+        pair = core.create('Bootstrap', [], ['observe'], [dict(world_instance_id=world['world_instance_id'],
+            template_project_id=f.project['id'], max_instances=1,
+            spawn_slots=[dict(x=0, y=0, z=1, yaw=0)], allow_control=False)])
+        before = f.projects.store.list()
+        result = completed(core, pair['token'], core.invoke(pair['token'], 'robot_allocate',
+            dict(world_instance_id=world['world_instance_id'], request_id='not-started')))
+        assert result['status'] == 'failed' and 'Start the existing World' in result['message']
+        assert not core.resources.list() and f.projects.store.list() == before
+        assert not f.launcher.ensure_shared_world.called
+    finally:
+        core.shutdown()
