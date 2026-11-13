@@ -14,6 +14,7 @@ infinite-horizon stability certificate.
 from __future__ import annotations
 
 import copy
+import hashlib
 import json
 import math
 import threading
@@ -25,7 +26,7 @@ import numpy as np
 
 
 class LocalStandingController:
-    def __init__(self, model_path, policy, state, settings):
+    def __init__(self, model_path, policy, state, settings, physics_dt=None):
         import mujoco
 
         started = time.monotonic()
@@ -41,13 +42,20 @@ class LocalStandingController:
                        for v in weights.values())):
             raise ValueError('Standing feedback requires positive posture costs and support bodies')
         path = Path(model_path)
+        expected = settings.get('model_sha256')
+        if expected and hashlib.sha256(path.read_bytes()).hexdigest() != expected:
+            raise ValueError('Standing model changed after qualification')
         root = ET.parse(path).getroot()
         root.find('compiler').set('meshdir', str(path.resolve().parent / 'meshes'))
         contract = json.loads(Path(policy.dir, 'contract.json').read_text())
-        dt = float(contract['timing']['physics_dt_s'])
-        decimation = int(contract['timing']['decimation'])
-        if policy.pd_mode != 'implicit' or not math.isclose(dt * decimation, policy.policy_dt):
-            raise ValueError('Standing feedback requires the declared implicit-PD timing contract')
+        release_dt = float(contract['timing']['physics_dt_s'])
+        dt = release_dt if physics_dt is None else float(physics_dt)
+        if not math.isfinite(dt) or dt <= 0:
+            raise ValueError('World must report a finite positive physics step')
+        decimation = round(policy.policy_dt / dt)
+        if (policy.pd_mode != 'implicit' or decimation < 1
+                or not math.isclose(dt * decimation, policy.policy_dt)):
+            raise ValueError('World physics step must divide the implicit-PD command period')
         root.find('option').set('timestep', str(dt))
         ET.SubElement(root.find('worldbody'), 'geom', name='balance_support_plane',
                       type='plane', size='0 0 .1')
@@ -145,7 +153,8 @@ class LocalStandingController:
         self.metadata = dict(design_seconds=time.monotonic() - started, horizon_steps=steps,
                              gain_change=change, riccati_residual=residual,
                              root_wrench=root_wrench.tolist(), support_height=self.height_offset,
-                             reference_sim_time=state.t)
+                             reference_sim_time=state.t, physics_dt_s=dt,
+                             release_physics_dt_s=release_dt, command_decimation=decimation)
 
     def _read(self, state):
         count = len(self.policy.joint_names)
@@ -184,12 +193,13 @@ class LocalStandingController:
 
 class StandingBalance:
     """Build away from the motor loop and discard results from revoked generations."""
-    def __init__(self, assets_root, policy, settings):
+    def __init__(self, assets_root, policy, settings, physics_dt=None):
         root = Path(assets_root).resolve()
         path = (root / settings['model']).resolve()
         if not path.is_relative_to(root) or not path.is_file():
             raise ValueError('Standing model must be a file in the active asset root')
         self.path, self.policy, self.settings = path, policy, settings
+        self.physics_dt = physics_dt
         self.lock = threading.Lock()
         self.generation = 0
         self.controller = self.worker = None
@@ -226,7 +236,7 @@ class StandingBalance:
 
     def _design(self, state, generation):
         try:
-            result = LocalStandingController(self.path, self.policy, state, self.settings)
+            result = LocalStandingController(self.path, self.policy, state, self.settings, self.physics_dt)
             error = ''
         except Exception as exc:
             result, error = None, f'{type(exc).__name__}: {exc}'

@@ -99,3 +99,25 @@ def test_failed_standing_controller_cannot_start_motion():
     body._balance = SimpleNamespace(status=lambda: dict(error='invalid dynamics'))
     result = body.invoke('move_forward', meters=1)
     assert result['ok'] is False and result['data']['executed'] is False
+
+
+def test_model_change_cannot_silently_reuse_qualification(tmp_path):
+    model = tmp_path / 'robot.xml'
+    model.write_text('<mujoco/>')
+    settings = dict(horizon_s=20, design_timeout_s=5, derivative_epsilon=1e-6,
+                    balance_cost=1000, foot_bodies=['foot'], posture_cost={'default':1},
+                    model_sha256='0'*64)
+    with pytest.raises(ValueError, match='model changed'):
+        LocalStandingController(model, None, None, settings, .002)
+
+
+def test_world_step_must_divide_the_command_period(tmp_path):
+    import json
+    model = tmp_path / 'robot.xml'
+    model.write_text('<mujoco><compiler/><option/></mujoco>')
+    (tmp_path / 'contract.json').write_text(json.dumps({'timing':{'physics_dt_s':.005}}))
+    policy = SimpleNamespace(dir=str(tmp_path), pd_mode='implicit', policy_dt=.02)
+    settings = dict(horizon_s=20, design_timeout_s=5, derivative_epsilon=1e-6,
+                    balance_cost=1000, foot_bodies=['foot'], posture_cost={'default':1})
+    with pytest.raises(ValueError, match='must divide'):
+        LocalStandingController(model, policy, None, settings, .003)

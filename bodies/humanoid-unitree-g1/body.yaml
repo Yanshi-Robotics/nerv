@@ -17,6 +17,7 @@ actuators:
   foot_bodies: [left_ankle_roll_link, right_ankle_roll_link]
   standing_balance:               # simulation only; sensor-local model feedback, no model training
     model: robots/g1/g1.xml
+    model_sha256: 2170db4ad90406d45ed71a8df3083ab1200c263b1f40d0ec15f7198e320e02a5
     foot_bodies: [left_ankle_roll_link, right_ankle_roll_link]
     horizon_s: 20                 # finite-horizon control design, not an infinite stability claim
     design_timeout_s: 5
@@ -57,8 +58,8 @@ locomotion:
   motion_settle_s: 4.0
   hold_settle_s: 1.5               # emergency stop: up to this long (sim s) to come to a stand before entering supervised balance
   hold_still_rad_s: 0.3            # every joint must remain below this during the quiet interval
-  hold_linear_m_s: 0.05          # provisional design bound; long holding has not passed
-  hold_angular_rad_s: 0.1        # provisional design bound; freeze only after qualification
+  hold_linear_m_s: 0.05          # unchanged sensor bound, qualified in scoped CPU holding probes
+  hold_angular_rad_s: 0.1        # unchanged sensor bound; not a hardware qualification
   hold_still_s: 0.2                # ten 50 Hz policy frames below the velocity bound before entering supervised balance
 buses:
   sim:
@@ -70,11 +71,18 @@ buses:
         max_observation_age_s: 40  # six MCP visual-processing samples; twice observed maximum, rounded up to 5 s
         poll_s: 0.05
       skill_transitions:
-        version: g1-apt-cpu-091-completion-pending
-        validated: false # New stop/lifecycle implementation requires candidate qualification
+        version: g1-apt-cpu-091-standing-1
+        validated: true # Scoped source engineering qualification; installed navigation remains separate
         scope: simulation-software
         scenes: [apt]
         pairs: [[move_forward, turn_left], [move_forward, turn_right], [turn_left, move_forward], [turn_left, turn_right], [turn_right, move_forward], [turn_right, turn_left]]
+        physics_dt_s: 0.002
+        policy_dt_s: 0.02
+        profile_sha256: dae8564963067034f9793b7a5ed31ecc9d19e3bc607a12d110d9154667173174
+        implementation_sha256:
+          body/balance.py: 0ef5b0080354addc2a3c5d3bc4721f71726cf7a76cd91fe90749c7f7268c328f
+          body/families/humanoid.py: 98d78db3cb23344b078cbc14ade01c99fdac9d272800f53986c072005012776b
+          runtime/builtin.py: 252073be1fde4d7ceb3fb281b2b752630182e1b5e1a80e471665872c528485c4
         policy_sha256:
           policy.onnx: 07400671a8fffae172d261688bc84f0e60d3d656156b564dbdc0a4638fb695c6
           contract.json: 1fdbe2ecc5d60945b5b630074425b053dbbca058b6a55be91833697083c8d6ef

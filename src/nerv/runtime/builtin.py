@@ -72,7 +72,32 @@ class BuiltinRuntime:
                           for name,digest in files.items())
         except OSError:
             matches = False
+        if matches and self.profile.configuration.get('actuators', {}).get('standing_balance'):
+            matches = self._standing_contract_matches(value)
         return {**value, 'validated':matches, 'pairs':value.get('pairs', []) if matches else []}
+
+    def _standing_contract_matches(self, value):
+        """Policy weights alone do not qualify changed control code, gains or timing."""
+        import hashlib
+        import json
+        from pathlib import Path
+        profile = self.profile.configuration
+        balance = getattr(self._impl, '_balance', None)
+        try:
+            encoded = json.dumps({key: profile.get(key, {}) for key in ('actuators', 'locomotion')},
+                                 sort_keys=True, separators=(',', ':'), allow_nan=False).encode()
+            if (hashlib.sha256(encoded).hexdigest() != value['profile_sha256'] or balance is None
+                    or not math.isclose(balance.physics_dt, value['physics_dt_s'])
+                    or not math.isclose(self._impl.policy.policy_dt, value['policy_dt_s'])):
+                return False
+            implementation = value['implementation_sha256']
+            required = {'body/balance.py', 'body/families/humanoid.py', 'runtime/builtin.py'}
+            root = Path(__file__).resolve().parents[1]
+            return (set(implementation) == required
+                    and all(hashlib.sha256((root / name).read_bytes()).hexdigest() == implementation[name]
+                            for name in required))
+        except (KeyError, OSError, TypeError, ValueError):
+            return False
 
     def _record_observation(self, started, state, images):
         # Acquisition begins before the bus camera call. A delayed read therefore

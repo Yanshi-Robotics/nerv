@@ -273,7 +273,8 @@ class VelocityPolicyBody:
         balance_settings = act.get('standing_balance')
         if balance_settings and spec.get('_simulation_assets_root'):
             from ..balance import StandingBalance
-            self._balance = StandingBalance(spec['_simulation_assets_root'], self.policy, balance_settings)
+            self._balance = StandingBalance(spec['_simulation_assets_root'], self.policy, balance_settings,
+                                            physics_dt=info['dt'])
         self._state: BusState | None = None     # last bus read, for observe/status
         self._yaw0: float | None = None         # heading reference: where the body first stood
         self._last = "nothing yet"
