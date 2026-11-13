@@ -436,6 +436,7 @@ class AgentGateway:
                                           current=lambda: self._still_current(record, pid, lease))
         if operation == "action":
             with self._admission_lock(pid):
+                self._owns(record, pid)
                 state = self.hub.tasks.snapshot(session.id).get("task") or {}
                 if (state.get("task_id") != args["task_id"] or state.get("version") != args["version"]
                         or state.get("status") != "running"):
