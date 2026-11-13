@@ -24,7 +24,7 @@ def evidence():
     record=dict(samples=samples,dynamic_geometry_ids=[],physics_events_complete=True,dropped_samples=0,finished=True,robot_collision_seen=False,fall_seen=False,
                 execution_audit=dict(navigation_wall_seconds=4,motion_requests={'A':1,'B':1},
                     source='mcp_receipts_and_run_task_journal',complete=True,terminal_violations=[]))
-    visual={rid:[dict(robot_instance_id=rid,world_epoch='epoch',sim_time=t,observation_sequence=i,
+    visual={rid:[dict(robot_instance_id=rid,world_instance_id='world',world_epoch='epoch',topology_revision=1,sim_time=t,observation_sequence=i,
         seen_other_reviewed=True,agent_claimed_seen_other=True,image_sha256=str(i)*64) for i,t in enumerate([1.5,2.5,3.5])] for rid in ['A','B']}
     stops={rid:dict(stop_confirmed=True,observed_sim_time=4,robot_instance_id=rid,world_epoch="epoch") for rid in ['A','B']}
     return record,contract,visual,stops
@@ -134,3 +134,18 @@ def test_later_recovery_does_not_erase_terminal_trial_failure(evidence):
     evidence[0]['execution_audit']['terminal_violations'] = [dict(condition='stop_unconfirmed')]
     result = evaluate(evidence)
     assert result['stops_confirmed'] and not result['success'] and not result['terminal_outcomes_valid']
+
+
+def test_ten_hz_evidence_cannot_pass_the_twenty_hz_contract(evidence):
+    record = evidence[0]
+    record['samples'] = record['samples'][::2]
+    for i, sample in enumerate(record['samples']):
+        sample['sequence'] = i + 1
+    result = evaluate(evidence)
+    assert not result['evidence_valid'] and not result['success']
+
+
+@pytest.mark.parametrize('field,value', [('world_instance_id','other-world'), ('topology_revision',2)])
+def test_visual_review_cannot_cross_world_or_topology(evidence,field,value):
+    evidence[2]['A'][0][field] = value
+    assert not evaluate(evidence)['success']

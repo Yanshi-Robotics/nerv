@@ -10,8 +10,10 @@ from nerv.runtime.builtin import BuiltinRuntime
 
 
 def test_unprepared_simulation_reads_only_declared_robot_cameras(monkeypatch):
-    bus = Mock()
-    bus.sensor.return_value = (b"fixture-image", "image/png")
+    bus = Mock(spec=['sensor_frame','close','write','spawn'])
+    source = dict(source_sequence=1, captured_sim_time=1.25, world_instance_id='world',
+                  robot_instance_id='robot', world_epoch='epoch', topology_revision=2)
+    bus.sensor_frame.return_value = (b"fixture-image", "image/png", source)
     monkeypatch.setattr("nerv.body.bus_zmq.ZmqBus", lambda _: bus)
     runtime = BuiltinRuntime(
         SimpleNamespace(id="fixture", family="arm", configuration={"sensors": [
@@ -23,10 +25,13 @@ def test_unprepared_simulation_reads_only_declared_robot_cameras(monkeypatch):
     state, images = runtime.observe()
     assert not state["prepared"] and runtime._impl is None and runtime.actions() == []
     assert [i[0] for i in images] == runtime.sensor_names()
-    assert [c.args[0] for c in bus.sensor.call_args_list] == ["top", "wrist"]
+    assert [c.args[0] for c in bus.sensor_frame.call_args_list] == ["top", "wrist"]
+    for frame in state['image_frames'].values():
+        assert all(frame[key] == value for key,value in source.items())
+        assert frame['source_metadata_available'] is True
     bus.write.assert_not_called()
     bus.spawn.assert_not_called()
-    bus.sensor.side_effect = RuntimeError("camera offline")
+    bus.sensor_frame.side_effect = RuntimeError("camera offline")
     state, images = runtime.observe()
     assert images == [] and set(state["sensor_errors"]) == set(runtime.sensor_names())
     runtime.close()

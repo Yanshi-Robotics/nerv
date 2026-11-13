@@ -4,6 +4,13 @@ import math
 from .score_navigation import _vector, _bounds, geometry_verdict
 
 
+def _sample_rate(samples):
+    stamps = [s.get('sim_time') for s in samples]
+    if len(stamps) < 2 or not _vector(stamps) or stamps[-1] <= stamps[0]:
+        return 0.
+    return (len(stamps) - 1) / (stamps[-1] - stamps[0])
+
+
 def score(record, robot_ids, contract, visual_reviews, stop_receipts, *, claimed_success):
     """Require complete physics evidence, a common terminal window and reviewed images.
 
@@ -17,6 +24,11 @@ def score(record, robot_ids, contract, visual_reviews, stop_receipts, *, claimed
     if not 0 < contract['distance_min_m'] < contract['distance_max_m']:
         raise ValueError('Freeze a positive meeting distance interval')
     samples = record.get('samples', [])
+    minimum_hz = contract.get('min_sample_hz', 20)
+    if not _vector([minimum_hz]) or minimum_hz < 20:
+        raise ValueError('Meeting evidence requires at least 20 measured samples per second')
+    measured_hz = _sample_rate(samples)
+    rate_valid = measured_hz + 1e-9 >= minimum_hz
     limits = record.get('execution_audit', {})
     elapsed = limits.get('navigation_wall_seconds')
     counts = limits.get('motion_requests', {})
@@ -30,10 +42,11 @@ def score(record, robot_ids, contract, visual_reviews, stop_receipts, *, claimed
                      and len(dynamic_ids) == len(set(dynamic_ids)))
     margin = record.get('dynamic_obstacle_margin_m')
     dynamic_valid &= (margin is None or (_vector([margin]) and margin >= contract['body_margin_m']))
-    valid = (budget_valid and dynamic_valid and record.get('physics_events_complete') is True and record.get('dropped_samples') == 0
+    valid = (budget_valid and dynamic_valid and rate_valid and record.get('physics_events_complete') is True and record.get('dropped_samples') == 0
              and record.get('finished') is True and bool(samples) and not record.get('error'))
     start = previous = identity = None
     stable = 0.
+    window_samples = 0
     anchors = {}
     collision = record.get('robot_collision_seen') is not False
     fallen = record.get('fall_seen') is not False
@@ -62,6 +75,7 @@ def score(record, robot_ids, contract, visual_reviews, stop_receipts, *, claimed
         if not complete:
             valid = False
             start, stable = None, 0.
+            window_samples = 0
             reason = 'invalid_or_discontinuous_evidence'
             continue
         collision |= sample['robot_collision_seen']
@@ -82,22 +96,29 @@ def score(record, robot_ids, contract, visual_reviews, stop_receipts, *, claimed
         drift = start is not None and any(math.dist(anchors[rid],pos) > contract['window_drift_max_m'] for rid,pos in zip(robot_ids,positions))
         if not eligible or gap or drift:
             start, stable, anchors = None, 0., {}
+            window_samples = 0
             reason = 'unstable_geometry_distance_drift_or_gap'
         else:
             if start is None:
                 start, anchors = stamp, dict(zip(robot_ids, positions))
             stable = stamp - start
+            window_samples += 1
             reason = 'common_stable_window'
         previous = stamp
     # The contract requires a common window of AT LEAST three seconds. Keep
     # its full uninterrupted extent: visual reasoning can take longer than three
     # seconds while both robots remain stationary. Never cross a reset or gap.
     window = [start, previous] if start is not None else None
+    window_hz = (window_samples - 1) / stable if stable > 0 else 0.
+    rate_valid &= window_hz + 1e-9 >= minimum_hz
+    valid &= rate_valid
     images_valid = stops_valid = bool(window)
     for rid in robot_ids:
         reviewed = visual_reviews.get(rid, [])
         selected = [r for r in reviewed if window and r.get('seen_other_reviewed') is True
                     and r.get('agent_claimed_seen_other') is True
+                    and r.get('world_instance_id') == (identity or (None,))[0]
+                    and r.get('topology_revision') == (identity or (None,None,None))[2]
                     and r.get('robot_instance_id') == rid and r.get('world_epoch') == (identity or (None,None))[1]
                     and _vector([r.get('sim_time')]) and window[0] <= r['sim_time'] <= window[1]
                     and isinstance(r.get('image_sha256'), str) and len(r['image_sha256']) == 64
@@ -125,6 +146,7 @@ def score(record, robot_ids, contract, visual_reviews, stop_receipts, *, claimed
     success = bool(valid and terminal_valid and not collision and not fallen and stable + 1e-9 >= contract['stable_seconds']
                    and images_valid and stops_valid)
     return dict(success=success, evidence_valid=valid, budget_valid=budget_valid, terminal_outcomes_valid=terminal_valid,
+                sample_rate_valid=rate_valid, measured_sample_hz=measured_hz, stable_window_sample_hz=window_hz,
                 common_stable_seconds=stable, stable_window=window,
                 visual_evidence_valid=bool(images_valid), stops_confirmed=bool(stops_valid),
                 robot_collision=collision, fallen=fallen, reason=reason,

@@ -121,3 +121,26 @@ def test_world_step_must_divide_the_command_period(tmp_path):
                     balance_cost=1000, foot_bodies=['foot'], posture_cost={'default':1})
     with pytest.raises(ValueError, match='must divide'):
         LocalStandingController(model, policy, None, settings, .003)
+
+
+def test_qualification_includes_stop_detector_world_and_numerical_dependencies():
+    import copy
+    from pathlib import Path
+    import yaml
+    from nerv.runtime.builtin import BuiltinRuntime
+    profile = yaml.safe_load((Path(__file__).parents[1]/'bodies/humanoid-unitree-g1/body.yaml').read_text())
+    contract = profile['buses']['sim']['settings']['skill_transitions']
+    runtime = BuiltinRuntime.__new__(BuiltinRuntime)
+    runtime.profile = SimpleNamespace(configuration=profile)
+    runtime._impl = SimpleNamespace(_balance=SimpleNamespace(physics_dt=.002),
+                                    policy=SimpleNamespace(policy_dt=.02))
+    assert runtime._standing_contract_matches(contract)
+    for change in ['missing_stop', 'changed_world', 'changed_dependency']:
+        altered = copy.deepcopy(contract)
+        if change == 'missing_stop':
+            del altered['implementation_sha256']['body/stopping.py']
+        elif change == 'changed_world':
+            altered['implementation_sha256']['world/mujoco_node.py'] = '0'*64
+        else:
+            altered['dependency_versions']['mujoco'] = 'unqualified'
+        assert not runtime._standing_contract_matches(altered)

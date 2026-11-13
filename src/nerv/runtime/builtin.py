@@ -79,6 +79,7 @@ class BuiltinRuntime:
     def _standing_contract_matches(self, value):
         """Policy weights alone do not qualify changed control code, gains or timing."""
         import hashlib
+        import importlib.metadata
         import json
         from pathlib import Path
         profile = self.profile.configuration
@@ -91,12 +92,18 @@ class BuiltinRuntime:
                     or not math.isclose(self._impl.policy.policy_dt, value['policy_dt_s'])):
                 return False
             implementation = value['implementation_sha256']
-            required = {'body/balance.py', 'body/families/humanoid.py', 'runtime/builtin.py'}
+            required = {'body/balance.py', 'body/families/humanoid.py', 'body/stopping.py',
+                        'body/bus_zmq.py', 'runtime/builtin.py', 'world/mujoco_node.py',
+                        'world/composition.py', 'world/bus_server.py'}
+            dependencies = value['dependency_versions']
+            if (set(dependencies) != {'mujoco','numpy','onnxruntime'} or any(
+                    importlib.metadata.version(name) != version for name,version in dependencies.items())):
+                return False
             root = Path(__file__).resolve().parents[1]
             return (set(implementation) == required
                     and all(hashlib.sha256((root / name).read_bytes()).hexdigest() == implementation[name]
                             for name in required))
-        except (KeyError, OSError, TypeError, ValueError):
+        except (KeyError, OSError, TypeError, ValueError, importlib.metadata.PackageNotFoundError):
             return False
 
     def _record_observation(self, started, state, images):

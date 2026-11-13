@@ -8,6 +8,10 @@ class QuietWindow:
     def __init__(self, *, joint_limit, linear_limit, angular_limit, duration, max_age):
         self.joint_limit, self.linear_limit, self.angular_limit = joint_limit, linear_limit, angular_limit
         self.duration, self.max_age = duration, max_age
+        # Wall-clock freshness is not a simulation sampling allowance. A gap
+        # longer than the entire required quiet window cannot establish that
+        # window, even when both endpoint positions happen to be identical.
+        self.max_sample_gap = duration
         self.lock = threading.RLock()
         self.previous = None
         self.since = None
@@ -46,7 +50,7 @@ class QuietWindow:
                             self.since = None
                         return self.snapshot()
                     dt = t - old_t
-                    if 0 < dt <= self.max_age:
+                    if 0 < dt <= self.max_sample_gap:
                         linear = math.dist(position, old_position) / dt
                         quiet = (not fallen and linear <= self.linear_limit
                                  and math.hypot(*gyro) <= self.angular_limit

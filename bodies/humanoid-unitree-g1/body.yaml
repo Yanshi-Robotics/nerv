@@ -82,7 +82,16 @@ buses:
         implementation_sha256:
           body/balance.py: 0ef5b0080354addc2a3c5d3bc4721f71726cf7a76cd91fe90749c7f7268c328f
           body/families/humanoid.py: 98d78db3cb23344b078cbc14ade01c99fdac9d272800f53986c072005012776b
-          runtime/builtin.py: 252073be1fde4d7ceb3fb281b2b752630182e1b5e1a80e471665872c528485c4
+          body/stopping.py: 83755d28857c54e0eba8c74bad6ab8e81edb690dba1753754157eb24897308ff
+          body/bus_zmq.py: 9bd1856c7311ed156209e82d3cb5e4eda235d9c8ae7b9978b7099fffd5bf3ea4
+          runtime/builtin.py: b88e2cc5a2ff1e7b2904c64d208e9d1794328ec73c16f342afdd531c93afab5a
+          world/mujoco_node.py: c23faa46d268fd16d5e52dbd04cc2facc9831e76dbfe5726143f6c53b42270e1
+          world/composition.py: e51673676688fee8cbe0bceda3ca2b8a0f4c28960ea80a5335916eedd5a994e1
+          world/bus_server.py: 736e3c994fdd7c24d634885c0080205426e3d54a7060badf5d7d7e1338963495
+        dependency_versions:
+          mujoco: 3.12.0
+          numpy: 2.5.2
+          onnxruntime: 1.31.0
         policy_sha256:
           policy.onnx: 07400671a8fffae172d261688bc84f0e60d3d656156b564dbdc0a4638fb695c6
           contract.json: 1fdbe2ecc5d60945b5b630074425b053dbbca058b6a55be91833697083c8d6ef

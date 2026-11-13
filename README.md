@@ -85,6 +85,8 @@ External Agents may request bounded visual actions or compatible motion skills. 
 
 Observation delivery, acknowledgement and task success are different facts. Images carry instance and frame information. The client must acknowledge a delivered observation before requesting motion, then observe again after a bounded action. Polling task state or keeping a transport open does not renew supervision. Local expiry handling requests a stop and reports whether it was confirmed.
 
+Stop confirmation uses current robot measurements. A simulation sampling gap longer than the required quiet window resets confirmation; wall-clock freshness alone cannot establish continuous stopping. Robot-local standing feedback continues after bounded motion ends.
+
 Manual takeover revokes external motion control and waits for stopping to be confirmed. Agent observation can continue; resuming Agent control requires another explicit operator action. Stopping incoming requests, stopping a task, emergency stop, disconnect and torque release have distinct meanings. See [architecture and control](guides/architecture.md).
 
 ## Robots and current limits
