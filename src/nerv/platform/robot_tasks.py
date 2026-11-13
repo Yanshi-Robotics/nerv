@@ -25,6 +25,7 @@ class RobotTasks:
         self._skill_history = {}  # (robot node, world epoch), independent of task restarts.
         self._generation = {}
         self._stopping = set()
+        self._unknown_executions = {}
         for session in hub.store.all():
             states = [e["data"] for e in hub.store.memory(session.id).events() if e["kind"] == "robot_task"]
             if states:
@@ -37,6 +38,11 @@ class RobotTasks:
     def _session_operation(self, sid):
         with self._operations:
             return self._session_operations.setdefault(sid, threading.RLock())
+
+    def stopping(self, sid):
+        with self._lock:
+            return (sid in self._stopping or sid in self._unknown_executions
+                    or self._jobs.get(sid, {}).get('status') == 'stopping')
 
     @staticmethod
     def capabilities():
@@ -57,8 +63,11 @@ class RobotTasks:
             session = self.hub.store.get(sid)
             identity = {key: getattr(session, key, "") for key in ("brain_instance_id", "robot_instance_id", "world_instance_id", "run_id", "binding_generation", "world_generation", "robot_epoch")}
             identity["world_epoch"] = session.epoch
-            identity["control_generation"] = fields.get("supervisor", self._jobs.get(sid, {}).get("supervisor", {})).get("control_generation")
-            state = {**self._jobs.get(sid, {}), **fields, **identity, "updated_at": time.time()}
+            previous = self._jobs.get(sid, {})
+            if fields.get("task_id", previous.get("task_id")) != previous.get("task_id"):
+                previous = {}
+            identity["control_generation"] = fields.get("supervisor", previous.get("supervisor", {})).get("control_generation")
+            state = {**previous, **fields, **identity, "updated_at": time.time()}
             # Durable before it becomes visible or may authorize an action.
             self.hub.store.memory(sid).append("robot_task", state)
             self._jobs[sid] = state
@@ -125,7 +134,7 @@ class RobotTasks:
             if self._jobs.get(sid, {}).get("status") in ACTIVE:
                 raise ValueError("Update or cancel the existing task first")
             with self._lock:
-                if sid in self._stopping:
+                if self.stopping(sid):
                     raise ValueError("Robot is still stopping")
                 generation = self._generation.get(sid, 0)
             from .control_schemes import resolve
@@ -145,7 +154,7 @@ class RobotTasks:
     def _launch(self, sid, state, brain, generation, current=lambda: True):
         token = threading.Event()
         with self._lock:
-            if self.hub._shutting_down or not current() or generation != self._generation.get(sid, 0) or sid in self._stopping:
+            if self.hub._shutting_down or not current() or generation != self._generation.get(sid, 0) or self.stopping(sid):
                 self._save(sid, status="cancelled", outcome="cancelled", message="Launch cancelled")
                 return
             try:
@@ -208,11 +217,45 @@ class RobotTasks:
                          and action in turn.token.allowed_actions), None)
             if wire is None:
                 raise ValueError("Action is outside the selected control scheme")
-            if turn.robot.post("/executions/status").get("running"):
-                raise ValueError("Wait until the previous execution has ended")
+            execution = turn.robot.post("/executions/status")
+            if execution.get("running") is not False or execution.get("ok") is False:
+                with self._lock:
+                    self._unknown_executions[sid] = {
+                        'token': turn.token, 'worker': getattr(turn, '_action_worker', None)}
+                self._stop_execution(sid, turn.token)
+                raise ValueError("Current execution status does not confirm that the previous execution ended")
             turn.external_current = current
             turn._observation = dict(observation)
-            return asdict(turn.call_tool(CallTool(uuid.uuid4().hex, wire, arguments)))
+            result = asdict(turn.call_tool(CallTool(uuid.uuid4().hex, wire, arguments)))
+            if not turn.is_current():
+                stopped = self._stop_execution(sid, turn.token)
+                worker = getattr(turn, '_action_worker', None)
+                if worker:
+                    from .. import config
+                    worker.join(timeout=config.BRIDGE_GRACE_S)
+                transport_stopped = worker is None or not worker.is_alive()
+                ended = turn.robot.post("/executions/status")
+                execution_stopped = ended.get("running") is False and ended.get("ok") is not False
+                if not transport_stopped or not execution_stopped or not stopped.get("ok"):
+                    with self._lock:
+                        self._stopping.add(sid)
+                        self._unknown_executions[sid] = {'token': turn.token, 'worker': worker}
+                result.update(ok=False, message="Execution context invalidated; inspect the stopping result")
+                deadline_expired = time.monotonic() >= turn.deadline
+                result["data"] = {**result.get("data", {}),
+                    "execution_status": "timeout" if deadline_expired else "interrupted",
+                    "timed_out": deadline_expired,
+                    "reason": "task_deadline_expired" if deadline_expired else "context_invalidated",
+                    "execution_stopped": execution_stopped, "transport_stopped": transport_stopped,
+                    "stop_confirmed": stopped.get("stop_confirmed") is True,
+                    "stop_state": stopped.get("stop_state", "stop_unconfirmed"), "stop_result": stopped}
+                self.hub.store.memory(sid).append('robot_activity', {
+                    'source':'host', 'type':'execution_interrupted', 'task_id':task_id,
+                    'version':version, 'ok':False, 'data':result['data'],
+                    **{key:state.get(key) for key in ('brain_instance_id','run_id','robot_instance_id',
+                        'world_instance_id','binding_generation','world_generation','world_epoch',
+                        'robot_epoch','control_generation')}})
+            return result
 
     def _stop_execution(self, sid, token):
         try:
@@ -279,7 +322,7 @@ class RobotTasks:
 
     def select_scheme(self, sid, scheme_id, revision=None):
         with self._session_operation(sid):
-            if self._jobs.get(sid, {}).get("status") in ACTIVE or sid in self._stopping:
+            if self._jobs.get(sid, {}).get("status") in ACTIVE or self.stopping(sid):
                 raise ValueError("Stop the task and confirm termination before switching schemes")
             session = self.hub.store.get(sid)
             if session.status != "active":
@@ -291,9 +334,12 @@ class RobotTasks:
             self.hub.store.save(session)
             return session.summary()
 
-    def cancel(self, sid, reason="Task cancelled", strict=False, *, expected_token=None):
+    def cancel(self, sid, reason="Task cancelled", strict=False, *, expected_token=None, expected_task_id=None):
         # Stop does not acquire the operation lock: it must preempt slow starts/model loads.
         with self._lock:
+            if expected_task_id is not None and (self._jobs.get(sid, {}).get('task_id') != expected_task_id
+                    or self._jobs.get(sid, {}).get('status') not in {'running', 'starting', 'updating'}):
+                return {"ok": False, "superseded": True, "message": "Task cancellation was superseded"}
             # Admission and invalidation must be atomic: an old deadline may
             # resume after its task has been cancelled and replaced.
             if expected_token is not None and (expected_token.is_set() or self._tokens.get(sid) is not expected_token):
@@ -302,6 +348,7 @@ class RobotTasks:
             generation = self._generation[sid]
             self._stopping.add(sid)
             state = dict(self._jobs.get(sid, {}))
+            unknown = self._unknown_executions.get(sid)
             token = self._tokens.get(sid)
             self._external_turns.pop(sid, None)
             if token:
@@ -313,7 +360,27 @@ class RobotTasks:
             result = self.hub.stop_robot(sid)
         except Exception as error:
             result = {"ok": False, "message": str(error)}
+        recovered = False
+        if result.get('ok') and unknown:
+            # A physical stop cannot erase newer evidence that its old command
+            # transport/execution has not terminated. Recheck that exact barrier.
+            try:
+                worker = unknown['worker']
+                if worker:
+                    from .. import config
+                    worker.join(timeout=config.BRIDGE_GRACE_S)
+                robot = self.hub.body_client(self.hub.store.get(sid).body)
+                execution = robot.post('/executions/status')
+                recovered = (not (worker and worker.is_alive()) and execution.get('running') is False
+                             and execution.get('ok') is not False)
+            except Exception:
+                recovered = False
         with self._lock:
+            if recovered and self._unknown_executions.get(sid) is unknown:
+                self._unknown_executions.pop(sid)
+            if sid in self._unknown_executions:
+                result = {**result, 'ok':False, 'execution_stopped':False,
+                          'message':'Command termination remains unconfirmed; stopping barrier retained'}
             if generation == self._generation[sid]:
                 if result.get("ok"):
                     self._stopping.discard(sid)

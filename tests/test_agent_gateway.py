@@ -1,5 +1,6 @@
 """Offline external-agent security and lifecycle fixtures, never hardware evidence."""
 import base64
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
 import threading
 import time
 from types import SimpleNamespace
@@ -125,6 +126,204 @@ def test_actual_external_task_uses_gate_allowlist_and_no_model(gateway):
     assert not gw.invoke(paired["token"], "action", {**args, "request_id": "disarmed"})["ok"]
     robot.invoke.assert_called_once()
     hub.new_role_model.assert_not_called()
+
+
+def test_explicit_processed_receipt_is_confirmed_in_the_action_request(gateway):
+    gw, paired, hub, session, robot = gateway
+    task = start(gw, paired)
+    # The Agent has read another image, then taken time to decide. Its old
+    # admission lease expired, while this supplied image is still fresh.
+    observation = gw.invoke(paired['token'], 'observe', {'project_id': 'project'})
+    gw._leases['project']['deadline'] = time.monotonic() - 1
+    robot.post.reset_mock()
+    args = dict(project_id='project', request_id='explicit-receipt-action', task_id=task['task_id'],
+                version=1, action='move', arguments={}, receipt_id=observation['receipt_id'])
+    result = gw.invoke(paired['token'], 'action', args)
+    assert result['ok']
+    assert robot.post.call_args_list[0].args[0] == '/supervision'
+    assert gw._leases['project']['task_id'] == task['task_id']
+    assert gw._leases['project']['action_consumed']
+    calls = robot.post.call_count
+    assert gw.invoke(paired['token'], 'action', args) == result
+    assert robot.post.call_count == calls
+    robot.invoke.assert_called_once()
+    with pytest.raises(ValueError, match='consumed'):
+        gw.invoke(paired['token'], 'action', {**args, 'request_id': 'receipt-reuse'})
+
+
+def test_new_acknowledgement_cannot_extend_a_captured_execution_lease(gateway):
+    gw, paired, hub, session, robot = gateway
+    start(gw, paired)
+    previous = gw._leases['project']
+    acknowledge(gw, paired)
+    record = gw._authenticate(paired['token'])
+    assert not gw._still_current(record, 'project', previous)
+
+
+def test_missing_runtime_execution_status_is_not_treated_as_stopped(gateway):
+    gw, paired, hub, session, robot = gateway
+    task = start(gw, paired)
+    robot.post.return_value = {'ok': False, 'message': 'unreachable fixture'}
+    with pytest.raises(ValueError, match='execution status'):
+        gw.invoke(paired['token'], 'action', dict(project_id='project', request_id='missing-status',
+            task_id=task['task_id'], version=1, action='move', arguments={}))
+    robot.invoke.assert_not_called()
+    assert hub.tasks.stopping(session.id)
+
+
+def test_slow_ack_serializes_same_instance_action_admission_without_global_lock(gateway):
+    gw, paired, hub, session, robot = gateway
+    task = start(gw, paired)
+    observation = gw.invoke(paired['token'], 'observe', {'project_id':'project'})
+    entered, release = threading.Event(), threading.Event()
+    original = robot.post
+    def post(path, payload=None):
+        if path == '/supervision':
+            entered.set()
+            assert release.wait(2)
+        return original(path, payload)
+    robot.post = post
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        ack = pool.submit(gw.invoke, paired['token'], 'acknowledge',
+                          {'project_id':'project', 'receipt_id':observation['receipt_id']})
+        try:
+            assert entered.wait(1)
+            action = pool.submit(gw.invoke, paired['token'], 'action', dict(project_id='project',
+                request_id='serialized-action', task_id=task['task_id'], version=1, action='move', arguments={}))
+            with pytest.raises(TimeoutError):
+                action.result(.03)
+            robot.invoke.assert_not_called()
+        finally:
+            release.set()
+        assert ack.result(1)['ok'] and action.result(1)['ok']
+
+
+def test_active_execution_rejects_acknowledgement_that_could_extend_it(gateway):
+    gw, paired, hub, session, robot = gateway
+    task = start(gw, paired)
+    observation = gw.invoke(paired['token'], 'observe', {'project_id':'project'})
+    entered, release = threading.Event(), threading.Event()
+    def invoke(*args, **kwargs):
+        entered.set()
+        assert release.wait(2)
+        return ActionResult(True, 'Completed fixture')
+    robot.invoke.side_effect = invoke
+    with ThreadPoolExecutor(max_workers=1) as pool:
+        action = pool.submit(gw.invoke, paired['token'], 'action', dict(project_id='project',
+            request_id='active-action', task_id=task['task_id'], version=1, action='move', arguments={}))
+        try:
+            assert entered.wait(1)
+            with pytest.raises(ValueError, match='active action'):
+                gw.invoke(paired['token'], 'acknowledge', {'project_id':'project','receipt_id':observation['receipt_id']})
+        finally:
+            release.set()
+        assert action.result(1)['ok']
+
+
+def test_idle_expiry_rebinds_new_action_to_task_and_reports_execution_timeout(gateway):
+    gw, paired, hub, session, robot = gateway
+    task = start(gw, paired)
+    gw._leases['project']['deadline'] = time.monotonic() - 1
+    gw.check_expired()
+    assert 'project' not in gw._leases
+    observation = gw.invoke(paired['token'], 'observe', {'project_id':'project'})
+    hub.stop_robot.return_value = {'ok':True,'stop_confirmed':True,'stop_state':'stopped'}
+    def expire(*args, **kwargs):
+        assert gw._leases['project']['task_id'] == task['task_id']
+        gw._leases['project']['deadline'] = time.monotonic() - 1
+        gw.check_expired()
+        return ActionResult(False, 'Fixture was interrupted')
+    robot.invoke.side_effect = expire
+    result = gw.invoke(paired['token'], 'action', dict(project_id='project',request_id='expire-execution',
+        task_id=task['task_id'],version=1,action='move',arguments={},receipt_id=observation['receipt_id']))
+    assert not result['ok'] and result['data']['timed_out']
+    assert result['data']['reason'] == 'external_supervision_expired'
+    assert result['data']['stop_confirmed'] and result['data']['execution_stopped']
+    assert hub.tasks.snapshot(session.id)['task']['status'] == 'cancelled'
+
+
+def test_unconfirmed_interrupted_execution_blocks_new_acknowledgement(gateway):
+    gw, paired, hub, session, robot = gateway
+    task = start(gw, paired)
+    hub.stop_robot.return_value = {'ok':False,'stop_confirmed':False,'stop_state':'stop_unconfirmed'}
+    def invalidate(*args, **kwargs):
+        gw._leases.pop('project')
+        return ActionResult(False, 'Fixture context invalidated')
+    robot.invoke.side_effect = invalidate
+    result = gw.invoke(paired['token'], 'action', dict(project_id='project',request_id='unconfirmed-execution',
+        task_id=task['task_id'],version=1,action='move',arguments={}))
+    assert not result['ok'] and not result['data']['stop_confirmed']
+    observation = gw.invoke(paired['token'], 'observe', {'project_id':'project'})
+    with pytest.raises(ValueError, match='stopping is unconfirmed'):
+        gw.invoke(paired['token'], 'acknowledge', {'project_id':'project','receipt_id':observation['receipt_id']})
+
+
+def test_watchdog_does_not_hold_gateway_lock_while_waiting_for_task_snapshot(gateway, monkeypatch):
+    gw, paired, hub, session, robot = gateway
+    start(gw, paired)
+    gw._leases['project']['deadline'] = time.monotonic() - 1
+    entered = threading.Event()
+    original = hub.tasks.snapshot
+    def snapshot(*args, **kwargs):
+        entered.set()
+        return original(*args, **kwargs)
+    monkeypatch.setattr(hub.tasks, 'snapshot', snapshot)
+    worker = threading.Thread(target=gw.check_expired, daemon=True)
+    with hub.tasks._lock:
+        worker.start()
+        assert entered.wait(1)
+        acquired = gw._lock.acquire(timeout=.05)
+        if acquired:
+            gw._lock.release()
+    worker.join(1)
+    assert not worker.is_alive()
+    assert acquired, 'Watchdog held the gateway lock while waiting for the task lock'
+
+
+def test_late_cancel_does_not_erase_a_new_unknown_execution_barrier(gateway):
+    gw, paired, hub, session, robot = gateway
+    task = start(gw, paired)
+    first_stop, second_stop = threading.Event(), threading.Event()
+    release_first, release_second = threading.Event(), threading.Event()
+    calls = 0
+    lock = threading.Lock()
+    def stop(*args, **kwargs):
+        nonlocal calls
+        with lock:
+            calls += 1
+            number = calls
+        (first_stop if number == 1 else second_stop).set()
+        assert (release_first if number == 1 else release_second).wait(2)
+        return {'ok':True,'stop_confirmed':True,'stop_state':'stopped'}
+    hub.stop_robot.side_effect = stop
+    reads = 0
+    def post(path, payload=None):
+        nonlocal reads
+        if path == '/executions/status':
+            reads += 1
+            return {'running':False} if reads == 1 else {'ok':False,'message':'fixture status unavailable'}
+        return {'ok':True}
+    robot.post.side_effect = post
+    def invalidate(*args, **kwargs):
+        gw._leases.pop('project')
+        return ActionResult(False, 'Fixture context invalidated')
+    robot.invoke.side_effect = invalidate
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        try:
+            action = pool.submit(gw.invoke, paired['token'], 'action', dict(project_id='project',
+                request_id='cancel-race',task_id=task['task_id'],version=1,action='move',arguments={}))
+            assert first_stop.wait(1)
+            cancel = pool.submit(hub.tasks.cancel, session.id)
+            assert second_stop.wait(1)
+            release_first.set()
+            result = action.result(1)
+            assert not result['data']['execution_stopped']
+            release_second.set()
+            assert not cancel.result(1)['ok']
+            assert hub.tasks.stopping(session.id)
+        finally:
+            release_first.set()
+            release_second.set()
 
 
 def test_unknown_outcome_is_not_replayed(gateway, monkeypatch):

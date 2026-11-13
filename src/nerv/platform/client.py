@@ -183,7 +183,9 @@ class _McpNode:
             res = ActionResult(False, f"The action exceeded its overall cap of "
                                       f"{config.NODE_INVOKE_HARD_CAP:g}s; gave up waiting")
         except mcp_bridge.CallAborted:
-            res = ActionResult(False, "Stopped by the operator while the action was running")
+            res = ActionResult(False, "Execution context invalidated while the action was running",
+                               {"execution_status":"interrupted", "reason":"context_invalidated",
+                                "stop_confirmed":False, "stop_state":"stop_unconfirmed"})
         except Exception as e:
             res = ActionResult(False, f"(The call to the {self.what} failed: {type(e).__name__}: {e})")
         log.record_node(self.log_kind, self.name, "invoke", f"{name}({kwargs})",

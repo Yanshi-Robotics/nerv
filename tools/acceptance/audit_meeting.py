@@ -21,6 +21,8 @@ def terminal_conditions(value):
         result.add('fallen')
     if value.get('timed_out') is True or value.get('execution_status') in ('timeout', 'timed_out'):
         result.add('timeout')
+    if value.get('execution_status') == 'interrupted':
+        result.add('execution_interrupted')
     if value.get('stop_confirmed') is False or value.get('stop_state') == 'stop_unconfirmed':
         result.add('stop_unconfirmed')
     for child in value.values():

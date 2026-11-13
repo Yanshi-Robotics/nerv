@@ -80,3 +80,15 @@ def test_operator_abort_cannot_be_reclassified_by_later_stable_geometry(tmp_path
     participants = fixture(tmp_path)
     result = audit(participants, 10, 14, termination_reason='collector_error')
     assert result['terminal_violations'][0]['condition'] == 'trial_not_completed'
+
+
+def test_interrupted_motion_remains_terminal_even_after_confirmed_stopping(tmp_path):
+    participants = fixture(tmp_path)
+    path = participants['A']['protocol']
+    replies = [json.loads(line) for line in path.read_text().splitlines()]
+    replies[0]['result'] = {'content': [dict(type='text', text=json.dumps({'data': {
+        'execution_status': 'interrupted', 'reason': 'context_invalidated', 'stop_confirmed': True}}))]}
+    path.write_text(''.join(json.dumps(row) + '\n' for row in replies))
+    result = audit(participants, 10, 14, termination_reason='agents_finished')
+    assert result['terminal_violations'] == [dict(robot_instance_id='A', source='mcp_response',
+                                                sequence=1, condition='execution_interrupted')]

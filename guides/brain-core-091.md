@@ -1,6 +1,6 @@
 # Brain Core in NERV 0.9.1
 
-This is an architecture and compatibility change under the requested 0.9.1 version. Earlier candidates failed navigation or stopping qualification. Candidate 66's first fresh paired rendezvous trial exposed conflicting validation and installation dependency pins; it failed without a success claim. Three successful fresh paired rounds remain required.
+This is an architecture and compatibility change under the requested 0.9.1 version. Earlier candidates failed navigation or stopping qualification. Candidate 66 exposed conflicting validation and installation dependency pins. The later candidate db8ee passed installed motion engineering but its first fresh rendezvous round exposed acknowledgement-to-dispatch latency consuming the motion-supervision interval. Both rounds failed without a success claim. Three successful fresh paired rounds remain required.
 
 ## Responsibility
 
@@ -15,6 +15,8 @@ World, Robot and canonical Brain identities are stored independently of Runs. Th
 World startup is an explicit operator resource operation. Allocation rejects an unstarted or unavailable World before consuming an instance quota; it never starts physics implicitly. A Run requires the existing World and Runtime attachment to be ready, with matching scene, profile and attachment epoch. Starting a Run only publishes execution metadata and its current World roster reference. Ending a Run preserves those resources. Rebuilding a World through a Run is retired; use the World lifecycle instead. A reserved Brain may have no World until an explicit binding is made. Existing standalone Runs retain history but cannot resume their former implicit resource creation path.
 
 After `brain_attach`, MCP announces a changed tool list and scopes control to that Brain. `brain_get` describes identity, Run, resource and control state. `control_acquire` requires an existing operator pregrant and a fresh observation; `control_release` revokes ownership and requests stopping. Multiple authorized observers may connect, but one Agent owns motion. Observer disconnect does not revoke another connection's control. Reconnection restores reading only. Runtime checks local control deadlines independently of transport heartbeat.
+
+An Agent can explicitly supply a processed observation `receipt_id` in `task_start` or `action` to confirm it and admit that single request together. Each receipt remains single-use and subject to its original age limit; this is not automatic acknowledgement. Per-robot admission excludes acknowledgement during active execution, and subsequent frames cannot extend the captured command deadline. Unknown transport/execution termination retains a separate barrier from physical stopping. A new Task starts with its own state rather than inheriting the preceding Task's stop or execution result.
 
 Observations and capability readiness are readable without a Run. Such reads carry resource identities and Runtime generation, but no motion receipt or authority. A changed Runtime epoch or a concurrent topology/resource change rejects the read. The console can display these resource observations and has separate device connection controls.
 

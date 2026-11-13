@@ -38,6 +38,31 @@ def test_external_goal_is_immutable_and_restart_never_replays(task_host):
     assert not recovered._threads
 
 
+def test_new_task_cannot_inherit_previous_execution_or_stopping_evidence(task_host):
+    hub, s = task_host
+    first = hub.tasks.start(s.id, 'first')['data']
+    hub.tasks._save(s.id, execution={'id': 'old-execution'}, end_reason='old-end')
+    assert hub.tasks.cancel(s.id)['ok']
+    old = [e for e in hub.store.memory(s.id).events() if e['kind'] == 'robot_task']
+    second = hub.tasks.start(s.id, 'second')['data']
+    assert second['task_id'] != first['task_id']
+    assert not {'execution', 'stop_result', 'end_reason'} & second.keys()
+    assert hub.tasks.snapshot(s.id)['task'] == second
+    assert [e for e in hub.store.memory(s.id).events() if e['kind'] == 'robot_task'][:len(old)] == old
+
+
+def test_late_watchdog_cannot_cancel_a_replacement_task_by_old_id(task_host):
+    hub, s = task_host
+    first = hub.tasks.start(s.id, 'first')['data']
+    assert hub.tasks.cancel(s.id)['ok']
+    second = hub.tasks.start(s.id, 'second')['data']
+    hub.stop_robot.reset_mock()
+    assert hub.tasks.cancel(s.id, expected_task_id=first['task_id'])['superseded']
+    hub.stop_robot.assert_not_called()
+    assert hub.tasks.snapshot(s.id)['task']['task_id'] == second['task_id']
+    assert not hub.tasks._tokens[s.id].is_set()
+
+
 def test_retired_model_entrypoints_never_construct_a_provider(task_host):
     hub, s = task_host
     # The production methods must reject even a historical model ID.
@@ -86,6 +111,28 @@ def test_late_activity_cannot_change_cancelled_task(task_host):
     hub.tasks.event(s.id, state['task_id'], state['version'], {'type':'reply','text':'late success'})
     assert hub.tasks.snapshot(s.id)['cursor'] == before
     assert hub.tasks.snapshot(s.id)['task']['outcome'] == 'cancelled'
+
+
+def test_unknown_execution_requires_transport_and_runtime_termination_before_recovery(task_host):
+    hub, s = task_host
+    hub.tasks.start(s.id, 'first')
+    worker = Mock()
+    worker.is_alive.return_value = True
+    hub.tasks._unknown_executions[s.id] = {'token': hub.tasks._tokens[s.id], 'worker': worker}
+    robot = hub.body_client(s.body)
+    robot.post.return_value = {'ok': True, 'running': False}
+    robot.post.side_effect = None
+    assert not hub.tasks.cancel(s.id)['ok']
+    assert hub.tasks.stopping(s.id)
+    worker.is_alive.return_value = False
+    robot.post.return_value = {'ok': True}  # A missing execution state is still unknown.
+    assert not hub.tasks.cancel(s.id)['ok']
+    with pytest.raises(ValueError, match='stopping'):
+        hub.tasks.start(s.id, 'blocked')
+    robot.post.return_value = {'ok': True, 'running': False}
+    assert hub.tasks.cancel(s.id)['ok']
+    assert not hub.tasks.stopping(s.id)
+    assert hub.tasks.start(s.id, 'recovered')['ok']
 
 
 def test_delayed_old_deadline_cannot_cancel_a_replacement_task(task_host, monkeypatch):

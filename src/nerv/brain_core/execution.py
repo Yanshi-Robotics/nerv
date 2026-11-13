@@ -169,10 +169,13 @@ class ExecutionTurn:
 
         ctx = contextvars.copy_context()
         th = threading.Thread(target=ctx.run, args=(_work,), daemon=True)
+        self._action_worker = th
         th.start()
         while th.is_alive():
             if not self.is_current():
-                return ToolResult(call.call_id, call.name, False, "Run invalidated; result unknown")
+                return ToolResult(call.call_id, call.name, False, "Execution context invalidated; result unknown",
+                    {"execution_status":"interrupted", "reason":"context_invalidated",
+                     "stop_confirmed":False, "stop_state":"stop_unconfirmed"})
             try:
                 self.emit(q.get(timeout=config.BRIDGE_WATCHDOG_POLL_S))
             except queue.Empty:
