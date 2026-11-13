@@ -79,3 +79,6 @@ For a preauthorized simulation allocation, the operator creates an empty World i
 Robot and Brain survive Run completion. Authorized observers may coexist; only one owner controls motion. A reconnect restores reading, never motion. Control acquisition requires current observation and confirmed stopping. Heartbeats neither acknowledge observations nor extend an old action deadline. Resource allocation/removal requires an unbound connection and an operator World policy; Agents cannot reset or stop the entire World.
 
 The previous reserved-Run flow remains a compatibility path. Current dynamic lifecycle code is under qualification; long-duration stable holding and installed-candidate rendezvous acceptance remain incomplete. See the [development findings](brain-core-091.md).
+
+
+After acquisition, check `ok` before any dependent request. A rejected acquisition must not be followed by `acknowledge`, `task_start` or `action`. Obtain a new observation to inspect the refusal; do not acknowledge an unseen image or recreate a task to bypass stopping. The bound owner may request ending its own standby simulation Run without motion ownership; the result still requires actual stop confirmation.

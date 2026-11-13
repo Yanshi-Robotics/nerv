@@ -1,6 +1,6 @@
 # Brain Core in NERV 0.9.1
 
-This is an architecture and compatibility change under the requested 0.9.1 version. This completion revision is source development, not a newly installed candidate. Independent dual-Agent navigation acceptance has not yet passed.
+This is an architecture and compatibility change under the requested 0.9.1 version. Candidate 11 has been installed and independently exercised by two Agents. It passed software and installation checks, but both Agents were refused control because stopping was unconfirmed. Formal three-round rendezvous acceptance has not run.
 
 ## Responsibility
 
@@ -58,3 +58,14 @@ Candidate 08, built from `248c7c0`, passed 713 CPU software tests with two retir
 Observed limitations include post-cancel hold oscillation, unconfirmed stopping after obstacle braking, and one empty cached capability manifest after a World failure that required operator refresh. In a separate Run-lifecycle check, B retained control after A ended, but its 0.5 m request stalled after 0.024 m. These findings limit the earlier development probes; the candidate is not navigation-qualified.
 
 Actual protocol checks rejected cross-project access, cross-instance observation receipts and forged generation fields. B cancelled during A long polling in approximately 0.027 seconds. A transport loss revoked only A; reconnect preserved old receipts without executing them and rejected new motion without authorization. Shared World process loss failed both Runs. Ending A preserved both physical robots and B's running instance. These checks do not replace physical navigation success. Historical evidence remains separate from later candidates.
+
+
+## Candidate 11 qualification
+
+Candidate 11 (`f6938d1`) passed 767 CPU tests with two retired-provider skips, frontend checks, and clean installation/update/rollback. Two independent Codex subagents connected through separate protocol-only MCP relays to the installed package. Each allocated its own G1 in the same pre-existing World and received a persistent Brain.
+
+The first attempt failed after Run start because the operator template selected a body camera alias instead of a World sensor stream. Both Agents reported failure without motion. After correcting the fixture and explicitly restarting the World, both obtained new Run observations but were refused control because stopping remained unconfirmed. Neither issued motion or claimed success. These are qualification attempts, not the three formal rendezvous rounds. Both contexts were reused for debugging, so they cannot count as fresh formal trials.
+
+The physical recorder retained 10,694 samples across the two attempts at 25 Hz, with a maximum gap of approximately 0.04 seconds and no recorded falls or robot-to-robot collisions. This evidence does not establish a stable meeting. The long-hold defect remains unresolved; stopping thresholds and transition qualification were not relaxed.
+
+Subsequent source fixes allow the bound owner to request ending its standby simulation Run without first gaining motion control, validate shared-World sensor selections before Session creation, and refresh Runtime attachment epochs on World restart. Forty-five focused regressions passed. These fixes are newer than candidate 11 and are not represented by its installed-package results.

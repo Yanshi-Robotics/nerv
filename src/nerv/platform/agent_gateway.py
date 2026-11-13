@@ -220,6 +220,12 @@ class AgentGateway:
                 (not allow_paused and not control.get("accepting"))):
             raise PermissionError("The operator has not assigned this Agent active control")
 
+    def _end_run(self, record, project_id, session):
+        self._owns(record, project_id, allow_paused=True)
+        if session.mode != "sim":
+            raise PermissionError("Real device lifecycle belongs to the operator")
+        return self.projects.stop_run(project_id, session.run_id)
+
     def _supervision_contract(self, session):
         robot = self.hub.body_client(session.body)
         if robot is None:
@@ -389,10 +395,7 @@ class AgentGateway:
             self._owns(record, pid, allow_paused=True)
             return self.hub.tasks.cancel(session.id, reason="External Agent requested stop")
         if operation == "run_end":
-            self._owns(record, pid, allow_paused=True)
-            if session.mode != "sim":
-                raise PermissionError("Real device lifecycle belongs to the operator")
-            return self.projects.stop_run(pid, session.run_id)
+            return self._end_run(record, pid, session)
         lease = self._fresh(record, pid, session)
         if operation == "task_start":
             result = self.hub.tasks.start(session.id, args["goal"], args.get("constraints", ""),

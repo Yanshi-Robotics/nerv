@@ -260,9 +260,9 @@ class WorldInstances:
                 self._sync_generation(world)
                 resources = getattr(self.projects, 'resources', None)
                 if resources is not None:
-                    for slot in world['roster']:
+                    for slot, runtime in zip(world['roster'], runtimes, strict=True):
                         resource = resources.get(slot['robot_instance_id'])
-                        resources.save(dict(resource, status='ready'))
+                        resources.save(dict(resource, status='ready', runtime_epoch=runtime.meta.get('epoch')))
                 return world
             except Exception as error:
                 world.update(status='failed', reason=str(error))
@@ -273,6 +273,12 @@ class WorldInstances:
     def attach(self, run):
         world = self.prepare(self.for_run(run))
         p = run['snapshot']
+        if p['sensors']:
+            client = self.hub.world_client(world['world_instance_id'], run['robot_instance_id'])
+            offered = set(client.sensors()) if client else set()
+            bad = [sensor for sensor in p['sensors'] if sensor not in offered]
+            if bad:
+                raise ValueError(f"World does not publish sensor streams {bad}; it offers {sorted(offered)}")
         s, frozen = self.hub.store.new('operator', run['robot_instance_id'], world['world_instance_id'],
             sensors=p['sensors'], tools=[], epoch=world['epoch'], project_id=p['id'], run_id=run['id'],
             project_revision=run['project_revision'], mode='sim')

@@ -21,7 +21,7 @@ async def serve(args):
     output = Path(args.output).resolve()
     output.mkdir(parents=True, exist_ok=False)
     params = StdioServerParameters(command=args.python, args=["-m", "nerv.platform.cli", "mcp",
-        "--channel", args.channel, "--client", args.client, "--brain", args.brain], env=dict(os.environ))
+        "--channel", args.channel, "--client", args.client] + (["--brain", args.brain] if args.brain else []), env=dict(os.environ))
     with (output / "bridge.stderr").open("w") as errors:
         async with stdio_client(params, errlog=errors) as (read, write):
             async with ClientSession(read, write) as session:
@@ -69,8 +69,9 @@ def main():
     parser = argparse.ArgumentParser(description=__doc__)
     modes = parser.add_subparsers(dest="mode", required=True)
     host = modes.add_parser("serve")
-    for key in ("socket", "python", "client", "brain", "output"):
+    for key in ("socket", "python", "client", "output"):
         host.add_argument("--" + key, required=True)
+    host.add_argument("--brain")
     host.add_argument("--channel", default="stable", choices=["stable", "preview"])
     client = modes.add_parser("call")
     client.add_argument("--socket", required=True)

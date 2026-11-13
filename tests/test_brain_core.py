@@ -35,6 +35,86 @@ def test_internal_provider_endpoints_are_tombstones(tmp_path, monkeypatch):
     assert client.get('/api/brains').json() == []
 
 
+def test_owned_standby_run_can_end_without_motion_but_peers_cannot(integrated, monkeypatch):
+    from unittest.mock import Mock
+    f = integrated
+    core = BrainCore(f.hub, f.projects, f.gw.root)
+    pid = f.project['id']
+    try:
+        owner = core.create('Owner', [pid], ['observe', 'control'])
+        peer = core.create('Peer', [pid], ['observe', 'control'])
+        binding = core.reserve(pid, owner['connection']['id'])
+        core.invoke(owner['token'], 'run_start', {'project_id':pid, 'request_id':'start'})
+        assert not core.control(pid)['accepting']
+        stop = Mock(return_value={'ok':False, 'message':'Stop is unconfirmed'})
+        monkeypatch.setattr(f.projects, 'stop_run', stop)
+        with pytest.raises(PermissionError, match='own the Run'):
+            core.invoke(peer['token'], 'run_end', {'project_id':pid, 'request_id':'peer-end'})
+        stop.assert_not_called()
+        result = core.invoke(owner['token'], 'run_end', {'project_id':pid, 'request_id':'owner-end'})
+        assert not result['ok']  # Authorization never turns an unconfirmed stop into success.
+        stop.assert_called_once_with(pid, binding['run_id'])
+        assert core.resources.for_project(pid)['brain_instance_id'] == binding['brain_instance_id']
+        core.set_control(pid, accepting=True, owner_id=peer['connection']['id'])
+        with pytest.raises(PermissionError, match='own the Run'):
+            core.invoke(owner['token'], 'run_end', {'project_id':pid, 'request_id':'after-transfer'})
+        assert stop.call_count == 1
+    finally:
+        core.shutdown()
+
+
+def test_shared_run_rejects_unknown_sensor_before_creating_session(integrated, monkeypatch):
+    f = integrated
+    worlds = f.projects.worlds
+    world = {'world_instance_id':'world_fixture', 'epoch':'world-epoch', 'status':'ready'}
+    monkeypatch.setattr(worlds, 'for_run', lambda run: world)
+    monkeypatch.setattr(worlds, 'prepare', lambda value: value)
+    run = {'robot_instance_id':'robot_fixture', 'snapshot':dict(f.project, sensors=['camera:head'])}
+    with pytest.raises(ValueError, match='does not publish sensor'):
+        worlds.attach(run)
+    assert not f.hub.store.all()
+
+
+def test_world_restart_refreshes_persistent_runtime_attachment_without_a_run(integrated, monkeypatch):
+    from types import SimpleNamespace
+    from unittest.mock import Mock
+    f = integrated
+    core = BrainCore(f.hub, f.projects, f.gw.root)
+    try:
+        pair = core.create('Observer', [f.project['id']], ['observe'])
+        worlds = f.projects.worlds
+        world = worlds.create(f.project['world'], f.project['robot'])
+        resource = core.resources.reserve(f.project, pair['connection']['id'])
+        resource.update(world_instance_id=world['world_instance_id'], shared_world=True,
+                        status='offline', runtime_epoch='old-runtime')
+        core.resources.save(resource)
+        world.update(status='stopped', roster=[dict(robot_instance_id=resource['robot_instance_id'],
+                     project_id=f.project['id'], run_id=None, spawn=dict(x=0,y=0,z=1,yaw=0))])
+        worlds.save(world)
+        spec = f.hub.registry.world(f.project['world'])
+        spec.physics = {}
+        spec.model_copy = lambda **kwargs: spec
+        body = f.hub.registry.body(f.project['robot'])
+        body.actuators, body.dir = {}, 'fixture'
+        body.model_copy = lambda **kwargs: body
+        handle = SimpleNamespace(meta={'epoch':'new-world', 'configuration':{}})
+        runtime = SimpleNamespace(meta={'epoch':'new-runtime'})
+        f.launcher.nodes['world:' + world['world_instance_id'] + '/' + resource['robot_instance_id']] = handle
+        f.launcher.ensure_shared_world = Mock(return_value=handle)
+        f.launcher.ensure_runtime = Mock(return_value=runtime)
+        monkeypatch.setattr(f.robot, 'health', lambda: {'epoch':'new-runtime'})
+        restarted = worlds.prepare(world, restart=True)
+        assert restarted['generation'] == world['generation'] + 1
+        current = core.resources.get(resource['robot_instance_id'])
+        assert current['runtime_epoch'] == 'new-runtime' and current['status'] == 'ready'
+        observation = core.invoke(pair['token'], 'observe', {'project_id':f.project['id']})
+        assert observation['robot_epoch'] == 'new-runtime'
+        assert observation['run_id'] is None and not observation['motion_authorized']
+        assert not core._leases and not f.projects.active_run(f.project['id'])
+    finally:
+        core.shutdown()
+
+
 def test_reserved_run_starts_once_and_keeps_identity(integrated):  # noqa: F811
     f = integrated
     core = BrainCore(f.hub, f.projects, f.gw.root)

@@ -288,6 +288,22 @@ class BrainCore(AgentGateway):
         with self._robot_control_locks.setdefault(pid, threading.RLock()):
             return self._agent_control_locked(record, pid, operation, args)
 
+    def _end_run(self, record, pid, session):
+        # Ending an owned standby Run must not require first acquiring motion.
+        # Serialize with control transfer, and keep the exact Run identity so a
+        # delayed request cannot end a replacement execution.
+        with self._robot_control_locks.setdefault(pid, threading.RLock()):
+            resource = self.resources.for_project(pid)
+            active = self.projects.active_run(pid)
+            control = self.control(pid)
+            if (not resource or resource.get('client_id') != record['id']
+                    or not active or active.get('client_id') != record['id']
+                    or control.get('owner_id') not in (None, record['id'])):
+                raise PermissionError('This Agent does not own the Run')
+            if session.mode != 'sim':
+                raise PermissionError('Real device lifecycle belongs to the operator')
+            return self.projects.stop_run(pid, session.run_id)
+
     def _agent_control_locked(self, record, pid, operation, args):
         resource = self.resources.for_project(pid)
         if operation == 'control_release':
