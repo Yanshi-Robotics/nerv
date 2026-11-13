@@ -33,10 +33,17 @@ async def serve(args):
                     nonlocal counter
                     async with lock:
                         counter += 1
-                        event = {"sequence": counter, "started_at": time.time()}
+                        event = {"sequence": counter, "started_at": time.time(),
+                                 "started_monotonic": time.monotonic()}
                         try:
                             request = json.loads(await reader.readline())
                             event["request"] = request
+                            # Record before forwarding, including rejected/retried
+                            # calls and requests interrupted before any response.
+                            with (output / "requests.jsonl").open("a") as journal:
+                                journal.write(json.dumps(event, ensure_ascii=False) + "\n")
+                                journal.flush()
+                                os.fsync(journal.fileno())
                             if request["operation"] == "list_tools":
                                 result = (await session.list_tools()).model_dump(mode="json")
                             else:
@@ -51,6 +58,7 @@ async def serve(args):
                         except Exception as error:
                             event["error"] = f"{type(error).__name__}: {error}"
                         event["completed_at"] = time.time()
+                        event["completed_monotonic"] = time.monotonic()
                         with (output / "protocol.jsonl").open("a") as journal:
                             journal.write(json.dumps(event, ensure_ascii=False) + "\n")
                         writer.write((json.dumps(event, ensure_ascii=False) + "\n").encode())

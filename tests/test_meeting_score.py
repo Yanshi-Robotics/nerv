@@ -21,7 +21,8 @@ def evidence():
         samples.append(dict(sequence=i+1,sim_time=t,world_instance_id='world',epoch='epoch',topology_revision=1,
             robot_collision_seen=False,fall_seen=False,physics_steps=i*25+1,robots=robots))
     record=dict(samples=samples,physics_events_complete=True,dropped_samples=0,finished=True,robot_collision_seen=False,fall_seen=False,
-                execution_audit=dict(navigation_wall_seconds=4,motion_requests={'A':1,'B':1},source='run_task_journal'))
+                execution_audit=dict(navigation_wall_seconds=4,motion_requests={'A':1,'B':1},
+                    source='mcp_receipts_and_run_task_journal',complete=True))
     visual={rid:[dict(robot_instance_id=rid,world_epoch='epoch',sim_time=t,observation_sequence=i,
         seen_other_reviewed=True,agent_claimed_seen_other=True,image_sha256=str(i)*64) for i,t in enumerate([1.5,2.5,3.5])] for rid in ['A','B']}
     stops={rid:dict(stop_confirmed=True,observed_sim_time=4,robot_instance_id=rid,world_epoch="epoch") for rid in ['A','B']}

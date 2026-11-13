@@ -41,3 +41,9 @@ Reserve the GPU through the host's existing queue before running:
 `--queue-id` records an existing reservation; it does not acquire one. The tool renders the native head and chase cameras plus authored room and route views. Time changes run on the production render thread, and the report compares physical state immediately before and after each mutation.
 
 For scene generation, interaction fixtures, Explore export and dual-camera performance, use the [world-library tools](../../nerv-assets/docs/explore/README.md). Validation records distinguish current results, retained failures, actual browser operations and measurements that require manual browser inspection.
+
+## Independent paired rendezvous evidence
+
+`score_meeting.py` evaluates retained operator-side physics, stopping and visual evidence. It does not navigate or supply truth to Agents. Its contract must be frozen before formal trials. Three image acquisitions per robot must lie within the same uninterrupted terminal stable window (at least three seconds), carry distinct observation sequences and acquisition times, and include both the Agent's visual declaration and independent review of the original image. Equal pixel hashes are valid for a stationary scene.
+
+`mcp_relay.py` forwards one requested MCP operation at a time. It persists `requests.jsonl` before dispatch and `protocol.jsonl` after response, with host monotonic times; it never selects actions, acknowledges observations or retries a call. `audit_meeting.py` counts every motion attempt, including denials and idempotent retries, and reconciles dispatched actions against the existing Run/Task journal. Missing responses, calls outside the operator's GO/end interval and unmatched execution records invalidate the audit. Use fresh relays and Runs for each trial. The scorer requires this combined audit for the 900-second and 60-request limits.

@@ -22,7 +22,8 @@ def score(record, robot_ids, contract, visual_reviews, stop_receipts, *, claimed
     counts = limits.get('motion_requests', {})
     budget_valid = (_vector([elapsed]) and 0 <= elapsed <= 900
                     and all(type(counts.get(rid)) is int and 0 <= counts[rid] <= 60 for rid in robot_ids)
-                    and limits.get('source') == 'run_task_journal')
+                    and limits.get('source') == 'mcp_receipts_and_run_task_journal'
+                    and limits.get('complete') is True)
     valid = (budget_valid and record.get('physics_events_complete') is True and record.get('dropped_samples') == 0
              and record.get('finished') is True and bool(samples) and not record.get('error'))
     start = previous = identity = None
