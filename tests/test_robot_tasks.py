@@ -85,3 +85,38 @@ def test_late_activity_cannot_change_cancelled_task(task_host):
     hub.tasks.event(s.id, state['task_id'], state['version'], {'type':'reply','text':'late success'})
     assert hub.tasks.snapshot(s.id)['cursor'] == before
     assert hub.tasks.snapshot(s.id)['task']['outcome'] == 'cancelled'
+
+
+def test_delayed_old_deadline_cannot_cancel_a_replacement_task(task_host, monkeypatch):
+    hub, s = task_host
+    original_get = hub.schemes.get
+    first_scheme = original_get(s.control_scheme, s.control_scheme_revision)
+    reads = 0
+    def scheme(*args):
+        nonlocal reads
+        reads += 1
+        return first_scheme.model_copy(update={'max_runtime_s': .05 if reads == 1 else 60})
+    monkeypatch.setattr(hub.schemes, 'get', scheme)
+    entered, release = threading.Event(), threading.Event()
+    original_cancel = hub.tasks.cancel
+    def delayed_cancel(*args, **kwargs):
+        entered.set()
+        assert release.wait(2)
+        return original_cancel(*args, **kwargs)
+    monkeypatch.setattr(hub.tasks, 'cancel', delayed_cancel)
+    try:
+        assert hub.tasks.start(s.id, 'first')['ok']
+        first_thread = hub.tasks._threads[s.id]
+        assert entered.wait(1)
+        assert original_cancel(s.id)['ok']
+        second = hub.tasks.start(s.id, 'second')['data']
+        second_token = hub.tasks._tokens[s.id]
+        release.set()
+        first_thread.join(1)
+        assert not first_thread.is_alive()
+        current = hub.tasks.snapshot(s.id)['task']
+        assert current['task_id'] == second['task_id'] and current['status'] == 'running'
+        assert not second_token.is_set()
+    finally:
+        release.set()
+        original_cancel(s.id)

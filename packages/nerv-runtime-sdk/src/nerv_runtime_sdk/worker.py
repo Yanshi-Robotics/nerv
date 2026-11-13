@@ -69,11 +69,12 @@ def main(argv=None):
         raise ValueError("binding does not match provider manifest")
     runtime = provider.create(profile, binding)
     from .control import StopFlag
-    from .node import BodyNode, build_app
+    from .node import BodyNode, build_app, DEFAULT_STOP_JOIN_TIMEOUT_S
     import uvicorn
     node = BodyNode(runtime, guidance=payload.get("guidance", ""), stop=StopFlag(), armed=False,
                     world=binding.world, bus_kind=manifest.id,
-                    stream_fps=payload["stream_fps"], require_control=True)
+                    stream_fps=payload["stream_fps"], require_control=True,
+                    stop_join_timeout_s=payload.get("stop_join_timeout_s", DEFAULT_STOP_JOIN_TIMEOUT_S))
     node.manifest = manifest.model_dump()
     uvicorn.run(build_app(node, [payload["cors_origin"]]), host=args.host, port=args.port, log_level="warning")
     return 0

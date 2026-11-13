@@ -42,6 +42,8 @@ Physics evidence can now be sampled at the physical step, with robot contacts an
 
 ## Execution and qualification
 
+Concurrent lease expiry, task expiry and operator cancellation share an in-flight Runtime stop only when its control generation and identity match. Joining waits outside the dispatch lock within the configured Host HTTP node budget; a timeout remains unconfirmed. A subsequent independent stop checks again rather than reusing historical physical evidence. An old task deadline must match its task token atomically before invalidating execution, so it cannot cancel a replacement task.
+
 The model-free dispatcher supports external primitives, external skills and a fixed policy. New tasks cannot erase the previous skill in the same robot instance. Runtime additionally qualifies G1 skill transitions against the scene and exact policy/contract/release hashes. The previous development contract covered the existing G1 turning policy in `apt`; it does not qualify Go2, arbitrary policies, ACT transitions or real devices.
 
 Earlier CPU development probes executed fourteen concurrent forward/turn actions across two G1 instances, with fourteen stable-stop confirmations and no reported falls. In that probe, six 0.5 m forward requests had final errors from 0.003 to 0.021 m, and eight 45-degree turns had errors from 0.5 to 3.3 degrees. These observations support a scoped transition contract; they do not establish independent navigation success or a broad reliability rate.
@@ -60,6 +62,10 @@ Normal G1 action completion may wait up to 4 simulation seconds for the existing
 
 
 ## Installed candidate findings
+
+The following candidate (`8c88`, source `ed9c787`) passed 837 CPU checks and isolated installation/recovery with the measured NumPy 2.5.2 stack. Its installed MCP engineering sequence completed fourteen motions with stop confirmation; one robot covered all nine ordered forward/left/right pairs. The final approximately 60-second physical window met the unchanged stopping bounds for both robots. Ending A's Run and later removing A each allowed B to complete another measured motion. These directed checks are not independent rendezvous acceptance.
+
+After that recording, B's engineering task reached its actual 900-second deadline during console inspection. Concurrent Runtime and Host stops left a historical unknown task receipt even though subsequent physical stopping was confirmed. This exposed the stop-result and delayed-timer races addressed above; the failed/unknown receipt remains unchanged. The corrected stop implementation needs a new installed candidate and fresh independent trials. The existing console's robot selector, cameras and event stream were also visually exercised without changing its style or page structure.
 
 Candidate 66 (`711668a`) passed 834 CPU checks with two retired-provider skips and a fresh isolated installation/update/rollback. Its first formal paired rendezvous round made four motion requests: two first motions completed with confirmed stopping, then both different-skill requests were refused. Neither Agent claimed success. Physics recording retained 4,359 samples at approximately 25 Hz without a recorded fall or robot-to-robot collision; no common meeting window existed.
 

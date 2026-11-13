@@ -187,10 +187,7 @@ class RobotTasks:
 
         def expire():
             if not token.wait(max(0, turn.deadline - time.monotonic())):
-                with self._lock:
-                    same = self._tokens.get(sid) is token
-                if same:
-                    self.cancel(sid, reason="External task time limit reached")
+                self.cancel(sid, reason="External task time limit reached", expected_token=token)
         thread = threading.Thread(target=expire, name=state["task_id"], daemon=True)
         self._threads[sid] = thread
         thread.start()
@@ -294,9 +291,13 @@ class RobotTasks:
             self.hub.store.save(session)
             return session.summary()
 
-    def cancel(self, sid, reason="Task cancelled", strict=False):
+    def cancel(self, sid, reason="Task cancelled", strict=False, *, expected_token=None):
         # Stop does not acquire the operation lock: it must preempt slow starts/model loads.
         with self._lock:
+            # Admission and invalidation must be atomic: an old deadline may
+            # resume after its task has been cancelled and replaced.
+            if expected_token is not None and self._tokens.get(sid) is not expected_token:
+                return {"ok": False, "superseded": True, "message": "Task deadline was superseded"}
             self._generation[sid] = self._generation.get(sid, 0) + 1
             generation = self._generation[sid]
             self._stopping.add(sid)

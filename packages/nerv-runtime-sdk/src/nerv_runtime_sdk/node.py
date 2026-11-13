@@ -24,6 +24,7 @@ import time
 import math
 import uuid
 import threading
+from concurrent.futures import Future, TimeoutError
 from typing import Any, Protocol
 
 import anyio
@@ -43,6 +44,9 @@ from .control import StopFlag
 
 # Default for standalone nodes; simulated nodes inherit their world's stream budget.
 DEFAULT_STREAM_FPS = 12.0
+# Standalone fallback matches the Host's default HTTP node deadline. Managed
+# workers receive the actual configured Host budget, independently of physics.
+DEFAULT_STOP_JOIN_TIMEOUT_S = 30.0
 
 
 class BodyImpl(Protocol):
@@ -78,9 +82,12 @@ class BodyImpl(Protocol):
 
 class BodyNode:
     def __init__(self, impl: BodyImpl, *, guidance: str, stop: StopFlag, armed: bool,
-                 world: str = "", bus_kind: str = "", stream_fps: float = DEFAULT_STREAM_FPS, require_control: bool = False) -> None:
+                 world: str = "", bus_kind: str = "", stream_fps: float = DEFAULT_STREAM_FPS, require_control: bool = False,
+                 stop_join_timeout_s: float = DEFAULT_STOP_JOIN_TIMEOUT_S) -> None:
         if not math.isfinite(stream_fps) or stream_fps <= 0:
             raise ValueError("stream_fps must be finite and positive")
+        if type(stop_join_timeout_s) not in (int, float) or not math.isfinite(stop_join_timeout_s) or stop_join_timeout_s <= 0:
+            raise ValueError("stop_join_timeout_s must be finite and positive")
         self._control_lock = threading.RLock()
         self._control_token = None
         self._control_owner = None
@@ -89,6 +96,8 @@ class BodyNode:
         self._control_deadline = 0.0
         self._action_budget = 0
         self._stopping = False
+        self._stop_operation = None
+        self.stop_join_timeout_s = stop_join_timeout_s
         self.require_control = require_control
         self.impl = impl
         self.guidance = guidance
@@ -172,22 +181,57 @@ class BodyNode:
 
     def cancel(self, reason="cancelled", expected=None):
         with self._control_lock:
-            if expected and expected != self._control_token:
-                return {"ok": False, "message": "Stop belongs to an old execution"}
             if self._stopping:
-                return {"ok": False, "message": "Stop is still pending"}
-            self._stopping = True
-            self.invalidate_control()
-            self.stop.request()
+                operation = self._stop_operation
+                if (expected and (expected != operation['token'] or operation['generation'] != self._control_generation
+                                  or operation['epoch'] != self.epoch)):
+                    return {"ok": False, "message": "Stop belongs to an old execution"}
+                first = False
+            else:
+                if expected and expected != self._control_token:
+                    return {"ok": False, "message": "Stop belongs to an old execution"}
+                operation = dict(id=uuid.uuid4().hex, token=self._control_token,
+                    generation=self._control_generation, epoch=self.epoch, result=Future())
+                self._stop_operation = operation
+                self._stopping = True
+                self.invalidate_control()
+                self.stop.request()
+                first = True
+        if not first:
+            # Lease expiry, task expiry and an operator can request the same
+            # stop concurrently. Join outside the dispatch lock; never reuse a
+            # completed operation as evidence for a later independent stop.
+            try:
+                return dict(operation['result'].result(timeout=self.stop_join_timeout_s))
+            except TimeoutError:
+                return {"ok": False, "accepted": True, "dispatch_revoked": True,
+                        "stop_confirmed": False, "stop_state": "stopping",
+                        "stop_operation_id": operation['id'], "runtime_control_generation": operation['generation'],
+                        "runtime_epoch": operation['epoch'],
+                        "message": "Stop completion wait timed out"}
+        result = None
         try:
             # Do not hold the dispatch lock while waiting for an execution thread:
             # it may need that lock to observe revoked authority and terminate.
             if hasattr(self.impl, "cancel_current"):
-                return self.impl.cancel_current(reason)
-            return {"ok": True, "message": "stop requested"}
+                result = self.impl.cancel_current(reason)
+            else:
+                result = {"ok": True, "message": "stop requested"}
+            if not isinstance(result, dict):
+                result = {"ok": False, "stop_confirmed": False, "stop_state": "stop_unconfirmed",
+                          "message": "Stop provider returned an invalid result"}
+        except Exception as error:
+            result = {"ok": False, "stop_confirmed": False, "stop_state": "stop_unconfirmed",
+                      "message": "Stop failed: " + str(error)}
         finally:
             with self._control_lock:
+                result = {**(result or {"ok": False, "stop_confirmed": False,
+                    "stop_state": "stop_unconfirmed", "message": "Stop completion was interrupted"}),
+                    "stop_operation_id": operation['id'], "runtime_control_generation": operation['generation'],
+                    "runtime_epoch": operation['epoch']}
+                operation['result'].set_result(result)
                 self._stopping = False
+        return dict(result)
 
     def hold(self, reason: str = "operator") -> dict:
         self.invalidate_control()

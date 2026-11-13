@@ -360,6 +360,7 @@ class Launcher:
         filename.write_text(json.dumps({"profile": profile.model_dump(), "binding": binding.model_dump(),
                                         "guidance": body.guidance,
                                         "stream_fps": world.physics.get("stream_fps", config.RUNTIME_STREAM_FPS) if world else config.RUNTIME_STREAM_FPS,
+                                        "stop_join_timeout_s": config.NODE_TIMEOUT,
                                         "cors_origin": config.CORS_ORIGINS[0]}))
         if ep.command:
             py = self._python(ep.command[0])
