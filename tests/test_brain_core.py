@@ -35,7 +35,27 @@ def test_internal_provider_endpoints_are_tombstones(tmp_path, monkeypatch):
     assert client.get('/api/brains').json() == []
 
 
-def test_owned_standby_run_can_end_without_motion_but_peers_cannot(integrated, monkeypatch):
+@pytest.mark.parametrize('world_state,robot_state', [('failed','ready'),('stopped','ready'),
+                                                   ('ready','failed'),('ready','offline')])
+def test_readiness_cannot_outlive_shared_world_or_runtime(integrated,world_state,robot_state):  # noqa: F811 - imported pytest fixture
+    f = integrated
+    core = BrainCore(f.hub, f.projects, f.gw.root)
+    try:
+        world = f.projects.worlds.create(f.project['world'], f.project['robot'])
+        world['status'] = world_state
+        f.projects.worlds.save(world)
+        resource = core.resources.reserve(f.project, f.pair['connection']['id'])
+        resource.update(shared_world=True, world_instance_id=world['world_instance_id'], status=robot_state)
+        core.resources.save(resource)
+        readiness = f.projects.readiness(f.project['id'])
+        assert readiness['ready'] is False
+        assert {issue['code'] for issue in readiness['issues']} & {'world_unavailable','runtime_unavailable'}
+        assert not f.hub.store.all() and not f.launcher.ensure_body.called
+    finally:
+        core.shutdown()
+
+
+def test_owned_standby_run_can_end_without_motion_but_peers_cannot(integrated, monkeypatch):  # noqa: F811 - imported pytest fixture
     from unittest.mock import Mock
     f = integrated
     core = BrainCore(f.hub, f.projects, f.gw.root)
@@ -63,7 +83,7 @@ def test_owned_standby_run_can_end_without_motion_but_peers_cannot(integrated, m
         core.shutdown()
 
 
-def test_shared_run_rejects_unknown_sensor_before_creating_session(integrated, monkeypatch):
+def test_shared_run_rejects_unknown_sensor_before_creating_session(integrated, monkeypatch):  # noqa: F811 - imported pytest fixture
     f = integrated
     worlds = f.projects.worlds
     world = {'world_instance_id':'world_fixture', 'epoch':'world-epoch', 'status':'ready'}
@@ -75,7 +95,7 @@ def test_shared_run_rejects_unknown_sensor_before_creating_session(integrated, m
     assert not f.hub.store.all()
 
 
-def test_world_restart_refreshes_persistent_runtime_attachment_without_a_run(integrated, monkeypatch):
+def test_world_restart_refreshes_persistent_runtime_attachment_without_a_run(integrated, monkeypatch):  # noqa: F811 - imported pytest fixture
     from types import SimpleNamespace
     from unittest.mock import Mock
     f = integrated
@@ -249,7 +269,7 @@ def test_shared_runtime_failure_is_local_and_world_failure_invalidates_peers(int
         core.shutdown()
 
 
-def test_robot_and_brain_identity_survive_run_end_and_new_run(integrated):
+def test_robot_and_brain_identity_survive_run_end_and_new_run(integrated):  # noqa: F811 - imported pytest fixture
     f = integrated
     core = BrainCore(f.hub, f.projects, f.gw.root)
     try:
@@ -269,7 +289,7 @@ def test_robot_and_brain_identity_survive_run_end_and_new_run(integrated):
         core.shutdown()
 
 
-def test_observer_transport_does_not_revoke_the_controller(integrated):
+def test_observer_transport_does_not_revoke_the_controller(integrated):  # noqa: F811 - imported pytest fixture
     f = integrated
     core = BrainCore(f.hub, f.projects, f.gw.root)
     try:
@@ -286,7 +306,7 @@ def test_observer_transport_does_not_revoke_the_controller(integrated):
         core.shutdown()
 
 
-def test_resource_without_run_becomes_failed_when_world_disappears(integrated):
+def test_resource_without_run_becomes_failed_when_world_disappears(integrated):  # noqa: F811 - imported pytest fixture
     f = integrated
     core = BrainCore(f.hub, f.projects, f.gw.root)
     try:
@@ -305,7 +325,7 @@ def test_resource_without_run_becomes_failed_when_world_disappears(integrated):
         core.shutdown()
 
 
-def test_delayed_world_health_probe_cannot_overwrite_new_topology(integrated, monkeypatch):
+def test_delayed_world_health_probe_cannot_overwrite_new_topology(integrated, monkeypatch):  # noqa: F811 - imported pytest fixture
     from types import SimpleNamespace
     f = integrated
     core = BrainCore(f.hub, f.projects, f.gw.root)
@@ -327,8 +347,9 @@ def test_delayed_world_health_probe_cannot_overwrite_new_topology(integrated, mo
         core.shutdown()
 
 
-def test_no_run_observation_rejects_runtime_change_and_never_grants_control(integrated, monkeypatch):
-    f=integrated;core=BrainCore(f.hub,f.projects,f.gw.root)
+def test_no_run_observation_rejects_runtime_change_and_never_grants_control(integrated, monkeypatch):  # noqa: F811 - imported pytest fixture
+    f=integrated
+    core=BrainCore(f.hub,f.projects,f.gw.root)
     try:
         pair=core.create('Observer',[f.project['id']],['observe'])
         resource=core.resources.reserve(f.project,pair['connection']['id'])
@@ -344,8 +365,11 @@ def test_no_run_observation_rejects_runtime_change_and_never_grants_control(inte
         monkeypatch.setattr(f.robot, 'health', lambda:{'epoch':'fixture-epoch'})
         original=f.robot.perceive
         def changed():
-            result=original();core.resources.save(dict(resource,status='offline'));return result
+            result=original()
+            core.resources.save(dict(resource,status='offline'))
+            return result
         monkeypatch.setattr(f.robot,'perceive',changed)
         with pytest.raises(ValueError,match='changed while reading'):
             core.invoke(pair['token'],'observe',{'project_id':f.project['id']},resource['brain_instance_id'])
-    finally:core.shutdown()
+    finally:
+        core.shutdown()

@@ -312,6 +312,19 @@ class ProjectService:
                 ok, reason = check(self.hub.registry.world(project["world"]), self.hub.registry.body(project["robot"]))
                 if not ok:
                     issues.append({"code": "incompatible_world", "reason": reason, "destination": "worlds"})
+            resources = getattr(self, 'resources', None)
+            resource = resources.for_project(project_id) if resources is not None else None
+            if resource and resource.get('shared_world'):
+                try:
+                    world = self.worlds.get(resource['world_instance_id'])
+                except (OSError, ValueError, KeyError):
+                    world = {}
+                if world.get('status') != 'ready':
+                    issues.append({'code':'world_unavailable', 'reason':'The assigned World is not ready',
+                                   'destination':'worlds'})
+                if resource.get('status') != 'ready':
+                    issues.append({'code':'runtime_unavailable', 'reason':'The assigned robot Runtime is not ready',
+                                   'destination':'robots'})
         return {"ready": not issues, "issues": issues}
 
     def require_session(self, project_id):
