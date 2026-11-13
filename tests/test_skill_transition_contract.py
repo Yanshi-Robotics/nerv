@@ -77,6 +77,7 @@ def test_old_stop_receipt_cannot_authorize_motion_after_balance_is_lost(tmp_path
 
 def test_standing_qualification_binds_profile_code_and_actual_world_timing(tmp_path):
     import json
+    import importlib.metadata
     from pathlib import Path
     import nerv.runtime.builtin as builtin
     value, _ = runtime(tmp_path)
@@ -90,7 +91,10 @@ def test_standing_qualification_binds_profile_code_and_actual_world_timing(tmp_p
     contract.update(profile_sha256=hashlib.sha256(json.dumps(config, sort_keys=True, separators=(',', ':')).encode()).hexdigest(),
         physics_dt_s=.002, policy_dt_s=.02,
         implementation_sha256={name: hashlib.sha256((root/name).read_bytes()).hexdigest()
-            for name in ['body/balance.py', 'body/families/humanoid.py', 'runtime/builtin.py']})
+            for name in ['body/balance.py', 'body/families/humanoid.py', 'body/stopping.py',
+                         'body/bus_zmq.py', 'runtime/builtin.py', 'world/mujoco_node.py',
+                         'world/composition.py', 'world/bus_server.py']},
+        dependency_versions={name:importlib.metadata.version(name) for name in ['mujoco','numpy','onnxruntime']})
     assert value.skill_transition_config()['validated']
     config['locomotion']['walk_speed'] = .7
     assert not value.skill_transition_config()['validated']
