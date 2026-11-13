@@ -245,3 +245,27 @@ def test_delayed_world_health_probe_cannot_overwrite_new_topology(integrated, mo
         assert current['generation'] == 2 and current['status'] == 'ready'
     finally:
         core.shutdown()
+
+
+def test_no_run_observation_rejects_runtime_change_and_never_grants_control(integrated, monkeypatch):
+    f=integrated;core=BrainCore(f.hub,f.projects,f.gw.root)
+    try:
+        pair=core.create('Observer',[f.project['id']],['observe'])
+        resource=core.resources.reserve(f.project,pair['connection']['id'])
+        resource.update(status='ready',runtime_epoch='fixture-epoch')
+        core.resources.save(resource)
+        first=core.invoke(pair['token'],'observe',{'project_id':f.project['id']},resource['brain_instance_id'])
+        assert first['run_id'] is None and not first['motion_authorized']
+        assert first['robot_epoch']=='fixture-epoch' and first['observation_id']
+        assert 'receipt_id' not in first and not core._receipts
+        monkeypatch.setattr(f.robot, 'health', lambda:{'epoch':'replacement-runtime'})
+        with pytest.raises(ValueError, match='attachment changed'):
+            core.invoke(pair['token'],'observe',{'project_id':f.project['id']},resource['brain_instance_id'])
+        monkeypatch.setattr(f.robot, 'health', lambda:{'epoch':'fixture-epoch'})
+        original=f.robot.perceive
+        def changed():
+            result=original();core.resources.save(dict(resource,status='offline'));return result
+        monkeypatch.setattr(f.robot,'perceive',changed)
+        with pytest.raises(ValueError,match='changed while reading'):
+            core.invoke(pair['token'],'observe',{'project_id':f.project['id']},resource['brain_instance_id'])
+    finally:core.shutdown()

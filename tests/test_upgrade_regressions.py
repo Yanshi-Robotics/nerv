@@ -111,9 +111,16 @@ def test_late_control_request_rejected_after_stop_and_after_new_claim():
 def test_builtin_cancel_reaches_its_actual_runner():
     from nerv.runtime.builtin import BuiltinRuntime
     runtime = BuiltinRuntime(SimpleNamespace(id="fixture", family="test"), None)
-    runtime._impl = object()
+    reasons = []
+    def hold(reason):
+        reasons.append(reason)
+        return {'ok': False, 'stop_confirmed': False, 'stop_state': 'stop_unconfirmed'}
+    runtime._impl = SimpleNamespace(hold=hold)
     runtime.stop = StopFlag()
-    assert runtime.cancel_current()["ok"] and runtime.stop.is_set()
+    result = runtime.cancel_current()
+    assert runtime.stop.is_set() and reasons == ['cancelled']
+    assert result['accepted'] and result['dispatch_revoked']
+    assert not result['ok'] and not result['stop_confirmed']
 
 
 def test_model_without_tool_calls_cannot_abandon_an_active_skill(tmp_path):

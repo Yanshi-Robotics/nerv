@@ -32,6 +32,9 @@ class BrainCore(AgentGateway):
         projects.brain_core = self
         super().__init__(hub, projects, root)
         self.discovery = Discovery(self)
+        from .attachments import RuntimeAttachments
+        self.attachments = RuntimeAttachments(self)
+        projects.attachments = self.attachments
 
     def shutdown(self):
         self.discovery.close()
@@ -226,17 +229,7 @@ class BrainCore(AgentGateway):
             if operation == 'project_get':
                 return {'project': project, **identity}
             if operation in {'capabilities', 'observe'}:
-                robot = self.hub.body_client(run['robot_instance_id'])
-                if robot is None:
-                    return {'connected':False, 'actions':[], **identity}
-                if operation == 'capabilities':
-                    caps = robot.capabilities()
-                    return {'actions':[dict(name=a.name, description=a.description, parameters=a.parameters, kind=a.kind) for a in caps.operations],
-                            'sensors':caps.sensors, 'motion_authorized':False, **identity}
-                import base64
-                observed = robot.perceive()
-                return {'state':observed.state, 'motion_authorized':False,
-                        'images':[dict(name=i['name'], mimeType='image/png', data=base64.b64encode(i['png']).decode()) for i in observed.images if i.get('png')], **identity}
+                return self._read_resource(project['id'], operation)
             if not run.get('session_id'):
                 return {'task': None, 'events': [], **identity}
             if operation == 'task_status':
@@ -250,6 +243,46 @@ class BrainCore(AgentGateway):
             return super().invoke(token, operation, args)
         finally:
             _request_run.reset(context)
+
+    def _read_resource(self, project_id, operation):
+        """Sensor access without a Run; never creates an authorization receipt."""
+        import base64
+        resource = self.resources.for_project(project_id)
+        if not resource:
+            raise ValueError('Robot resource is unavailable')
+        identity = {key:resource.get(key) for key in IDENTITY_FIELDS}
+        identity.update(run_id=None, project_id=project_id, motion_authorized=False,
+                        resource_status=resource['status'], robot_epoch=resource.get('runtime_epoch'),
+                        runtime_generation=resource.get('runtime_generation', 0))
+        world = self.projects.worlds.get(resource['world_instance_id']) if resource.get('shared_world') else None
+        if world:
+            identity.update(world_generation=world['generation'], world_epoch=world.get('epoch'),
+                            topology_revision=world.get('topology_revision'))
+        if resource['status'] != 'ready' or (world and world['status'] != 'ready'):
+            return {**identity, 'connected':False, 'actions':[], 'prepare_state':resource['status']}
+        robot = self.hub.body_client(resource['robot_instance_id'])
+        before = (robot.health() or {}).get('epoch') if robot else None
+        if not before:
+            return {**identity, 'connected':False, 'actions':[], 'prepare_state':'offline'}
+        if before != resource.get('runtime_epoch'):
+            raise ValueError('Runtime attachment changed; recover it before reading')
+        if operation == 'capabilities':
+            caps = robot.capabilities()
+            result = dict(actions=[dict(name=a.name, description=a.description, parameters=a.parameters, kind=a.kind)
+                                   for a in caps.operations], sensors=caps.sensors,
+                          prepare_state=caps.prepare_state, manifest_revision=caps.manifest_revision)
+        else:
+            observed = robot.perceive()
+            result = dict(observation_id='obs_' + uuid.uuid4().hex, delivered_at=time.time(), state=observed.state,
+                images=[dict(name=i['name'], mimeType='image/png', data=base64.b64encode(i['png']).decode())
+                        for i in observed.images if i.get('png')])
+        current = self.resources.for_project(project_id)
+        now_world = self.projects.worlds.get(resource['world_instance_id']) if world else None
+        if (not current or any(current.get(k) != resource.get(k) for k in
+                ('status','binding_generation','runtime_epoch','runtime_generation','world_instance_id'))
+                or now_world != world or (robot.health() or {}).get('epoch') != before):
+            raise ValueError('Resource changed while reading; obtain a new observation')
+        return {**result, **identity, 'robot_epoch':before, 'connected':True}
 
     def _agent_control(self, record, pid, operation, args):
         with self._robot_control_locks.setdefault(pid, threading.RLock()):

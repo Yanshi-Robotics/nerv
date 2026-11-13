@@ -1214,7 +1214,14 @@ export const LOCALES: Record<string, Locale> = {
       "This grant permits one robot. Spawn coordinates are operator configuration and are not sent to the Agent.": "This grant permits one robot. Spawn coordinates are operator configuration and are not sent to the Agent.",
       "Choose a template and enter a finite spawn pose.": "Choose a template and enter a finite spawn pose.",
       "Refresh": "Refresh",
-      "Status": "Status"
+      "Status": "Status",
+      "Connecting a device may energize its motors. Continue?": "Connecting a device may energize its motors. Continue?",
+      "Connect registered device": "Connect registered device",
+      "Disconnect device": "Disconnect device",
+      "Robot observation": "Robot observation",
+      "Observation does not grant motion control.": "Observation does not grant motion control.",
+      "Frame": "Frame",
+      "Offline": "Offline"
     }
   },
   "zh": {
@@ -2412,7 +2419,14 @@ export const LOCALES: Record<string, Locale> = {
       "This grant permits one robot. Spawn coordinates are operator configuration and are not sent to the Agent.": "此授权允许申请一台机器人。出生坐标属于操作者配置，不会发送给 Agent。",
       "Choose a template and enter a finite spawn pose.": "请选择模板并填写有效的出生位置与朝向。",
       "Refresh": "刷新",
-      "Status": "状态"
+      "Status": "状态",
+      "Connecting a device may energize its motors. Continue?": "连接设备可能使电机上电。是否继续？",
+      "Connect registered device": "连接已登记设备",
+      "Disconnect device": "断开设备",
+      "Robot observation": "机器人观测",
+      "Observation does not grant motion control.": "查看观测不会授予运动控制权。",
+      "Frame": "帧",
+      "Offline": "离线"
     }
   }
 };

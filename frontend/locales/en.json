@@ -1193,6 +1193,13 @@
     "This grant permits one robot. Spawn coordinates are operator configuration and are not sent to the Agent.": "This grant permits one robot. Spawn coordinates are operator configuration and are not sent to the Agent.",
     "Choose a template and enter a finite spawn pose.": "Choose a template and enter a finite spawn pose.",
     "Refresh": "Refresh",
-    "Status": "Status"
+    "Status": "Status",
+    "Connecting a device may energize its motors. Continue?": "Connecting a device may energize its motors. Continue?",
+    "Connect registered device": "Connect registered device",
+    "Disconnect device": "Disconnect device",
+    "Robot observation": "Robot observation",
+    "Observation does not grant motion control.": "Observation does not grant motion control.",
+    "Frame": "Frame",
+    "Offline": "Offline"
   }
 }

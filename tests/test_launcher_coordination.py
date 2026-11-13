@@ -8,6 +8,7 @@ import httpx
 import pytest
 
 from nerv import config, paths
+from nerv.paths import node_coordination_dir
 from nerv.platform.launcher import Launcher, NodeHandle
 
 
@@ -101,10 +102,10 @@ def test_dead_child_cannot_be_replaced_by_foreign_health(launchers, monkeypatch)
 
 
 def test_coordination_path_is_independent_of_channel_home(monkeypatch):
-    before = paths.node_coordination_dir()
+    before = node_coordination_dir()
     monkeypatch.setenv('NERV_HOME', '/different/channel')
     monkeypatch.setattr(paths, 'NERV_HOME', '/another/channel')
-    assert paths.node_coordination_dir() == before
+    assert node_coordination_dir() == before
 
 
 def test_all_local_node_health_routes_report_launch_identity(monkeypatch):

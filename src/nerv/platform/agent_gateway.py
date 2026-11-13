@@ -298,7 +298,9 @@ class AgentGateway:
             caps = robot.capabilities()
             return {"actions": [{"name": op.name, "kind": op.kind, "description": op.description,
                                   "parameters": op.parameters} for op in caps.operations],
-                    "sensors": caps.sensors, "external_supervision": (caps.config or {}).get("external_supervision"),
+                    "sensors": caps.sensors, "prepare_state":caps.prepare_state,
+                    "manifest_revision":caps.manifest_revision, "runtime_epoch":caps.runtime_epoch,
+                    "external_supervision": (caps.config or {}).get("external_supervision"),
                     "control": self.control(pid)}
         if operation == "observe":
             control_generation = self.control(pid).get('control_generation')

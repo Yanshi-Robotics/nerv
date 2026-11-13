@@ -174,6 +174,23 @@ def router(get_hub):
     def robots_list():
         return services(get_hub())[1].resources.list()
 
+    @api.get('/api/robot-instances/{rid}/observation')
+    def resource_observation(rid: str, request: Request):
+        operator(request)
+        core = services(get_hub())[1]
+        resource = call(core.resources.get, rid)
+        return call(core._read_resource, resource['project_id'], 'observe')
+
+    @api.post('/api/projects/{pid}/runtime/connect')
+    def device_connect(pid: str, request: Request):
+        operator(request)
+        return call(services(get_hub())[1].attachments.connect, pid, operator=True)
+
+    @api.post('/api/robot-instances/{rid}/disconnect')
+    def device_disconnect(rid: str, request: Request):
+        operator(request)
+        return call(services(get_hub())[1].attachments.disconnect, rid, operator=True)
+
     @api.post('/api/robot-instances/{rid}/remove')
     def robot_remove(rid: str, request: Request):
         operator(request)

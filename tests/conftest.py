@@ -31,13 +31,17 @@ def serve(app, port: int):
 
 
 @pytest.fixture(autouse=True)
-def _isolated_data(tmp_path, monkeypatch):
+def _isolated_data(tmp_path, tmp_path_factory, monkeypatch):
     monkeypatch.delenv("NERV_STORAGE_HOME", raising=False)
     monkeypatch.setenv("NERV_HOME", str(tmp_path / "home"))
     monkeypatch.setenv("NERV_TRUST_ALL", "1")
     monkeypatch.setenv("NERV_SESSION_ROOT", str(tmp_path / "sessions"))
     from nerv import paths
     from nerv.platform.session import log
+    # Tests share a suite-local allocation mutex, never the installed Host's
+    # user-home lock. The production path stays shared across all channels.
+    monkeypatch.setattr(paths, "node_coordination_dir",
+                        lambda: str(tmp_path_factory.getbasetemp() / "coordination"))
     monkeypatch.setattr(paths, "NERV_HOME", str(tmp_path / "home"))
     monkeypatch.setattr(paths, "DATA_ROOT", str(tmp_path))
     monkeypatch.setattr(paths, "CACHE_DIR", str(tmp_path / "cache"))

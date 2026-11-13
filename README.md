@@ -67,11 +67,13 @@ Installed candidate: an unarmed SO-101 simulation Run with an observation-only M
 
 ## Projects, runs and task history
 
-A Project is the saved configuration: robot, environment, execution structure, layout and revisions. A Run is one instance of that world or device workspace. A Task is a goal with frozen configuration and authority. An Execution is one policy or bounded action within that task.
+A Project is the saved configuration: robot, environment, execution structure, layout and revisions. A Run records one execution period against an existing Robot, Brain and World or device attachment. Those resources have independent lifetimes. A Task is a goal with frozen configuration and authority. An Execution is one policy or bounded action within that task.
 
 <div align="center"><img src="assets/readme/diagrams/en/lifecycle-091.svg" alt="Project contains current and historical runs; a task in a run can contain multiple executions" width="960"></div>
 
 Reopening a project restores configuration and history and can reattach to a valid active instance. Host restart interrupts old work and clears motion authority. It does not replay actions. New project revisions apply to future runs/tasks; current tasks keep their locked references. Official weights and assets are referenced rather than copied into every project.
+
+A registered device is connected separately before starting its Run. Ending a Run preserves the attachment; disconnecting it is an explicit operator action. Resources can provide observations without an active Run, and viewing them grants no motion authority. The device lifecycle has been checked with inert adapters only; physical validation remains pending.
 
 The 0.9 migration preserves robot sessions as projects and historical runs. Plain chat remains a read-only archive rather than becoming a fictitious robot project. Migration snapshots and idempotent records support recovery; use the candidate's recovery instructions before rolling an older binary back over its data.
 

@@ -91,6 +91,9 @@ def test_invalid_distance_and_angle_never_dispatch(argument, verb, field):
 
 def test_observation_has_sensor_feedback_not_world_truth():
     body = QuadrupedBody.__new__(QuadrupedBody)
+    body.loco = dict(DEFAULT_LOCOMOTION)
+    body._stop_evidence = body._new_stop_evidence()
+    body._hold_pending = None
     body.bus = SimpleNamespace(read=lambda: BusState(1, [], [], odom_xy=[20, 30], odom_yaw=.2))
     body._yaw0 = 0
     body._clearances = lambda: {'front': 1.0}
@@ -104,6 +107,7 @@ def test_observation_has_sensor_feedback_not_world_truth():
     assert state['heading_deg'] == 11.5 and state['last_action'] == 'stopped'
     assert not {'odom_xy', 'x', 'y', 'room', 'room_label'}.intersection(state)
     assert images == []
+    assert state['stop_evidence']['stop_confirmed'] is False
 
 
 def test_complete_policy_still_requires_quadruped_stop_profile(tmp_path):

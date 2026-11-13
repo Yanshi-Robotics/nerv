@@ -2,7 +2,7 @@ import type { SessionSummary } from './api';
 const BASE = process.env.NEXT_PUBLIC_API ?? 'http://localhost:8170';
 export type ProjectLayout = { primary?: string; hidden?: string[]; monitorSize?: string; dock?: string };
 export type ProjectRun = { brain_instance_id?: string; robot_instance_id?: string; world_instance_id?: string; client_id?: string; shared_world?: boolean; id: string; session_id: string; status: string; created_at?: number | string; reason?: string };
-export type RobotResource = { robot_instance_id:string; brain_instance_id:string; world_instance_id:string; project_id:string; status:string; client_id?:string; shared_world:boolean };
+export type RobotResource = { robot_instance_id:string; brain_instance_id:string; world_instance_id:string|null; project_id:string; status:string; client_id?:string; shared_world:boolean };
 export type WorldInstance = {world_instance_id:string; world:string; robot_profile:string; status:string; generation:number; topology_revision:number; topology_policy?:{allow_agent_changes?:boolean}; roster:{robot_instance_id:string;project_id:string;project_name?:string}[]};
 export type Project = { resource?:RobotResource|null; id: string; name: string; mode: 'sim'|'real'; robot: string; world?: string|null; execution: string; scheme?: string; revision: number; created_at: number | string; updated_at?: number | string; last_opened_at?: number | string; view_layout?: ProjectLayout; active_run?: ProjectRun|null; readiness?: {ready: boolean; reasons?: string[]} };
 export type ProjectDetail = { project: Project; runs: ProjectRun[]; active_run: ProjectRun|null; readiness?: {ready: boolean; issues: {code: string; reason?: string; destination: string}[]} };

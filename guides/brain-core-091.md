@@ -14,13 +14,15 @@ World, Robot and canonical Brain identities are stored independently of Runs. Th
 
 After `brain_attach`, MCP announces a changed tool list and scopes control to that Brain. `brain_get` describes identity, Run, resource and control state. `control_acquire` requires an existing operator pregrant and a fresh observation; `control_release` revokes ownership and requests stopping. Multiple authorized observers may connect, but one Agent owns motion. Observer disconnect does not revoke another connection's control. Reconnection restores reading only. Runtime checks local control deadlines independently of transport heartbeat.
 
+Observations and capability readiness are readable without a Run. Such reads carry resource identities and Runtime generation, but no motion receipt or authority. A changed Runtime epoch or a concurrent topology/resource change rejects the read. The console can display these resource observations and has separate device connection controls.
+
 ## Dynamic shared World
 
 The source compiler creates namespaced robot trees in one MuJoCo model/data pair. A topology transaction quiesces members under the operator policy, pauses physical advancement, builds a separate candidate, migrates named joint and scene state, reconstructs mappings and publishes a new revision. Missing or stale topology revisions cannot drive actuators after a change. Input assets and third-party robot files are not edited.
 
 A failed candidate compile preserves the prior physical objects. Once a topology has committed, Runtime preparation failure is explicitly recovery-required; operator stop/restart is required. This is not a claim of transparent rollback. Activation, equality, mocap and plugin states are rejected by the current migration implementation rather than silently lost.
 
-Ending a shared Run keeps the Robot, Brain and World. Entity removal is separate and requires the Run to end. Host restart retains identities but interrupts attachments and motion authority. An explicit operator World restart changes generation/epoch; it does not restore tasks or motion. The complete multi-device mock attachment contract remains unfinished.
+Ending a shared Run keeps the Robot, Brain and World. Entity removal is separate and requires the Run to end. Host restart retains identities but interrupts attachments and motion authority. An explicit operator World restart changes generation/epoch; it does not restore tasks or motion. Registered devices use separate operator connect/disconnect operations. Ending a device Run retains its Runtime attachment; disconnecting A does not close B or a simulation World. Inert-adapter regressions cover this lifecycle, failed preparation and restart invalidation. They do not establish real-device support. After a restart, reconnect is explicit and no motion is replayed.
 
 ## Completion qualification status
 

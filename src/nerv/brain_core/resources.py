@@ -21,7 +21,10 @@ class RobotResources:
         with self.lock:
             for resource in self.list():
                 if resource['status'] in {'ready', 'preparing'}:
-                    self.save(dict(resource, status='offline', reason='Host restarted; attachment requires recovery'))
+                    attachment = dict(resource.get('runtime_attachment') or {})
+                    if attachment:
+                        attachment['status'] = 'offline'
+                    self.save(dict(resource, status='offline', runtime_attachment=attachment, reason='Host restarted; attachment requires recovery'))
             for project in projects.store.list():
                 if self.for_project(project['id']) is not None:
                     continue
@@ -54,7 +57,7 @@ class RobotResources:
                 value = dict(project_id=project['id'], mode=project['mode'],
                              robot_instance_id='robot_' + uuid.uuid4().hex,
                              brain_instance_id='brain_' + uuid.uuid4().hex,
-                             world_instance_id='world_' + uuid.uuid4().hex,
+                             world_instance_id=('world_' + uuid.uuid4().hex) if project['mode'] == 'sim' else None,
                              binding_generation=1, client_id=client_id,
                              status='allocated', shared_world=False, created_at=time.time())
             elif value['client_id'] != client_id:

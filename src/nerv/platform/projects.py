@@ -334,7 +334,12 @@ class ProjectService:
                 return {"run": current, "session": session.summary()}
             if project["mode"] == "real" and not operator:
                 raise ValueError("A person must connect the real robot in NERV")
-            if not self.worlds.for_run(current) and any(self.active_run(p["id"]) for p in self.store.list() if p["id"] != project_id):
+            attached_device = project['mode'] == 'real' and hasattr(self, 'attachments')
+            if attached_device:
+                resource = self.resources.for_project(project_id)
+                if not resource or resource['status'] != 'ready':
+                    raise ValueError('Connect the registered device before starting its Run')
+            if not attached_device and not self.worlds.for_run(current) and any(self.active_run(p["id"]) for p in self.store.list() if p["id"] != project_id):
                 raise ValueError("End the active world before starting another project")
             if current and current["project_revision"] != project["revision"]:
                 raise ValueError("Project changed after Brain allocation; end the reserved Run")
@@ -354,7 +359,7 @@ class ProjectService:
             run["status"] = "starting"
             self.store.save_run(project_id, run)
             try:
-                session = self.worlds.attach(run) if self.worlds.for_run(run) else self.hub.new_session("operator", project["robot"], project["world"] or None,
+                session = self.attachments.attach_run(run) if attached_device else self.worlds.attach(run) if self.worlds.for_run(run) else self.hub.new_session("operator", project["robot"], project["world"] or None,
                     project["sensors"], [], project["mode"], project["world_configuration"], operator_workspace=True,
                     project_id=project_id, run_id=run["id"], project_revision=project["revision"])
                 bound_session = self.hub.store.get(session["id"])
@@ -419,10 +424,10 @@ class ProjectService:
                 result = self.hub.tasks.cancel(session.id, reason="Project run ended")
                 if not result.get("ok"):
                     raise ValueError("Stop has not been confirmed")
-                if run.get("shared_world"):
+                if run.get("shared_world") or run.get("runtime_attachment_id"):
                     disarmed = self.hub.arm(session.id, False)
                     if not disarmed.get('ok'):
-                        raise ValueError('Shared robot disarm was not confirmed')
+                        raise ValueError('Robot disarm was not confirmed')
                     self.hub.store.set_status(session.id, "frozen")
                     # Runtime remains in supervised hold; shared physics stays alive.
                 elif session.mode == "sim":
