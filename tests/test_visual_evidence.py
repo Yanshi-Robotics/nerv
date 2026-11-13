@@ -47,14 +47,23 @@ def test_original_acquisition_is_bound_without_inventing_a_view(retained):
 def test_changed_bytes_or_mixed_originals_are_rejected(retained,fault,tmp_path):
     protocol,identity,image,event,observation=retained
     frame=observation['state']['image_frames']['camera:head']
-    if fault=='bytes':image.write_bytes(b'changed')
-    if fault=='world':frame['world_instance_id']='other'
-    if fault=='topology':frame['topology_revision']=4
-    if fault=='run':observation['run_id']='other'
-    if fault=='missing_metadata':frame['source_metadata_available']=False
+    if fault=='bytes':
+        image.write_bytes(b'changed')
+    if fault=='world':
+        frame['world_instance_id']='other'
+    if fault=='topology':
+        frame['topology_revision']=4
+    if fault=='run':
+        observation['run_id']='other'
+    if fault=='missing_metadata':
+        frame['source_metadata_available']=False
     if fault=='outside':
-        other=tmp_path/'other';other.mkdir();outside=other/'image.png';outside.write_bytes(image.read_bytes())
+        other=tmp_path/'other'
+        other.mkdir()
+        outside=other/'image.png'
+        outside.write_bytes(image.read_bytes())
         event['result']['content'][-1]['path']=str(outside)
     event['result']['content'][0]['text']=json.dumps(observation)
     protocol.write_text(json.dumps(event)+'\n'+(json.dumps(event)+'\n' if fault=='duplicate' else ''))
-    with pytest.raises(ValueError):review(retained)
+    with pytest.raises(ValueError):
+        review(retained)
