@@ -8,6 +8,8 @@
 
 NERV 0.9.1 introduces **Brain Core**, the internal identity and control module used by external Agents. It ships with NERV and contains no AI Agent, model provider, prompt loop or model credential manager. External Agents own reasoning and context; Runtime owns device drivers, ACT and gait policies, high-frequency control and stopping. Despite the version number, this is an architecture and compatibility change.
 
+G1 sensor observations distinguish point rays from full-body braking clearance and include robot-local joint/IMU validity and capture-time camera calibration. They provide no World position, map or destination coordinates; see the [MCP sensor contract](guides/mcp.md).
+
 [Connect an Agent](guides/mcp.md) · [Architecture](guides/architecture.md) · [SO-101 setup](guides/so101-setup.md) · [Assets](guides/assets.md) · [Roadmap](ROADMAP.md)
 
 This checkout is a **0.9.1 development checkout**, not a published release. The commands below install the latest public release; they do not fetch unpublished changes. Candidate 08 passed its Linux CPU software and installation checks, but its fixed shared-world two-G1 trial achieved 0/6 independently scored navigation successes, with three false arrival claims and no falls. Navigation qualification and physical SO-101 trials remain incomplete. See the [candidate findings](guides/brain-core-091.md#installed-candidate-findings). Go2 motion is blocked until a complete, verifiable deployment contract is available.

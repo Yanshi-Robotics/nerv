@@ -310,6 +310,7 @@ class WorldSim:
         self._ray_mask: np.ndarray | None = None
         self._ray_gid = np.zeros(1, np.int32)
         self._imu_acc = np.zeros(3)
+        self._imu_sample_time = None
         self._prev_base_v = np.zeros(3)
 
         self._camera_sequence = 0
@@ -406,6 +407,7 @@ class WorldSim:
         self._prev_base_v = v
         R = _rot_of(self.data.qpos[self.free_qadr + 3:self.free_qadr + 7])
         self._imu_acc = R.T @ (acc_w - np.asarray(self.model.opt.gravity))
+        self._imu_sample_time = float(self.data.time)
 
     # ---- spawn / reset -------------------------------------------------------------------------------------
     def _joint_to_actuator(self) -> dict[int, int]:
@@ -551,6 +553,7 @@ class WorldSim:
         self.targets = np.array(self.default_pos)
         self._prev_base_v[:] = 0.0
         self._imu_acc[:] = 0.0
+        self._imu_sample_time = None
         if self.pd_mode == PD_POSITION_ACTUATOR:
             self.data.ctrl[self.act_id] = self.targets
         mujoco.mj_forward(self.model, self.data)
@@ -623,6 +626,7 @@ class WorldSim:
                                    "joint_pos": d.qpos[self.qadr].tolist(),
                                    "joint_vel": d.qvel[self.dadr].tolist(), "extra": {}}
             if self.has_free_base:
+                out['extra']['imu_specific_force_sample_sim_time'] = self._imu_sample_time
                 xyz, quat, yaw = self._base_pose()
                 a = self.free_dadr
                 out.update({"imu_quat": quat.tolist(),
@@ -712,6 +716,10 @@ class WorldSim:
                                 robot_instance_id=getattr(self, 'robot_instance_id', None),
                                 world_instance_id=getattr(owner, 'world_instance_id', None),
                                 topology_revision=getattr(owner, 'topology_revision', None))
+                cid = mujoco.mj_name2id(self.model, mujoco.mjtObj.mjOBJ_CAMERA, cam)
+                from .camera_metadata import calibration
+                metadata['calibration'] = calibration(self.model, self.data, self.base_body, cid,
+                                                      self.render._w, self.render._h)
             return renderer.render().copy(), metadata
         return self.render.run(job)
 

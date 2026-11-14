@@ -1,5 +1,6 @@
 """Actual MuJoCo rays on physical geometry, with no renderer or listening port."""
 import threading
+import math
 from types import SimpleNamespace
 
 import mujoco
@@ -39,6 +40,20 @@ def test_flat_ground_and_self_visual_exclusion():
         assert result["turn_clear"]
     assert np.array_equal(model.geom_group, groups)
     assert np.array_equal(model.geom_rgba, rgba)
+
+
+def test_public_body_envelope_is_robot_local_after_global_rigid_motion():
+    _, data, scanner = scene()
+    first = scanner.measure(data, QUERY)
+    data.qpos[:2] = [200., -300.]
+    angle = 1.1
+    data.qpos[3:7] = [math.cos(angle/2), 0, 0, math.sin(angle/2)]
+    data.time = 12.
+    mujoco.mj_forward(scanner.model, data)
+    moved = scanner.measure(data, QUERY)
+    assert np.allclose(first['own_body_bounds_m'], moved['own_body_bounds_m'])
+    assert moved['sample_sim_time'] == 12.
+    assert moved['frame'] == 'base_yaw_gravity_aligned'
 
 
 @pytest.mark.parametrize("height", [.08, .28, .60, .95, 1.2])

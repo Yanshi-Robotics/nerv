@@ -93,7 +93,8 @@ def test_standing_qualification_binds_profile_code_and_actual_world_timing(tmp_p
         implementation_sha256={name: hashlib.sha256((root/name).read_bytes()).hexdigest()
             for name in ['body/balance.py', 'body/families/humanoid.py', 'body/stopping.py',
                          'body/bus_zmq.py', 'runtime/builtin.py', 'world/mujoco_node.py',
-                         'world/composition.py', 'world/bus_server.py']},
+                         'world/composition.py', 'world/bus_server.py', 'world/clearance.py',
+                         'body/sensor_state.py', 'world/camera_metadata.py']},
         dependency_versions={name:importlib.metadata.version(name) for name in ['mujoco','numpy','onnxruntime']})
     assert value.skill_transition_config()['validated']
     config['locomotion']['walk_speed'] = .7

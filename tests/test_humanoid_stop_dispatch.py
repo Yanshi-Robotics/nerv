@@ -20,7 +20,7 @@ def test_inference_started_before_hold_cannot_overwrite_latched_targets():
     body._held, body._hold_pending, body._hold_reason = False, None, ""
     body._hold_targets, body._last_targets = [], [0.0]
     body._last = "fixture"
-    body._yaw0, body._state, body._running = None, state, True
+    body._heading_reference, body._state, body._running = ('fixture', None, None), state, True
     body._fallen = lambda _: False
     body._observation = lambda *_: (np.zeros(1), None)
     body._set_command = lambda *_: None

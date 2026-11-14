@@ -94,7 +94,8 @@ class BuiltinRuntime:
             implementation = value['implementation_sha256']
             required = {'body/balance.py', 'body/families/humanoid.py', 'body/stopping.py',
                         'body/bus_zmq.py', 'runtime/builtin.py', 'world/mujoco_node.py',
-                        'world/composition.py', 'world/bus_server.py'}
+                        'world/composition.py', 'world/bus_server.py', 'world/clearance.py',
+                        'body/sensor_state.py', 'world/camera_metadata.py'}
             dependencies = value['dependency_versions']
             if (set(dependencies) != {'mujoco','numpy','onnxruntime'} or any(
                     importlib.metadata.version(name) != version for name,version in dependencies.items())):

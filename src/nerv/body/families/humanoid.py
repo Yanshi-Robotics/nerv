@@ -35,6 +35,7 @@ import time
 from collections import deque
 from dataclasses import dataclass, field
 from pathlib import Path
+from uuid import uuid4
 
 import numpy as np
 
@@ -223,6 +224,7 @@ class VelocityPolicyBody:
         self.loco = dict(DEFAULT_LOCOMOTION)
         self.loco.update(self._locomotion_knobs(spec))
         self.sensors = [s["name"] if isinstance(s, dict) else str(s) for s in spec.get("sensors", [])]
+        self._sensor_source = 'simulation_physics_derived' if spec.get('_simulation_assets_root') else 'robot_bus'
         self._cam_map = {(s["name"] if isinstance(s, dict) else str(s)):
                          (s.get("camera", "") if isinstance(s, dict) else "") for s in spec.get("sensors", [])}
 
@@ -276,7 +278,8 @@ class VelocityPolicyBody:
             self._balance = StandingBalance(spec['_simulation_assets_root'], self.policy, balance_settings,
                                             physics_dt=info['dt'])
         self._state: BusState | None = None     # last bus read, for observe/status
-        self._yaw0: float | None = None         # heading reference: where the body first stood
+        # Publish identity, origin and sample time together across policy/observe threads.
+        self._heading_reference = (uuid4().hex, None, None)
         self._last = "nothing yet"
         self._sim_dead = False
         self._policy_error = ""
@@ -376,7 +379,7 @@ class VelocityPolicyBody:
                 self._stop_evidence.update(st, fallen=self._fallen(st))
             if last_t is not None and st.t < last_t:          # the world was reset: start over
                 hist, prev_action, last_t = None, np.zeros(len(p.joint_names)), None
-                self._yaw0 = None
+                self._heading_reference = (uuid4().hex, None, None)
                 if getattr(self, '_balance', None) is not None:
                     self._balance.reset()
                 self._release(after_reset=True)                # back at the spawn pose: nothing to hold
@@ -391,8 +394,9 @@ class VelocityPolicyBody:
             last_advance_wall = time.perf_counter()
             self._sim_dead = False
             self._state = st
-            if self._yaw0 is None:
-                self._yaw0 = float(st.odom_yaw)
+            reference = self._heading_reference
+            if reference[1] is None and math.isfinite(st.odom_yaw) and math.isfinite(st.t):
+                self._heading_reference = (reference[0], float(st.odom_yaw), float(st.t))
             if not self._held and self._fallen(st):
                 self._hold(HOLD_FALLEN, st)
             pend = self._hold_pending
@@ -835,14 +839,32 @@ class VelocityPolicyBody:
         ]
 
     def observe(self):
+        reference = self._heading_reference
         st = self.bus.read()
-        heading = math.degrees(_wrap(st.odom_yaw - (self._yaw0 if self._yaw0 is not None else st.odom_yaw)))
+        heading_valid = (reference[1] is not None and reference[2] is not None
+                         and all(math.isfinite(v) for v in (st.t, st.odom_yaw, reference[1], reference[2]))
+                         and st.t >= reference[2])
+        heading = math.degrees(_wrap(st.odom_yaw - reference[1])) if heading_valid else None
         state = {"clearance_m": self._clearances(), "front_cone_m": round(self._front_cone(), 2),
-                 "fallen": self._fallen(st), "heading_deg": round(heading, 1),
+                 "fallen": self._fallen(st), "heading_deg": round(heading, 1) if heading_valid else None,
                  "held": self._held, "hold_reason": self._hold_reason,
                  "last_action": self._last, "t": round(st.t, 3),
                  "topology_revision": st.extra.get('topology_revision'),
                  "stop_evidence": self._stop_snapshot()}
+        from ..sensor_state import proprioception
+        state['proprioception'] = proprioception(st, self.policy.joint_names, source=self._sensor_source)
+        state['heading_reference'] = {'valid':heading_valid, 'frame_id':reference[0],
+            'frame':'runtime_initial_base_heading', 'unit':'degree', 'sample_sim_time':float(st.t),
+            'reset_semantics':'new Runtime or simulation clock reset changes frame_id'}
+        state['range_semantics'] = {'frame':'base_yaw_gravity_aligned', 'forward':'+X', 'left':'+Y',
+            'positive_turn':'counterclockwise', 'clearance_m':'single_height_point_rays',
+            'front_cone_m':'minimum_single_height_point_ray; not full-body traversability'}
+        forward_reason, forward_space = self._motion_clearance('dist')
+        turn_reason, turn_space = self._motion_clearance('yaw')
+        state['motion_space'] = {'schema_revision':1, 'forward':{**forward_space, 'inhibit_reason':forward_reason},
+                                'turn':{**turn_space, 'inhibit_reason':turn_reason},
+                                'forward_brake_margin_m':float(self.loco['brake_margin_m']),
+                                'meaning':'sensor preflight only; execution rechecks, no destination claim'}
         if self._policy_error:
             state["policy_error"] = self._policy_error
         images = []
@@ -868,6 +890,11 @@ class VelocityPolicyBody:
                     'image_sha256': hashlib.sha256(data).hexdigest()}
             except Exception as e:      # a missing camera is reported, never faked
                 state.setdefault("sensor_errors", {})[name] = f"{type(e).__name__}: {e}"
+        if self._heading_reference is not reference:
+            state['heading_deg'] = None
+            state['heading_reference'].update(valid=False, reason='reference_changed_during_capture')
+        elif not heading_valid:
+            state['heading_reference']['reason'] = 'missing_or_invalid_heading_sample'
         return state, images
 
     def invoke(self, name: str, *, _progress=None, **args) -> dict:

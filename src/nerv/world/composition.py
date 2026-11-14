@@ -136,6 +136,7 @@ class RobotView(WorldSim):
         self.targets = np.array(self.default_pos)
         self._prev_base_v[:] = 0
         self._imu_acc[:] = 0
+        self._imu_sample_time = None
         mujoco.mj_forward(self.model, self.data)
 
     def spawn(self, msg):

@@ -95,7 +95,10 @@ def test_observation_has_sensor_feedback_not_world_truth():
     body._stop_evidence = body._new_stop_evidence()
     body._hold_pending = None
     body.bus = SimpleNamespace(read=lambda: BusState(1, [], [], odom_xy=[20, 30], odom_yaw=.2))
-    body._yaw0 = 0
+    body._heading_reference = ('fixture', 0., 0.)
+    body.policy = SimpleNamespace(joint_names=[])
+    body._sensor_source = 'robot_bus'
+    body._motion_clearance = lambda _:('', {})
     body._clearances = lambda: {'front': 1.0}
     body._front_cone = lambda: 1.0
     body._fallen = lambda _: False
@@ -129,7 +132,7 @@ def test_invalid_network_output_never_reaches_bus(output):
     body.bus = SimpleNamespace(read=lambda: state, write=lambda cmd: writes.append(cmd))
     body._hold_lock = threading.Lock()
     body._held, body._hold_pending = False, None
-    body._running, body._yaw0 = True, None
+    body._running, body._heading_reference = True, ('fixture', None, None)
     body._fallen = lambda _: False
     body._observation = lambda *_: (np.zeros(1), None)
     body.loco = {'sim_dead_wall_s': 1.}

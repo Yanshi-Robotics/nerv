@@ -140,7 +140,10 @@ class ClearanceScanner:
             return np.linspace(start, end, count)
 
         result = {"valid": True, "reason": "clear", "travel_clearance_m": horizon,
-                  "support_drop_m": 0.0, "support_rise_m": 0.0, "turn_clear": True}
+                  "support_drop_m": 0.0, "support_rise_m": 0.0, "turn_clear": True,
+                  "sample_sim_time":float(data.time), "frame":"base_yaw_gravity_aligned",
+                  "motion":mode, "lookahead_m":horizon,
+                  "own_body_bounds_m":[low.tolist(), high.tolist()], "envelope_margin_m":margin}
 
         def blocked(distance, reason):
             if distance <= result["travel_clearance_m"]:
