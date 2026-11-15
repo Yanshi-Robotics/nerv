@@ -376,6 +376,10 @@ def test_world_restart_refreshes_persistent_runtime_attachment_without_a_run(int
         spec.model_copy = lambda **kwargs: spec
         body = f.hub.registry.body(f.project['robot'])
         body.actuators, body.dir = {}, 'fixture'
+        from nerv.platform.registry.schema import SensorDecl
+        sensor = SensorDecl(name='camera:ground', camera='ground_down', simulation_mount=dict(
+            link='base', position_m=[.3,0,-.1], xyaxes=[0,-1,0,1,0,0], vertical_fov_deg=95))
+        body.sensors = [sensor]
         body.model_copy = lambda **kwargs: body
         handle = SimpleNamespace(meta={'epoch':'new-world', 'configuration':{}})
         runtime = SimpleNamespace(meta={'epoch':'new-runtime'})
@@ -384,6 +388,8 @@ def test_world_restart_refreshes_persistent_runtime_attachment_without_a_run(int
         f.launcher.ensure_runtime = Mock(return_value=runtime)
         monkeypatch.setattr(f.robot, 'health', lambda: {'epoch':'new-runtime'})
         restarted = worlds.prepare(world, restart=True)
+        request = f.launcher.ensure_shared_world.call_args.args[2]
+        assert request['body_profile']['sensors'] == [sensor.model_dump(mode='json')]
         assert restarted['generation'] == world['generation'] + 1
         current = core.resources.get(resource['robot_instance_id'])
         assert current['runtime_epoch'] == 'new-runtime' and current['status'] == 'ready'
