@@ -38,7 +38,7 @@ from mcp.server.lowlevel import Server
 from mcp.server.lowlevel.helper_types import ReadResourceContents
 from mcp.server.streamable_http_manager import StreamableHTTPSessionManager
 
-from .contracts import (CAPABILITIES_URI, CONFIG_URI, GUIDANCE_PROMPT, MUTATING_KINDS,
+from .contracts import (CAPABILITIES_URI, CONFIG_URI, CONTROL_META_KEY, CONTROL_TRANSPORT, GUIDANCE_PROMPT, MUTATING_KINDS,
                           NON_MUTATING_KINDS, OBSERVATION_URI)
 from .control import StopFlag
 
@@ -274,6 +274,18 @@ def build_app(node: BodyNode, cors_origins: list[str]) -> FastAPI:
     async def _call_tool(name, arguments):
         kwargs = dict(arguments or {})
         ctx = srv.request_context
+        # Control is transport metadata, never a provider's business argument.
+        # Leave its input schema intact so MCP still rejects invalid business
+        # input before dispatch, including additionalProperties:false.
+        if "_nerv_control" in kwargs:
+            raise ValueError("Runtime control belongs in MCP request metadata")
+        metadata = ctx.meta.model_dump(exclude_none=True) if ctx.meta else {}
+        if CONTROL_META_KEY in metadata:
+            control = metadata[CONTROL_META_KEY]
+            if (not isinstance(control, dict) or set(control) != {"token"}
+                    or not isinstance(control["token"], str) or not 1 <= len(control["token"]) <= 128):
+                raise ValueError("Invalid Runtime control metadata")
+            kwargs["_nerv_control"] = control["token"]
         token = ctx.meta.progressToken if ctx.meta else None
         session, req_id = ctx.session, ctx.request_id
 
@@ -363,6 +375,7 @@ def build_app(node: BodyNode, cors_origins: list[str]) -> FastAPI:
                 "armed": node.armed, "held": bool(impl.held), "epoch": node.epoch,
                 "prepare_state": node.prepare_state, "manifest_revision": node.manifest_revision,
                 "protocol_major": PROTOCOL_MAJOR, "protocol_minor": PROTOCOL_MINOR, "runtime_manifest": getattr(node, "manifest", {}),
+                "control_transport": CONTROL_TRANSPORT,
                 "supervision_sensors": impl.supervision_sensors() if hasattr(impl, "supervision_sensors") else []}
 
     @app.get("/status")

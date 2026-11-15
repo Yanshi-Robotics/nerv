@@ -128,12 +128,13 @@ def test_all_local_node_health_routes_report_launch_identity(monkeypatch):
 @pytest.mark.parametrize('failure', ['http', 'transport', 'json', 'refused', 'protocol'])
 def test_failed_runtime_preparation_is_actionable_and_stops_owned_child(launchers, monkeypatch, tmp_path, failure):
     from nerv.platform.registry.schema import BodySpec
-    from nerv_runtime_sdk.contracts import PROTOCOL_MAJOR
+    from nerv_runtime_sdk.contracts import CONTROL_TRANSPORT, PROTOCOL_MAJOR
     launcher, _ = launchers
     monkeypatch.setattr(paths, 'CACHE_DIR', str(tmp_path / 'cache'))
     monkeypatch.setattr(launcher, '_free_port', lambda: 1)
     body = BodySpec(name='fixture', family='fixture', buses={'sim': {'kind': 'zmq', 'verified': True, 'python': sys.executable}})
-    handle = NodeHandle('body', 'body:fixture', 'http://unused', meta={'protocol_major': PROTOCOL_MAJOR})
+    handle = NodeHandle('body', 'body:fixture', 'http://unused', meta={'protocol_major': PROTOCOL_MAJOR,
+        'control_transport': CONTROL_TRANSPORT})
     if failure == 'protocol':
         handle.meta = {}
     def spawn(*args, **kwargs):
@@ -162,3 +163,30 @@ def test_failed_runtime_preparation_is_actionable_and_stops_owned_child(launcher
     # The failure also relinquishes allocation ownership for the other Host.
     with launchers[1]._allocation_lock.acquire(timeout=0):
         pass
+
+
+@pytest.mark.parametrize('cached', [False, True])
+@pytest.mark.parametrize('failure', ['health', 'metadata'])
+def test_rejected_external_runtime_never_becomes_a_cached_handshake_bypass(launchers, monkeypatch, cached, failure):
+    from nerv.platform.registry.schema import BodySpec
+    from nerv_runtime_sdk.contracts import CONTROL_TRANSPORT, PROTOCOL_MAJOR
+    launcher, _ = launchers
+    body = BodySpec(name='external-fixture', family='fixture', buses={'real':{
+        'kind':'inert-network', 'verified':True, 'url':'http://external.invalid'}})
+    key = 'body:' + body.name
+    if cached:
+        launcher.nodes[key] = NodeHandle('body', key, 'http://external.invalid', attached=True,
+            meta={'protocol_major':PROTOCOL_MAJOR, 'control_transport':CONTROL_TRANSPORT})
+    checks, stops = [], []
+    def health(handle):
+        checks.append(handle)
+        if failure == 'health':
+            raise RuntimeError('Fixture health unavailable')
+        handle.meta = {'protocol_major':PROTOCOL_MAJOR}  # Real endpoint now has the old contract.
+    monkeypatch.setattr(launcher, '_wait_health', health)
+    monkeypatch.setattr(launcher, 'stop', lambda key:stops.append(key))
+    for _ in range(2):
+        with pytest.raises((RuntimeError, ValueError)):
+            launcher.ensure_runtime(body, 'real')
+        assert key not in launcher.nodes
+    assert len(checks) == 2 and not stops

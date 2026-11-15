@@ -100,9 +100,17 @@ For a preauthorized simulation allocation, the operator creates an empty World i
 
 Robot and Brain survive Run completion. Authorized observers may coexist; only one owner controls motion. A reconnect restores reading, never motion. Control acquisition requires current observation and confirmed stopping. Heartbeats neither acknowledge observations nor extend an old action deadline. Resource allocation/removal requires an unbound connection and an operator World policy; Agents cannot reset or stop the entire World.
 
-The previous reserved-Run flow remains a compatibility path. Current dynamic lifecycle code is under qualification; long-duration stable holding and installed-candidate rendezvous acceptance remain incomplete. See the [development findings](brain-core-091.md).
+The previous reserved-Run flow remains a compatibility path. Candidate 23 completed installed shared-world engineering and three independently scored paired rendezvous rounds. The later Runtime metadata repair requires a new fixed installed candidate and fresh trials; the complete version remains under qualification. See the [development findings](brain-core-091.md).
 
 
 After acquisition, check `ok` before any dependent request. A rejected acquisition must not be followed by `acknowledge`, `task_start` or `action`. Obtain a new observation to inspect the refusal; do not acknowledge an unseen image or recreate a task to bypass stopping. The bound owner may request ending its own standby simulation Run without motion ownership; the result still requires actual stop confirmation.
 
 An operator can close further Agent allocation/removal requests with `POST /api/world-instances/{id}/agent-topology`, supplying `allow_agent_changes: false` and the current `expected_topology_revision`. This permission change waits for an in-flight membership transaction and rejects a stale revision. Existing robot entities, observations and control leases remain intact. It is not an Agent MCP tool; formal rendezvous trials close this gate after both instances are ready.
+
+## Runtime adapter compatibility
+
+The current 0.9.1 revision requires Runtime protocol 3.1 and Runtime SDK 0.8.3. The supported MCP Python baseline remains 1.30.0; no MCP wire-version upgrade is involved. Host-to-Runtime `tools/call` uses `_meta["nerv/control"] = {"token": "<runtime grant>"}`. Tool `arguments` contain only business input and retain the provider's original JSON Schema, including strict and nested schemas. Providers receive no control metadata. The legacy `_nerv_control` tool argument and dual-source credentials are refused rather than used as fallback. Control metadata coexists with progress notifications and is excluded from ordinary invocation and progress logs.
+
+Runtime health advertises `control_transport: "mcp_request_meta"`; Host rejects an endpoint lacking this contract before preparation, including a cached attachment. Upgrade the adapter wrapper together with NERV. The bundled LeRobot adapter dependency revision is 0.8.4; this does not establish real-device qualification. External Agent tools and pairing credentials are unchanged.
+
+After Host recovery, the previous successful World probe is retained as `last_known_health`, while current health is unknown until a fresh attachment/probe establishes it. Persisted timestamps never restore a live or movement-authorized state.

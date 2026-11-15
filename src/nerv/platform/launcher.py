@@ -329,6 +329,16 @@ class Launcher:
         key = f"body:{body.name}"
         handle = self.nodes.get(key)
         if handle and handle.alive():
+            try:
+                if handle.attached:
+                    self._wait_health(handle)
+                self._runtime_protocol(handle)
+            except BaseException:
+                # An external endpoint is not ours to stop. Forget only this
+                # rejected attachment so a retry cannot bypass its handshake.
+                if handle.attached and self.nodes.get(key) is handle:
+                    self.nodes.pop(key)
+                raise
             return handle
         ep = body.buses[mode]
         if body.policy_error:
@@ -340,9 +350,9 @@ class Launcher:
         endpoint = ep.url or body.url
         if endpoint:
             handle = NodeHandle(kind="body", name=key, url=endpoint.rstrip("/"), attached=True)
-            self.nodes[key] = handle
             self._wait_health(handle)
             self._runtime_protocol(handle)
+            self.nodes[key] = handle
             return handle
         port = self._free_port()
         from nerv_runtime_sdk.contracts import RobotProfile, EnvironmentBinding
@@ -414,9 +424,11 @@ class Launcher:
 
     @staticmethod
     def _runtime_protocol(handle):
-        from nerv_runtime_sdk.contracts import PROTOCOL_MAJOR
+        from nerv_runtime_sdk.contracts import CONTROL_TRANSPORT, PROTOCOL_MAJOR
         if handle.meta.get("protocol_major") != PROTOCOL_MAJOR:
             raise ValueError("incompatible or undeclared runtime protocol; refusing preparation")
+        if handle.meta.get("control_transport") != CONTROL_TRANSPORT:
+            raise ValueError("Runtime lacks MCP control request metadata; update its SDK or adapter before preparation")
 
     @_serialized_launch
     def ensure_tool(self, tool: ToolNodeSpec) -> NodeHandle:

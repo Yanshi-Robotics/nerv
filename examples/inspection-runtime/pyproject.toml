@@ -6,7 +6,7 @@ build-backend = "setuptools.build_meta"
 name = "nerv-inspection-example"
 version = "0.1.0"
 requires-python = ">=3.11"
-dependencies = ["nerv-runtime-sdk>=0.6.2,<0.7"]
+dependencies = ["nerv-runtime-sdk>=0.8.3,<0.9"]
 
 [project.entry-points."nerv.runtime_providers"]
 inspection = "nerv_inspection_example:Provider"

@@ -1,6 +1,6 @@
 # Inspection runtime example
 
-This independently installable provider demonstrates protocol 2 discovery and lifecycle
+This independently installable provider demonstrates protocol 3.1 discovery and lifecycle
 without connecting hardware, loading a model, or pretending to execute a robot task.
 Install the SDK and this example in the adapter's environment, from the NERV checkout:
 

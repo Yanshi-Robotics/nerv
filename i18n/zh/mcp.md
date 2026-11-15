@@ -100,7 +100,7 @@ G1 观测还提供本机传感器契约。`state.proprioception` 包含具名关
 
 Robot 与 Brain 跨 Run 保留。授权观察者可以并存，每台机器人只有一个运动控制者。重连只恢复读取，运动需要当前观测和已确认停止；心跳不会确认图像或延长旧动作期限。实例申请与移除属于未绑定资源入口，必须符合操作者 World policy；Agent 不能重置或停止整个世界。
 
-旧的 Run 预留流程仍作为兼容路径。当前动态生命周期源码尚在验证，长期稳定保持、安装候选及独立会合验收尚未完成，见[开发说明](brain-core-091.md)。
+旧的 Run 预留流程仍作为兼容路径。候选 23 已完成安装后的共享世界工程和三轮独立会合验收；后续 Runtime 元数据修复需要新固定安装候选及全新试验，整个版本仍在验证，见[开发说明](brain-core-091.md)。
 
 实例申请与移除立即返回操作 ID；用 `operation_get` 轮询直至完成、失败或中断。同一身份和请求 ID 的重试返回已有操作。Host 重启不重放未完成申请；失败操作保留已分配身份供恢复检查。
 
@@ -108,3 +108,11 @@ Robot 与 Brain 跨 Run 保留。授权观察者可以并存，每台机器人�
 申请控制后先检查 `ok`，再执行后续请求。申请被拒后，不继续调用 `acknowledge`、`task_start` 或 `action`；可取得新观测核对状态，不能确认未看过的图像，也不能重建任务绕过停止检查。绑定所有者可以在尚无运动权时请求结束自己的待命仿真 Run，但结果仍须实际停止确认。
 
 操作者可通过 `POST /api/world-instances/{id}/agent-topology` 关闭后续 Agent 增删实例请求，提交 `allow_agent_changes: false` 和当前 `expected_topology_revision`。权限变更会等待正在执行的成员事务，并拒绝过期修订；现有机器人实体、观测和控制租约保持有效。这不是 Agent MCP 工具。正式会合试验在双方实例准备完成后关闭该权限。
+
+## Runtime 适配器兼容性
+
+当前 0.9.1 修订要求 Runtime 协议 3.1 与 Runtime SDK 0.8.3。MCP Python 支持基线仍为已使用的 1.30.0，不升级 MCP 线协议。Host→Runtime 的 `tools/call` 通过 `_meta["nerv/control"] = {"token": "<Runtime 授权凭据>"}` 传递控制凭据；工具 `arguments` 只包含业务参数，保留 provider 原有的严格及嵌套 JSON Schema。provider 不接收控制元数据。旧 `_nerv_control` 工具参数和双来源凭据会被拒绝，不作为回退；控制元数据可与进度通知并存，不进入普通调用及进度日志。
+
+Runtime 健康接口声明 `control_transport: "mcp_request_meta"`。Host 在准备设备前拒绝不支持该契约的端点，缓存的连接也须验证。适配器包装层应随 NERV 一起升级；随包 LeRobot 适配器依赖修订为 0.8.4，不表示已完成真机资格验证。外部 Agent 工具和配对凭据保持原契约。
+
+Host 恢复后，旧的成功 World 探测保留为 `last_known_health`，当前健康先标为未知，只有新的连接和探测才能确认；磁盘时间戳不会恢复在线状态或运动授权。

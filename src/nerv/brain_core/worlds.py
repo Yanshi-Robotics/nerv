@@ -45,8 +45,14 @@ class WorldInstances:
         # No process resurrection or movement after Host recovery.
         for path in self.root.glob('world_*.json'):
             value = json.loads(path.read_text())
-            if value['status'] in {'preparing', 'ready', 'changing'}:
+            was_active = value['status'] in {'preparing', 'ready', 'changing'}
+            if was_active:
                 value.update(status='interrupted', reason='Host restarted; operator restart required')
+            if was_active or value.get('health', {}).get('state') == 'healthy':
+                if value.get('health'):
+                    value['last_known_health'] = value['health']
+                value['health'] = dict(state='unknown', reason='host_restarted', observed_at=None,
+                    process_alive=None, expected_epoch=value.get('epoch'), observed_epoch=None)
                 _write(path, value)
 
     def get(self, wid):

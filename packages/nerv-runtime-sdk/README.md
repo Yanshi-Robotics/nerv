@@ -3,7 +3,7 @@
 The SDK runs in the adapter's Python environment. NERV Host does not import vendor SDKs,
 PyTorch or device objects. Non-Python adapters can serve the equivalent HTTP/MCP protocol.
 
-Protocol **3.0** separates `robot_actions` from Agent auxiliary tools. A `RuntimeProvider`
+Protocol **3.1** separates `robot_actions` from Agent auxiliary tools. A `RuntimeProvider`
 registers under the `nerv.runtime_providers` Python entry-point group. `describe()` returns
 identity, version, configuration schema and source fingerprints without touching devices.
 The worker checks protocol compatibility before calling `create()` or preparing a device.
@@ -39,8 +39,11 @@ capability metadata. Its capability resource contains `robot_actions`, not a mix
   capture, ACT execution and local supervision.
 - [Contracts](src/nerv_runtime_sdk/contracts.py) and [dispatch authority](src/nerv_runtime_sdk/control.py).
 
-A protocol check is not a physical acceptance test. Existing protocol 1 and 2 workers must be
-upgraded; the host does not silently downgrade to the mixed capability contract.
+A protocol check is not a physical acceptance test. The Host requires protocol major 3
+and the `control_transport: "mcp_request_meta"` health capability, including on cached
+attachments. Workers from protocols 1, 2 and 3.0 need an adapter upgrade; the Host refuses
+incompatible workers before preparation. SDK 0.8.3 implements this contract. Non-Python
+adapters can implement the equivalent protocol without installing the Python SDK.
 
 ## Optional provider management and policy backends
 
@@ -61,6 +64,14 @@ while an earlier execution remains active. Every motion call needs the current t
 an allowed action. Expiry and stop revoke dispatch; late responses cannot renew their own
 observation or authority. `POST /stop` accepts `expected_control` to prevent an old task
 from stopping a newer one. Operator emergency stop remains unscoped.
+
+The Host sends the action's control token in MCP request metadata:
+`_meta["nerv/control"] = {"token": "<runtime grant>"}`. Business arguments remain subject
+to their declared JSON Schema, including `additionalProperties: false`. The SDK extracts
+this metadata before provider dispatch; providers do not receive it as a business argument.
+Legacy `_nerv_control` arguments and ambiguous dual-source requests are rejected. Progress
+metadata remains available alongside the control envelope. Control credentials must not
+appear in ordinary call summaries, results or progress logs.
 
 Workers must preserve this check inside asynchronous actuator loops through the supplied
 control guard. Protocol version equality alone is not proof of a third-party driver's

@@ -16,6 +16,7 @@ from typing import Any, Callable, Optional
 
 import httpx
 from pydantic import AnyUrl
+from nerv_runtime_sdk.contracts import CONTROL_META_KEY
 
 from .. import config
 from ..nerve.body import (CAPABILITIES_URI, CONFIG_URI, GUIDANCE_PROMPT, KIND_PRIMITIVE,
@@ -146,12 +147,19 @@ class _McpNode:
     # -- invoke ---------------------------------------------------------------------------
     def invoke(self, name: str, *, _on_progress: Optional[Callable] = None,
                _should_abort: Optional[Callable[[], bool]] = None, _control_token: str | None = None, **kwargs: Any) -> ActionResult:
+        if "_nerv_control" in kwargs:
+            return ActionResult(False, "Runtime control must use the dedicated transport credential")
         self.capabilities()
         t0 = time.perf_counter()
         beat = mcp_bridge.Beat()
 
+        def safe_message(value) -> str:
+            text = str(value or "")
+            return text.replace(_control_token, "[redacted runtime control]") if _control_token else text
+
         async def _cb(progress: float, total, message) -> None:
             beat.touch()
+            message = safe_message(message)
             log.record_node(self.log_kind, self.name, "progress", f"{name}: {message or ''}",
                             (time.perf_counter() - t0) * 1000, {"progress": progress})
             if _on_progress is not None:
@@ -160,12 +168,11 @@ class _McpNode:
                 except Exception:
                     pass
 
-        if _control_token:
-            kwargs["_nerv_control"] = _control_token
         async def op(s):
             if _should_abort and _should_abort():
                 raise mcp_bridge.CallAborted()
-            r = await s.call_tool(name, kwargs, progress_callback=_cb)
+            metadata = {CONTROL_META_KEY: {"token": _control_token}} if _control_token else None
+            r = await s.call_tool(name, kwargs, progress_callback=_cb, meta=metadata)
             text = "".join(c.text for c in r.content if getattr(c, "text", None))
             return (not bool(getattr(r, "isError", False))), text, (r.structuredContent or {})
 
@@ -188,6 +195,7 @@ class _McpNode:
                                 "stop_confirmed":False, "stop_state":"stop_unconfirmed"})
         except Exception as e:
             res = ActionResult(False, f"(The call to the {self.what} failed: {type(e).__name__}: {e})")
+        res.message = safe_message(res.message)
         log.record_node(self.log_kind, self.name, "invoke", f"{name}({kwargs})",
                         (time.perf_counter() - t0) * 1000,
                         {"ok": res.ok, "message": res.message[:500], "has_data": bool(res.data)})
