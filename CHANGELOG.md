@@ -2,26 +2,37 @@
 
 ## 0.9.1 — in development; compatibility change
 
-- Qualify fixed local candidate 25 with 975 CPU checks, two retired-provider skips, isolated offline installation/update/rollback and three fresh independent paired apt rendezvous rounds. Six robot tasks passed fixed scoring and read-only review; formal navigation had no false claims, falls or robot collisions. Preserve the separate pre-GO setup interruption, rejected/stalled/braked outcomes, UI reload limits and fault-test scope. This documentation update does not rebuild the qualified package or publish a release.
+### Capabilities and execution
+
 - Introduce NERV Brain Core and explicitly allocated Agent/Run/robot/world identities. Add scoped MCP `--brain` and `brain_get`.
-- Retire internal model services and provider packaging; preserve historical source and journals. Fixed policies remain Runtime capabilities.
 - Add generated shared-world robot namespaces, per-robot buses and separate Run lifetimes. The completion revision adds durable World/Robot/Brain records, scoped bootstrap allocation and transactional topology changes in source.
 - Require explicit World startup and ready Runtime resources before simulation Run attachment. Runs no longer create or rebuild physics; new Run references remain in World stop/fault scope, and unrelated Run stops do not wait behind resource startup.
-- Preserve JSON numeric types in installed registry descriptors so scientific notation cannot silently alter qualified control-profile hashes.
-- Keep simulation installation constraints and resolved numerical artifacts identical to the measured control qualification. Reject conflicting validation and installation baselines before producing a candidate.
 - Share in-flight stop results within one Runtime control generation, with a bounded wait and no reuse of old physical confirmation. Admit task deadlines atomically so a late timer cannot cancel a replacement task.
-- Accept an explicitly processed observation receipt within a task/action request. Serialize per-robot acknowledgement and action admission, retain captured command deadlines, isolate late supervision cancellation and preserve unconfirmed execution barriers. New tasks no longer inherit prior task results.
 - Separate unknown World health from confirmed instance failure. Revoke authority and stop registered task/manual execution using its exact Runtime identity without permanently discarding a potentially live World. Same-epoch recovery requires fresh control; renderer preparation precedes readiness and never acknowledges observations.
 - Expose valid robot-local proprioception, reset-scoped heading references, same-source full-body braking preflight and capture-time fixed-camera calibration. Keep point-ray and body-clearance meanings separate; never expose World coordinates or mark unmeasured sensor zeros as valid.
 - Add declared simulation-only robot-link camera overlays without changing vendor assets, plus capture-time own conservative collision bounds in camera coordinates. Keep contact, floor detection and occlusion explicitly unevaluated; bind sensor configuration and camera implementation to control qualification.
-- Reject held or unknown Runtime readiness before task admission and report measured hold provenance. Candidate 21 passed its first paired rendezvous round but failed its second on incomplete body entry and a false success claim; three fresh paired successes on a fixed candidate remain required.
-- Add directional motion feedback, continuous stop evidence and physics-step paired-meeting scoring. Candidate 23 completed three independently scored paired rendezvous rounds with six successful robot tasks and no false claims, falls or robot collisions; a later strict-schema transport defect requires a new candidate and a fresh series.
+- Add directional motion feedback, continuous stopping evidence and physics-step paired-meeting scoring. Report partial braking/stalling and stop confirmation separately from reaching a requested action target.
+
+### Compatibility and migration
+
+- Retire internal model services and provider packaging; preserve historical source and journals. Fixed policies remain Runtime capabilities.
+- Preserve JSON numeric types in installed registry descriptors so scientific notation cannot silently alter qualified control-profile hashes.
+- Keep simulation installation constraints and resolved numerical artifacts identical to the measured control qualification. Reject conflicting validation and installation baselines before producing a candidate.
+- Accept an explicitly processed observation receipt within a task/action request. Serialize per-robot acknowledgement and action admission, retain captured command deadlines, isolate late supervision cancellation and preserve unconfirmed execution barriers. New tasks no longer inherit prior task results.
 - Carry Runtime control grants in MCP request metadata while preserving strict provider input schemas and progress notifications. Refuse legacy argument or dual-source credentials and keep Runtime credentials out of ordinary invocation/progress logs. Runtime SDK advances to 0.8.3, wire protocol to 3.1 and the LeRobot dependency revision to 0.8.4; MCP remains on the existing 1.30.0 baseline.
 - Reject missing Runtime metadata support before preparation and recheck cached external endpoints. A rejected attachment is not retained or stopped as if Host owned it.
 - Preserve prior World health as history after Host restart and report current health as unknown until independently observed again.
-- Record actual displacement, braking travel and stable stopping. Candidate 08 passed 713 CPU software tests (two retired-provider skips) and managed frontend/install/recovery checks. Its three paired navigation rounds produced 0/6 successes, three false arrival claims and no falls; navigation qualification failed.
-- This is an architecture upgrade despite the retained 0.9.1 version number. Installed candidate, UI, migration and three independent paired rendezvous rounds must pass before release. No release is implied by this entry.
 
+### Validation and remaining limits
+
+- Qualify fixed local candidate 25 with 975 CPU checks, two retired-provider skips, isolated offline installation/update/rollback and three fresh independent paired apt rendezvous rounds. Six robot tasks passed fixed scoring and read-only review; formal navigation had no false claims, falls or robot collisions. Preserve the separate pre-GO setup interruption, rejected/stalled/braked outcomes, UI reload limits and fault-test scope. This documentation update does not rebuild the qualified package or publish a release.
+- Retain 57 formal motion attempts: 56 dispatched and 52 reached their motion targets. Confirmed stalled/braked partial executions and an expired-observation refusal remain in their original budgets; task success does not relabel every motion as reached.
+- Verify the actual single-robot Stop task and emergency-stop targets in a separate UI scenario. B retained its control identity; after A task cancellation, B completed 0.514 m with stopping confirmed. End run native-confirmation acceptance and the shared-World stop-button interaction remain unverified because the browser dialog interface was unavailable. Operator API cleanup is not a button pass.
+- End the separate UI resources and task-owned Host/relays by exact identity. The final recorded check found all Worlds stopped, 21 Projects without active Runs, no candidate processes and the registered test ports free. A stale browser dialog is not a live Run.
+- Preserve candidate 08: 713 CPU checks and two skips, followed by 0/6 navigation successes, three false arrival claims and no falls. Preserve candidate 21: its first paired round passed and its second failed on incomplete full-body entry and a false claim. At those stages, a complete new three-round series was still required.
+- Preserve candidate 23: 945 CPU checks and three successful independently reviewed paired rounds. A later strict-schema transport defect required a new package and fresh series; candidate 25 completed that separate series without transferring historical successes.
+- Reject held or unknown Runtime readiness before task admission and report measured hold provenance. All earlier candidate failures, unconfirmed/unknown receipts and the separate pre-GO interruption remain historical facts.
+- This is an architecture upgrade despite the retained 0.9.1 version number. Installed candidate, UI, migration and three independent paired rendezvous rounds must pass before release. No release is implied by this entry.
 
 Versions are managed from 0.2.0 on: every release gets an entry here and a `v<version>` tag.
 The 0.1.x entries below are the pre-release trail.

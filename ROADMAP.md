@@ -2,11 +2,11 @@
 
 [中文](i18n/zh/ROADMAP.md) · [Project overview](README.md)
 
-NERV is a robot foundation for different Agents, covering real devices and simulated worlds. The 0.9.1 local candidate introduces Projects and same-machine MCP while retaining environment, asset, policy and device management. Its [support matrix](README.md#robots-and-current-limits) distinguishes implementation from client, simulation and hardware acceptance.
+NERV is a robot foundation for different Agents, covering real devices and simulated worlds. The 0.9.1 local candidate builds on the Project and same-machine MCP foundation from 0.9.0, adding model-free Brain Core, persistent resources and shared-world control while retaining environment, asset, policy and device management. Its [support matrix](README.md#robots-and-current-limits) distinguishes implementation from client, simulation and hardware acceptance.
 
 The work below has no promised release date. Entries describe user value, the available foundation, the next step and evidence needed for completion. None of the future products below is delivered merely by adding an interface to 0.9.1.
 
-Candidate 25 completed the local persistent-World gate: autonomous instance allocation, dynamic G1 membership, installed control/stopping engineering and three fresh paired apt rendezvous rounds. All six robot tasks passed fixed scoring and independent review on one Linux CPU package, without false claims, falls or robot collisions during formal navigation. Earlier failures remain separate and unchanged. This is a local candidate, not a public release; see the [qualification limits](guides/brain-core-091.md#current-local-qualification).
+Candidate 25 completed the local persistent-World gate: autonomous instance allocation, dynamic G1 membership, installed control/stopping engineering and three fresh paired apt rendezvous rounds. All six robot tasks passed fixed scoring and independent review on one Linux CPU package, without false claims, falls or robot collisions during formal navigation. Earlier failures remain separate and unchanged. Two native-confirmation UI interactions remain unverified; the separate UI resources were cleaned up through operator interfaces, not by completing those button checks. This is a local candidate, not a public release; see the [qualification limits](guides/brain-core-091.md#current-local-qualification).
 
 ## Agent and Harness integration
 
