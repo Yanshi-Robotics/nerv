@@ -4,6 +4,122 @@ from test_project_mcp_integration import integrated, ready_binding  # noqa: F401
 from nerv.brain_core.core import BrainCore
 
 
+def test_cancelled_runtime_requires_explicit_control_reacquisition(integrated):  # noqa: F811
+    from unittest.mock import Mock
+    f = integrated
+    core = BrainCore(f.hub, f.projects, f.gw.root)
+    pid, client = f.project['id'], f.pair['connection']['id']
+    held = {'value': False}
+    try:
+        binding = ready_binding(core, f, core.reserve(pid, client))
+        resource = core.resources.for_project(pid)
+        core.resources.save(dict(resource, allow_control=True))
+        def invoke(operation, **args):
+            return core.invoke(f.pair['token'], operation, {'project_id': pid, **args}, binding['brain_instance_id'])
+        invoke('run_start', request_id='start')
+        session = f.projects.require_session(pid)
+        f.hub.store.set_armed(session.id, True)
+        core.set_control(pid, accepting=True, owner_id=client)
+        f.robot.health = lambda: {'epoch': 'fixture-epoch', 'held': held['value'], 'supervision_sensors': ['camera']}
+        f.robot.status = lambda: {'held': held['value'], 'stop_evidence': {'stop_confirmed': True}}
+        def stop(*args, **kwargs):
+            held['value'] = True
+            return {'ok': True, 'stop_confirmed': True}
+        def release():
+            held['value'] = False
+            return {'ok': True, 'held': False}
+        f.hub.stop_robot.side_effect = stop
+        f.robot.release = Mock(side_effect=release)
+        first = invoke('observe')
+        invoke('task_start', request_id='first', goal='Fixture task', receipt_id=first['receipt_id'])
+        assert invoke('task_cancel', request_id='cancel')['ok'] and held['value']
+        observed = invoke('observe')
+        previous = core.control(pid)
+        refused = invoke('control_acquire', receipt_id=observed['receipt_id'])
+        assert not refused['ok'] and refused['reacquisition_required']
+        assert core.control(pid) == previous
+        f.robot.release.assert_not_called()
+        claims = f.hub.claim_robot.call_count
+        refused = invoke('task_start', request_id='held-start', goal='Cannot start yet', receipt_id=observed['receipt_id'])
+        assert not refused['ok'] and refused['reason'] == 'runtime_held'
+        assert not core._receipts[(client, pid)]['acknowledged']
+        assert f.hub.claim_robot.call_count == claims
+        assert f.hub.tasks.snapshot(session.id)['task']['status'] == 'cancelled'
+        assert invoke('control_release')['ok']
+        observed = invoke('observe')
+        acquired = invoke('control_acquire', receipt_id=observed['receipt_id'])
+        assert acquired['ok'] and acquired['control_generation'] > previous['control_generation']
+        f.robot.release.assert_called_once()
+        assert not held['value']
+        observed = invoke('observe')
+        task = invoke('task_start', request_id='resumed', goal='New fixture task', receipt_id=observed['receipt_id'])['data']
+        observed = invoke('observe')
+        outcome = invoke('action', request_id='resumed-action', task_id=task['task_id'], version=task['version'],
+                         action='move', arguments={}, receipt_id=observed['receipt_id'])
+        assert outcome['ok']
+        f.robot.invoke.assert_called_once()
+        f.hub.new_role_model.assert_not_called()
+    finally:
+        core.shutdown()
+
+
+@pytest.mark.parametrize('health', [
+    {'epoch': 'fixture-epoch', 'held': None},
+    {'epoch': 'fixture-epoch', 'held': 'false'},
+    {'epoch': 'fixture-epoch', 'held': 0},
+    {'epoch': 'fixture-epoch', 'held': False, 'ok': False},
+])
+@pytest.mark.parametrize('existing_owner', [False, True])
+def test_control_does_not_treat_unknown_or_failed_runtime_as_ready(integrated, health, existing_owner):  # noqa: F811
+    f = integrated
+    core = BrainCore(f.hub, f.projects, f.gw.root)
+    pid, client = f.project['id'], f.pair['connection']['id']
+    try:
+        ready_binding(core, f, core.reserve(pid, client))
+        core.resources.save(dict(core.resources.for_project(pid), allow_control=True))
+        core.invoke(f.pair['token'], 'run_start', {'project_id': pid, 'request_id': 'start'})
+        if existing_owner:
+            core.set_control(pid, accepting=True, owner_id=client)
+        observed = core.invoke(f.pair['token'], 'observe', {'project_id': pid})
+        previous = core.control(pid)
+        f.robot.health = lambda: health
+        result = core.invoke(f.pair['token'], 'control_acquire', {'project_id': pid, 'receipt_id': observed['receipt_id']})
+        assert not result['ok'] and result['reason'] == 'runtime_readiness_unknown'
+        assert core.control(pid) == previous
+        assert not core._receipts[(client, pid)]['acknowledged']
+    finally:
+        core.shutdown()
+
+
+@pytest.mark.parametrize('failure', ['failed_health', 'malformed_health', 'transport', 'malformed_stop_evidence'])
+def test_control_transfer_revokes_published_control_if_runtime_recovery_is_unknown(integrated, failure):  # noqa: F811
+    from unittest.mock import Mock
+    f = integrated
+    core = BrainCore(f.hub, f.projects, f.gw.root)
+    pid, client = f.project['id'], f.pair['connection']['id']
+    try:
+        ready_binding(core, f, core.reserve(pid, client))
+        core.resources.save(dict(core.resources.for_project(pid), allow_control=True))
+        core.invoke(f.pair['token'], 'run_start', {'project_id': pid, 'request_id': 'start'})
+        observed = core.invoke(f.pair['token'], 'observe', {'project_id': pid})
+        after_transfer = {
+            'failed_health': {'ok': False, 'epoch': 'fixture-epoch', 'held': False},
+            'malformed_health': ['not a health object'],
+            'transport': RuntimeError('fixture unavailable'),
+            'malformed_stop_evidence': {'epoch': 'fixture-epoch', 'held': True},
+        }[failure]
+        f.robot.health = Mock(side_effect=[{'epoch': 'fixture-epoch', 'held': False}, after_transfer])
+        f.robot.status = lambda: {'stop_evidence': 'not stop evidence'}
+        f.robot.release = Mock()
+        result = core.invoke(f.pair['token'], 'control_acquire', {'project_id': pid, 'receipt_id': observed['receipt_id']})
+        assert not result['ok']
+        assert not core.control(pid)['accepting'] and core.control(pid)['owner_id'] is None
+        f.robot.release.assert_not_called()
+        f.hub.claim_robot.assert_not_called()
+    finally:
+        core.shutdown()
+
+
 def test_binding_is_operator_owned_and_cannot_cross_projects(integrated):  # noqa: F811
     hub, projects, gateway, pid = integrated.hub, integrated.projects, integrated.gw, integrated.project["id"]
     core = BrainCore(hub, projects, gateway.root)

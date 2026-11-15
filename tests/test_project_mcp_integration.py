@@ -47,7 +47,7 @@ def integrated(tmp_path, monkeypatch):
         ToolSpec("move", "Bounded move", {"type": "object", "properties": {}, "additionalProperties": False}, "primitive"),
         ToolSpec("act", "Fixture ACT", {"type": "object", "properties": {}, "additionalProperties": False}, "skill")],
         sensors=["camera"], config={"external_supervision": {"validated": True, "timeout_s": 30, "max_observation_age_s": 2}}),
-        health=lambda: {"epoch": "fixture-epoch", "supervision_sensors": ["camera"]}, perceive=observe,
+        health=lambda: {"epoch": "fixture-epoch", "held": False, "supervision_sensors": ["camera"]}, perceive=observe,
         set_config=Mock(side_effect=lambda key, value: {"ok": True, key: value}),
         invoke=Mock(side_effect=invoke), post=Mock(side_effect=lambda *a, **k: {"ok": True, "execution_id": "fixture-execution", **execution}))
     # Runtime discovery/transport are the only substitutes. Project creation,
@@ -124,6 +124,31 @@ def acknowledge(fixture):
     observation = call(fixture, "observe")
     assert call(fixture, "acknowledge", receipt_id=observation["receipt_id"])["ok"]
     return observation
+
+
+@pytest.mark.parametrize('health', [
+    {'epoch': 'fixture-epoch', 'held': True},
+    {'epoch': 'fixture-epoch'},
+    {'epoch': 'fixture-epoch', 'held': 'false'},
+    {'epoch': 'replacement-epoch', 'held': False},
+    {'epoch': 'fixture-epoch', 'held': False, 'ok': False},
+    ['malformed health'],
+])
+def test_task_start_refuses_held_or_unknown_runtime_before_consuming_observation(integrated, health):
+    f = integrated
+    _, session = start_run(f)
+    observation = call(f, 'observe')
+    f.robot.health = lambda: health
+    claims = f.hub.claim_robot.call_count
+    f.robot.post.reset_mock()
+    result = call(f, 'task_start', request_id='not-ready', goal='Do not dispatch',
+                  receipt_id=observation['receipt_id'])
+    assert not result['ok']
+    assert result['reason'] == ('runtime_held' if isinstance(health, dict) and health.get('held') is True else 'runtime_readiness_unknown')
+    assert not f.gw._receipts[(f.pair['connection']['id'], f.project['id'])]['acknowledged']
+    assert f.hub.tasks.snapshot(session.id)['task'] is None
+    assert f.hub.claim_robot.call_count == claims
+    f.robot.post.assert_not_called()
 
 
 def test_project_run_identity_scope_dispatch_and_takeover(integrated):

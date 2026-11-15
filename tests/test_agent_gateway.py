@@ -28,7 +28,7 @@ def gateway(tmp_path, monkeypatch):
         ToolSpec("move", "Move", {"type": "object", "properties": {}, "additionalProperties": False}, "primitive"),
         ToolSpec("other", "Other", {"type": "object"}, "primitive")], sensors=["camera"],
         config={"external_supervision": {"validated": True, "timeout_s": 30, "max_observation_age_s": 2}}),
-        health=lambda: {"epoch": "epoch", "supervision_sensors": ["camera"]},
+        health=lambda: {"epoch": "epoch", "held": False, "supervision_sensors": ["camera"]},
         perceive=lambda: Observation({"frame_seq": 1}, [{"name": "camera", "png": png}]),
         invoke=Mock(return_value=ActionResult(True, "Completed")),
         post=Mock(return_value={"ok": True, "running": False}))
@@ -526,7 +526,7 @@ def test_revoking_stale_owner_does_not_stop_a_replacement_run(gateway):
 def test_acknowledgement_targets_body_epoch_not_world_epoch(gateway):
     gw, paired, _, session, robot = gateway
     session.epoch = "world-epoch"
-    robot.health = lambda: {"epoch": "body-epoch", "supervision_sensors": ["camera"]}
+    robot.health = lambda: {"epoch": "body-epoch", "held": False, "supervision_sensors": ["camera"]}
     acknowledge(gw, paired)
     robot.post.assert_called_with("/supervision", {"epoch": "body-epoch", "frame_seq": 1})
 
@@ -534,7 +534,7 @@ def test_acknowledgement_targets_body_epoch_not_world_epoch(gateway):
 def test_restarted_body_rejects_receipt_even_when_world_epoch_unchanged(gateway):
     gw, paired, _, _, robot = gateway
     observation = gw.invoke(paired["token"], "observe", {"project_id": "project"})
-    robot.health = lambda: {"epoch": "new-body", "supervision_sensors": ["camera"]}
+    robot.health = lambda: {"epoch": "new-body", "held": False, "supervision_sensors": ["camera"]}
     robot.post.reset_mock()
     with pytest.raises(ValueError, match="Runtime instance changed"):
         gw.invoke(paired["token"], "acknowledge", {"project_id": "project", "receipt_id": observation["receipt_id"]})

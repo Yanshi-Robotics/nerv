@@ -343,28 +343,48 @@ class BrainCore(AgentGateway):
         session = self.projects.require_session(pid)
         robot, contract = self._supervision_contract(session)
         receipt = self._receipts.get((record['id'], pid))
+        health = self._runtime_health(robot)
         if (not receipt or receipt['id'] != args['receipt_id'] or receipt['epoch'] != session.epoch
                 or time.monotonic() - receipt['delivered_mono'] > contract['max_observation_age_s']
-                or (robot.health() or {}).get('epoch') != receipt['body_epoch']):
+                or health.get('epoch') != receipt['body_epoch']):
             raise ValueError('Observe this robot before acquiring control')
+        if health.get('ok') is False or type(health.get('held')) is not bool:
+            return {'ok':False, **current, 'reason':'runtime_readiness_unknown',
+                    'message':'Runtime hold state is unavailable; inspect it before requesting control.'}
         if current.get('accepting') and current.get('owner_id') == record['id']:
+            if health['held']:
+                return {'ok':False, **current, 'reason':'runtime_held', 'reacquisition_required':True,
+                        'message':'Runtime is held. Release this control, obtain a fresh observation, '
+                                  'and acquire new control before starting another task.'}
             return {'ok':True, **current}
         result = self.set_control(pid, accepting=True, owner_id=record['id'])
         if result.get('ok'):
             # Grant covers release from a confirmed supervised stop, never a fall
             # or an unconfirmed emergency hold.
-            status = robot.status() or {}
-            if status.get('held'):
-                if not status.get('stop_evidence', {}).get('stop_confirmed'):
-                    self._invalidate_control(pid)
-                    return {'ok':False, 'message':'Held robot has no current stable-stop evidence'}
-                if not self.hub.release(session.id).get('ok'):
-                    self._invalidate_control(pid)
-                    return {'ok':False, 'message':'Runtime refused release'}
-            armed = self.hub.arm(session.id, True)
-            if not armed.get('ok'):
+            health = self._runtime_health(robot)
+            if (health.get('ok') is False or health.get('epoch') != receipt['body_epoch']
+                    or type(health.get('held')) is not bool):
                 self._invalidate_control(pid)
-                return {'ok':False, 'message':'Runtime did not authorize motion'}
+                return {'ok':False, 'reason':'runtime_readiness_unknown',
+                        'message':'Runtime changed or its hold state is unavailable; control remains disabled.'}
+            try:
+                if health['held']:
+                    status = robot.status()
+                    evidence = status.get('stop_evidence') if isinstance(status, dict) else None
+                    if not isinstance(evidence, dict) or evidence.get('stop_confirmed') is not True:
+                        self._invalidate_control(pid)
+                        return {'ok':False, 'message':'Held robot has no current stable-stop evidence'}
+                    if not self.hub.release(session.id).get('ok'):
+                        self._invalidate_control(pid)
+                        return {'ok':False, 'message':'Runtime refused release'}
+                armed = self.hub.arm(session.id, True)
+                if not armed.get('ok'):
+                    self._invalidate_control(pid)
+                    return {'ok':False, 'message':'Runtime did not authorize motion'}
+            except Exception:
+                self._invalidate_control(pid)
+                return {'ok':False, 'reason':'runtime_readiness_unknown',
+                        'message':'Runtime recovery could not be confirmed; control remains disabled.'}
         return {**result, 'next':'Observe and acknowledge a new frame before any action.'}
 
     def _dispatch(self, record, operation, args):

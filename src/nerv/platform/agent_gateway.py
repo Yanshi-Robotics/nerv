@@ -246,6 +246,16 @@ class AgentGateway:
         with self._lock:
             return self._admissions.setdefault(project_id, threading.RLock())
 
+    @staticmethod
+    def _runtime_health(robot):
+        # A failed transport or malformed JSON is unknown readiness, never an
+        # implicit unheld state. No global Gateway lock crosses this RPC.
+        try:
+            value = robot.health() if robot else None
+        except Exception:
+            return {}
+        return value if isinstance(value, dict) else {}
+
     def _acknowledge_receipt(self, record, pid, session, args):
         # Caller holds the instance admission lock, including Runtime validation.
         if self.hub.tasks.stopping(session.id):
@@ -417,6 +427,23 @@ class AgentGateway:
             return self._end_run(record, pid, session)
         if operation == "task_start":
             with self._admission_lock(pid):
+                self._owns(record, pid)
+                # Admission must not consume an inspected frame or create a Task
+                # while the Runtime requires explicit control recovery. The
+                # Runtime still checks again at dispatch if holding races this RPC.
+                robot = self.hub.body_client(session.body)
+                with self._lock:
+                    observed_epoch = self._receipts.get((record["id"], pid), {}).get("body_epoch")
+                expected_epoch = getattr(session, "robot_epoch", "") or observed_epoch
+                health = self._runtime_health(robot)
+                if (health.get("ok") is False or type(health.get("held")) is not bool or not health.get("epoch")
+                        or (expected_epoch and health["epoch"] != expected_epoch)):
+                    return {"ok": False, "reason": "runtime_readiness_unknown",
+                            "message": "Runtime readiness is unavailable or changed; inspect its state before starting a task."}
+                if health["held"]:
+                    return {"ok": False, "reason": "runtime_held", "reacquisition_required": True,
+                            "message": "Runtime is held. Release this control, obtain a fresh observation, "
+                                       "and acquire new control before starting another task."}
                 if args.get("receipt_id"):
                     self._acknowledge_receipt(record, pid, session, args)
                 lease = self._fresh(record, pid, session)

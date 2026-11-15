@@ -164,9 +164,17 @@ class BodyNode:
                                              "The operator arms it on the body node's page "
                                              "or through NERV.")}
         if kind in MUTATING_KINDS and self.impl.held:
-            return {"ok": False, "message": ("the body is holding its pose (emergency stop), so it will "
-                                             "not move until the operator releases it."),
-                    "data": {"held": True}}
+            # Cancellation, supervision loss and an operator stop can all hold a
+            # Runtime. Report measured provenance without inventing the cause.
+            try:
+                reason = (self.impl.status() or {}).get("hold_reason")
+            except Exception:
+                reason = None
+            data = {"held": True, "executed": False, "reason": "runtime_held"}
+            if isinstance(reason, str) and reason:
+                data["hold_reason"] = reason
+            return {"ok": False, "message": "The Runtime is held; explicit control recovery is required before motion.",
+                    "data": data}
         return self.impl.invoke(name, _progress=_progress, **args)
 
     @contextlib.contextmanager

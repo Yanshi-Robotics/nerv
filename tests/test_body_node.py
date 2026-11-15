@@ -77,6 +77,24 @@ def _start(armed):
     return impl, node, srv, f"http://127.0.0.1:{port}"
 
 
+def test_held_dispatch_reports_measured_cause_without_claiming_emergency():
+    impl = FakeArm()
+    node = BodyNode(impl, guidance='', stop=StopFlag(), armed=True)
+    impl.hold('cancelled')
+    impl.status = lambda: {'hold_reason': impl.hold_reason}
+    refused = node.invoke('set_angle', deg=10)
+    assert not refused['ok'] and refused['data'] == {
+        'held': True, 'executed': False, 'reason': 'runtime_held', 'hold_reason': 'cancelled'}
+    assert 'emergency' not in refused['message'] and not impl.calls
+    def unavailable():
+        raise RuntimeError('status unavailable')
+    impl.status = unavailable
+    refused = node.invoke('set_angle', deg=10)
+    assert not refused['ok'] and 'hold_reason' not in refused['data']
+    assert refused['data']['executed'] is False and not impl.calls
+    assert node.invoke('read_angle')['ok']
+
+
 def test_handshake_observe_invoke_and_conformance():
     impl, node, srv, url = _start(armed=True)
     try:
