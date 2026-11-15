@@ -2,6 +2,7 @@
 
 ## 0.9.1 — in development; compatibility change
 
+- Qualify fixed local candidate 25 with 975 CPU checks, two retired-provider skips, isolated offline installation/update/rollback and three fresh independent paired apt rendezvous rounds. Six robot tasks passed fixed scoring and read-only review; formal navigation had no false claims, falls or robot collisions. Preserve the separate pre-GO setup interruption, rejected/stalled/braked outcomes, UI reload limits and fault-test scope. This documentation update does not rebuild the qualified package or publish a release.
 - Introduce NERV Brain Core and explicitly allocated Agent/Run/robot/world identities. Add scoped MCP `--brain` and `brain_get`.
 - Retire internal model services and provider packaging; preserve historical source and journals. Fixed policies remain Runtime capabilities.
 - Add generated shared-world robot namespaces, per-robot buses and separate Run lifetimes. The completion revision adds durable World/Robot/Brain records, scoped bootstrap allocation and transactional topology changes in source.

@@ -6,13 +6,13 @@ NERV is a robot foundation for different Agents, covering real devices and simul
 
 The work below has no promised release date. Entries describe user value, the available foundation, the next step and evidence needed for completion. None of the future products below is delivered merely by adding an interface to 0.9.1.
 
-The current completion gate is a persistent apt World with autonomous instance allocation and three paired living-room rendezvous rounds. Persistent resources, dynamic G1 membership and installed control/stopping engineering are implemented. Candidate 21 passed one formal paired round and failed its second on incomplete body entry and a false arrival claim. A robot-local observation repair is undergoing qualification before a new installed candidate and three fresh fixed rounds. The earlier 0/6 navigation result remains unchanged.
+Candidate 25 completed the local persistent-World gate: autonomous instance allocation, dynamic G1 membership, installed control/stopping engineering and three fresh paired apt rendezvous rounds. All six robot tasks passed fixed scoring and independent review on one Linux CPU package, without false claims, falls or robot collisions during formal navigation. Earlier failures remain separate and unchanged. This is a local candidate, not a public release; see the [qualification limits](guides/brain-core-091.md#current-local-qualification).
 
 ## Agent and Harness integration
 
-**Status: local MCP exercised by two independent Codex subagents; fixed shared-world navigation acceptance failed.**
+**Status: fixed Linux CPU shared-world rendezvous passed through real local MCP; named-client qualification remains pending.**
 
-Candidate 08 completed three paired rounds with 0/6 scored successes, three false arrival claims and no falls. Protocol isolation and reconnect checks passed. Next work must address sustained stopping, short-motion stalls, capability refresh after World failure and evidence of complete target entry before repeating the frozen acceptance design.
+Candidate 08 recorded 0/6 navigation successes and three false claims. Later repairs addressed stopping, observation grounding, capability readiness and installation/transport consistency. Candidate 25's separate fresh series passed six robot tasks, retaining original images, physics evidence, rejected requests and independent reviews. This bounded result does not establish compatibility with every client or task.
 
 Users should be able to use their preferred Agent without replacing robot drivers. Brain Core provides model-free identity, observation, permission and execution services; internal model loops are retired. The external bridge adds project permissions, observations and bounded tasks.
 
