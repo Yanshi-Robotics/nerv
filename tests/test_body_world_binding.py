@@ -7,6 +7,7 @@ import pytest
 from nerv.platform.hub import Nerv
 from nerv.platform.launcher import NodeHandle
 from nerv.platform.session import SessionStore
+from nerv_runtime_sdk.contracts import CONTROL_TRANSPORT, PROTOCOL_MAJOR
 
 
 @pytest.fixture
@@ -24,7 +25,8 @@ def live_body(hub, world="apt"):
     body = hub.registry.body("humanoid-unitree-g1")
     handle = NodeHandle("body", f"body:{body.name}", "http://unused",
                         proc=SimpleNamespace(poll=lambda: None),
-                        meta={"world": world})
+                        meta={"world": world, "protocol_major": PROTOCOL_MAJOR,
+                              "control_transport": CONTROL_TRANSPORT})
     hub.launcher.nodes[handle.name] = handle
     return body, handle
 
@@ -32,6 +34,16 @@ def live_body(hub, world="apt"):
 def test_same_world_reuses_body(hub):
     body, handle = live_body(hub)
     assert hub.launcher.ensure_body(body, hub.registry.world("apt"), None) is handle
+
+
+@pytest.mark.parametrize('missing', ['protocol_major', 'control_transport'])
+def test_same_world_owned_runtime_without_transport_contract_is_refused(hub, missing):
+    body, handle = live_body(hub)
+    handle.meta.pop(missing)
+    with pytest.raises(ValueError, match='protocol|request metadata'):
+        hub.launcher.ensure_body(body, hub.registry.world('apt'), None)
+    assert hub.launcher.nodes[handle.name] is handle
+    assert handle.proc.poll() is None
 
 
 def test_different_world_refused_before_launch_or_session_changes(hub, monkeypatch):
