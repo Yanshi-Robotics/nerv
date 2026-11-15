@@ -1,6 +1,10 @@
 # Brain Core in NERV 0.9.1
 
-This is an architecture and compatibility change under the requested 0.9.1 version. Earlier candidates failed navigation or stopping qualification. Candidate 66 exposed conflicting validation and installation dependency pins. The later candidate db8ee passed installed motion engineering but its first fresh rendezvous round exposed acknowledgement-to-dispatch latency consuming the motion-supervision interval. Both rounds failed without a success claim. Three successful fresh paired rounds remain required.
+This is an architecture and compatibility change under the requested 0.9.1 version. Candidate 21 passed 912 CPU checks, isolated installation/recovery and installed shared-world engineering. Its first fresh independent paired rendezvous round passed; its second failed because one robot remained partly outside the target while claiming success. Three successful fresh paired rounds on one fixed candidate remain required. Earlier dependency, stopping and acknowledgement-latency failures below retain their original results.
+
+The second round recorded 25 completed motions with confirmed stopping, approximately 25 Hz physics evidence and no falls or robot-to-robot collisions. The failing robot's conservative body bounds missed the required interior margin by approximately 0.344 m; its last forward-distance error was approximately 0.027 m. The evidence supports an arrival-judgment and self-grounding error, with a near-body camera blind area as a plausible usability contributor. It does not establish a Brain/World identity failure or justify changing gait parameters or acceptance limits. The other Agent correctly declined to claim success.
+
+The development repair adds a declared pelvis-mounted downward simulation camera and same-capture own conservative collision bounds. Static visibility and bounded source CPU motion/camera probes passed; installation, shared-world fairness and fresh independent navigation remain separate gates. The original head view, raw pixels, policy, scene, births and physical scoring criteria are retained. The new sensor contains no target coordinates, room classification or arrival oracle. Candidate 21's failed round and successful first round are preserved; its third round is not run, and its first success will not be combined with another candidate.
 
 ## Responsibility
 

@@ -1,7 +1,9 @@
 """What a body.yaml / world.yaml / tool.yaml may say. Validated on load; env-expanded."""
 from __future__ import annotations
 
-from pydantic import BaseModel, Field, model_validator
+import math
+
+from pydantic import BaseModel, ConfigDict, Field, model_validator
 
 KIND_SIM, KIND_REAL = "sim", "real"
 
@@ -33,12 +35,32 @@ class SkillDecl(BaseModel):
     policy_record: dict = Field(default_factory=dict)
 
 
+class SimulationCameraMount(BaseModel):
+    """A declared robot-link camera; no tracking or operator-camera fields."""
+    model_config = ConfigDict(extra='forbid')
+    link: str
+    position_m: list[float] = Field(min_length=3, max_length=3)
+    xyaxes: list[float] = Field(min_length=6, max_length=6)
+    vertical_fov_deg: float = Field(gt=0, lt=180)
+
+    @model_validator(mode='after')
+    def finite_mount(self):
+        if not self.link.strip() or not all(math.isfinite(x) for x in (*self.position_m, *self.xyaxes)):
+            raise ValueError('Camera mount needs a link and finite coordinates')
+        x, y = self.xyaxes[:3], self.xyaxes[3:]
+        cross = [x[1]*y[2]-x[2]*y[1], x[2]*y[0]-x[0]*y[2], x[0]*y[1]-x[1]*y[0]]
+        if not any(cross):
+            raise ValueError('Camera axes must be nonzero and nonparallel')
+        return self
+
+
 class SensorDecl(BaseModel):
     name: str                         # camera:top
     description: str = ""
     camera: str = ""                  # for sim: the MJCF camera name
     width: int = 640
     height: int = 480
+    simulation_mount: SimulationCameraMount | None = None
 
 
 class BodySpec(BaseModel):

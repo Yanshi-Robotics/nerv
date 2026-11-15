@@ -237,7 +237,8 @@ class WorldInstances:
                        'topology_revision': world.get('topology_revision', 1),
                        'arena': str(Path(spec.assets_root) / spec.supports[body.name]),
                        'physics': dict(spec.physics), 'source_revision':world['source_revision'],
-                       'body_profile': {'actuators': body.actuators, 'dir': body.dir},
+                       'body_profile': {'actuators': body.actuators, 'dir': body.dir,
+                                        'sensors':[s.model_dump(mode='json') for s in body.sensors]},
                        'roster': [dict(r) for r in world['roster']]}
             world['status'] = 'preparing'
             self.save(world)

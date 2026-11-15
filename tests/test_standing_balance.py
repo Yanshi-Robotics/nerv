@@ -128,7 +128,11 @@ def test_qualification_includes_stop_detector_world_and_numerical_dependencies()
     from pathlib import Path
     import yaml
     from nerv.runtime.builtin import BuiltinRuntime
+    from nerv.platform.registry.schema import BodySpec
     profile = yaml.safe_load((Path(__file__).parents[1]/'bodies/humanoid-unitree-g1/body.yaml').read_text())
+    # Match the serialized profile actually supplied by Launcher to the worker,
+    # including default camera fields and typed simulation-mount values.
+    profile = BodySpec.model_validate(profile).model_dump()
     contract = profile['buses']['sim']['settings']['skill_transitions']
     runtime = BuiltinRuntime.__new__(BuiltinRuntime)
     runtime.profile = SimpleNamespace(configuration=profile)

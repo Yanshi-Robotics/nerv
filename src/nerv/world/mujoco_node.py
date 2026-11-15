@@ -268,7 +268,11 @@ class WorldSim:
         self.body_defaults = dict(body_defaults or {})    # start_height / chase_* / fall_* from body.yaml
         self.epoch = uuid.uuid4().hex
 
-        self.model = shared_model if shared_model is not None else mujoco.MjModel.from_xml_path(arena_xml)
+        if shared_model is not None:
+            self.model = shared_model
+        else:
+            from .robot_camera_mounts import compile_robot_cameras
+            self.model = compile_robot_cameras(arena_xml, self.body_defaults.get('simulation_cameras', []), root_name)
         self.data = shared_data if shared_data is not None else mujoco.MjData(self.model)
         self.model.opt.timestep = float(self.phys["dt"])
         # A world may prescribe a named joint pose without changing model calibration.
@@ -720,6 +724,12 @@ class WorldSim:
                 from .camera_metadata import calibration
                 metadata['calibration'] = calibration(self.model, self.data, self.base_body, cid,
                                                       self.render._w, self.render._h)
+                from .own_camera_geometry import capture_geometry
+                prefix = getattr(self, 'prefix', '')
+                support = [prefix+name for name in self.body_defaults.get('foot_bodies', [])]
+                metadata['own_robot_geometry'] = capture_geometry(self.model, self.data, self.base_body, cid,
+                    self.render._w, self.render._h, support)
+                metadata['own_robot_geometry']['calibration_revision'] = metadata['calibration'].get('calibration_revision')
             return renderer.render().copy(), metadata
         return self.render.run(job)
 
@@ -1058,9 +1068,12 @@ def _body_defaults_from_registry(body) -> dict:
     camera offsets, fall thresholds. A spawn message's `extra` overrides any of these."""
     out: dict = {}
     act = dict(body.actuators or {})
-    for k in ("start_height", "chase_body", "chase_back_m", "chase_up_m"):
+    for k in ("start_height", "chase_body", "chase_back_m", "chase_up_m", "foot_bodies"):
         if k in act:
             out[k] = act[k]
+    sensors = [s.model_dump(mode='json') if hasattr(s, 'model_dump') else dict(s)
+               for s in (getattr(body, 'sensors', None) or [])]
+    out['simulation_cameras'] = [s for s in sensors if s.get('simulation_mount') is not None]
     # `locomotion` is not a BodySpec field (pydantic drops it): read the yaml for the fall thresholds
     try:
         raw = _load_yaml(os.path.join(body.dir, "body.yaml"))

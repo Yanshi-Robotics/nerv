@@ -185,3 +185,11 @@ reviewed images and a common three-second stable window. Candidate08 navigation
 remains 0/6 with three false claims. New source checks and diagnostic probes do not
 upgrade that result. Long zero-command holding remains unqualified until measured
 velocity and drift pass; do not loosen thresholds or claim success from no falls.
+
+G1 simulation may declare an additional fixed robot-link camera through its sensor
+profile. Do not rewrite vendor assets or hide self meshes. Capture-time own geometry
+describes conservative collision bounds in that image's camera frame; it does not
+detect floor, contact, rooms or arrival. Separate sequential camera timestamps from
+atomic per-image geometry. Changed sensors and camera code invalidate the old scoped
+control qualification. Candidate21 passed one formal paired round and failed its
+second; never combine that first pass with a repaired candidate's new trial series.

@@ -6,6 +6,18 @@ label: Unitree G1 humanoid (29 DoF)
 version: "1"
 sensors:
   - {name: "camera:head", camera: "head_front", description: "forward camera on the head"}
+  # Declared simulation sensor; not a claim about the stock G1 hardware camera.
+  # Pelvis front bound .06143 m + .10 m designed standoff, rounded to centimetres.
+  - name: "camera:ground"
+    camera: "ground_down"
+    description: "robot-mounted downward simulation camera; raw view retains self-occlusion"
+    width: 640
+    height: 480
+    simulation_mount:
+      link: pelvis
+      position_m: [0.17, 0, -0.10]
+      xyaxes: [0, -1, 0, 1, 0, 0]
+      vertical_fov_deg: 95
 skills:
   move_forward: {policy: "managed:g1-29dof-turn", description: "walk forward a distance"}
   turn_left:    {policy: "managed:g1-29dof-turn", description: "turn left on the spot"}
@@ -71,26 +83,28 @@ buses:
         max_observation_age_s: 40  # six MCP visual-processing samples; twice observed maximum, rounded up to 5 s
         poll_s: 0.05
       skill_transitions:
-        version: g1-apt-cpu-091-standing-sensors-2
-        validated: true # Scoped source engineering qualification; installed navigation remains separate
+        version: g1-apt-cpu-091-standing-ground-sensors-3
+        validated: true # Bounded source CPU motion/camera qualification; installed acceptance remains separate.
         scope: simulation-software
         scenes: [apt]
         pairs: [[move_forward, turn_left], [move_forward, turn_right], [turn_left, move_forward], [turn_left, turn_right], [turn_right, move_forward], [turn_right, turn_left]]
         physics_dt_s: 0.002
         policy_dt_s: 0.02
-        profile_sha256: dae8564963067034f9793b7a5ed31ecc9d19e3bc607a12d110d9154667173174
+        profile_sha256: e51516f6a2ea09eaf7635f47453b489d4d7196c5e3b89e1ad5fb313fab538e85
         implementation_sha256:
           body/balance.py: 0ef5b0080354addc2a3c5d3bc4721f71726cf7a76cd91fe90749c7f7268c328f
           body/families/humanoid.py: e63ff11286f7419bd7bff66b49eaf86fdf285270d1d0c16834a110b291372cc6
           body/stopping.py: 83755d28857c54e0eba8c74bad6ab8e81edb690dba1753754157eb24897308ff
           body/bus_zmq.py: 9bd1856c7311ed156209e82d3cb5e4eda235d9c8ae7b9978b7099fffd5bf3ea4
-          runtime/builtin.py: 298e2079a9eee1a5fdf35603128763d6d9013117c51684e34b171017567517a5
-          world/mujoco_node.py: 10607dd4417699cee34d4815e18a242e0f1051709ee805af44d46a570d7f459f
-          world/composition.py: 283bc1dbe51c889a9e93c2774d469de4b184e7a9357bf2c317ccb2a473978959
+          runtime/builtin.py: 1bffadb14929a2413d30ad4b456443b6a0b104c5f76c8a371b8d0d56a0eba54d
+          world/mujoco_node.py: a695e15a2ce37cc9915669e1abc357695723d6bc096f7b2474b03ac27b8760dd
+          world/composition.py: 9f2dd1068077dc1f83554bdbf3274410709534dd4a23605cb91e71b925f33fd7
           world/bus_server.py: 736e3c994fdd7c24d634885c0080205426e3d54a7060badf5d7d7e1338963495
           world/clearance.py: caa3061696f538882daaa21c59e016d858409e81a5ed8d3f4290818425638afe
           body/sensor_state.py: 583393f5f20002d5ba445d97ec0fd4b4df28ea841151edb8713a82ed00bc3721
           world/camera_metadata.py: 3463c06b69bc2418571748bfa5dabc24de039967ec635a70dcbb5be19b754957
+          world/robot_camera_mounts.py: 0cbedbbd02d0f9359b7c389d3aa5b3584236c1b282efd06c060eb86a3d450593
+          world/own_camera_geometry.py: 2b4f48ddd29175347914f642b5704cbe0d55c234d18c1250ed9b145cce677fd0
         dependency_versions:
           mujoco: 3.12.0
           numpy: 2.5.2

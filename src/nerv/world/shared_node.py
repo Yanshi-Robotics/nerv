@@ -25,10 +25,10 @@ def prepare_rendering(owner):
         started = time.monotonic()
         try:
             cameras = view.model_cameras()
-            def initialize(renderer):
-                if cameras:
+            def initialize(renderer, view=view, cameras=tuple(cameras)):
+                for camera in cameras:
                     with view._lock:
-                        renderer.update_scene(view.data, camera=view._camera_for(cameras[0]))
+                        renderer.update_scene(view.data, camera=view._camera_for(camera))
                     renderer.render()
             view.render.run(initialize)
             states[rid] = {'state':'ready', 'elapsed_s':time.monotonic() - started}

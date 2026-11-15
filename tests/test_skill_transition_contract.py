@@ -82,7 +82,7 @@ def test_standing_qualification_binds_profile_code_and_actual_world_timing(tmp_p
     import nerv.runtime.builtin as builtin
     value, _ = runtime(tmp_path)
     config = {'actuators': {'standing_balance': {'model': 'fixture.xml'}},
-              'locomotion': {'walk_speed': .6}}
+              'locomotion': {'walk_speed': .6}, 'sensors': []}
     value.profile.configuration = config
     value._impl._balance = SimpleNamespace(physics_dt=.002)
     value._impl.policy.policy_dt = .02
@@ -94,9 +94,21 @@ def test_standing_qualification_binds_profile_code_and_actual_world_timing(tmp_p
             for name in ['body/balance.py', 'body/families/humanoid.py', 'body/stopping.py',
                          'body/bus_zmq.py', 'runtime/builtin.py', 'world/mujoco_node.py',
                          'world/composition.py', 'world/bus_server.py', 'world/clearance.py',
-                         'body/sensor_state.py', 'world/camera_metadata.py']},
+                         'body/sensor_state.py', 'world/camera_metadata.py',
+                         'world/robot_camera_mounts.py', 'world/own_camera_geometry.py']},
         dependency_versions={name:importlib.metadata.version(name) for name in ['mujoco','numpy','onnxruntime']})
     assert value.skill_transition_config()['validated']
+    config['sensors'].append({'name':'camera:ground','camera':'ground_down'})
+    assert not value.skill_transition_config()['validated'], 'A changed sensor configuration requires new qualification'
+    config['sensors'].clear()
+    assert value.skill_transition_config()['validated']
+    for name in ('world/robot_camera_mounts.py','world/own_camera_geometry.py'):
+        original=contract['implementation_sha256'].pop(name)
+        assert not value.skill_transition_config()['validated'], 'Missing camera compilation or capture code is unqualified'
+        contract['implementation_sha256'][name]='0'*64
+        assert not value.skill_transition_config()['validated'], 'Changed camera code cannot inherit old qualification'
+        contract['implementation_sha256'][name]=original
+        assert value.skill_transition_config()['validated']
     config['locomotion']['walk_speed'] = .7
     assert not value.skill_transition_config()['validated']
     config['locomotion']['walk_speed'] = .6

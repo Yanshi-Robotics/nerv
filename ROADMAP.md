@@ -6,7 +6,7 @@ NERV is a robot foundation for different Agents, covering real devices and simul
 
 The work below has no promised release date. Entries describe user value, the available foundation, the next step and evidence needed for completion. None of the future products below is delivered merely by adding an interface to 0.9.1.
 
-The current completion gate is a persistent apt World with autonomous instance allocation and three paired living-room rendezvous rounds. Source lifecycle and evidence work is underway; long-duration stable holding, mock multi-device attachment, candidate packaging, UI inspection and fixed trials remain unfinished. The earlier 0/6 navigation result remains unchanged.
+The current completion gate is a persistent apt World with autonomous instance allocation and three paired living-room rendezvous rounds. Persistent resources, dynamic G1 membership and installed control/stopping engineering are implemented. Candidate 21 passed one formal paired round and failed its second on incomplete body entry and a false arrival claim. A robot-local observation repair is undergoing qualification before a new installed candidate and three fresh fixed rounds. The earlier 0/6 navigation result remains unchanged.
 
 ## Agent and Harness integration
 

@@ -17,6 +17,7 @@ def test_capture_metadata_and_pixels_share_one_scene_snapshot():
       <camera name="robot-A/head"/></body></worldbody></mujoco>''')
     world.data = mujoco.MjData(world.model)
     world.base_body = world.model.body('robot-A').id
+    world.body_defaults = {'foot_bodies':['robot-A']}
     world.data.time = 10.
     mujoco.mj_forward(world.model, world.data)
     world._lock = threading.RLock()
@@ -36,6 +37,9 @@ def test_capture_metadata_and_pixels_share_one_scene_snapshot():
     assert source['captured_sim_time'] == 10
     assert source['calibration']['sample_sim_time'] == 10
     assert source['calibration']['valid'] is True
+    assert source['own_robot_geometry']['valid'] is True
+    assert source['own_robot_geometry']['sample_sim_time'] == 10
+    assert source['own_robot_geometry']['calibration_revision'] == source['calibration']['calibration_revision']
     assert source['calibration']['resolution_px'] == [2, 2]
     assert source['source_sequence'] == 1
     assert source['robot_instance_id'] == 'robot-A'

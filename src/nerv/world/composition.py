@@ -43,6 +43,9 @@ def compose(arena: str, roster: list[dict]):
     roots = {}
     for robot in roster:
         child = mujoco.MjSpec.from_file(arena)
+        from .robot_camera_mounts import apply_robot_cameras
+        apply_robot_cameras(child, source, root,
+                            robot.get('body_defaults', {}).get('simulation_cameras', []))
         for key in list(child.keys):
             child.delete(key)
         prefix = robot['robot_instance_id'] + '/'

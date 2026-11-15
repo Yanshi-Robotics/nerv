@@ -85,7 +85,7 @@ class BuiltinRuntime:
         profile = self.profile.configuration
         balance = getattr(self._impl, '_balance', None)
         try:
-            encoded = json.dumps({key: profile.get(key, {}) for key in ('actuators', 'locomotion')},
+            encoded = json.dumps({key: profile.get(key, {}) for key in ('actuators', 'locomotion', 'sensors')},
                                  sort_keys=True, separators=(',', ':'), allow_nan=False).encode()
             if (hashlib.sha256(encoded).hexdigest() != value['profile_sha256'] or balance is None
                     or not math.isclose(balance.physics_dt, value['physics_dt_s'])
@@ -95,7 +95,8 @@ class BuiltinRuntime:
             required = {'body/balance.py', 'body/families/humanoid.py', 'body/stopping.py',
                         'body/bus_zmq.py', 'runtime/builtin.py', 'world/mujoco_node.py',
                         'world/composition.py', 'world/bus_server.py', 'world/clearance.py',
-                        'body/sensor_state.py', 'world/camera_metadata.py'}
+                        'body/sensor_state.py', 'world/camera_metadata.py',
+                        'world/robot_camera_mounts.py', 'world/own_camera_geometry.py'}
             dependencies = value['dependency_versions']
             if (set(dependencies) != {'mujoco','numpy','onnxruntime'} or any(
                     importlib.metadata.version(name) != version for name,version in dependencies.items())):
