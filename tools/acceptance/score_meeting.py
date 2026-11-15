@@ -42,8 +42,10 @@ def score(record, robot_ids, contract, visual_reviews, stop_receipts, *, claimed
                      and len(dynamic_ids) == len(set(dynamic_ids)))
     margin = record.get('dynamic_obstacle_margin_m')
     dynamic_valid &= (margin is None or (_vector([margin]) and margin >= contract['body_margin_m']))
-    valid = (budget_valid and dynamic_valid and rate_valid and record.get('physics_events_complete') is True and record.get('dropped_samples') == 0
+    structure_valid = (dynamic_valid and record.get('physics_events_complete') is True and record.get('dropped_samples') == 0
              and record.get('finished') is True and bool(samples) and not record.get('error'))
+    overall_rate_valid = rate_valid
+    valid = budget_valid and structure_valid and rate_valid
     start = previous = identity = None
     stable = 0.
     window_samples = 0
@@ -52,6 +54,8 @@ def score(record, robot_ids, contract, visual_reviews, stop_receipts, *, claimed
     fallen = record.get('fall_seen') is not False
     reason = 'no_samples'
     previous_steps = 0
+    final_geometry = {}
+    terminal_complete = False
     for index, sample in enumerate(samples):
         robots = [sample.get('robots', {}).get(rid, {}) for rid in robot_ids]
         stamp = sample.get('sim_time')
@@ -72,7 +76,10 @@ def score(record, robot_ids, contract, visual_reviews, stop_receipts, *, claimed
                 and r.get('world_instance_id') == current_identity[0] and r.get('epoch') == current_identity[1]
                 and r.get('sim_time') == stamp and type(r.get('status',{}).get('fallen')) is bool)
         complete = complete and (previous is None or stamp > previous) and (identity is None or identity == current_identity)
+        terminal_complete = bool(complete)
         if not complete:
+            final_geometry = {}
+            structure_valid = False
             valid = False
             start, stable = None, 0.
             window_samples = 0
@@ -90,7 +97,8 @@ def score(record, robot_ids, contract, visual_reviews, stop_receipts, *, claimed
         # Frozen standing space remains conservative. Also test current dynamic
         # geometry: a chair pushed into the region must not disappear from scoring.
         region = {**contract['region'], 'obstacles': contract['region']['obstacles'] + moving}
-        inside = all(geometry_verdict(r,region,contract)['inside'] for r in robots)
+        final_geometry = {rid:geometry_verdict(r,region,contract) for rid,r in zip(robot_ids,robots)}
+        inside = all(verdict['inside'] for verdict in final_geometry.values())
         eligible = quiet and inside and contract['distance_min_m'] <= distance <= contract['distance_max_m']
         gap = previous is not None and stamp - previous > contract['max_sample_gap_s'] + 1e-9
         drift = start is not None and any(math.dist(anchors[rid],pos) > contract['window_drift_max_m'] for rid,pos in zip(robot_ids,positions))
@@ -110,9 +118,11 @@ def score(record, robot_ids, contract, visual_reviews, stop_receipts, *, claimed
     # seconds while both robots remain stationary. Never cross a reset or gap.
     window = [start, previous] if start is not None else None
     window_hz = (window_samples - 1) / stable if stable > 0 else 0.
-    rate_valid &= window_hz + 1e-9 >= minimum_hz
+    window_rate_valid = window_hz + 1e-9 >= minimum_hz
+    rate_valid &= window_rate_valid
     valid &= rate_valid
     images_valid = stops_valid = bool(window)
+    current_stops_valid = terminal_complete and previous is not None
     for rid in robot_ids:
         reviewed = visual_reviews.get(rid, [])
         selected = [r for r in reviewed if window and r.get('seen_other_reviewed') is True
@@ -140,6 +150,9 @@ def score(record, robot_ids, contract, visual_reviews, stop_receipts, *, claimed
         # acquisitions require distinct sequence numbers AND acquisition times;
         # content hashes identify retained originals, not physical movement.
         stop = stop_receipts.get(rid, {})
+        current_stops_valid &= (stop.get('stop_confirmed') is True and _vector([stop.get('observed_sim_time')])
+                               and stop.get('robot_instance_id') == rid and stop.get('world_epoch') == (identity or (None,None))[1]
+                               and previous is not None and previous - contract['max_sample_gap_s'] <= stop['observed_sim_time'] <= previous)
         stops_valid &= (stop.get('stop_confirmed') is True and _vector([stop.get('observed_sim_time')])
                         and stop.get('robot_instance_id') == rid and stop.get('world_epoch') == (identity or (None,None))[1]
                         and window is not None and window[1] - contract['max_sample_gap_s'] <= stop['observed_sim_time'] <= window[1])
@@ -150,4 +163,8 @@ def score(record, robot_ids, contract, visual_reviews, stop_receipts, *, claimed
                 common_stable_seconds=stable, stable_window=window,
                 visual_evidence_valid=bool(images_valid), stops_confirmed=bool(stops_valid),
                 robot_collision=collision, fallen=fallen, reason=reason,
+                diagnostics=dict(record_structure_valid=bool(structure_valid),
+                    overall_sample_rate_valid=bool(overall_rate_valid),
+                    common_window_present=bool(window), window_sample_rate_valid=bool(window_rate_valid),
+                    current_stops_confirmed=bool(current_stops_valid), final_geometry=final_geometry),
                 agent_claimed_success=bool(claimed_success), false_success_claim=bool(claimed_success and not success))

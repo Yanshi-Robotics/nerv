@@ -38,6 +38,36 @@ def test_complete_common_window_requires_independent_images(evidence):
     evidence[2]['B'][0]['seen_other_reviewed']=False
     assert evaluate(evidence)['false_success_claim']
 
+
+def test_outside_body_does_not_misdiagnose_valid_recording_or_current_stops(evidence):
+    for sample in evidence[0]['samples']:
+        sample['robots']['B']['bounds'] = [[2,-.2,0],[2.4,.2,1.6]]
+    result = evaluate(evidence)
+    assert not result['success'] and result['false_success_claim']
+    assert not result['evidence_valid'] and not result['stops_confirmed']  # Legacy window aggregates.
+    diagnostics = result['diagnostics']
+    assert diagnostics['record_structure_valid'] and diagnostics['overall_sample_rate_valid']
+    assert diagnostics['current_stops_confirmed']
+    assert not diagnostics['common_window_present'] and not diagnostics['window_sample_rate_valid']
+    assert diagnostics['final_geometry']['A']['inside']
+    assert diagnostics['final_geometry']['B'] == {'inside':False,'reason':'body_outside_region'}
+
+
+def test_structural_diagnostics_do_not_hide_invalid_original_sensor_evidence(evidence):
+    evidence[0]['samples'][3]['robots']['A']['joint_velocity'] = []
+    result = evaluate(evidence)
+    assert not result['success'] and not result['diagnostics']['record_structure_valid']
+    assert result['diagnostics']['overall_sample_rate_valid']
+
+
+def test_final_diagnostics_cannot_reuse_a_valid_sample_before_a_broken_tail(evidence):
+    evidence[0]['samples'][-1]['robots']['A']['joint_velocity'] = []
+    result = evaluate(evidence)
+    assert not result['success']
+    assert not result['diagnostics']['record_structure_valid']
+    assert not result['diagnostics']['current_stops_confirmed']
+    assert result['diagnostics']['final_geometry'] == {}
+
 @pytest.mark.parametrize('fault',['velocity','missing','collision','fall','gap','epoch','floor','stop','recording','budget'])
 def test_bad_evidence_never_proves_meeting(evidence,fault):
     r,c,v,s=evidence
