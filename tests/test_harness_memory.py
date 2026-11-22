@@ -4,9 +4,16 @@ from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
-from nerv.harness.context import ContextManager, ContextOverflow, groups
-from nerv.harness.memory import SessionMemory
+from nerv.brain_core.journal import SessionMemory
 from nerv.platform.session import SessionStore
+
+
+def _harness_context():
+    return pytest.importorskip("nerv.harness.context", reason="nerv.harness is retired from packaged distributions")
+
+
+def _harness_memory():
+    return pytest.importorskip("nerv.harness.memory", reason="nerv.harness is retired from packaged distributions")
 
 
 def test_session_history_is_durable_scoped_and_serialized(tmp_path):
@@ -35,7 +42,8 @@ def test_legacy_session_is_migrated_without_losing_notes(tmp_path):
 
 
 def test_compaction_keeps_original_and_can_retrieve_it(tmp_path):
-    memory = SessionMemory(tmp_path, "s_test")
+    ContextManager = _harness_context().ContextManager
+    memory = _harness_memory().SessionMemory(tmp_path, "s_test")
     for role, text in [("user", "prior constraint " * 1000), ("assistant", "historical result " * 1000),
                        ("user", "current request"), ("assistant", "current reply")]:
         memory.append("message", {"role": role, "text": text})
@@ -49,7 +57,7 @@ def test_compaction_keeps_original_and_can_retrieve_it(tmp_path):
 
 
 def test_cancelled_compaction_does_not_commit(tmp_path):
-    memory = SessionMemory(tmp_path, "s_test")
+    memory = _harness_memory().SessionMemory(tmp_path, "s_test")
     for role in ["user", "assistant", "user", "assistant"]:
         memory.append("message", {"role": role, "text": "history " * 1000})
     source = memory.events()[:2]
@@ -58,14 +66,16 @@ def test_cancelled_compaction_does_not_commit(tmp_path):
 
 
 def test_context_rejects_malformed_tool_groups():
-    with pytest.raises(ContextOverflow):
-        groups([{"role": "assistant", "tool_calls": [{"id": "a"}]},
-                {"role": "tool", "id": "other"}])
+    ctx = _harness_context()
+    with pytest.raises(ctx.ContextOverflow):
+        ctx.groups([{"role": "assistant", "tool_calls": [{"id": "a"}]},
+                    {"role": "tool", "id": "other"}])
 
 
 def test_image_and_tools_are_in_request_budget():
-    manager = ContextManager(200, 50, 100)
-    with pytest.raises(ContextOverflow):
+    ctx = _harness_context()
+    manager = ctx.ContextManager(200, 50, 100)
+    with pytest.raises(ctx.ContextOverflow):
         manager.prepare("system", [{"role": "user", "text": "hi"}], [], [{}, {}])
 
 
@@ -80,7 +90,6 @@ def test_journal_damage_is_not_silently_ignored(tmp_path):
 
 def test_dispatch_barrier_uses_writable_handle_without_changing_history(tmp_path, monkeypatch):
     import os
-    from nerv.harness.memory import SessionMemory
     journal = SessionMemory(tmp_path, 'flush-portability')
     journal.append('fixture', {'message': 'preserved'})
     before = journal.path.read_bytes()

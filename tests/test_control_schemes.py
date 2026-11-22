@@ -105,7 +105,7 @@ def test_agent_cannot_enumerate_or_invoke_motion(tmp_path, monkeypatch):
     import threading
     from nerv.platform.hub import Nerv
     from nerv.platform.session import SessionStore
-    from nerv.platform.role_turn import RoleTurn
+    RoleTurn = pytest.importorskip("nerv.platform.role_turn", reason="nerv.platform.role_turn is retired from packaged distributions").RoleTurn
     from nerv.nerve.body import Capabilities, ToolSpec
     from nerv.nerve.brain import CallTool
     hub = Nerv(store=SessionStore(str(tmp_path)))

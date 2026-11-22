@@ -109,7 +109,7 @@ def test_token_is_private_and_removed_on_failure(tmp_path):
 def test_hub_job_resume_keeps_original_commit(tmp_path, monkeypatch):
     from nerv import installation
     from nerv.platform import module_jobs
-    from nerv.vlm.store import CredentialStore
+    from nerv.asset_credentials import CredentialStore
     monkeypatch.setenv('NERV_HOME', str(tmp_path))
     record = tmp_path / 'install-jobs/abc.json'
     original = {'repository': 'owner/model', 'commit': 'a' * 40, 'files': []}
@@ -132,7 +132,7 @@ def test_hub_job_interruption_keeps_pinned_plan(tmp_path, monkeypatch):
     from nerv import installation
     from nerv.platform import module_jobs
     from nerv.install_downloads import DownloadStopped
-    from nerv.vlm.store import CredentialStore
+    from nerv.asset_credentials import CredentialStore
     monkeypatch.setenv('NERV_HOME', str(tmp_path))
     record = tmp_path / 'install-jobs/abc.json'
     plan = {'repository': 'owner/model', 'commit': 'b' * 40, 'files': []}
