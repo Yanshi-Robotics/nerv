@@ -1,6 +1,6 @@
 # NERV
 
-[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB)](pyproject.toml) [![Status](https://img.shields.io/badge/0.9.1-in_development-c59b42)](CHANGELOG.md) [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB)](pyproject.toml) [![Status](https://img.shields.io/badge/0.9.1-development_release-2b7a78)](CHANGELOG.md) [![License](https://img.shields.io/badge/License-MIT-blue)](LICENSE)
 
 [English](README.md) · [简体中文](i18n/zh/README.md)
 
@@ -10,7 +10,7 @@
 
 **Current result: the same local candidate 25 passed three fresh paired G1 living-room rendezvous rounds; within each round, both G1 robots ran in one shared apt World.** All six robot tasks passed fixed scoring and independent read-only review on the frozen Linux CPU configuration, without false success claims, falls or robot-to-robot collisions during formal navigation. The candidate passed 975 CPU checks with two retired-provider skips and isolated offline installation/update/rollback. This is a bounded simulation qualification, not general reliability or physical-robot acceptance.
 
-**0.9.1 remains unpublished. The two previously open native UI checks now passed independent review:** End run and shared-World stop confirmations were exercised through real cancel/accept interactions, with robots already stopped. Ending A retained its entity and the World; B then completed 0.471 m of forward progress with stopping confirmed. Both shared-World stop entry points were checked, and late actions after World stop were refused because their Run had ended. This closes the scoped UI evidence gaps without qualifying emergency braking during motion. Product code and frontend were unchanged. Despite the retained version number, 0.9.1 changes architecture and compatibility. See [current qualification and limits](guides/brain-core-091.md#current-local-qualification).
+**0.9.1 is published as a development release (candidate 25 build `01e434d2` from source `3a642360`). The two previously open native UI checks passed independent review:** End run and shared-World stop confirmations were exercised through real cancel/accept interactions, with robots already stopped. Ending A retained its entity and the World; B then completed 0.471 m of forward progress with stopping confirmed. Both shared-World stop entry points were checked, and late actions after World stop were refused because their Run had ended. This closes the scoped UI evidence gaps without qualifying emergency braking during motion. Product code and frontend were unchanged. Despite the retained version number, 0.9.1 changes architecture and compatibility. See [current qualification and limits](guides/brain-core-091.md#current-local-qualification).
 
 <div align="center"><img src="assets/readme/images/dual-agent-091.jpg" alt="Selected original head-camera frames from the candidate 25 formal CPU simulation show each G1 seeing the other in the living room" width="960"></div>
 
@@ -18,7 +18,7 @@ Selected original camera frames from the formal CPU simulation, arranged for pre
 
 [Connect an Agent](guides/mcp.md) · [Architecture](guides/architecture.md) · [SO-101 setup](guides/so101-setup.md) · [Assets](guides/assets.md) · [Roadmap](ROADMAP.md) · [Development history](guides/brain-core-091.md#development-history)
 
-The commands below install the latest **public release**, not these unpublished candidate changes. Physical SO-101 acceptance remains incomplete; Go2 motion is blocked until a complete, verifiable deployment contract is available.
+The commands below install the published **0.9.1** development release (qualified on frozen Linux CPU simulation; physical SO-101 acceptance and named-client end-to-end matrices remain incomplete, and Go2 motion is blocked until a complete, verifiable deployment contract is available).
 
 <div align="center"><img src="assets/readme/diagrams/en/platform-091.svg" alt="External Agents use NERV Brain Core for identity and authority while Runtime controls devices and shared simulation" width="960"></div>
 

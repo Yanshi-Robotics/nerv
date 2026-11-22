@@ -1,6 +1,6 @@
 # NERV
 
-[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB)](../../pyproject.toml) [![Status](https://img.shields.io/badge/0.9.1-in_development-c59b42)](../../CHANGELOG.md) [![License](https://img.shields.io/badge/License-MIT-blue)](../../LICENSE)
+[![Python](https://img.shields.io/badge/Python-3.11%2B-3776AB)](../../pyproject.toml) [![Status](https://img.shields.io/badge/0.9.1-development_release-2b7a78)](../../CHANGELOG.md) [![License](https://img.shields.io/badge/License-MIT-blue)](../../LICENSE)
 
 [English](../../README.md) · [简体中文](README.md)
 
@@ -10,7 +10,7 @@
 
 **当前成果：同一本地候选 25 通过三轮全新双 Agent G1 客厅会合；每轮两台 G1 均在同一个共享 apt World 中运行。** 冻结的 Linux CPU 配置上，6 次机器人任务均通过固定评分与独立只读复核，正式导航中无虚报成功、跌倒或机器人间碰撞。该候选还通过 975 项 CPU 检查、两项退役 Provider 跳过，以及隔离离线安装／升级／回滚。这是限定组合的仿真资格，不代表普遍可靠性或真机验收。
 
-**0.9.1 尚未公开发布。此前两项原生 UI 检查现已通过独立复核：** 在机器人已停止的状态下，实际验证了 End run 与共享 World 停止的原生取消／确认交互。结束 A 后实体与 World 保留，B 随后实际前进 0.471 米并确认停止；共享 World 的两个停止入口均已核验，World 停止后的迟到动作因 Run 已结束而拒绝。本次关闭了限定范围的 UI 证据缺口，不扩大为运动中的急停制动资格；产品代码与前端未改。沿用 0.9.1 版本号，但这是架构与兼容性升级，详见[当前验收与限制](brain-core-091.md#当前本地验收)。
+**0.9.1 现已作为开发发行版公开发布（对应候选 25 构建 `01e434d2`／源码 `3a642360`）。此前两项原生 UI 检查已通过独立复核：** 在机器人已停止的状态下，实际验证了 End run 与共享 World 停止的原生取消／确认交互。结束 A 后实体与 World 保留，B 随后实际前进 0.471 米并确认停止；共享 World 的两个停止入口均已核验，World 停止后的迟到动作因 Run 已结束而拒绝。本次关闭了限定范围的 UI 证据缺口，不扩大为运动中的急停制动资格；产品代码与前端未改。沿用 0.9.1 版本号，但这是架构与兼容性升级，详见[当前验收与限制](brain-core-091.md#当前本地验收)。
 
 <div align="center"><img src="../../assets/readme/images/dual-agent-091.jpg" alt="候选25正式CPU仿真验收的原始头部相机选帧，两台G1在客厅中分别看到对方" width="960"></div>
 
@@ -18,7 +18,7 @@
 
 [接入 Agent](mcp.md) · [架构](architecture.md) · [SO-101 设置](so101-setup.md) · [资产](../../guides/assets.md) · [路线图](ROADMAP.md) · [开发历史](brain-core-091.md#开发历史)
 
-下方命令安装最新**公开版本**，不会取得这些尚未发布的候选修改。SO-101 真机验收仍未完成；Go2 缺少完整、可核验的部署契约，暂不能开放运动。
+下方命令安装公开的 **0.9.1** 开发发行版（已验证范围限定于冻结 Linux CPU 仿真；SO-101 真机验收与多品牌客户端完整兼容矩阵仍未完成；Go2 缺少完整、可核验的部署契约，暂不能开放运动）。
 
 <div align="center"><img src="../../assets/readme/diagrams/zh/platform-091.svg" alt="外部Agent通过NERV Brain Core管理身份和授权，由Runtime控制设备与共享仿真" width="960"></div>
 

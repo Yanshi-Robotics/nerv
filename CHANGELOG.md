@@ -1,6 +1,6 @@
 # Changelog
 
-## 0.9.1 — in development; compatibility change
+## [0.9.1] — 2026-11-22 (development release; compatibility change)
 
 ### Capabilities and execution
 
@@ -33,7 +33,7 @@
 - Preserve candidate 08: 713 CPU checks and two skips, followed by 0/6 navigation successes, three false arrival claims and no falls. Preserve candidate 21: its first paired round passed and its second failed on incomplete full-body entry and a false claim. At those stages, a complete new three-round series was still required.
 - Preserve candidate 23: 945 CPU checks and three successful independently reviewed paired rounds. A later strict-schema transport defect required a new package and fresh series; candidate 25 completed that separate series without transferring historical successes.
 - Reject held or unknown Runtime readiness before task admission and report measured hold provenance. All earlier candidate failures, unconfirmed/unknown receipts and the separate pre-GO interruption remain historical facts.
-- This is an architecture upgrade despite the retained 0.9.1 version number. Installed-candidate, migration, scoped UI and three independent paired rendezvous results are recorded separately. Public release remains a separate action; none is implied by this entry.
+- This is an architecture upgrade despite the retained 0.9.1 version number. Installed-candidate, migration, scoped UI and three independent paired rendezvous results are recorded separately for candidate 25 (build `01e434d2402b4890bcce68ca5d89fcd3`, source `3a642360b261af418cdb5ff1d792e795ae78fbd6`). Published as `v0.9.1` development release on 2026-11-22 without rebuilding the qualified candidate package; physical hardware, Go2 motion, and cross-platform hardware acceptance remain separate pending gates.
 
 Versions are managed from 0.2.0 on: every release gets an entry here and a `v<version>` tag.
 The 0.1.x entries below are the pre-release trail.
