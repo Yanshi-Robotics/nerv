@@ -159,12 +159,15 @@ class ProjectStore:
             if not manifest.exists():
                 # Startup migration runs before any journal conversion or device work.
                 with sessions.transaction():
-                    files = sorted(p for p in source.rglob("*") if p.is_file()) if source.exists() else []
+                    files = sorted(
+                        p for p in source.rglob("*")
+                        if p.is_file() and not p.name.endswith(".lock") and not p.is_relative_to(self.root)
+                    ) if source.exists() else []
                     hashes = {}
                     for path in files:
                         if path.is_symlink() or any(parent.is_symlink() for parent in path.parents if parent != source.parent):
                             raise ValueError("Session backup cannot follow symbolic links")
-                        relative = str(path.relative_to(source))
+                        relative = path.relative_to(source).as_posix()
                         digest = hashlib.sha256(path.read_bytes()).hexdigest()
                         target = backup / relative
                         target.parent.mkdir(parents=True, exist_ok=True)

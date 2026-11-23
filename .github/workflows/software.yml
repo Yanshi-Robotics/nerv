@@ -8,14 +8,14 @@ jobs:
         os: [ubuntu-latest, windows-latest, macos-latest]
     runs-on: ${{ matrix.os }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           submodules: recursive
-      - uses: astral-sh/setup-uv@v6
+      - uses: astral-sh/setup-uv@v10.4.0
         with:
           version: '0.12.2'
           enable-cache: false
-      - uses: actions/setup-python@v5
+      - uses: actions/setup-python@v7
         with:
           python-version: '3.12'
       - name: Install CPU rendering libraries for Linux simulation checks
@@ -26,7 +26,7 @@ jobs:
         run: python scripts/ci_managed.py
       - name: Check source checkout remains free of build dependencies
         run: python scripts/check_source_clean.py
-      - uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v7
         with:
           name: candidate-${{ matrix.os }}
           path: ${{ steps.candidate.outputs.bundle }}/nerv-*-bundle.zip

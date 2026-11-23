@@ -360,8 +360,8 @@ def _history_hashes(directory):
         for path in sorted(source.rglob("*")) if source.is_dir() else []:
             if path.is_symlink():
                 raise ValueError("History snapshots cannot follow symbolic links")
-            if path.is_file():
-                result[str(path.relative_to(directory))] = hashlib.sha256(path.read_bytes()).hexdigest()
+            if path.is_file() and not path.name.endswith(".lock"):
+                result[path.relative_to(directory).as_posix()] = hashlib.sha256(path.read_bytes()).hexdigest()
     return result
 
 
@@ -372,13 +372,13 @@ def _snapshot():
     for name in RESTORE_PATHS:
         source = root / name
         if source.is_dir():
-            shutil.copytree(source, destination / name)
+            shutil.copytree(source, destination / name, ignore=shutil.ignore_patterns(".lock", "*.lock"))
         elif source.is_file():
             shutil.copy2(source, destination / name)
     hashes = _history_hashes(root)
     for name in HISTORY_PATHS:
         if (root / name).is_dir():
-            shutil.copytree(root / name, destination / name)
+            shutil.copytree(root / name, destination / name, ignore=shutil.ignore_patterns(".lock", "*.lock"))
     if _history_hashes(destination) != hashes:
         raise ValueError("History snapshot verification failed")
     write_json(destination / "snapshot.json", {"paths": list(RESTORE_PATHS), "schema": CONFIG_SCHEMA,
@@ -410,7 +410,7 @@ def _legacy_history_snapshot(root, snapshot, metadata):
         target.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(backup / relative, target)
     metadata = {**metadata, "history": {"paths": list(HISTORY_PATHS),
-                "sha256": {"memory/sessions/" + name: digest for name, digest in hashes.items()}}}
+                "sha256": {"memory/sessions/" + Path(name).as_posix().replace("\\", "/"): digest for name, digest in hashes.items()}}}
     write_json(snapshot / "snapshot.json", metadata)
     return metadata
 

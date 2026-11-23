@@ -39,8 +39,8 @@ def test_migration_verified_backup_and_idempotent_history(tmp_path):
     sessions = SessionStore(str(tmp_path / "sessions"))
     robot, _ = sessions.new("operator", "fixture", "world")
     chat, _ = sessions.new("fixture-model", None, None)
-    source = {str(p.relative_to(tmp_path / "sessions")): p.read_bytes()
-              for p in (tmp_path / "sessions").rglob("*") if p.is_file()}
+    source = {p.relative_to(tmp_path / "sessions").as_posix(): p.read_bytes()
+              for p in (tmp_path / "sessions").rglob("*") if p.is_file() and not p.name.endswith(".lock")}
     store = ProjectStore(tmp_path / "projects")
     first = store.migrate(sessions)
     assert first == store.migrate(sessions)
@@ -53,6 +53,7 @@ def test_migration_verified_backup_and_idempotent_history(tmp_path):
     for relative, content in source.items():
         assert (store.root / "migration-backup-v1" / relative).read_bytes() == content
         assert (tmp_path / "sessions" / relative).read_bytes() == content
+    assert not any(p.name.endswith(".lock") for p in (store.root / "migration-backup-v1").rglob("*"))
 
 
 def test_migration_resumes_after_partial_project_creation(tmp_path):

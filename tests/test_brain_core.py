@@ -500,10 +500,17 @@ def test_scene_revision_covers_geometry_and_ignores_private_rules(tmp_path):
     assert source_revision(spec)!=first
 
 
+def _pause_watchdog(core):
+    core._stop.set()
+    core._thread.join(1)
+    core._stop.clear()
+
+
 def test_shared_runtime_failure_is_local_and_world_failure_invalidates_peers(integrated, monkeypatch):  # noqa: F811
     from types import SimpleNamespace
     f = integrated
     core = BrainCore(f.hub, f.projects, f.gw.root)
+    _pause_watchdog(core)
     try:
         second=f.projects.store.create({'name':'Peer','mode':'sim','robot':f.project['robot'],'world':f.project['world']})
         slots=[]
@@ -525,12 +532,11 @@ def test_shared_runtime_failure_is_local_and_world_failure_invalidates_peers(int
         monkeypatch.setattr('httpx.get',lambda *a,**k:SimpleNamespace(json=lambda:{'ok':True,'epoch':'world_epoch'}))
         first,peer=world['roster']
         f.launcher.nodes.pop('body:'+first['robot_instance_id'])
-        assert f.projects.worlds.check_health()==[first['project_id']]
+        assert f.projects.worlds.check_health(force=True)==[first['project_id']]
         assert f.projects.active_run(first['project_id']) is None
         assert f.projects.active_run(peer['project_id'])['status']=='running'
         owner.alive=lambda:False
-        f.projects.worlds._last_health=0
-        assert f.projects.worlds.check_health()==[peer['project_id']]
+        assert f.projects.worlds.check_health(force=True)==[peer['project_id']]
         assert f.projects.active_run(peer['project_id']) is None
         assert f.projects.worlds.get(world['world_instance_id'])['status']=='failed'
     finally:
@@ -577,6 +583,7 @@ def test_observer_transport_does_not_revoke_the_controller(integrated):  # noqa:
 def test_resource_without_run_becomes_failed_when_world_disappears(integrated):  # noqa: F811 - imported pytest fixture
     f = integrated
     core = BrainCore(f.hub, f.projects, f.gw.root)
+    _pause_watchdog(core)
     try:
         resource = core.resources.reserve(f.project, 'agent_fixture')
         world = f.projects.worlds.create(f.project['world'], f.project['robot'])
@@ -586,7 +593,7 @@ def test_resource_without_run_becomes_failed_when_world_disappears(integrated): 
             project_id=f.project['id'], run_id=None)])
         f.projects.worlds.save(world)
         assert f.projects.active_run(f.project['id']) is None
-        assert f.projects.worlds.check_health() == [f.project['id']]
+        assert f.projects.worlds.check_health(force=True) == [f.project['id']]
         assert core.resources.get(resource['robot_instance_id'])['status'] == 'failed'
         assert f.projects.worlds.get(world['world_instance_id'])['status'] == 'failed'
     finally:
@@ -598,6 +605,7 @@ def test_unknown_world_probe_revokes_control_without_destroying_same_instance(in
     import httpx
     f = integrated
     core = BrainCore(f.hub, f.projects, f.gw.root)
+    _pause_watchdog(core)
     try:
         binding = ready_binding(core, f, core.reserve(f.project['id'], f.pair['connection']['id']))
         wid = binding['world_instance_id']
@@ -634,6 +642,7 @@ def test_confirmed_world_fault_still_ends_the_run_immediately(integrated, monkey
     import httpx
     f = integrated
     core = BrainCore(f.hub, f.projects, f.gw.root)
+    _pause_watchdog(core)
     try:
         binding = ready_binding(core, f, core.reserve(f.project['id'], f.pair['connection']['id']))
         core.invoke(f.pair['token'], 'run_start', {'project_id':f.project['id'], 'request_id':'start'}, binding['brain_instance_id'])
@@ -701,6 +710,7 @@ def test_unknown_health_revokes_manual_context_using_its_own_control_token(integ
     from types import SimpleNamespace
     f = integrated
     core = BrainCore(f.hub, f.projects, f.gw.root)
+    _pause_watchdog(core)
     entered, release = threading.Event(), threading.Event()
     captured = {}
     try:
@@ -747,6 +757,7 @@ def test_delayed_world_health_probe_cannot_overwrite_new_topology(integrated, mo
     from types import SimpleNamespace
     f = integrated
     core = BrainCore(f.hub, f.projects, f.gw.root)
+    _pause_watchdog(core)
     try:
         world = f.projects.worlds.create(f.project['world'], f.project['robot'])
         world.update(status='ready', epoch='same-world')
@@ -758,7 +769,7 @@ def test_delayed_world_health_probe_cannot_overwrite_new_topology(integrated, mo
             f.projects.worlds.save(changed)
             return SimpleNamespace(json=lambda:{'ok':False})
         monkeypatch.setattr('httpx.get', delayed)
-        assert f.projects.worlds.check_health() == []
+        assert f.projects.worlds.check_health(force=True) == []
         current = f.projects.worlds.get(world['world_instance_id'])
         assert current['generation'] == 2 and current['status'] == 'ready'
     finally:
@@ -797,6 +808,7 @@ def test_no_run_observation_rejects_runtime_change_and_never_grants_control(inte
 def test_new_operator_run_remains_in_world_failure_scope(integrated, fault):  # noqa: F811
     f = integrated
     core = BrainCore(f.hub, f.projects, f.gw.root)
+    _pause_watchdog(core)
     try:
         binding = ready_binding(core, f, core.reserve(f.project['id'], f.pair['connection']['id']))
         f.projects.stop_run(f.project['id'], binding['run_id'])
@@ -809,7 +821,7 @@ def test_new_operator_run_remains_in_world_failure_scope(integrated, fault):  # 
             key = ('shared_world:' + binding['world_instance_id'] if fault == 'world_loss'
                    else 'body:' + binding['robot_instance_id'])
             f.launcher.nodes[key].alive = lambda: False
-            f.projects.worlds.check_health()
+            f.projects.worlds.check_health(force=True)
         assert f.projects.active_run(f.project['id']) is None
         assert not f.hub.store.get(sid).armed
         assert next(r for r in f.projects.store.runs(f.project['id']) if r['id'] == run_id)['status'] in {'failed', 'interrupted'}
@@ -894,5 +906,30 @@ def test_waiting_run_start_cannot_block_another_project_stop(integrated):  # noq
         stopper.join(2)
         assert was_independent, 'Stop waited behind an unrelated World transaction'
         assert not errors and not starter.is_alive() and not stopper.is_alive()
+    finally:
+        core.shutdown()
+
+
+def test_health_probe_preserves_concurrent_operator_run_attachment(integrated, monkeypatch):  # noqa: F811
+    from types import SimpleNamespace
+    f = integrated
+    core = BrainCore(f.hub, f.projects, f.gw.root)
+    _pause_watchdog(core)
+    attached = {}
+    try:
+        binding = ready_binding(core, f, core.reserve(f.project['id'], f.pair['connection']['id']))
+        f.projects.stop_run(f.project['id'], binding['run_id'])
+        def attach_during_probe(*args, **kwargs):
+            if not attached:
+                attached['created'] = f.projects.create_run(f.project['id'], operator=True)
+            return SimpleNamespace(json=lambda: {'ok': True, 'epoch': 'fixture-epoch'})
+        monkeypatch.setattr('httpx.get', attach_during_probe)
+        assert f.projects.worlds.check_health(force=True) == []
+        new_run_id = attached['created']['run']['id']
+        world = f.projects.worlds.get(binding['world_instance_id'])
+        assert world['roster'][0]['run_id'] == new_run_id
+        f.launcher.nodes['body:' + binding['robot_instance_id']].alive = lambda: False
+        assert f.projects.worlds.check_health(force=True) == [f.project['id']]
+        assert f.projects.active_run(f.project['id']) is None
     finally:
         core.shutdown()

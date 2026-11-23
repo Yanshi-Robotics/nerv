@@ -94,15 +94,15 @@ def ready_binding(core, fixture, binding):
     run = f.projects.active_run(pid)
     run.update(shared_world=True,world_instance_id=world['world_instance_id'],world_generation=1)
     f.projects.store.save_run(pid,run)
-    world.update(status='ready',epoch='fixture-epoch',roster=[dict(project_id=pid,
-        robot_instance_id=resource['robot_instance_id'],run_id=run['id'],spawn=dict(x=0,y=0,z=1,yaw=0))])
-    f.projects.worlds.save(world)
     f.launcher.nodes['shared_world:'+world['world_instance_id']] = SimpleNamespace(alive=lambda:True,url='http://fixture')
     f.launcher.nodes['body:'+resource['robot_instance_id']] = SimpleNamespace(meta={'epoch':'fixture-epoch'},alive=lambda:True)
     original_get = httpx.get
     f.monkeypatch.setattr(httpx,'get',lambda url,*args,**kwargs:
         SimpleNamespace(json=lambda:{'ok':True,'epoch':'fixture-epoch'}) if url=='http://fixture/health'
         else original_get(url,*args,**kwargs))
+    world.update(status='ready',epoch='fixture-epoch',roster=[dict(project_id=pid,
+        robot_instance_id=resource['robot_instance_id'],run_id=run['id'],spawn=dict(x=0,y=0,z=1,yaw=0))])
+    f.projects.worlds.save(world)
     return core.describe(run)
 
 

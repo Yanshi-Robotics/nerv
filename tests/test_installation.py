@@ -392,3 +392,20 @@ def test_corrupt_history_snapshot_fails_before_moving_live_data(tmp_path, monkey
     with pytest.raises(ValueError, match='verification'):
         i._restore(snapshot)
     assert original.read_text() == 'original'
+
+
+def test_history_hashes_skip_lock_files_and_use_posix_keys(tmp_path, monkeypatch):
+    monkeypatch.setenv('NERV_HOME', str(tmp_path))
+    sess = tmp_path / 'memory/sessions/s1.json'
+    sess.parent.mkdir(parents=True)
+    sess.write_text('{"id":"s1"}')
+    (tmp_path / 'projects').mkdir()
+    (tmp_path / 'projects/.lock').write_text('')
+    (tmp_path / 'bodies/b1').mkdir(parents=True)
+    (tmp_path / 'bodies/b1/display.lock').write_text('')
+    hashes = i._history_hashes(tmp_path)
+    assert 'memory/sessions/s1.json' in hashes
+    assert all(not key.endswith('.lock') and '\\' not in key for key in hashes)
+    snap = i._snapshot()
+    assert not (snap / 'projects/.lock').exists()
+    assert not (snap / 'bodies/b1/display.lock').exists()
