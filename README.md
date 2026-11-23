@@ -12,11 +12,17 @@
 
 **0.9.1 is published as a development release (candidate 25 build `01e434d2` from source `3a642360`). The two previously open native UI checks passed independent review:** End run and shared-World stop confirmations were exercised through real cancel/accept interactions, with robots already stopped. Ending A retained its entity and the World; B then completed 0.471 m of forward progress with stopping confirmed. Both shared-World stop entry points were checked, and late actions after World stop were refused because their Run had ended. This closes the scoped UI evidence gaps without qualifying emergency braking during motion. Product code and frontend were unchanged. Despite the retained version number, 0.9.1 changes architecture and compatibility. See [current qualification and limits](guides/brain-core-091.md#current-local-qualification).
 
+<div align="center"><img src="assets/readme/images/dual-agent-091-demo.gif" alt="Accelerated preview of two Unitree G1 humanoids navigating the shared apt World in NERV 0.9.1" width="960"></div>
+
+Accelerated simulation preview (1.7× speed) from shared-World dual-G1 navigation in NERV 0.9.1. Full-body arrival and stable stopping in the formal 3/3 Candidate 25 qualification were verified independently from physics evidence; a clip alone is not the score.
+
+<details>
+<summary>Original head-camera frames from Candidate 25 formal CPU scoring</summary>
 <div align="center"><img src="assets/readme/images/dual-agent-091.jpg" alt="Selected original head-camera frames from the candidate 25 formal CPU simulation show each G1 seeing the other in the living room" width="960"></div>
+<p>Selected original camera frames from the formal CPU simulation, arranged for presentation. The two views are separate acquisitions, not synchronized stereo.</p>
+</details>
 
-Selected original camera frames from the formal CPU simulation, arranged for presentation. The two views are separate acquisitions, not synchronized stereo. Full-body arrival and stable stopping were checked independently from physics evidence; a picture alone is not the score.
-
-[Connect an Agent](guides/mcp.md) · [Architecture](guides/architecture.md) · [SO-101 setup](guides/so101-setup.md) · [Assets](guides/assets.md) · [Roadmap](ROADMAP.md) · [Development history](guides/brain-core-091.md#development-history)
+[Ecosystem](#nerv-ecosystem) · [Connect an Agent](guides/mcp.md) · [Architecture](guides/architecture.md) · [SO-101 setup](guides/so101-setup.md) · [Assets](guides/assets.md) · [Roadmap](ROADMAP.md) · [Development history](guides/brain-core-091.md#development-history)
 
 The commands below install the published **0.9.1** development release (qualified on frozen Linux CPU simulation; physical SO-101 acceptance and named-client end-to-end matrices remain incomplete, and Go2 motion is blocked until a complete, verifiable deployment contract is available).
 
@@ -42,6 +48,19 @@ Open a new terminal and run `nerv`. The stable channel normally opens [http://12
 
 An explicitly installed preview uses `nerv preview` and its own channel data. Candidate installation and repository development are described in [CONTRIBUTING.md](CONTRIBUTING.md). Preview is not a second source checkout, and publishing code does not activate a local installation.
 
+## NERV Ecosystem
+
+`nerv` is the model-agnostic platform core of a four-repository robotics stack. Separating platform runtime, procedural worlds, versioned locomotion policies, and multi-agent Swarm orchestration keeps every layer independently verifiable and swappable:
+
+<div align="center"><img src="assets/readme/diagrams/en/ecosystem-091.svg" alt="NERV four-repository ecosystem showing nerv core, nerv-assets submodule, nerv-policies contract shelf, and companion nerv-harness Swarm host" width="960"></div>
+
+| Repository | Visibility | Role | Coupling with `nerv` |
+|---|---|---|---|
+| `nerv` (this repo) | Public (Core) | Host, Brain Core, Runtime, World, MCP server, safety interlocks, and CLI | Core platform; zero embedded LLM loop |
+| [nerv-assets](https://github.com/Yanshi-Robotics/nerv-assets) | Public | Procedural MuJoCo residential scenes (`apt`, `house`), SO-101 workbenches, and Unitree G1/Go2 bodies | Pinned `nerv-assets/` Git submodule (geometry and physics only; no policy weights) |
+| [nerv-policies](https://github.com/Yanshi-Robotics/nerv-policies) | Public | Versioned locomotion ONNX weights, `contract.json`, and `release.yaml` actuator manifests | Referenced via `${NERV_POLICIES_ROOT}` and `body.yaml` (implicit vs explicit PD invariants) |
+| `nerv-harness` | Private preview | Standalone multi-agent Swarm host (append-only board, 35s receipt watchdog, dual isolation, read-only monitor) | Connects externally over NERV MCP (`stdio` or Unix socket); never bypasses operator safety gates |
+
 ## Create a project and connect your Agent
 
 1. Open the console. Install a simulation engine and World, or register a standard SO-101 from Robots.
@@ -55,7 +74,7 @@ An explicitly installed preview uses `nerv preview` and its own channel data. Ca
 
 5. For simulation, create and explicitly start an empty World, then grant a compatible template and instance quota to the Agent. The unbound bridge discovers the grant and allocates a robot before attaching its Brain and starting a Run. Inspect the selected control scheme and authorize motion separately, or use the operator's explicit simulation control pregrant.
 
-The bridge connects to an already running Host. It does not start another robot service or prepare hardware. The [MCP guide](guides/mcp.md) explains configuration, observation acknowledgements, request IDs and revocation. Codex, DeepSeek Harness and Claude Code are intended clients; their names are not a claim that every client/version has passed acceptance.
+The bridge connects to an already running Host. It does not start another robot service or prepare hardware. The [MCP guide](guides/mcp.md) explains configuration, observation acknowledgements, request IDs and revocation. Gemini (Antigravity), Codex, DeepSeek Harness and companion MCP hosts such as `nerv-harness` are intended clients; their names are not a claim that every client/version has passed acceptance.
 
 Without an Agent or model key, operators can still install resources, configure devices, view observations and use the permitted fixed-policy/manual controls. There is no internal visual decision service.
 
@@ -108,7 +127,7 @@ Manual takeover revokes external motion control and waits for stopping to be con
 | G1 Sim | Managed scene and motion-policy path | Candidate 25 passed three paired apt living-room rendezvous rounds through real MCP, with six successful robot tasks. Distance tracking remains imprecise; qualification is specific to the frozen Linux CPU configuration |
 | Go2 Sim | Adapter and capability work | Motion blocked by missing complete deployment contract; no public motion claim |
 | Sim2Real / Real2Sim combinations | Reserved capability types | Not runnable in this release |
-| Codex / DeepSeek Harness / Claude Code | Local stdio MCP bridge intended for these clients | Client/version-specific end-to-end acceptance still pending |
+| Gemini (Antigravity) / Codex / DeepSeek Harness | Local stdio MCP bridge intended for these clients | Client/version-specific end-to-end acceptance still pending |
 
 Standard SO-101 setup checks the computer, installs the runtime, identifies a follower, checks existing motor/calibration prerequisites, confirms cameras and saves configuration. Motor setup and new calibration remain external. Missing a calibration file means it was not found, not that the device has never been calibrated. Connecting may energize motors; follow the [SO-101 guide](guides/standard-so101.md).
 
@@ -158,7 +177,7 @@ The [world-library tools](https://github.com/Yanshi-Robotics/nerv-assets/blob/ma
 
 ## Contribute
 
-NERV is maintained by Yanshi Robotics. **DeepSeek Harness** and **Codex** contribute AI-assisted development; maintainers review changes and decide what to merge and release.
+NERV is maintained by Yanshi Robotics. **Gemini (Antigravity)**, **Codex**, and **DeepSeek Harness** contribute AI-assisted development; maintainers review changes and decide what to merge and release.
 
 Read [CONTRIBUTING.md](CONTRIBUTING.md), the [Runtime SDK](packages/nerv-runtime-sdk/README.md) and [repository rules](AGENTS.md). Use [GitHub Issues](https://github.com/Yanshi-Robotics/nerv/issues) for reproducible problems and use cases. Remove credentials, personal data and private recordings from reports.
 

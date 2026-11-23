@@ -117,11 +117,11 @@ the model.
 
 ## AI contributors
 
-DeepSeek Harness and Codex have contributed AI-assisted development to NERV.
+Gemini (Antigravity), Codex, and DeepSeek Harness have contributed AI-assisted development to NERV.
 Maintainers review changes and remain responsible for merge and release decisions.
 AI-assisted contributions follow the same scope, testing and evidence requirements
-as other changes. Planned Harness and plugin integrations are described in the
-[roadmap](ROADMAP.md).
+as other changes. Companion multi-agent Swarm orchestration (`nerv-harness`) and planned
+plugin integrations are described in the [roadmap](ROADMAP.md).
 
 ### Retire generated build dependencies
 

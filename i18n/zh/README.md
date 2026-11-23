@@ -12,11 +12,17 @@
 
 **0.9.1 现已作为开发发行版公开发布（对应候选 25 构建 `01e434d2`／源码 `3a642360`）。此前两项原生 UI 检查已通过独立复核：** 在机器人已停止的状态下，实际验证了 End run 与共享 World 停止的原生取消／确认交互。结束 A 后实体与 World 保留，B 随后实际前进 0.471 米并确认停止；共享 World 的两个停止入口均已核验，World 停止后的迟到动作因 Run 已结束而拒绝。本次关闭了限定范围的 UI 证据缺口，不扩大为运动中的急停制动资格；产品代码与前端未改。沿用 0.9.1 版本号，但这是架构与兼容性升级，详见[当前验收与限制](brain-core-091.md#当前本地验收)。
 
+<div align="center"><img src="../../assets/readme/images/dual-agent-091-demo.gif" alt="NERV 0.9.1 共享 apt 世界中两台宇树 G1 双机协同导航加速预览" width="960"></div>
+
+NERV 0.9.1 共享 World 双 G1 仿真片段的 1.7 倍速可视化预览。正式 3/3 轮候选 25 验收中的全身到达与稳定停止均由独立物理证据核验，演示动图本身不等于评分。
+
+<details>
+<summary>查看候选 25 正式 CPU 评分原始头部相机选帧</summary>
 <div align="center"><img src="../../assets/readme/images/dual-agent-091.jpg" alt="候选25正式CPU仿真验收的原始头部相机选帧，两台G1在客厅中分别看到对方" width="960"></div>
+<p>正式 CPU 仿真验收的原始相机选帧，经排版用于展示。两路视图分别采集，不是同步双目。</p>
+</details>
 
-正式 CPU 仿真验收的原始相机选帧，经排版用于展示。两路视图分别采集，不是同步双目；全身到达和稳定停止由独立物理证据核验，单张画面不等于评分。
-
-[接入 Agent](mcp.md) · [架构](architecture.md) · [SO-101 设置](so101-setup.md) · [资产](../../guides/assets.md) · [路线图](ROADMAP.md) · [开发历史](brain-core-091.md#开发历史)
+[四仓生态](#nerv-四仓生态架构) · [接入 Agent](mcp.md) · [架构](architecture.md) · [SO-101 设置](so101-setup.md) · [资产](../../guides/assets.md) · [路线图](ROADMAP.md) · [开发历史](brain-core-091.md#开发历史)
 
 下方命令安装公开的 **0.9.1** 开发发行版（已验证范围限定于冻结 Linux CPU 仿真；SO-101 真机验收与多品牌客户端完整兼容矩阵仍未完成；Go2 缺少完整、可核验的部署契约，暂不能开放运动）。
 
@@ -42,6 +48,19 @@ irm https://github.com/Yanshi-Robotics/nerv/releases/latest/download/install.ps1
 
 显式安装的预览版通过 `nerv preview` 启动，使用独立渠道数据。候选安装与源码开发见[贡献说明](../../CONTRIBUTING.md)。预览版不是另一份源码仓库，推送代码也不会自动切换本地安装。
 
+## NERV 四仓生态架构
+
+`nerv` 是整个四仓机器人技术栈的模型无关核心底座。将平台运行时、程序化场景、版本化运动策略与外部多 Agent Swarm 编排拆分为四个职责清晰、边界锁死的仓库，使每一层都能独立验证与热替换：
+
+<div align="center"><img src="../../assets/readme/diagrams/zh/ecosystem-091.svg" alt="NERV 四仓生态架构图：nerv 核心仓、nerv-assets 子模块、nerv-policies 策略发布架与 nerv-harness 多 Agent 宿主" width="960"></div>
+
+| 仓库 | 可见性 | 核心职责 | 与 `nerv` 的耦合接口 |
+|---|---|---|---|
+| `nerv`（本仓库） | 公开（核心仓） | Host、Brain Core、Runtime、World、MCP 服务端、安全联锁与 CLI | 核心平台底座；零内置大模型循环 |
+| [nerv-assets](https://github.com/Yanshi-Robotics/nerv-assets) | 公开 | 程序化 MuJoCo 住宅场景（`apt`、`house`）、SO-101 工作台与宇树 G1/Go2 机身模型 | 作为固定版本的 `nerv-assets/` Git 子模块接入（仅含几何与物理，无策略权重） |
+| [nerv-policies](https://github.com/Yanshi-Robotics/nerv-policies) | 公开 | 版本化运动 ONNX 权重、`contract.json` 部署契约与 `release.yaml` 执行器清单 | 通过 `${NERV_POLICIES_ROOT}` 与 `body.yaml` 引用（严格区分隐式/显式 PD） |
+| `nerv-harness` | 私有预览 | 独立多 Agent Swarm 宿主（追加式消息板、35s 回执看门狗、双隔离策略、只读监控面板） | 通过 NERV MCP（`stdio` 或 Unix Socket）外部接入，严守操作者审批门 |
+
 ## 创建项目并连接 Agent
 
 1. 打开控制台，安装仿真引擎和 World，或从“机器人”注册标准 SO-101。
@@ -55,7 +74,7 @@ irm https://github.com/Yanshi-Robotics/nerv/releases/latest/download/install.ps1
 
 5. 仿真先创建并明确启动空 World，再向 Agent 授予兼容模板与实例配额。未绑定桥接器发现授权并申请机器人，之后附着 Brain、启动 Run。检查选定的控制方案，再单独授权动作，或使用操作者明确授予的仿真控制预授权。
 
-桥接器连接已经运行的 Host，不另起一套机器人服务，也不自动准备硬件。[MCP 指南](mcp.md) 介绍配置、观测确认、请求 ID 和撤销方式。Codex、DeepSeek Harness、Claude Code 是计划接入的客户端；列出名称不代表所有客户端及版本均已通过验收。
+桥接器连接已经运行的 Host，不另起一套机器人服务，也不自动准备硬件。[MCP 指南](mcp.md) 介绍配置、观测确认、请求 ID 和撤销方式。Gemini（Antigravity）、Codex、DeepSeek Harness 以及配套宿主 `nerv-harness` 是计划接入的客户端；列出名称不代表所有客户端及版本均已通过验收。
 
 没有 Agent 或模型密钥，操作者仍可安装资源、配置设备、查看观测，以及使用允许的固定策略和人工控制。NERV 不再运行内部视觉决策服务。
 
@@ -108,7 +127,7 @@ G1 观测区分点射线与全身制动通行空间，提供本机关节／IMU �
 | G1 Sim | 受管理场景与运动策略路径 | 候选 25 经真实 MCP 完成三轮 apt 客厅会合，6 次机器人任务成功；位移精度仍有限，资格仅适用于冻结的 Linux CPU 配置 |
 | Go2 Sim | 适配器与能力声明开发 | 完整部署契约缺失，运动被阻止；不宣称已具备公开运动能力 |
 | Sim2Real／Real2Sim 等组合 | 预留能力类型 | 本版不开放运行 |
-| Codex／DeepSeek Harness／Claude Code | 面向这些客户端提供本地 stdio MCP 桥接 | 具体客户端及版本的完整流程验收仍待完成 |
+| Gemini（Antigravity）／Codex／DeepSeek Harness | 面向这些客户端提供本地 stdio MCP 桥接 | 具体客户端及版本的完整流程验收仍待完成 |
 
 标准 SO-101 引导依次检查电脑、安装运行组件、识别 follower、核对已有电机与标定条件、确认相机并保存配置。电机配置和新标定继续在外部完成。缺少标定文件表示没有找到文件，不意味着设备从未标定。连接可能给电机上力，请按 [SO-101 指南](standard-so101.md) 操作。
 
@@ -158,7 +177,7 @@ NERV 的 Python 环境、工具、缓存和已安装资源统一保存在 `NERV_
 
 ## 参与开发
 
-NERV 由 Yanshi Robotics 维护，**DeepSeek Harness** 与 **Codex** 参与 AI 辅助开发，维护者负责审核、合并和发布。
+NERV 由 Yanshi Robotics 维护，**Gemini（Antigravity）**、**Codex** 与 **DeepSeek Harness** 参与 AI 辅助开发，维护者负责审核、合并和发布。
 
 开发入口包括[贡献说明](../../CONTRIBUTING.md)、[Runtime SDK](../../packages/nerv-runtime-sdk/README.md) 和[仓库规则](../../AGENTS.md)。欢迎通过 [GitHub Issues](https://github.com/Yanshi-Robotics/nerv/issues) 提交可复现问题和使用场景；报告中不要包含凭据、个人信息和私有录像。
 

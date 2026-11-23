@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="880" viewBox="0 0 1200 880" role="img" aria-labelledby="title desc">
+<title id="title">NERV Ecosystem: Core Platform, External Agents, Assets &amp; Policies</title>
+<desc id="desc">Strict separation of concerns: models stay external, Brain Core &amp; safety gates live in nerv, worlds in nerv-assets, weights in nerv-policies.</desc>
+<defs>
+<filter id="shadow" x="-4%" y="-4%" width="108%" height="112%"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0f172a" flood-opacity="0.06"/></filter>
+<marker id="arr-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1.5 L8.5 5 L1 8.5" fill="none" stroke="#2563eb" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="arr-teal" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1.5 L8.5 5 L1 8.5" fill="none" stroke="#0d9488" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="arr-amber" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1.5 L8.5 5 L1 8.5" fill="none" stroke="#d97706" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="arr-purple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1.5 L8.5 5 L1 8.5" fill="none" stroke="#7c3aed" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="arr-red" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1.5 L8.5 5 L1 8.5" fill="none" stroke="#dc2626" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
+</defs>
+<style>text { font-family: "Noto Sans CJK SC", "PingFang SC", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; fill: #0f172a; }.mono { font-family: "DejaVu Sans Mono", "JetBrains Mono", ui-monospace, monospace; }</style>
+<rect width="1200" height="880" rx="20" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2"/>
+<path d="M36 96 H1164" stroke="#cbd5e1" stroke-width="1.2"/>
+<rect x="36" y="20" width="256" height="22" rx="11" fill="#eff6ff" stroke="#2563eb" stroke-width="1" stroke-opacity="0.45"/>
+<text x="164.0" y="35" font-size="10.5" font-weight="700" fill="#2563eb" text-anchor="middle" class="mono">ECOSYSTEM ARCHITECTURE · 0.9.1</text>
+<text x="36" y="75" font-size="24" font-weight="700" fill="#0f172a" text-anchor="start">NERV Ecosystem: Core Platform, External Agents, Assets &amp; Policies</text>
+<text x="1164" y="36" font-size="12" font-weight="600" fill="#64748b" text-anchor="end" class="mono">YANSHI ROBOTICS · NERV ECOSYSTEM</text>
+<text x="36" y="860" font-size="13.5" font-weight="400" fill="#64748b" text-anchor="start">Strict separation of concerns: models stay external, Brain Core &amp; safety gates live in nerv, worlds in nerv-assets, weights in nerv-policies.</text>
+<rect x="36" y="112" width="1128" height="170" rx="14" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.4" stroke-dasharray="6 5"/>
+<text x="56" y="136" font-size="12.5" font-weight="700" fill="#7c3aed" text-anchor="start" class="mono">EXTERNAL COGNITIVE LAYER (OUTSIDE NERV — MODEL-AGNOSTIC)</text>
+<rect x="56" y="150" width="520" height="114" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<rect x="56" y="150" width="6" height="114" rx="3" fill="#7c3aed"/>
+<rect x="76" y="162" width="107" height="22" rx="11" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1" stroke-opacity="0.45"/>
+<text x="129.5" y="177" font-size="10.5" font-weight="700" fill="#7c3aed" text-anchor="middle" class="mono">MCP CLIENTS</text>
+<text x="76" y="204" font-size="16.5" font-weight="700" fill="#0f172a" text-anchor="start">General MCP Agents &amp; Coding Clients</text>
+<text x="76" y="228" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">Gemini (Antigravity) · Codex · DeepSeek Harness · custom clients</text>
+<text x="76" y="250" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">Owns vision reasoning, planning, prompts &amp; conversation context</text>
+<rect x="604" y="150" width="540" height="114" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<rect x="604" y="150" width="6" height="114" rx="3" fill="#d97706"/>
+<rect x="624" y="162" width="139" height="22" rx="11" fill="#fffbeb" stroke="#d97706" stroke-width="1" stroke-opacity="0.45"/>
+<text x="693.5" y="177" font-size="10.5" font-weight="700" fill="#d97706" text-anchor="middle" class="mono">PRIVATE PREVIEW</text>
+<text x="624" y="204" font-size="16.5" font-weight="700" fill="#0f172a" text-anchor="start">nerv-harness — Companion Swarm Host</text>
+<text x="624" y="228" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">Swarm Board · strict-sensor-only / cooperative-swarm · 35s watchdog</text>
+<text x="624" y="250" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">Heterogeneous router (OpenAI / DeepSeek / custom) + 8175 UI</text>
+<path d="M316,268 L316,332" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-start="url(#arr-blue)" marker-end="url(#arr-blue)"/>
+<path d="M874,268 L874,332" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-start="url(#arr-blue)" marker-end="url(#arr-blue)"/>
+<rect x="355" y="285" width="490" height="32" rx="16" fill="#ffffff" stroke="#2563eb" stroke-width="1.4"/>
+<text x="600" y="306" font-size="12.5" font-weight="700" fill="#1d4ed8" text-anchor="middle">Model Context Protocol (MCP) — Images, Receipts, Bounded Skills</text>
+<rect x="36" y="334" width="1128" height="238" rx="14" fill="#eff6ff" stroke="#2563eb" stroke-width="1.4"/>
+<text x="56" y="360" font-size="13.5" font-weight="700" fill="#1d4ed8" text-anchor="start">CORE PLATFORM — Yanshi-Robotics/nerv (PUBLIC · MIT · v0.9.1)</text>
+<rect x="56" y="376" width="350" height="178" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<rect x="56" y="376" width="6" height="178" rx="3" fill="#2563eb"/>
+<rect x="76" y="388" width="84" height="22" rx="11" fill="#eff6ff" stroke="#2563eb" stroke-width="1" stroke-opacity="0.45"/>
+<text x="118.0" y="403" font-size="10.5" font-weight="700" fill="#2563eb" text-anchor="middle" class="mono">CORE</text>
+<text x="76" y="430" font-size="16.5" font-weight="700" fill="#0f172a" text-anchor="start">Brain Core</text>
+<text x="76" y="454" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">Persistent World / Robot / Brain IDs</text>
+<text x="76" y="476" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">Single-use observation receipts (~35s)</text>
+<text x="76" y="498" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">Authority leases &amp; task lifecycle</text>
+<text x="76" y="520" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">Zero AI model loop inside NERV</text>
+<rect x="425" y="376" width="350" height="178" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<rect x="425" y="376" width="6" height="178" rx="3" fill="#0d9488"/>
+<rect x="445" y="388" width="84" height="22" rx="11" fill="#f0fdfa" stroke="#0d9488" stroke-width="1" stroke-opacity="0.45"/>
+<text x="487.0" y="403" font-size="10.5" font-weight="700" fill="#0d9488" text-anchor="middle" class="mono">OPERATOR</text>
+<text x="445" y="430" font-size="16.5" font-weight="700" fill="#0f172a" text-anchor="start">Operator Console &amp; Safety Gates</text>
+<text x="445" y="454" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">Local Web UI on 127.0.0.1:8170</text>
+<text x="445" y="476" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">Explicit node-manifest approval</text>
+<text x="445" y="498" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">Manual takeover &amp; local e-stop</text>
+<text x="445" y="520" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">Managed isolated Python runtimes</text>
+<rect x="794" y="376" width="350" height="178" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<rect x="794" y="376" width="6" height="178" rx="3" fill="#0f766e"/>
+<rect x="814" y="388" width="84" height="22" rx="11" fill="#f0fdfa" stroke="#0f766e" stroke-width="1" stroke-opacity="0.45"/>
+<text x="856.0" y="403" font-size="10.5" font-weight="700" fill="#0f766e" text-anchor="middle" class="mono">RUNTIME</text>
+<text x="814" y="430" font-size="16.5" font-weight="700" fill="#0f172a" text-anchor="start">Runtime SDK &amp; Adapters</text>
+<text x="814" y="454" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">nerv-runtime-sdk 0.8.3 (wire 3.1)</text>
+<text x="814" y="476" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">Shared-world MuJoCo CPU simulation</text>
+<text x="814" y="498" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">LeRobot SO-101 real &amp; sim adapters</text>
+<text x="814" y="520" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">RL gait inference &amp; local braking</text>
+<path d="M316,634 L316,574" fill="none" stroke="#0d9488" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arr-teal)"/>
+<path d="M884,634 L884,574" fill="none" stroke="#d97706" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arr-amber)"/>
+<text x="330" y="610" font-size="13" font-weight="600" fill="#0f766e" text-anchor="start">world.yaml · MJCF · bodies</text>
+<text x="898" y="610" font-size="13" font-weight="600" fill="#b45309" text-anchor="start">policy.onnx · contract.json · release.yaml</text>
+<rect x="36" y="636" width="550" height="188" rx="14" fill="#f0fdfa" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<rect x="36" y="636" width="6" height="188" rx="3" fill="#0d9488"/>
+<rect x="56" y="648" width="115" height="22" rx="11" fill="#ffffff" stroke="#0d9488" stroke-width="1" stroke-opacity="0.45"/>
+<text x="113.5" y="663" font-size="10.5" font-weight="700" fill="#0d9488" text-anchor="middle" class="mono">PUBLIC · MIT</text>
+<text x="56" y="690" font-size="16.5" font-weight="700" fill="#0f172a" text-anchor="start">Yanshi-Robotics/nerv-assets</text>
+<text x="56" y="714" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">Procedural residences: apt (Manhattan duplex) &amp; house (3-storey)</text>
+<text x="56" y="736" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">SO-101 tabletop workbenches (pick-place, snack sort, 5-disk Hanoi)</text>
+<text x="56" y="758" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">Unitree G1 &amp; Go2 MJCF bodies + Three.js World Explore guide</text>
+<text x="56" y="780" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">Strict boundary: zero policy weights stored here</text>
+<rect x="614" y="636" width="550" height="188" rx="14" fill="#fffbeb" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<rect x="614" y="636" width="6" height="188" rx="3" fill="#d97706"/>
+<rect x="634" y="648" width="193" height="22" rx="11" fill="#ffffff" stroke="#d97706" stroke-width="1" stroke-opacity="0.45"/>
+<text x="730.5" y="663" font-size="10.5" font-weight="700" fill="#d97706" text-anchor="middle" class="mono">PUBLIC · RELEASE SHELF</text>
+<text x="634" y="690" font-size="16.5" font-weight="700" fill="#0f172a" text-anchor="start">Yanshi-Robotics/nerv-policies</text>
+<text x="634" y="714" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">Versioned ONNX locomotion bundles paired with strict contracts</text>
+<text x="634" y="736" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">g1-29dof-turn: implicit PD, in-place turn (qualified in NERV 0.9.1)</text>
+<text x="634" y="758" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">g1-flat-parity-s42: parity-gate bundle with audit evidence</text>
+<text x="634" y="780" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">go2-velocity-flat: explicit PD (contract incomplete — blocked)</text>
+</svg>

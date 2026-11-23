@@ -1,0 +1,91 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="880" viewBox="0 0 1200 880" role="img" aria-labelledby="title desc">
+<title id="title">NERV 四仓全景架构：外部 Agent、核心平台与解耦资产/策略</title>
+<desc id="desc">职责严格分离：模型与编排在外部，身份/回执/安全门在 nerv，世界与机身在 nerv-assets，权重与契约在 nerv-policies。</desc>
+<defs>
+<filter id="shadow" x="-4%" y="-4%" width="108%" height="112%"><feDropShadow dx="0" dy="2" stdDeviation="3" flood-color="#0f172a" flood-opacity="0.06"/></filter>
+<marker id="arr-blue" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1.5 L8.5 5 L1 8.5" fill="none" stroke="#2563eb" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="arr-teal" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1.5 L8.5 5 L1 8.5" fill="none" stroke="#0d9488" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="arr-amber" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1.5 L8.5 5 L1 8.5" fill="none" stroke="#d97706" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="arr-purple" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1.5 L8.5 5 L1 8.5" fill="none" stroke="#7c3aed" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
+<marker id="arr-red" viewBox="0 0 10 10" refX="8" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse"><path d="M1 1.5 L8.5 5 L1 8.5" fill="none" stroke="#dc2626" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></marker>
+</defs>
+<style>text { font-family: "Noto Sans CJK SC", "PingFang SC", -apple-system, BlinkMacSystemFont, "Segoe UI", Arial, sans-serif; fill: #0f172a; }.mono { font-family: "DejaVu Sans Mono", "JetBrains Mono", ui-monospace, monospace; }</style>
+<rect width="1200" height="880" rx="20" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2"/>
+<path d="M36 96 H1164" stroke="#cbd5e1" stroke-width="1.2"/>
+<rect x="36" y="20" width="256" height="22" rx="11" fill="#eff6ff" stroke="#2563eb" stroke-width="1" stroke-opacity="0.45"/>
+<text x="164.0" y="35" font-size="10.5" font-weight="700" fill="#2563eb" text-anchor="middle" class="mono">ECOSYSTEM ARCHITECTURE · 0.9.1</text>
+<text x="36" y="75" font-size="24" font-weight="700" fill="#0f172a" text-anchor="start">NERV 四仓全景架构：外部 Agent、核心平台与解耦资产/策略</text>
+<text x="1164" y="36" font-size="12" font-weight="600" fill="#64748b" text-anchor="end">偃师造物 · NERV 开源生态架构</text>
+<text x="36" y="860" font-size="13.5" font-weight="400" fill="#64748b" text-anchor="start">职责严格分离：模型与编排在外部，身份/回执/安全门在 nerv，世界与机身在 nerv-assets，权重与契约在 nerv-policies。</text>
+<rect x="36" y="112" width="1128" height="170" rx="14" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.4" stroke-dasharray="6 5"/>
+<text x="56" y="136" font-size="12.5" font-weight="700" fill="#7c3aed" text-anchor="start">外部认知与编排层（位于 NERV 之外，不绑定任何大模型）</text>
+<rect x="56" y="150" width="520" height="114" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<rect x="56" y="150" width="6" height="114" rx="3" fill="#7c3aed"/>
+<rect x="76" y="162" width="107" height="22" rx="11" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1" stroke-opacity="0.45"/>
+<text x="129.5" y="177" font-size="10.5" font-weight="700" fill="#7c3aed" text-anchor="middle" class="mono">MCP CLIENTS</text>
+<text x="76" y="204" font-size="16.5" font-weight="700" fill="#0f172a" text-anchor="start">通用 MCP 客户端与外部 Agent</text>
+<text x="76" y="228" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">Gemini (Antigravity) · Codex · DeepSeek Harness · 自研客户端</text>
+<text x="76" y="250" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">负责视觉理解、高层规划、提示词与模型上下文</text>
+<rect x="604" y="150" width="540" height="114" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<rect x="604" y="150" width="6" height="114" rx="3" fill="#d97706"/>
+<rect x="624" y="162" width="139" height="22" rx="11" fill="#fffbeb" stroke="#d97706" stroke-width="1" stroke-opacity="0.45"/>
+<text x="693.5" y="177" font-size="10.5" font-weight="700" fill="#d97706" text-anchor="middle" class="mono">PRIVATE PREVIEW</text>
+<text x="624" y="204" font-size="16.5" font-weight="700" fill="#0f172a" text-anchor="start">nerv-harness — 独立多 Agent Swarm 宿主</text>
+<text x="624" y="228" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">Swarm 消息板 · 双隔离策略 · 35 秒回执看门狗 · 物理安全联锁</text>
+<text x="624" y="250" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">异构模型路由（OpenAI / DeepSeek 等）+ 只读监控面板</text>
+<path d="M316,268 L316,332" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-start="url(#arr-blue)" marker-end="url(#arr-blue)"/>
+<path d="M874,268 L874,332" fill="none" stroke="#2563eb" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-start="url(#arr-blue)" marker-end="url(#arr-blue)"/>
+<rect x="355" y="285" width="490" height="32" rx="16" fill="#ffffff" stroke="#2563eb" stroke-width="1.4"/>
+<text x="600" y="306" font-size="12.5" font-weight="700" fill="#1d4ed8" text-anchor="middle">标准 MCP 协议：相机图像 · 单次观测回执 · 有界技能 · 停止确认</text>
+<rect x="36" y="334" width="1128" height="238" rx="14" fill="#eff6ff" stroke="#2563eb" stroke-width="1.4"/>
+<text x="56" y="360" font-size="13.5" font-weight="700" fill="#1d4ed8" text-anchor="start">核心平台 — Yanshi-Robotics/nerv（公开仓 · MIT · v0.9.1）</text>
+<rect x="56" y="376" width="350" height="178" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<rect x="56" y="376" width="6" height="178" rx="3" fill="#2563eb"/>
+<rect x="76" y="388" width="84" height="22" rx="11" fill="#eff6ff" stroke="#2563eb" stroke-width="1" stroke-opacity="0.45"/>
+<text x="118.0" y="403" font-size="10.5" font-weight="700" fill="#2563eb" text-anchor="middle" class="mono">CORE</text>
+<text x="76" y="430" font-size="16.5" font-weight="700" fill="#0f172a" text-anchor="start">Brain Core 核心引擎</text>
+<text x="76" y="454" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">持久 World / Robot / Brain 身份</text>
+<text x="76" y="476" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">单次观测回执与 ~35s 监督超时</text>
+<text x="76" y="498" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">控制租约、任务边界与运行审计</text>
+<text x="76" y="520" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">仓内零大模型循环，完全模型无关</text>
+<rect x="425" y="376" width="350" height="178" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<rect x="425" y="376" width="6" height="178" rx="3" fill="#0d9488"/>
+<rect x="445" y="388" width="84" height="22" rx="11" fill="#f0fdfa" stroke="#0d9488" stroke-width="1" stroke-opacity="0.45"/>
+<text x="487.0" y="403" font-size="10.5" font-weight="700" fill="#0d9488" text-anchor="middle" class="mono">OPERATOR</text>
+<text x="445" y="430" font-size="16.5" font-weight="700" fill="#0f172a" text-anchor="start">操作者控制台与安全门</text>
+<text x="445" y="454" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">本地 Web 控制台（127.0.0.1:8170）</text>
+<text x="445" y="476" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">显式节点清单审批，默认未解锁</text>
+<text x="445" y="498" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">人工接管、急停与断连独立生效</text>
+<text x="445" y="520" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">托管隔离 Python / uv 运行环境</text>
+<rect x="794" y="376" width="350" height="178" rx="14" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<rect x="794" y="376" width="6" height="178" rx="3" fill="#0f766e"/>
+<rect x="814" y="388" width="84" height="22" rx="11" fill="#f0fdfa" stroke="#0f766e" stroke-width="1" stroke-opacity="0.45"/>
+<text x="856.0" y="403" font-size="10.5" font-weight="700" fill="#0f766e" text-anchor="middle" class="mono">RUNTIME</text>
+<text x="814" y="430" font-size="16.5" font-weight="700" fill="#0f172a" text-anchor="start">Runtime SDK 与设备执行层</text>
+<text x="814" y="454" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">nerv-runtime-sdk 0.8.3 协议隔离</text>
+<text x="814" y="476" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">共享物理时钟 MuJoCo 多机仿真</text>
+<text x="814" y="498" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">LeRobot SO-101 真机与仿真适配</text>
+<text x="814" y="520" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">RL 步态推理、平衡控制与制动确认</text>
+<path d="M316,634 L316,574" fill="none" stroke="#0d9488" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arr-teal)"/>
+<path d="M884,634 L884,574" fill="none" stroke="#d97706" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" marker-end="url(#arr-amber)"/>
+<text x="330" y="610" font-size="13" font-weight="600" fill="#0f766e" text-anchor="start">场景描述 · MJCF · 机身模型</text>
+<text x="898" y="610" font-size="13" font-weight="600" fill="#b45309" text-anchor="start">策略权重 · 部署契约 · 发布属性</text>
+<rect x="36" y="636" width="550" height="188" rx="14" fill="#f0fdfa" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<rect x="36" y="636" width="6" height="188" rx="3" fill="#0d9488"/>
+<rect x="56" y="648" width="115" height="22" rx="11" fill="#ffffff" stroke="#0d9488" stroke-width="1" stroke-opacity="0.45"/>
+<text x="113.5" y="663" font-size="10.5" font-weight="700" fill="#0d9488" text-anchor="middle" class="mono">PUBLIC · MIT</text>
+<text x="56" y="690" font-size="16.5" font-weight="700" fill="#0f172a" text-anchor="start">Yanshi-Robotics/nerv-assets（场景与机身）</text>
+<text x="56" y="714" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">程序化住宅：apt（曼哈顿两层复式）与 house（三层山坡豪宅）</text>
+<text x="56" y="736" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">SO-101 桌面工作台（抓取、零食分拣、五层汉诺塔）</text>
+<text x="56" y="758" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">Unitree G1 / Go2 机身资产 + Three.js 浏览器空间导览</text>
+<text x="56" y="780" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">严格边界：只放场景与机身，绝不存放运动策略权重</text>
+<rect x="614" y="636" width="550" height="188" rx="14" fill="#fffbeb" stroke="#cbd5e1" stroke-width="1.4" filter="url(#shadow)"/>
+<rect x="614" y="636" width="6" height="188" rx="3" fill="#d97706"/>
+<rect x="634" y="648" width="193" height="22" rx="11" fill="#ffffff" stroke="#d97706" stroke-width="1" stroke-opacity="0.45"/>
+<text x="730.5" y="663" font-size="10.5" font-weight="700" fill="#d97706" text-anchor="middle" class="mono">PUBLIC · RELEASE SHELF</text>
+<text x="634" y="690" font-size="16.5" font-weight="700" fill="#0f172a" text-anchor="start">Yanshi-Robotics/nerv-policies（运动策略）</text>
+<text x="634" y="714" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">带严格部署契约的版本化 ONNX 运动策略包</text>
+<text x="634" y="736" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">g1-29dof-turn：隐式 PD 原地转向（已用于 NERV 0.9.1 验收）</text>
+<text x="634" y="758" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">g1-flat-parity-s42：平价门复现批次（附证据，待补转向参数）</text>
+<text x="634" y="780" font-size="13.5" font-weight="400" fill="#475569" text-anchor="start">go2-velocity-flat：显式 PD（契约字段未补齐，运动保持阻塞）</text>
+</svg>
