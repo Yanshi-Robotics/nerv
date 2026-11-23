@@ -152,7 +152,7 @@ These recordings and screenshots are preserved from earlier versions. They show 
 <div align="center"><img src="assets/readme/images/world-explore/apt-cutaway.png" alt="Apartment cutaway" width="960"></div>
 </details>
 
-The [world-library tools](nerv-assets/docs/explore/README.md) describe scene inspection. A flat-ground gait does not supply grasping, autonomous sitting or stair traversal. The candidate console below was captured from the local 0.9.0 build. It shows a saved project before a Run starts; it is not evidence of robot motion.
+The [world-library tools](https://github.com/Yanshi-Robotics/nerv-assets/blob/master/docs/explore/README.md) describe scene inspection. A flat-ground gait does not supply grasping, autonomous sitting or stair traversal. The candidate console below was captured from the local 0.9.0 build. It shows a saved project before a Run starts; it is not evidence of robot motion.
 
 ![NERV 0.9.0 Project console in dark appearance](assets/readme/project-console-090-en.jpg)
 

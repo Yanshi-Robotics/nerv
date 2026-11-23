@@ -152,7 +152,7 @@ NERV 的 Python 环境、工具、缓存和已安装资源统一保存在 `NERV_
 <div align="center"><img src="../../assets/readme/images/world-explore/apt-cutaway.png" alt="公寓剖视图" width="960"></div>
 </details>
 
-[世界库工具](../../nerv-assets/docs/explore/README.md) 介绍场景查看方式。平地步态不包含抓取、自主坐下或上下楼能力。下图采集自本地 0.9.0 候选版，展示已保存但尚未启动 Run 的项目，不作为机器人运动证据。
+[世界库工具](https://github.com/Yanshi-Robotics/nerv-assets/blob/master/docs/explore/README.md) 介绍场景查看方式。平地步态不包含抓取、自主坐下或上下楼能力。下图采集自本地 0.9.0 候选版，展示已保存但尚未启动 Run 的项目，不作为机器人运动证据。
 
 ![NERV 0.9.0 浅色 Project 控制台](../../assets/readme/project-console-090-zh.jpg)
 
